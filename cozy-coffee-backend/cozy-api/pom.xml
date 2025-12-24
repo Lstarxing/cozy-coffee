@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.cozy</groupId>
+        <artifactId>cozy-coffee-backend</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>cozy-api</artifactId>
+    <packaging>pom</packaging>
+    <description>API层 - Dubbo接口定义与DTO</description>
+
+    <modules>
+        <module>cozy-user-api</module>
+        <module>cozy-member-api</module>
+        <module>cozy-order-api</module>
+        <module>cozy-mall-api</module>
+    </modules>
+</project>

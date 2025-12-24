@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.cozy</groupId>
+        <artifactId>cozy-coffee-backend</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>cozy-gateway</artifactId>
+    <packaging>jar</packaging>
+    <description>API网关 - 统一Web入口，Dubbo Consumer</description>
+
+    <dependencies>
+        <!-- 公共模块 -->
+        <dependency>
+            <groupId>com.cozy</groupId>
+            <artifactId>cozy-common</artifactId>
+        </dependency>
+
+        <!-- 用户服务API -->
+        <dependency>
+            <groupId>com.cozy</groupId>
+            <artifactId>cozy-user-api</artifactId>
+        </dependency>
+
+        <!-- 会员服务API -->
+        <dependency>
+            <groupId>com.cozy</groupId>
+            <artifactId>cozy-member-api</artifactId>
+        </dependency>
+
+        <!-- 订单服务API -->
+        <dependency>
+            <groupId>com.cozy</groupId>
+            <artifactId>cozy-order-api</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Web -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Dubbo Spring Boot Starter -->
+        <dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo-spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- Nacos Discovery -->
+        <dependency>
+            <groupId>com.alibaba.nacos</groupId>
+            <artifactId>nacos-client</artifactId>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <mainClass>com.cozy.gateway.GatewayApplication</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

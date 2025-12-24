@@ -1,0 +1,89 @@
+# ===================== 通用过滤规则 =====================
+# 敏感配置文件（核心！禁止上传）
+application.yml
+application.properties
+application-prod.yml
+application-prod.properties
+.env
+.env.local
+.env.production
+*.key
+*.pem
+*.jks  # Java证书文件
+*.pfx  # SSL证书
+config/prod/  # 生产环境配置目录
+
+# 日志文件
+*.log
+logs/
+log/
+*.trace
+*.out
+
+# 临时文件
+*.tmp
+*.temp
+*.cache
+.DS_Store  # Mac系统隐藏文件
+Thumbs.db  # Windows系统缩略图
+
+# ===================== Java后端（cozy-coffee-backend） =====================
+# Maven/Gradle编译产物
+target/
+build/
+classes/
+resources/
+*.jar
+*.war
+*.ear
+
+# Maven依赖缓存
+.m2/
+.gradle/
+gradle-wrapper.jar
+
+# IDE配置（仅本地保留，不上传）
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ===================== 前端项目（如cozy-coffee-frontend） =====================
+# Node.js依赖（核心！禁止上传）
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 前端编译产物
+dist/
+build/
+out/
+dist/assets/
+*.min.js
+*.min.css
+
+# 前端缓存/锁文件（可传package-lock.json/yarn.lock，这里过滤本地缓存）
+package-lock.json.bak
+yarn.lock.bak
+.pnpm-store/
+
+# ===================== 数据库相关 =====================
+# SQL脚本备份（仅传原始migrate_data.sql，过滤备份）
+*.sql.bak
+*.sql.backup
+data/  # 本地数据库数据目录
+
+# ===================== 其他冗余文件 =====================
+# 测试报告
+test-report/
+coverage/
+# 打包压缩文件
+*.zip
+*.rar
+*.7z

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于我们 - 咖熙咖啡</title>
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="stylesheet" href="styles/about_style.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="#home" class="active"><img src="images/cozycafe_logo.png" alt="Logo" ></a>
+            </div>
+            <div class="nav-links">
+                <a href="#home" class="active">首页</a>
+                <a href="#menu">菜单</a>
+                <a href="#membership">加入我们</a>
+                <a href="#about">关于我们</a>
+            </div>
+
+        </div>
+        
+        <div class="nav-buttons">
+            <a href="login.html" class="nav-btn login" style="font-size: 18px;"><strong>登录</strong></a>
+            <a href="register.html" class="nav-btn register" style="font-size: 18px;"><strong>注册</strong></a>
+        </div>
+    </nav>
+
+    <!-- 首屏视频区域 -->
+    <section class="hero-video">
+        <div class="video-container">
+            <video id="heroVideo" muted loop playsinline>
+                <source src="videos/coffee-story.mp4" type="video/mp4">
+            </video>
+            <div class="play-button" id="playButton">
+                <div class="play-icon"></div>
+            </div>
+        </div>
+     
+    </section>
+
+    <!-- 添加全屏视频播放容器 -->
+    <div class="fullscreen-video-container" id="fullscreenVideo">
+        <div class="close-button" id="closeButton">&times;</div>
+        <video id="fullVideo" controls>
+            <source src="videos/coffee-story.mp4" type="video/mp4">
+        </video>
+    </div>
+
+  
+    <!-- 品牌故事 -->
+    <section class="brand-story">
+        <div class="story-content">
+            <h1>品牌故事</h1>
+            <p>咖熙咖啡，源于对咖啡的热爱与追求</p>
+            <div class="story-grid">
+                <div class="story-item">
+                    <div class="story-image">
+                        <img src="images/about/story1.jpg" alt="品牌起源">
+                    </div>
+                    <div class="story-text">
+                        <h3>品牌起源</h3>
+                        <p>始于2023年，我们致力于为每一位顾客提供优质的咖啡体验。</p>
+                    </div>
+                </div>
+                <!-- 其他故事项目 -->
+            </div>
+        </div>
+    </section>
+
+    <!-- 品牌理念 -->
+    <section class="brand-values">
+        <div class="values-content">
+            <h2>品牌理念</h2>
+            <div class="values-grid">
+                <div class="value-item">
+                    <div class="value-icon">
+                        <img src="images/icons/quality.svg" alt="品质">
+                    </div>
+                    <h3>极致品质</h3>
+                    <p>严选全球优质咖啡豆，追求卓越口感</p>
+                </div>
+                <div class="value-item">
+                    <div class="value-icon">
+                        <img src="images/icons/innovation.svg" alt="创新">
+                    </div>
+                    <h3>持续创新</h3>
+                    <p>不断探索咖啡新可能，创造独特风味</p>
+                </div>
+                <div class="value-item">
+                    <div class="value-icon">
+                        <img src="images/icons/service.svg" alt="服务">
+                    </div>
+                    <h3>匠心服务</h3>
+                    <p>用心呈现每一杯咖啡，传递温暖体验</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 发展历程 -->
+    <section class="brand-history">
+        <div class="history-content">
+            <h2>发展历程</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="year">2023</div>
+                    <div class="event">
+                        <h3>品牌创立</h3>
+                        <p>首家门店开业，开启咖啡梦想</p>
+                    </div>
+                </div>
+                <!-- 其他时间线项目 -->
+            </div>
+        </div>
+    </section>
+
+    <!-- 品牌荣誉 -->
+    <section class="brand-awards">
+        <div class="awards-content">
+            <h2>品牌荣誉</h2>
+            <div class="awards-grid">
+                <div class="award-item">
+                    <img src="images/awards/award1.png" alt="荣誉证书">
+                    <h3>最佳新锐品牌</h3>
+                    <p>2023年度餐饮创新奖</p>
+                </div>
+                <!-- 其他荣誉项目 -->
+            </div>
+        </div>
+    </section>
+
+
+    <script src="js/about.js"></script>
+</body>
+</html> 

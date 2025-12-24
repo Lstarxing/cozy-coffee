@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>咖熙Cozy Cafe</title>
+    <!-- 添加 AOS CSS -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles/style.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="#home" class="active"><img src="images/cozycafe_logo.png" alt="Logo" ></a>
+            </div>
+            <div class="nav-links">
+                <a href="#home" class="active">首页</a>
+                <a href="#menu">菜单</a>
+                <a href="#membership">加入我们</a>
+                <a href="about_us.html"  ">关于我们</a>
+            </div>
+
+        </div>
+        
+        <div class="nav-buttons">
+            <a href="login.html" class="nav-btn login" style="font-size: 18px;"><strong>登录</strong></a>
+            <a href="register.html" class="nav-btn register" style="font-size: 18px;"><strong>注册</strong></a>
+        </div>
+    </nav>
+
+    <!-- 首页部分 -->
+    <section id="home" class="hero-section">
+        <div class="hero-slider">
+            <!-- 添加左右箭头 -->
+            <div class="slider-arrows">
+                <button class="arrow prev-arrow">&#10094;</button>
+                <button class="arrow next-arrow">&#10095;</button>
+            </div>
+            <div class="slide fade">
+                <img src="images/slide1.png" alt="咖啡店图片1">
+            </div>
+            <div class="slide fade">
+                <img src="images/slide2.png" alt="咖啡店图片2">  
+            </div>
+            <div class="slide fade">
+                <img src="images/slide3.png" alt="咖啡店图片3">
+            </div>
+            <div class="slide fade">
+                <img src="images/slide4.png" alt="咖啡店图片4">
+            </div>
+            <div class="slide fade">
+                <img src="images/slide5.png" alt="咖啡店图片5">
+            </div>
+            <div class="slider-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+        </div>
+        <div class="hero-content">
+            <h1>欢迎来到咖熙咖啡</h1>
+            <p>每一杯都是手心的温度，每一刻都是生活的馈赠</p>
+            <a href="#bean-source" class="cta-button">查看更多</a>
+        </div>
+    </section>
+    
+  
+    <!-- 添加品牌特色部分 -->
+    <section id="features" class="features-section">
+        <!-- 咖啡豆源产地展示 -->
+        <div class="feature-block bean-source" id="bean-source">
+            <div class="feature-content">
+                <h2 class="animate-title">臻选产地 | Premium Origins</h2>
+                <div class="origin-cards">
+                    <div class="origin-card" data-aos="fade-up" data-aos-delay="100">
+                        <div class="card-image">
+                            <img src="images/origins/brazil.webp" alt="巴西产区">
+                            <div class="image-overlay"></div>
+                        </div>
+                        <div class="card-content">
+                            <h3>巴西圣保罗</h3>
+                            <p class="altitude">海拔1200米以上黄波旁</p>
+                            <p class="flavor">醇厚果香，坚果巧克力风味</p>
+                        </div>
+                    </div>
+                    <div class="origin-card" data-aos="fade-up" data-aos-delay="200">
+                        <div class="card-image">
+                            <img src="images/origins/ethiopia.avif" alt="埃塞俄比亚产区">
+                            <div class="image-overlay"></div>
+                        </div>
+                        <div class="card-content">
+                            <h3>埃塞俄比亚耶加雪菲</h3>
+                            <p class="altitude">海拔1800-2200米</p>
+                            <p class="flavor">焦糖甜感，柑橘般明亮风味</p>
+                        </div>
+                    </div>
+                    <div class="origin-card" data-aos="fade-up" data-aos-delay="300">
+                        <div class="card-image">
+                            <img src="images/origins/colombia.png" alt="哥伦比亚产区">
+                            <div class="image-overlay"></div>
+                        </div>
+                        <div class="card-content">
+                            <h3>哥伦比亚安第斯</h3>
+                            <p class="altitude">海拔1700-2000米</p>
+                            <p class="flavor">花香馥郁，莓果般明亮酸甜</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>    
+    </section>
+
+      <!-- 添加获奖海报 -->
+      <section class="prize-section" >
+        <div class="prize-banner">
+            <img src="images/banner_prize.png" alt="咖熙咖啡连续5年获得IIAC金奖">
+        </div>
+    </section>
+
+    <!-- 主体菜单区域 -->
+    <section id="menu" class="menu-section">
+        <div class="menu-container">
+            <h1 class="section-title">精品推荐 | Best Sellers</h1>
+            <p class="section-subtitle" style="text-align: center;">一杯咖啡，一种心情</p>
+            <div class="menu-grid"> 
+                <div class="menu-item">
+                    <img src="images/cafe1.png" alt="咖啡1">
+                    <div class="menu-item-content">
+                        <h3>美式咖啡</h3>
+                        <p>优选上等阿拉比卡豆萃取美式</p>
+                        <span class="price">¥18</span>
+                    </div>
+                </div>
+
+                <div class="menu-item">
+                    <img src="images/cafe2.jpg" alt="咖啡2">
+                    <div class="menu-item-content">
+                        <h3>原味拿铁</h3>
+                        <p>丝滑浓醇的拿铁</p>
+                        <span class="price">¥25</span>
+                    </div>
+                </div>
+
+                <div class="menu-item">
+                    <img src="images/cafe3.jpg" alt="咖啡3">
+                    <div class="menu-item-content">
+                        <h3>卡布奇诺</h3>
+                        <p>完美比例的卡布奇诺</p>
+                        <span class="price">¥30</span>
+                    </div>
+                </div>
+
+                <div class="menu-item">
+                    <img src="images/cafe4.jpg" alt="咖啡4">
+                    <div class="menu-item-content">
+                        <h3>摩卡咖啡</h3>
+                        <p>香浓可可与咖啡的邂逅</p>
+                        <span class="price">¥30</span>
+                    </div>
+                </div>
+                <div class="menu-item">
+                    <img src="images/cafe5.jpg" alt="咖啡5">
+                    <div class="menu-item-content">
+                        <h3>抹茶拿铁</h3>
+                        <p>抹茶浓郁的拿铁</p>
+                        <span class="price">¥30</span>
+                    </div>
+                </div>
+                <div class="menu-item">
+                    <img src="images/cafe6.jpg" alt="咖啡6">
+                    <div class="menu-item-content">
+                        <h3>生椰拿铁</h3>
+                        <p>醇厚椰香与咖啡的完美融合</p>
+                        <span class="price">¥28</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 会员计划部分 -->
+    <section id="membership" class="membership-section">
+        <div class="membership-container">
+            <h1 class="section-title">会员计划 | Membership Plan</h1>
+            <p class="section-subtitle" style="text-align: center;">加入 Cozy Cafe 会员，开启您的专属咖啡之旅</p>
+            
+            <!-- 会员权益概览 -->
+            <div class="membership-intro">
+                <div class="intro-card">
+                    <div class="intro-icon">🎁</div>
+                    <h3>零门槛加入</h3>
+                    <p>注册即享20积分好礼</p>
+                </div>
+                <div class="intro-card">
+                    <div class="intro-icon">💫</div>
+                    <h3>多重积分奖励</h3>
+                    <p>消费、推荐好友多渠道赚积分</p>
+                </div>
+                <div class="intro-card">
+                    <div class="intro-icon">🏆</div>
+                    <h3>专属特权礼遇</h3>
+                    <p>等级升级尊享多重权益</p>
+                </div>
+            </div>
+
+            <!-- 会员等级体系 -->
+            <div class="membership-levels">
+                <h2>会员成长体系</h2>
+                <div class="level-cards">
+                    <div class="level-card">
+                        <div class="level-header basic">
+                            <h3>基础会员</h3>
+                            <p>开启您的咖啡之旅</p>
+                        </div>
+                        <div class="level-benefits">
+                            <ul>
+                                <li>积分倍率1元=1积分</li>
+                                <li>生日当月双倍积分</li>
+                                <li>每日签到享积分</li>
+                                <li>积分商城基础兑换资格</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="level-card">
+                        <div class="level-header silver">
+                            <h3>白银会员</h3>
+                            <p>累计1000积分</p>
+                        </div>
+                        <div class="level-benefits">
+                            <ul>
+                                <li>积分倍率1元=1.2积分</li>
+                                <li>生日享免费中杯饮品</li>
+                                <li>每月2张免配送费券</li>
+                                <li>积分商城中级兑换资格</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="level-card">
+                        <div class="level-header gold">
+                            <h3>黄金会员</h3>
+                            <p>累计3000积分</p>
+                        </div>
+                        <div class="level-benefits">
+                            <ul>
+                                <li>积分倍率1元=1.5积分</li>
+                                <li>生日享免费大杯饮品+甜品</li>
+                                <li>新品品鉴会优先邀请</li>
+                                <li>会员专属休息区使用权</li>
+                                <li>积分商城高级兑换资格</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="level-card">
+                        <div class="level-header black">
+                            <h3>黑金会员</h3>
+                            <p>累计8000积分</p>
+                        </div>
+                        <div class="level-benefits">
+                            <ul>
+                                <li>积分倍率1元=2积分</li>
+                                <li>生日享全年任意饮品免单券+200积分</li>
+                                <li>专属实体黑金卡</li>
+                                <li>咖啡师上门服务</li>
+                                <li>无限次免配送费</li>
+                                <li>年度品牌活动VIP邀请</li>
+                                <li>积分商城黑金专属兑换资格</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+           
+
+            <!-- 加入按钮 -->
+            <div class="join-now">
+                <a href="register.html" class="join-button">立即加入</a>
+                <p class="terms">*积分有效期为24个月</p>
+            </div>
+        </div>
+    </section>
+
+   
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="footer-container">
+            <!-- 左侧联系信息 -->
+            <div class="footer-left">
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <img src="images/email.png" alt="email">
+                        <p>联系我们：3187979459@qq.com</p>
+                    </div>
+                    <div class="contact-item">
+                        <img src="images/phone.png" alt="phone">
+                        <p>服务热线：400-888-8888</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间社交媒体 -->
+            <div class="footer-middle">
+                <div class="social-links">
+                    <div class="social-item">
+                        <img src="images/icons/xhs.png" alt="小红书">
+                        <a href="https://www.xiaohongshu.com/explore" class="social-link">小红书</a>
+                    </div>
+                    <div class="social-item">
+                        <img src="images/icons/wechat.png" alt="微信">
+                        <a href="https://wx.qq.com/" class="social-link">公众号</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧版权信息 -->
+            <div class="footer-right">
+                <p class="copyright">Copyright © 2025-现在 咖熙咖啡版权所有</p>
+                <p class="rights">All rights reserved</p>
+            </div>
+        </div>
+    </footer>
+    <!-- 在其他脚本之前先引入 AOS JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="js/slider.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/about.js"></script>
+    <script src="js/features.js"></script>
+</body>
+</html> 

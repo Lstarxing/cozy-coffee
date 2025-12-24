@@ -1,0 +1,58 @@
+package com.cozy.common.interceptor;
+
+import com.cozy.common.context.UserContext;
+import com.cozy.common.util.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerInterceptor;
+
+/**
+ * JWT 鉴权拦截器
+ * 统一处理 token 验证，将用户ID和角色放入上下文
+ */
+@Slf4j
+@Component
+public class JwtAuthInterceptor implements HandlerInterceptor {
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+            throws Exception {
+        // 获取 Authorization Header
+        String authHeader = request.getHeader("Authorization");
+        log.debug("JwtAuthInterceptor - Request URI: {}, Authorization header: {}",
+                request.getRequestURI(),
+                authHeader != null ? authHeader.substring(0, Math.min(20, authHeader.length())) + "..." : "null");
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            try {
+                // 验证 token 并提取用户ID和角色
+                if (JwtUtil.validateToken(token)) {
+                    Long userId = JwtUtil.getUserIdFromToken(token);
+                    String role = JwtUtil.getRoleFromToken(token);
+                    // 将用户ID和角色放入上下文
+                    UserContext.setUserId(userId);
+                    UserContext.setRole(role);
+                    log.debug("JwtAuthInterceptor - Token valid, userId: {}, role: {}", userId, role);
+                } else {
+                    log.warn("JwtAuthInterceptor - Token validation failed");
+                }
+            } catch (Exception e) {
+                log.warn("JwtAuthInterceptor - Token parse error: {}", e.getMessage());
+            }
+        } else {
+            log.debug("JwtAuthInterceptor - No Bearer token found");
+        }
+
+        return true; // 继续执行，由具体接口决定是否需要登录
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
+            throws Exception {
+        // 请求结束，清除上下文
+        UserContext.clear();
+    }
+}
