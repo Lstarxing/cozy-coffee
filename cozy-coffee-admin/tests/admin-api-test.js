@@ -42,8 +42,9 @@
  */
 
 // Configuration via environment variables
+const MIN_TIMEOUT_MS = 1000; // Minimum timeout to prevent too-fast failures
 const API_BASE = process.env.API_BASE || 'http://localhost:8080/api';
-const TIMEOUT_MS = Math.max(1000, parseInt(process.env.TIMEOUT_MS || '10000', 10)); // Min 1 second
+const TIMEOUT_MS = Math.max(MIN_TIMEOUT_MS, parseInt(process.env.TIMEOUT_MS || '10000', 10));
 const ALLOW_MUTATIONS = process.env.ALLOW_MUTATIONS === 'true';
 
 // 测试账号（需要执行 mysql/test_accounts.sql）
@@ -377,11 +378,15 @@ async function testOrders() {
         const todayDate = new Date(today);
         const allInRange = dateRes.data.data.every(o => {
             if (!o.createdAt) return false;
-            // Handle various date formats - extract date portion and compare
-            const orderDateStr = o.createdAt.split('T')[0].split(' ')[0]; // Handle both ISO and space-separated
-            const orderDate = new Date(orderDateStr);
-            // For same-day filtering, compare date strings or use date equality
-            return orderDate.toDateString() === todayDate.toDateString();
+            try {
+                // Handle various date formats - extract date portion and compare
+                const orderDateStr = o.createdAt.split('T')[0].split(' ')[0]; // Handle both ISO and space-separated
+                const orderDate = new Date(orderDateStr);
+                // For same-day filtering, compare date strings or use date equality
+                return !isNaN(orderDate.getTime()) && orderDate.toDateString() === todayDate.toDateString();
+            } catch (e) {
+                return false; // Invalid date format
+            }
         });
         test('筛选结果在日期范围内', allInRange,
             allInRange ? '' : '存在不在日期范围内的订单');
@@ -554,7 +559,7 @@ async function testRedemptionMutations(redemption) {
             `状态: ${processRes.data.data?.status}`);
         
         // Ship: processing -> shipped (需要物流信息)
-        const trackingNo = `SF_AUTO_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const trackingNo = `SF_AUTO_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
         const shipRes = await request('POST', 
             `/admin/redemptions/${redemption.id}/ship?company=顺丰速运&trackingNo=${trackingNo}`, 
             null, adminToken);
