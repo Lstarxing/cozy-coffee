@@ -43,7 +43,7 @@
 
 // Configuration via environment variables
 const API_BASE = process.env.API_BASE || 'http://localhost:8080/api';
-const TIMEOUT_MS = parseInt(process.env.TIMEOUT_MS || '10000', 10);
+const TIMEOUT_MS = Math.max(1000, parseInt(process.env.TIMEOUT_MS || '10000', 10)); // Min 1 second
 const ALLOW_MUTATIONS = process.env.ALLOW_MUTATIONS === 'true';
 
 // 测试账号（需要执行 mysql/test_accounts.sql）
@@ -132,8 +132,11 @@ function validateResponseShape(response, testName) {
     const hasMessage = typeof data.message === 'string';
     
     if (!hasSuccess || !hasCode || !hasMessage) {
-        test(`${testName} - Response shape`, false, 
-            `Missing fields: ${!hasSuccess ? 'success' : ''} ${!hasCode ? 'code' : ''} ${!hasMessage ? 'message' : ''}`);
+        const missing = [];
+        if (!hasSuccess) missing.push('success');
+        if (!hasCode) missing.push('code');
+        if (!hasMessage) missing.push('message');
+        test(`${testName} - Response shape`, false, `Missing fields: ${missing.join(', ')}`);
         return false;
     }
     
@@ -374,8 +377,11 @@ async function testOrders() {
         const todayDate = new Date(today);
         const allInRange = dateRes.data.data.every(o => {
             if (!o.createdAt) return false;
-            const orderDate = new Date(o.createdAt.split(' ')[0]);
-            return orderDate >= todayDate && orderDate <= todayDate;
+            // Handle various date formats - extract date portion and compare
+            const orderDateStr = o.createdAt.split('T')[0].split(' ')[0]; // Handle both ISO and space-separated
+            const orderDate = new Date(orderDateStr);
+            // For same-day filtering, compare date strings or use date equality
+            return orderDate.toDateString() === todayDate.toDateString();
         });
         test('筛选结果在日期范围内', allInRange,
             allInRange ? '' : '存在不在日期范围内的订单');
@@ -548,8 +554,9 @@ async function testRedemptionMutations(redemption) {
             `状态: ${processRes.data.data?.status}`);
         
         // Ship: processing -> shipped (需要物流信息)
+        const trackingNo = `SF_AUTO_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const shipRes = await request('POST', 
-            `/admin/redemptions/${redemption.id}/ship?company=顺丰速运&trackingNo=SF${Date.now()}`, 
+            `/admin/redemptions/${redemption.id}/ship?company=顺丰速运&trackingNo=${trackingNo}`, 
             null, adminToken);
         validateResponseShape(shipRes, '发货');
         test('兑换订单发货 (processing -> shipped)', shipRes.data?.success === true,
