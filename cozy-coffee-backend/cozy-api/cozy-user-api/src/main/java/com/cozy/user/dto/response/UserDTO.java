@@ -14,8 +14,12 @@ public class UserDTO implements Serializable {
     private String memberCode;
     private String phone;
     private String email;
+    private String birthday;
+    private java.time.LocalDateTime birthdaySetAt;
     private String inviteCode; // 用户专属邀请码（用于分享）
     private boolean hasAppliedInviteCode; // 是否已填写过邀请码
+    private String role; // 用户角色 user/admin
+    private String status; // 用户状态 active/disabled
     private LocalDateTime createdAt;
 
     // 会员信息（管理端用）

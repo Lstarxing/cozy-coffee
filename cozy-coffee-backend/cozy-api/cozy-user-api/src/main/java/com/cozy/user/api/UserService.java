@@ -37,4 +37,35 @@ public interface UserService {
      * 获取所有用户列表（管理端用）
      */
     java.util.List<UserDTO> listAllUsers();
+
+    /**
+     * 更新用户状态（管理端用）
+     * 
+     * @param userId 用户ID
+     * @param status 新状态 active/disabled
+     */
+    void updateUserStatus(Long userId, String status);
+
+    /**
+     * 获取用户详情（含会员信息）
+     */
+    UserDTO getUserDetail(Long userId);
+
+    /**
+     * 获取用户token版本号（用于校验Token是否失效）
+     */
+    Integer getTokenVersion(Long userId);
+
+    /**
+     * 获取指定月日生日的用户ID列表
+     */
+    java.util.List<Long> findUsersByBirthday(int month, int day);
+
+    /**
+     * v5.0: 被邀请人首单完成时触发邀请奖励发放
+     * 
+     * @param userId 被邀请人的用户ID
+     * @return 是否成功发放奖励（如果已发放过则返回false）
+     */
+    boolean grantInviteRewardOnFirstOrder(Long userId);
 }

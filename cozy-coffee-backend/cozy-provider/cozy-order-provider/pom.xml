@@ -28,6 +28,12 @@
             <artifactId>cozy-member-api</artifactId>
         </dependency>
 
+        <!-- v5.0: 用户服务API（用于首单邀请奖励） -->
+        <dependency>
+            <groupId>com.cozy</groupId>
+            <artifactId>cozy-user-api</artifactId>
+        </dependency>
+
         <!-- 公共模块 -->
         <dependency>
             <groupId>com.cozy</groupId>

@@ -18,7 +18,6 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
 public class AuthController {
 
     @DubboReference(check = false)
@@ -74,7 +73,7 @@ public class AuthController {
             return Result.success(null, "更新成功");
         } catch (Exception e) {
             log.error("更新资料失败", e);
-            return Result.fail(e.getMessage());
+            return Result.fail(friendlyErrorMessage(e, "更新资料"));
         }
     }
 
@@ -99,7 +98,13 @@ public class AuthController {
 
         // 处理常见数据库异常
         if (msg.contains("Duplicate entry") || msg.contains("账号已存在")) {
-            return "该账号已被注册，请换一个账号";
+            if (msg.contains("uk_phone") || msg.contains("phone")) {
+                return "该手机号已被其他账号绑定";
+            }
+            if (msg.contains("uk_email") || msg.contains("email")) {
+                return "该邮箱已被其他账号绑定";
+            }
+            return "该账号信息已存在，请核对后重试";
         }
         if (msg.contains("Connection refused") || msg.contains("timeout")) {
             return "服务繁忙，请稍后重试";
@@ -122,7 +127,7 @@ public class AuthController {
                 return Result.fail("用户未登录");
             }
             userService.applyInviteCode(userId, request.getInviteCode());
-            return Result.success(null, "邀请码填写成功！双方都已获得积分奖励");
+            return Result.success(null, "邀请码填写成功！");
         } catch (Exception e) {
             log.error("填写邀请码失败", e);
             return Result.fail(e.getMessage());

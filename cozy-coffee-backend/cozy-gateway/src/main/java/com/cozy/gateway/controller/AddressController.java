@@ -15,7 +15,6 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/api/member/addresses")
-@CrossOrigin(origins = "*")
 public class AddressController {
 
     @DubboReference(check = false)

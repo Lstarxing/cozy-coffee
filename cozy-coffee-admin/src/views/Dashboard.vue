@@ -1,234 +1,307 @@
 <template>
-  <div class="dashboard">
-    <!-- 统计卡片 -->
-    <el-row :gutter="20" class="stat-cards">
-      <el-col :span="6">
-        <div class="stat-card">
-          <div class="stat-icon users">
-            <el-icon><User /></el-icon>
-          </div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats.totalUsers }}</span>
-            <span class="stat-label">总用户数</span>
-          </div>
-        </div>
-      </el-col>
-      
-      <el-col :span="6">
-        <div class="stat-card">
-          <div class="stat-icon orders">
-            <el-icon><List /></el-icon>
-          </div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats.todayOrders }}</span>
-            <span class="stat-label">今日订单</span>
-          </div>
-        </div>
-      </el-col>
-      
-      <el-col :span="6">
-        <div class="stat-card">
-          <div class="stat-icon revenue">
-            <el-icon><TrendCharts /></el-icon>
-          </div>
-          <div class="stat-info">
-            <span class="stat-value">¥{{ stats.todayRevenue }}</span>
-            <span class="stat-label">今日营收</span>
-          </div>
-        </div>
-      </el-col>
-      
-      <el-col :span="6">
-        <div class="stat-card">
-          <div class="stat-icon pending">
-            <el-icon><Bell /></el-icon>
-          </div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats.pendingOrders }}</span>
-            <span class="stat-label">待处理订单</span>
-          </div>
-        </div>
-      </el-col>
-    </el-row>
-
-    <!-- 最近订单 -->
-    <el-card class="recent-orders">
-      <template #header>
-        <div class="card-header">
-          <span>最近订单</span>
-          <el-button text type="primary" @click="$router.push('/orders')">查看全部</el-button>
+  <div class="dashboard-page">
+    <AdminPageHeader title="控制台" subtitle="运营数据总览">
+      <template #extra>
+        <div class="header-controls">
+           <el-radio-group v-model="datePreset" size="small" @change="handlePresetChange">
+              <el-radio-button value="today">今天</el-radio-button>
+              <el-radio-button value="yesterday">昨日</el-radio-button>
+              <el-radio-button value="week">近7天</el-radio-button>
+              <el-radio-button value="month">近30天</el-radio-button>
+           </el-radio-group>
+           
+           <el-date-picker 
+             v-model="dateRange" 
+             type="daterange" 
+             range-separator="-" 
+             start-placeholder="开始" 
+             end-placeholder="结束" 
+             size="small"
+             value-format="YYYY-MM-DD"
+             style="width: 200px"
+             :clearable="false"
+             @change="handleDateChange"
+           />
+           
+           <el-divider direction="vertical" />
+           <span class="last-updated">更新于 {{ lastUpdated }}</span>
+           <el-button :icon="Refresh" circle size="small" @click="refreshData" :loading="loading" />
         </div>
       </template>
+    </AdminPageHeader>
+
+    <div class="dashboard-content" v-loading="loading && !stats.coffeeOrders"> <!-- Only block if init load -->
       
-      <el-table :data="recentOrders" v-loading="ordersLoading" style="width: 100%">
-        <el-table-column prop="orderNo" label="订单号" width="180" />
-        <el-table-column prop="productName" label="商品" />
-        <el-table-column prop="totalAmount" label="金额">
-          <template #default="{ row }">
-            ¥{{ row.totalAmount }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="pickupCode" label="取餐码" width="100">
-          <template #default="{ row }">
-            <el-tag v-if="row.pickupCode" type="warning" size="large">{{ row.pickupCode }}</el-tag>
-            <span v-else>-</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createdAt" label="时间" width="180">
-          <template #default="{ row }">
-            {{ formatDate(row.createdAt) }}
-          </template>  
-        </el-table-column>
-      </el-table>
-    </el-card>
+      <!-- KPI Tiles -->
+      <el-row :gutter="16">
+        <el-col :xs="24" :sm="12" :lg="6" class="mb-mobile">
+          <KpiTile 
+            label="总营收" 
+            :value="stats.coffeeRevenue" 
+            currency 
+            :icon="TrendCharts"
+            to="/orders"
+          >
+             <template #footer><span class="text-gray">仅统计咖啡订单</span></template>
+          </KpiTile>
+        </el-col>
+        <el-col :xs="24" :sm="12" :lg="6" class="mb-mobile">
+           <KpiTile label="咖啡订单" :value="stats.coffeeOrders" :icon="CoffeeCup" to="/orders">
+              <template #footer>笔</template>
+           </KpiTile>
+        </el-col>
+        <el-col :xs="24" :sm="12" :lg="6" class="mb-mobile">
+           <KpiTile label="兑换订单" :value="stats.redemptionOrders" :icon="Present" to="/redemptions">
+              <template #footer>笔</template>
+           </KpiTile>
+        </el-col>
+        <el-col :xs="24" :sm="12" :lg="6" class="mb-mobile">
+           <KpiTile label="积分消耗" :value="stats.pointsSpent" :icon="Star">
+              <template #footer>积分</template>
+           </KpiTile>
+        </el-col>
+      </el-row>
+
+      <!-- Charts Row 1 -->
+      <section class="dashboard-section">
+        <el-row :gutter="24">
+          <el-col :span="16">
+              <ChartCard title="营收与订单趋势" :body-height="320">
+                <template #actions>
+                    <el-radio-group v-model="trendGranularity" size="small" @change="loadTrend">
+                      <el-radio-button value="day">按日</el-radio-button>
+                      <el-radio-button value="hour">按时</el-radio-button>
+                    </el-radio-group>
+                </template>
+                <TrendChart :data="trendData" />
+              </ChartCard>
+          </el-col>
+          <el-col :span="8">
+              <ChartCard title="订单状态分布" :body-height="320">
+                  <template #actions>
+                    <el-select v-model="distDomain" size="small" style="width: 100px" @change="loadDistribution">
+                        <el-option label="咖啡" value="coffee" />
+                        <el-option label="兑换" value="redemption" />
+                    </el-select>
+                  </template>
+                  <StatusDonutChart :data="distributionData" />
+              </ChartCard>
+          </el-col>
+        </el-row>
+      </section>
+
+      <!-- Charts Row 2 -->
+      <section class="dashboard-section">
+        <el-row :gutter="24">
+          <el-col :span="12">
+              <ChartCard title="商品排行 TOP10" :body-height="320">
+                <template #actions>
+                    <el-select v-model="rankDomain" size="small" style="width: 90px" @change="loadRank">
+                        <el-option label="咖啡" value="coffee" />
+                        <el-option label="兑换" value="redemption" />
+                    </el-select>
+                    <el-select v-model="rankMetric" size="small" style="width: 90px" @change="loadRank">
+                        <el-option label="销量" value="count" />
+                        <el-option label="金额" value="amount" v-if="rankDomain==='coffee'" />
+                        <el-option label="积分" value="points" v-if="rankDomain==='redemption'" />
+                    </el-select>
+                </template>
+                <RankBarChart :data="rankData" />
+              </ChartCard>
+          </el-col>
+          <el-col :span="12">
+              <el-card shadow="never" class="recent-card">
+                <!-- Content handled by RecentActivity tabs -->
+                <RecentActivity ref="recentRef" />
+              </el-card>
+          </el-col>
+        </el-row>
+      </section>
+
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { getOrders, getUsers } from '../api'
+import { ref, reactive, onMounted, watch } from 'vue'
+import dayjs from 'dayjs'
+import { Refresh, TrendCharts, CoffeeCup, Present, Star } from '@element-plus/icons-vue'
+import { getDashboardStats, getAnalyticsTrend, getAnalyticsDistribution, getAnalyticsRank } from '../api'
 
-const stats = ref({
-  totalUsers: 0,
-  todayOrders: 0,
-  todayRevenue: 0,
-  pendingOrders: 0
-})
+import AdminPageHeader from '../components/ui/AdminPageHeader.vue'
+import KpiTile from '../components/dashboard/KpiTile.vue'
+import ChartCard from '../components/dashboard/ChartCard.vue'
+import TrendChart from '../components/dashboard/TrendChart.vue'
+import StatusDonutChart from '../components/dashboard/StatusDonutChart.vue'
+import RankBarChart from '../components/dashboard/RankBarChart.vue'
+import RecentActivity from '../components/dashboard/RecentActivity.vue'
 
-const recentOrders = ref([])
-const ordersLoading = ref(false)
+// State
+const loading = ref(false)
+const lastUpdated = ref('')
+const datePreset = ref('today')
+const dateRange = ref([]) // [start, end]
 
-const getStatusType = (status) => {
-  const map = { pending: 'warning', preparing: 'primary', completed: 'success', cancelled: 'info' }
-  return map[status] || 'info'
-}
+const stats = ref({ coffeeRevenue: 0, coffeeOrders: 0, redemptionOrders: 0, pointsSpent: 0 })
+const trendData = ref([])
+const trendGranularity = ref('hour')
 
-const getStatusText = (status) => {
-  const map = { pending: '待处理', preparing: '制作中', completed: '已完成', cancelled: '已取消' }
-  return map[status] || status
-}
+const distributionData = ref([])
+const distDomain = ref('coffee')
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-'
-  const d = new Date(dateStr)
-  return d.toLocaleString()
-}
+const rankData = ref([])
+const rankDomain = ref('coffee')
+const rankMetric = ref('count')
 
-const isToday = (dateStr) => {
-  if (!dateStr) return false
-  const d = new Date(dateStr)
-  const today = new Date()
-  return d.getFullYear() === today.getFullYear() &&
-         d.getMonth() === today.getMonth() &&
-         d.getDate() === today.getDate()
-}
+const recentRef = ref(null)
 
-const loadStats = async () => {
-  try {
-    // 获取用户数
-    const usersRes = await getUsers()
-    stats.value.totalUsers = (usersRes.data || []).length
-
-    // 获取订单统计
-    const ordersRes = await getOrders()
-    const allOrders = ordersRes.data || []
-    
-    // 今日订单（按创建时间筛选）
-    const todayOrders = allOrders.filter(o => isToday(o.createdAt))
-    stats.value.todayOrders = todayOrders.length
-    
-    // 今日营收（已完成的订单）
-    const todayRevenue = todayOrders
-      .filter(o => o.status !== 'cancelled')
-      .reduce((sum, o) => sum + parseFloat(o.totalAmount || 0), 0)
-    stats.value.todayRevenue = todayRevenue.toFixed(2)
-    
-    // 待处理订单
-    stats.value.pendingOrders = allOrders.filter(o => o.status === 'pending').length
-
-    // 最近5条订单（按时间倒序，createdAt为空时按id倒序）
-    recentOrders.value = allOrders
-      .sort((a, b) => {
-        if (a.createdAt && b.createdAt) {
-          return new Date(b.createdAt) - new Date(a.createdAt)
-        }
-        return (b.id || 0) - (a.id || 0)
-      })
-      .slice(0, 5)
-  } catch (e) {
-    console.error('加载统计失败:', e)
+// Date High-Level Logic
+const setPreset = (preset) => {
+  const end = dayjs()
+  let start = dayjs()
+  
+  if (preset === 'today') {
+     start = dayjs()
+     trendGranularity.value = 'hour' // Auto switch granularity
+  } else if (preset === 'yesterday') {
+     start = dayjs().subtract(1, 'day')
+     trendGranularity.value = 'hour'
+  } else if (preset === 'week') {
+     start = dayjs().subtract(6, 'day')
+     trendGranularity.value = 'day'
+  } else if (preset === 'month') {
+     start = dayjs().subtract(29, 'day')
+     trendGranularity.value = 'day'
+  }
+  
+  // Actually force the Yesterday case to be Start=Yesterday, End=Yesterday? 
+  // Dashboard usually "Until Now" or specific range. "Yesterday" implies 00:00-23:59 of yesterday.
+  if (preset === 'yesterday') {
+      dateRange.value = [start.format('YYYY-MM-DD'), start.format('YYYY-MM-DD')]
+  } else {
+      dateRange.value = [start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD')]
   }
 }
 
+const handlePresetChange = (val) => {
+   setPreset(val)
+   refreshData()
+}
+
+const handleDateChange = () => {
+   datePreset.value = '' // clear preset
+   refreshData()
+}
+
+// Data Fetching
+const refreshData = () => {
+   loadStats()
+   loadTrend()
+   loadDistribution()
+   loadRank()
+   recentRef.value?.loadData()
+   lastUpdated.value = dayjs().format('HH:mm:ss')
+}
+
+const getParams = () => ({
+  startDate: dateRange.value[0],
+  endDate: dateRange.value[1]
+})
+
+const loadStats = async () => {
+  console.log('[Dashboard] loadStats called, dateRange:', dateRange.value)
+  try {
+     const res = await getDashboardStats(dateRange.value[0], dateRange.value[1])
+     console.log('[Dashboard] stats response:', res)
+     stats.value = res.data || {}
+  } catch (e) {
+     console.error('[Dashboard] loadStats error:', e)
+  }
+}
+
+const loadTrend = async () => {
+  console.log('[Dashboard] loadTrend called')
+  try {
+     const res = await getAnalyticsTrend({
+        ...getParams(),
+        granularity: trendGranularity.value
+     })
+     console.log('[Dashboard] trend response:', res)
+     trendData.value = res.data || []
+  } catch (e) { console.error('[Dashboard] loadTrend error:', e) }
+}
+
+const loadDistribution = async () => {
+  console.log('[Dashboard] loadDistribution called')
+  try {
+     const res = await getAnalyticsDistribution({
+        ...getParams(),
+        domain: distDomain.value
+     })
+     console.log('[Dashboard] distribution response:', res)
+     distributionData.value = res.data || []
+  } catch (e) { console.error('[Dashboard] loadDistribution error:', e) }
+}
+
+const loadRank = async () => {
+   console.log('[Dashboard] loadRank called')
+   try {
+     const res = await getAnalyticsRank({
+        ...getParams(),
+        domain: rankDomain.value,
+        metric: rankMetric.value
+     })
+     console.log('[Dashboard] rank response:', res)
+     rankData.value = res.data || []
+   } catch (e) { console.error('[Dashboard] loadRank error:', e) }
+}
+
+// Init
 onMounted(() => {
-  loadStats()
+   console.log('[Dashboard] onMounted triggered')
+   setPreset('today')
+   refreshData()
 })
 </script>
 
-<style scoped>
-.dashboard {
-  padding: 0;
+<style scoped lang="scss">
+.dashboard-content {
+   display: flex;
+   flex-direction: column;
+   gap: 24px;
 }
 
-.stat-cards {
-  margin-bottom: 24px;
-}
-
-.stat-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
+.header-controls {
   display: flex;
   align-items: center;
-  gap: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  gap: 12px;
 }
 
-.stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: #fff;
+.last-updated {
+  font-size: 12px;
+  color: #9CA3AF;
 }
 
-.stat-icon.users { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-.stat-icon.orders { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-.stat-icon.revenue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-.stat-icon.pending { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+.text-gray { color: #9CA3AF; font-size: 12px; }
 
-.stat-info {
-  display: flex;
-  flex-direction: column;
+@media (max-width: 992px) {
+  .mb-mobile { margin-bottom: 24px; }
 }
 
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: #333;
+/* 关键：section 隔离，抵御 el-row gutter 负 margin 外溢 */
+.dashboard-section {
+  display: flow-root; /* 清除浮动并创建 BFC */
+  position: relative;
+  isolation: isolate; /* 隔离层叠上下文 */
 }
 
-.stat-label {
-  font-size: 14px;
-  color: #999;
-  margin-top: 4px;
-}
-
-.recent-orders {
-  border-radius: 12px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.recent-card {
+  height: 100%;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  
+  :deep(.el-card__body) {
+     padding: 0;
+  }
 }
 </style>

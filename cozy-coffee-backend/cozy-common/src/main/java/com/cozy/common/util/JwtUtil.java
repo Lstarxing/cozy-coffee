@@ -20,9 +20,9 @@ public class JwtUtil {
     private static final long EXPIRATION_TIME = 7 * 24 * 60 * 60 * 1000;
 
     /**
-     * 生成JWT Token（包含角色信息）
+     * 生成JWT Token（包含角色信息和Token版本号）
      */
-    public static String generateToken(Long userId, String username, String role) {
+    public static String generateToken(Long userId, String username, String role, Integer tokenVersion) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + EXPIRATION_TIME);
 
@@ -30,10 +30,18 @@ public class JwtUtil {
                 .setSubject(userId.toString())
                 .claim("username", username)
                 .claim("role", role != null ? role : "user")
+                .claim("tokenVersion", tokenVersion != null ? tokenVersion : 0)
                 .setIssuedAt(now)
                 .setExpiration(expiration)
                 .signWith(KEY, SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    /**
+     * 生成JWT Token（向后兼容，不传tokenVersion）
+     */
+    public static String generateToken(Long userId, String username, String role) {
+        return generateToken(userId, username, role, 0);
     }
 
     /**
@@ -69,6 +77,15 @@ public class JwtUtil {
         Claims claims = parseToken(token);
         String role = claims.get("role", String.class);
         return role != null ? role : "user";
+    }
+
+    /**
+     * 从Token中获取Token版本号
+     */
+    public static Integer getTokenVersionFromToken(String token) {
+        Claims claims = parseToken(token);
+        Integer version = claims.get("tokenVersion", Integer.class);
+        return version != null ? version : 0;
     }
 
     /**

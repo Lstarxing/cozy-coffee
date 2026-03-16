@@ -1,0 +1,61 @@
+/**
+ * 全局 SCSS 变量定义 (Premium Design System)
+ * 
+ * 设计规范：
+ * - 主色调: 拿铁金 #C69C6D
+ * - 辅助色: 深咖 #2C1810
+ * - 背景色: 暖白 #F8F5F2
+ */
+
+// ==================== 品牌色彩 ====================
+$primary-color: #C69C6D; // 拿铁金 - 核心按钮、高亮
+$primary-light: #E8D4B8; // 浅拿铁 - 辅助背景
+$primary-dark: #A67C4E; // 深拿铁 - 点击态
+$secondary-color: #2C1810; // 深咖 - 重要标题
+
+// ==================== 背景色 ====================
+$bg-color: #F8F5F2; // 全局暖白背景
+$bg-white: #FFFFFF; // 卡片纯白背景
+$bg-gray: #F5F5F5; // 浅灰辅助背景
+$bg-overlay: rgba(0, 0, 0, 0.4); // 遮罩层
+
+// ==================== 文字色 ====================
+$text-main: #2C1810; // 主文字 - 深咖
+$text-sub: #666666; // 次要文字 - 灰黑
+$text-placeholder: #999999; // 占位符
+$text-white: #FFFFFF; // 反白文字
+
+// ==================== 功能色 ====================
+$success-color: #52C41A;
+$warning-color: #FAAD14;
+$error-color: #FF4D4F;
+$info-color: #1890FF;
+
+// ==================== 形状与质感 ====================
+$border-color: #EEEEEE;
+$card-radius: 24rpx; // 标准卡片圆角
+$card-radius-lg: 32rpx; // 大卡片圆角
+$box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.06); // 柔和微影
+$glass-blur: blur(20rpx); // 毛玻璃效果 (仅H5有效)
+
+// ==================== 间距 ====================
+$spacing-xs: 8rpx;
+$spacing-sm: 16rpx;
+$spacing-md: 24rpx;
+$spacing-lg: 32rpx;
+$spacing-xl: 48rpx;
+$spacing-xxl: 64rpx;
+
+// ==================== 字体大小 ====================
+$font-size-xs: 20rpx;
+$font-size-sm: 24rpx;
+$font-size-md: 28rpx;
+$font-size-lg: 32rpx;
+$font-size-xl: 36rpx;
+$font-size-xxl: 44rpx;
+$font-size-mega: 60rpx; // 特大数字
+
+// ==================== 布局安全区 ====================
+$nav-height: 88rpx; // 导航栏高度
+$status-bar-height: var(--status-bar-height); // 状态栏高度
+$safe-bottom: env(safe-area-inset-bottom); // 底部安全区

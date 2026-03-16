@@ -32,9 +32,10 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
                 if (JwtUtil.validateToken(token)) {
                     Long userId = JwtUtil.getUserIdFromToken(token);
                     String role = JwtUtil.getRoleFromToken(token);
-                    // 将用户ID和角色放入上下文
+                    // 将用户ID和角色放入上下文，并设置到请求属性中以兼容某些控制器
                     UserContext.setUserId(userId);
                     UserContext.setRole(role);
+                    request.setAttribute("userId", userId);
                     log.debug("JwtAuthInterceptor - Token valid, userId: {}, role: {}", userId, role);
                 } else {
                     log.warn("JwtAuthInterceptor - Token validation failed");

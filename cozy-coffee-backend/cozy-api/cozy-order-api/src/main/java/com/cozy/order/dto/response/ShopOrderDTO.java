@@ -5,23 +5,66 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+/**
+ * 订单 DTO（支持多商品）
+ */
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ShopOrderDTO implements Serializable {
     private static final long serialVersionUID = 1L;
+
+    // 订单基础信息
     private Long id;
     private String orderNo;
-    private Long productId;
-    private String productName;
-    private Integer quantity;
-    private BigDecimal unitPrice;
-    private BigDecimal totalAmount;
-    private Integer pointsEarned;
-    private BigDecimal pointsMultiplier;
+    private Long userId;
     private String status;
     private LocalDateTime createdAt;
-
-    // 取餐码相关
-    private String pickupCode;
+    private LocalDateTime updatedAt;
+    private Long storeId;
     private LocalDate businessDate;
+
+    // 用户信息（仅详情接口返回）
+    private String username;
+    private String nickname;
+    private String phoneMasked;
+    private String memberLevel; // v5.0: 会员等级 (basic, silver, gold, diamond, black)
+
+    // 取餐信息
+    private String pickupCode;
+    private LocalDateTime pickupCodeGeneratedAt;
+    private String diningMethod;
+
+    // 金额信息
+    private BigDecimal totalAmount;
+    private BigDecimal discountAmount;
+    private BigDecimal payAmount;
+    private Integer totalQuantity;
+
+    // 券信息
+    private Long appliedCouponId;
+
+    // 商品摘要（列表展示用，如"美式x2,拿铁x1"）
+    private String itemsSummary;
+
+    // 商品明细（详情接口返回）
+    private List<ShopOrderItemDTO> items;
+
+    // 备注
+    private String remark;
+
+    // 积分信息
+    private Integer expEarned;
+    private Integer pointsEarned;
+    private BigDecimal pointsMultiplier;
+    private Boolean rewardsGranted;
+
+    // v5.3: 配送费相关
+    private BigDecimal deliveryFee; // 原始配送费金额
+    private Boolean deliveryFeeWaived; // 配送费是否已减免
+    private String deliveryFeeWaivedReason; // 减免原因 (BLACK_GOLD_UNLIMITED / COUPON)
+
 }

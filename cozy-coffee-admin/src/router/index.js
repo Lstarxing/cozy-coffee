@@ -25,10 +25,27 @@ const routes = [
                 meta: { title: '用户管理' }
             },
             {
+                path: 'users/:id',
+                name: 'UserDetail',
+                component: () => import('../views/UserDetail.vue'),
+                meta: { title: '用户详情' }
+            },
+            {
                 path: 'products',
-                name: 'Products',
-                component: () => import('../views/Products.vue'),
+                redirect: '/products/coffee',
                 meta: { title: '商品管理' }
+            },
+            {
+                path: 'products/coffee',
+                name: 'CoffeeProducts',
+                component: () => import('../views/Products.vue'),
+                meta: { title: '咖啡菜单' }
+            },
+            {
+                path: 'products/points',
+                name: 'PointsProducts',
+                component: () => import('../views/Products.vue'),
+                meta: { title: '积分商品' }
             },
             {
                 path: 'orders',

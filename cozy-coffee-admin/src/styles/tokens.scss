@@ -1,0 +1,62 @@
+/* 
+  CozyCoffee Admin Design Tokens 
+  v1.1 (Enterprise Style)
+*/
+
+// --- Colors ---
+$color-primary: #8B5E3C;
+$color-bg: #F9FAFB;
+$color-surface: #FFFFFF;
+$color-text-primary: #111827;
+$color-text-secondary: #6B7280;
+$color-border: #E5E7EB;
+
+// Status Colors
+$color-success-bg: #F0FDF4;
+$color-success-text: #166534;
+
+$color-warning-bg: #FEFCE8;
+$color-warning-text: #854D0E;
+
+$color-danger-bg: #FEF2F2;
+$color-danger-text: #991B1B;
+
+$color-info-bg: #EFF6FF;
+$color-info-text: #1E40AF;
+
+$color-neutral-bg: #F3F4F6;
+$color-neutral-text: #374151;
+
+// --- Typography ---
+$font-family: 'Inter', system-ui, -apple-system, sans-serif;
+
+$font-size-h1: 20px;
+$line-height-h1: 28px;
+$font-weight-h1: 600;
+
+$font-size-h2: 16px;
+$line-height-h2: 24px;
+$font-weight-h2: 600;
+
+$font-size-body: 14px;
+$line-height-body: 20px;
+
+$font-size-small: 12px;
+$line-height-small: 18px;
+
+// --- Spacing ---
+$spacing-xs: 8px;
+$spacing-sm: 12px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+$page-padding: $spacing-lg;
+
+// --- Layout ---
+$sidebar-width: 240px;
+$topbar-height: 64px;
+$radius-base: 6px;
+
+// --- Shadows ---
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);

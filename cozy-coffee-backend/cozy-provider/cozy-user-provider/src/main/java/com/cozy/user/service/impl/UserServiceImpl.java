@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +30,10 @@ public class UserServiceImpl implements UserService {
     @DubboReference(check = false, timeout = 60000)
     private MemberService memberService;
 
+    // v5.0: 用于发放邀请奖励券
+    @DubboReference(check = false, timeout = 60000)
+    private com.cozy.member.api.PointsMallService pointsMallService;
+
     @Override
     @Transactional
     public void register(RegisterRequest request) {
@@ -45,9 +48,15 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("密码长度不能少于6位");
         }
 
+        // v4.2: 校验username格式必须是手机号或邮箱
+        String username = request.getUsername().trim();
+        if (!isPhone(username) && !isEmail(username)) {
+            throw new RuntimeException("账号格式不正确,请使用手机号或邮箱注册");
+        }
+
         // 检查用户名是否已存在
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(User::getUsername, request.getUsername().trim());
+        wrapper.eq(User::getUsername, username);
         if (userMapper.selectCount(wrapper) > 0) {
             throw new RuntimeException("该账号已被注册，请换一个账号");
         }
@@ -56,7 +65,7 @@ public class UserServiceImpl implements UserService {
         String inviteCode = generateInviteCode();
 
         User user = new User();
-        user.setUsername(request.getUsername().trim());
+        user.setUsername(username);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setMemberCode(memberCode);
         user.setInviteCode(inviteCode); // 生成用户专属邀请码
@@ -65,10 +74,10 @@ public class UserServiceImpl implements UserService {
                 : "COZY-" + memberCode);
         user.setAvatar("/images/default-avatar.png");
 
-        if (isPhone(request.getUsername())) {
-            user.setPhone(request.getUsername());
-        } else if (isEmail(request.getUsername())) {
-            user.setEmail(request.getUsername());
+        if (isPhone(username)) {
+            user.setPhone(username);
+        } else if (isEmail(username)) {
+            user.setEmail(username);
         }
 
         // 如果填写了邀请码，在插入用户前验证有效性
@@ -91,9 +100,20 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        userMapper.insert(user);
+        try {
+            userMapper.insert(user);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            String msg = e.getMessage();
+            if (msg.contains("uk_phone")) {
+                throw new RuntimeException("该手机号已被其他账号绑定");
+            } else if (msg.contains("uk_email")) {
+                throw new RuntimeException("该邮箱已被其他账号绑定");
+            } else {
+                throw new RuntimeException("账号信息已存在");
+            }
+        }
 
-        // 处理注册时填写的邀请码奖励（如果存在）
+        // v5.0: 处理注册时填写的邀请码（仅记录关系，不立即发放奖励）
         if (inviter != null) {
             final Long newUserId = user.getId();
             final Long inviterId = inviter.getId();
@@ -101,36 +121,27 @@ public class UserServiceImpl implements UserService {
             // 更新当前用户的邀请人信息
             user.setInvitedBy(inviterId);
             user.setInvitedAt(java.time.LocalDateTime.now());
+            user.setInviteRewardGranted(false); // 标记奖励待首单完成后发放
             userMapper.updateById(user);
 
-            // 异步发放积分奖励
-            CompletableFuture.runAsync(() -> {
-                try {
-                    // 邀请人获得奖励
-                    memberService.addPoints(inviterId, INVITER_REWARD_POINTS,
-                            "invite", "邀请好友注册奖励");
-
-                    // 被邀请人获得奖励
-                    memberService.addPoints(newUserId, INVITEE_REWARD_POINTS,
-                            "invited", "填写好友邀请码奖励");
-
-                    log.info("注册邀请奖励发放成功: inviter={}, invitee={}", inviterId, newUserId);
-                } catch (Exception e) {
-                    log.error("注册邀请奖励发放失败: {}", e.getMessage());
-                }
-            });
+            log.info("注册邀请关系绑定成功: inviter={}, invitee={}。奖励将在被邀请人首单完成时发放。", inviterId, newUserId);
         }
         log.info("用户注册成功: userId={}, username={}", user.getId(), user.getUsername());
 
-        // 异步创建会员信息，不阻塞注册流程
+        // 异步创建会员信息及发放新用户福利，不阻塞注册流程
         final Long userId = user.getId();
         CompletableFuture.runAsync(() -> {
             try {
+                // 1. 创建会员基础信息
                 memberService.createMember(userId);
                 log.info("会员信息创建成功: userId={}", userId);
+
+                // 2. 发放新用户礼包：首单五折券（有效期7天，饮品专用）
+                if (pointsMallService != null) {
+                    pointsMallService.issueNewUserCoupon(userId);
+                }
             } catch (Exception e) {
-                log.error("创建会员信息失败: userId={}, error={}", userId, e.getMessage());
-                // 会员信息创建失败不影响用户注册，可以后续补偿
+                log.error("执行注册后续逻辑失败: userId={}, error={}", userId, e.getMessage());
             }
         });
     }
@@ -149,12 +160,17 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("账号不存在");
         }
 
+        // 检查用户状态
+        if ("disabled".equals(user.getStatus())) {
+            throw new RuntimeException("账号已被禁用，请联系管理员");
+        }
+
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("密码错误");
         }
 
         log.info("用户登录成功: userId={}, username={}, role={}", user.getId(), user.getUsername(), user.getRole());
-        return JwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
+        return JwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole(), user.getTokenVersion());
     }
 
     @Override
@@ -203,25 +219,72 @@ public class UserServiceImpl implements UserService {
             hasUpdate = true;
         }
         if (request.getPhone() != null) {
-            if (!request.getPhone().isEmpty() && !isPhone(request.getPhone())) {
-                throw new RuntimeException("手机号格式不正确");
+            String newPhone = request.getPhone().trim();
+            if (!newPhone.isEmpty()) {
+                if (!isPhone(newPhone)) {
+                    throw new RuntimeException("手机号格式不正确");
+                }
+                // v4.2: 检查手机号唯一性（排除当前用户）
+                if (!newPhone.equals(user.getPhone())) {
+                    LambdaQueryWrapper<User> phoneWrapper = new LambdaQueryWrapper<>();
+                    phoneWrapper.eq(User::getPhone, newPhone)
+                            .ne(User::getId, userId);
+                    if (userMapper.selectCount(phoneWrapper) > 0) {
+                        throw new RuntimeException("该手机号已被其他账号绑定");
+                    }
+                }
             }
             // 检查是否首次填写手机号
-            if ((user.getPhone() == null || user.getPhone().isEmpty()) && !request.getPhone().isEmpty()) {
+            if ((user.getPhone() == null || user.getPhone().isEmpty()) && !newPhone.isEmpty()) {
                 isFirstPhone = true;
             }
-            user.setPhone(request.getPhone());
+            user.setPhone(newPhone);
             hasUpdate = true;
         }
         if (request.getEmail() != null) {
-            if (!request.getEmail().isEmpty() && !isEmail(request.getEmail())) {
-                throw new RuntimeException("邮箱格式不正确");
+            String newEmail = request.getEmail().trim();
+            if (!newEmail.isEmpty()) {
+                if (!isEmail(newEmail)) {
+                    throw new RuntimeException("邮箱格式不正确");
+                }
+                // v4.2: 检查邮箱唯一性（排除当前用户）
+                if (!newEmail.equals(user.getEmail())) {
+                    LambdaQueryWrapper<User> emailWrapper = new LambdaQueryWrapper<>();
+                    emailWrapper.eq(User::getEmail, newEmail)
+                            .ne(User::getId, userId);
+                    if (userMapper.selectCount(emailWrapper) > 0) {
+                        throw new RuntimeException("该邮箱已被其他账号绑定");
+                    }
+                }
             }
             // 检查是否首次填写邮箱
-            if ((user.getEmail() == null || user.getEmail().isEmpty()) && !request.getEmail().isEmpty()) {
+            if ((user.getEmail() == null || user.getEmail().isEmpty()) && !newEmail.isEmpty()) {
                 isFirstEmail = true;
             }
-            user.setEmail(request.getEmail());
+            user.setEmail(newEmail);
+            hasUpdate = true;
+        }
+
+        // v4.2 生日设置逻辑
+        if (request.getBirthday() != null) {
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+
+            // 检查是否允许修改
+            if (user.getBirthdaySetAt() != null) {
+                if (user.getNextBirthdayResetAt() != null && now.isBefore(user.getNextBirthdayResetAt())) {
+                    throw new RuntimeException("生日每年只能修改一次，下次可修改时间: " +
+                            user.getNextBirthdayResetAt().toLocalDate());
+                }
+            }
+
+            // 如果原来的生日是空的，不算修改，而是初始化
+            if (user.getBirthday() == null) {
+                // 首次设置
+            }
+
+            user.setBirthday(java.time.LocalDate.parse(request.getBirthday()));
+            user.setBirthdaySetAt(now);
+            user.setNextBirthdayResetAt(now.plusYears(1));
             hasUpdate = true;
         }
 
@@ -229,7 +292,18 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("没有需要更新的内容");
         }
 
-        userMapper.updateById(user);
+        try {
+            userMapper.updateById(user);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            String msg = e.getMessage();
+            if (msg.contains("uk_phone")) {
+                throw new RuntimeException("该手机号已被其他账号绑定");
+            } else if (msg.contains("uk_email")) {
+                throw new RuntimeException("该邮箱已被其他账号绑定");
+            } else {
+                throw new RuntimeException("更新失败，信息可能重复");
+            }
+        }
         log.info("用户资料更新成功: userId={}", userId);
 
         // 检查是否首次完成手机号+邮箱的完善（只有两者都填写才奖励50积分）
@@ -241,10 +315,27 @@ public class UserServiceImpl implements UserService {
         if (shouldReward) {
             CompletableFuture.runAsync(() -> {
                 try {
-                    memberService.addPoints(userId, 50, "profile", "完善个人资料（手机号+邮箱）奖励");
+                    memberService.addPoints(userId, 20, "profile", "完善个人资料（手机号+邮箱）奖励");
                     log.info("完善资料奖励积分: userId={}", userId);
                 } catch (Exception e) {
                     log.error("完善资料奖励积分失败: userId={}, error={}", userId, e.getMessage());
+                }
+            });
+        }
+
+        // v4.2: 设置生日后立即发放生日权益包
+        if (request.getBirthday() != null) {
+            final Long uid = userId;
+            CompletableFuture.runAsync(() -> {
+                try {
+                    boolean granted = memberService.grantBirthdayReward(uid);
+                    if (granted) {
+                        log.info("生日权益包发放成功: userId={}", uid);
+                    } else {
+                        log.info("生日权益包已领取过: userId={}", uid);
+                    }
+                } catch (Exception e) {
+                    log.error("生日权益包发放失败: userId={}, error={}", uid, e.getMessage());
                 }
             });
         }
@@ -261,7 +352,12 @@ public class UserServiceImpl implements UserService {
         dto.setEmail(user.getEmail());
         dto.setInviteCode(user.getInviteCode()); // 用户的邀请码（用于分享）
         dto.setHasAppliedInviteCode(user.getInvitedBy() != null); // 是否已填写过邀请码
+        dto.setRole(user.getRole());
+        dto.setStatus(user.getStatus());
         dto.setCreatedAt(user.getCreatedAt());
+        // v4.2 生日权益
+        dto.setBirthday(user.getBirthday() != null ? user.getBirthday().toString() : null);
+        dto.setBirthdaySetAt(user.getBirthdaySetAt());
         return dto;
     }
 
@@ -298,8 +394,6 @@ public class UserServiceImpl implements UserService {
     // ========== 邀请码功能实现 ==========
 
     // 邀请积分配置
-    private static final int INVITER_REWARD_POINTS = 150; // 邀请人奖励
-    private static final int INVITEE_REWARD_POINTS = 80; // 被邀请人奖励
 
     @Override
     @Transactional
@@ -346,26 +440,13 @@ public class UserServiceImpl implements UserService {
         // 5. 更新当前用户的邀请人信息
         currentUser.setInvitedBy(inviter.getId());
         currentUser.setInvitedAt(java.time.LocalDateTime.now());
+        currentUser.setInviteRewardGranted(false); // v5.0: 标记奖励未发放，等待首单触发
         userMapper.updateById(currentUser);
 
-        log.info("用户 {} 填写邀请码成功，邀请人: {}", userId, inviter.getId());
+        log.info("用户 {} 填写邀请码成功，邀请人: {}。奖励将在被邀请人首单完成时发放。", userId, inviter.getId());
 
-        // 6. 发放邀请奖励积分（异步，避免影响主流程）
-        CompletableFuture.runAsync(() -> {
-            try {
-                // 邀请人获得奖励
-                memberService.addPoints(inviter.getId(), INVITER_REWARD_POINTS,
-                        "invite", "邀请好友加入奖励");
-                log.info("邀请人 {} 获得 {} 积分奖励", inviter.getId(), INVITER_REWARD_POINTS);
-
-                // 被邀请人获得奖励
-                memberService.addPoints(userId, INVITEE_REWARD_POINTS,
-                        "invited", "填写有效邀请码奖励");
-                log.info("被邀请人 {} 获得 {} 积分奖励", userId, INVITEE_REWARD_POINTS);
-            } catch (Exception e) {
-                log.error("发放邀请积分失败: {}", e.getMessage());
-            }
-        });
+        // v5.0: 不再立即发放奖励，改为在被邀请人首单完成时发放
+        // 详见 OrderServiceImpl.completeOrder() 中的 grantInviteRewardOnFirstOrder() 调用
     }
 
     @Override
@@ -403,4 +484,136 @@ public class UserServiceImpl implements UserService {
             return dto;
         }).collect(java.util.stream.Collectors.toList());
     }
+
+    @Override
+    @Transactional
+    public void updateUserStatus(Long userId, String status) {
+        if (userId == null) {
+            throw new RuntimeException("用户ID不能为空");
+        }
+        if (!"active".equals(status) && !"disabled".equals(status)) {
+            throw new RuntimeException("无效的用户状态");
+        }
+
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        String oldStatus = user.getStatus();
+        user.setStatus(status);
+
+        // 如果是禁用操作，递增tokenVersion使所有Token失效
+        if ("disabled".equals(status)) {
+            user.setTokenVersion(user.getTokenVersion() + 1);
+            log.info("用户 {} 被禁用，tokenVersion递增到 {}", userId, user.getTokenVersion());
+        }
+
+        userMapper.updateById(user);
+        log.info("用户状态更新: userId={}, {} -> {}", userId, oldStatus, status);
+    }
+
+    @Override
+    public UserDTO getUserDetail(Long userId) {
+        if (userId == null) {
+            throw new RuntimeException("用户ID不能为空");
+        }
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        UserDTO dto = toDTO(user);
+
+        // 获取会员信息
+        try {
+            com.cozy.member.dto.response.MemberDTO memberInfo = memberService.getMemberByUserId(userId);
+            if (memberInfo != null) {
+                dto.setMemberLevel(memberInfo.getMemberLevel());
+                dto.setCurrentPoints(memberInfo.getCurrentPoints());
+                dto.setTotalPoints(memberInfo.getTotalPoints());
+            }
+        } catch (Exception e) {
+            dto.setMemberLevel("basic");
+            dto.setCurrentPoints(0);
+            dto.setTotalPoints(0);
+        }
+
+        return dto;
+    }
+
+    @Override
+    public Integer getTokenVersion(Long userId) {
+        if (userId == null) {
+            return 0;
+        }
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            return 0;
+        }
+        return user.getTokenVersion() != null ? user.getTokenVersion() : 0;
+    }
+
+    @Override
+    public java.util.List<Long> findUsersByBirthday(int month, int day) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        // 使用MySQL函数提取月日
+        wrapper.apply("MONTH(birthday) = {0} AND DAY(birthday) = {1}", month, day);
+        wrapper.select(User::getId);
+        return userMapper.selectObjs(wrapper).stream()
+                .map(obj -> (Long) obj)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public boolean grantInviteRewardOnFirstOrder(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            return false;
+        }
+
+        // 检查是否有邀请人
+        if (user.getInvitedBy() == null) {
+            log.debug("用户 {} 没有邀请人，跳过首单奖励", userId);
+            return false;
+        }
+
+        // 检查奖励是否已发放
+        if (Boolean.TRUE.equals(user.getInviteRewardGranted())) {
+            log.debug("用户 {} 的邀请奖励已发放过，跳过", userId);
+            return false;
+        }
+
+        Long inviterId = user.getInvitedBy();
+        log.info("用户 {} 完成首单，准备为邀请人 {} 发放买一送一券", userId, inviterId);
+
+        try {
+            // 发放买一送一券给邀请人
+            if (pointsMallService != null) {
+                String inviteKey = "invite_firstorder_" + userId + "_" + inviterId;
+                pointsMallService.issueCouponToUser(inviterId, "BOGO",
+                        inviteKey, 0, 40, 30); // 买一送一券，最高抵扣40元，有效期30天
+                log.info("邀请人 {} 获得买一送一券奖励（被邀请人 {} 首单）", inviterId, userId);
+            } else {
+                log.error("券服务不可用，无法为邀请人 {} 发放首单奖励", inviterId);
+                return false;
+            }
+
+            // 标记奖励已发放
+            user.setInviteRewardGranted(true);
+            userMapper.updateById(user);
+
+            return true;
+        } catch (Exception e) {
+            log.error("发放首单邀请奖励失败: userId={}, inviterId={}, error={}",
+                    userId, inviterId, e.getMessage());
+            return false;
+        }
+    }
+
 }

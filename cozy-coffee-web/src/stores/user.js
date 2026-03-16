@@ -95,9 +95,12 @@ export const useUserStore = defineStore('user', () => {
             })
             const data = await response.json()
             if (data.success && data.data) {
+                // 排除积分和等级字段，防止Auth接口返回空值覆盖Member接口的数据
+                const { currentPoints, totalPoints, memberLevel, level, expTotal, ...authData } = data.data
+
                 userInfo.value = {
                     ...userInfo.value,
-                    ...data.data,
+                    ...authData,
                     // 映射可能的字段名差异
                     signInDays: data.data.signInDays || userInfo.value?.signInDays || 0,
                     hasAppliedInviteCode: data.data.hasAppliedInviteCode !== undefined ? data.data.hasAppliedInviteCode : (userInfo.value?.hasAppliedInviteCode || false)
@@ -128,10 +131,12 @@ export const useUserStore = defineStore('user', () => {
                     ...data.data,
                     level: data.data.memberLevel || userInfo.value?.level || 'basic',
                     memberLevel: data.data.memberLevel || userInfo.value?.memberLevel || 'basic',
-                    signInDays: data.data.consecutiveSignDays || userInfo.value?.signInDays || 0
+                    signInDays: data.data.consecutiveSignDays || userInfo.value?.signInDays || 0,
+                    expTotal: data.data.expTotal || 0,
+                    expiringPoints: data.data.expiringPoints || 0
                 }
                 localStorage.setItem('userInfo', JSON.stringify(userInfo.value))
-                console.log('Member info updated:', userInfo.value.memberLevel)
+                console.log('Member info updated:', userInfo.value.memberLevel, 'EXP:', userInfo.value.expTotal)
             }
         } catch (error) {
             console.error('Failed to fetch member info:', error)

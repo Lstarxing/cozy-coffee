@@ -44,6 +44,11 @@ public interface OrderService {
     // ==================== 管理端方法 ====================
 
     /**
+     * 获取订单详情（管理端，含完整信息）
+     */
+    ShopOrderDTO getOrderDetail(Long orderId);
+
+    /**
      * 获取所有订单列表（管理端用）
      */
     List<ShopOrderDTO> listAllOrders(String status);
@@ -56,6 +61,13 @@ public interface OrderService {
      * @return 更新后的订单
      */
     ShopOrderDTO updateOrderStatus(Long orderId, String status);
+
+    /**
+     * 获取各状态订单数量（管理端用）
+     * 
+     * @return status -> count
+     */
+    java.util.Map<String, Long> getOrderStatusCounts();
 
     /**
      * 接单（生成取餐码，状态改为preparing）
@@ -110,4 +122,9 @@ public interface OrderService {
      * 切换商品上下架状态
      */
     CoffeeProductDTO toggleProductStatus(Long productId);
+
+    /**
+     * 获取用户月度订单统计数据（v5.0 任务用）
+     */
+    com.cozy.order.dto.response.MonthlyStatsDTO getMonthlyStats(Long userId);
 }

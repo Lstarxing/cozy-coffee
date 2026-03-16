@@ -2,11 +2,13 @@ package com.cozy.gateway.controller;
 
 import com.cozy.common.result.Result;
 import com.cozy.common.context.UserContext;
+import com.cozy.gateway.sse.SseEventPublisher;
 import com.cozy.member.api.MemberService;
 import com.cozy.order.api.OrderService;
 import com.cozy.order.dto.request.CreateOrderRequest;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.web.bind.annotation.*;
@@ -20,8 +22,10 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/api/order")
-@CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class OrderController {
+
+    private final SseEventPublisher sseEventPublisher;
 
     @DubboReference(check = false)
     private OrderService orderService;
@@ -62,6 +66,8 @@ public class OrderController {
      */
     @PostMapping("/create")
     public Result<ShopOrderDTO> createOrder(@RequestBody CreateOrderRequest request) {
+        log.info("网关收到创建订单请求: userId={}, itemsCount={}",
+                UserContext.getUserIdOrNull(), request.getItems() != null ? request.getItems().size() : 0);
         try {
             Long userId = UserContext.getUserIdOrNull();
             if (userId == null) {
@@ -78,6 +84,14 @@ public class OrderController {
                 log.warn("获取会员等级失败，使用默认等级", e);
             }
             ShopOrderDTO order = orderService.createOrder(userId, memberLevel, request);
+
+            // 发布 SSE 事件通知管理端
+            try {
+                sseEventPublisher.publishNewOrder(order.getId(), order.getOrderNo());
+            } catch (Exception e) {
+                log.warn("发布新订单 SSE 事件失败", e);
+            }
+
             return Result.success(order, "下单成功！获得 " + order.getPointsEarned() + " 积分");
         } catch (Exception e) {
             log.error("创建订单失败", e);
@@ -117,6 +131,24 @@ public class OrderController {
             return Result.success(order);
         } catch (Exception e) {
             log.error("获取订单详情失败", e);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * 取消订单
+     */
+    @PostMapping("/{id}/cancel")
+    public Result<ShopOrderDTO> cancelOrder(@PathVariable Long id) {
+        try {
+            Long userId = UserContext.getUserIdOrNull();
+            if (userId == null) {
+                return Result.fail("用户未登录");
+            }
+            ShopOrderDTO order = orderService.cancelUserOrder(id, userId);
+            return Result.success(order, "订单已取消");
+        } catch (Exception e) {
+            log.error("取消订单失败", e);
             return Result.fail(e.getMessage());
         }
     }
