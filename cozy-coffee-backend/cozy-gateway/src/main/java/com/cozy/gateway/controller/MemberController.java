@@ -3,8 +3,10 @@ package com.cozy.gateway.controller;
 import com.cozy.common.context.UserContext;
 import com.cozy.common.result.Result;
 import com.cozy.member.api.MemberService;
+import com.cozy.member.api.MonthlyTaskService;
 import com.cozy.member.api.SigninService;
 import com.cozy.member.dto.response.MemberDTO;
+import com.cozy.member.dto.response.MonthlyTaskDTO;
 import com.cozy.member.dto.response.SigninResultDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -13,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequestMapping("/api/member")
-@CrossOrigin(origins = "*")
 public class MemberController {
 
     @DubboReference(check = false)
@@ -21,6 +22,9 @@ public class MemberController {
 
     @DubboReference(check = false)
     private SigninService signinService;
+
+    @DubboReference(check = false)
+    private MonthlyTaskService monthlyTaskService;
 
     @GetMapping("/info")
     public Result<MemberDTO> getMemberInfo() {
@@ -115,6 +119,90 @@ public class MemberController {
             return Result.success(transactions);
         } catch (Exception e) {
             log.error("获取积分流水失败", e);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * v4.2: 获取当月任务进度
+     */
+    @GetMapping("/monthly-task")
+    public Result<MonthlyTaskDTO> getMonthlyTask() {
+        try {
+            Long userId = UserContext.getUserIdOrNull();
+            if (userId == null) {
+                return Result.fail("用户未登录");
+            }
+            MonthlyTaskDTO task = monthlyTaskService.getCurrentMonthTask(userId);
+            return Result.success(task);
+        } catch (Exception e) {
+            log.error("获取月度任务失败", e);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * v4.2: 获取即将到期的积分
+     */
+    @GetMapping("/points/expiring")
+    public Result<Integer> getExpiringPoints(@RequestParam(defaultValue = "30") int days) {
+        try {
+            Long userId = UserContext.getUserIdOrNull();
+            if (userId == null) {
+                return Result.fail("用户未登录");
+            }
+            int expiringPoints = memberService.getExpiringPoints(userId, days);
+            return Result.success(expiringPoints, days + "天内到期积分: " + expiringPoints);
+        } catch (Exception e) {
+            log.error("获取到期积分失败", e);
+            return Result.fail(e.getMessage());
+        }
+
+    }
+
+    @GetMapping("/test/trigger-birthday")
+    public Result<String> triggerBirthdayRewards() {
+        try {
+            memberService.processBirthdayRewards();
+            return Result.success("手动触发生日福利发放成功");
+        } catch (Exception e) {
+            log.error("手动触发生日福利失败", e);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * v5.5: 获取本月权益领取状态
+     */
+    @GetMapping("/benefits/status")
+    public Result<java.util.Map<String, Object>> getMonthlyBenefitStatus() {
+        try {
+            Long userId = UserContext.getUserIdOrNull();
+            if (userId == null) {
+                return Result.fail("用户未登录");
+            }
+            java.util.Map<String, Object> status = memberService.getMonthlyBenefitStatus(userId);
+            return Result.success(status);
+        } catch (Exception e) {
+            log.error("获取权益状态失败", e);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * v5.5: 领取本月等级权益
+     */
+    @PostMapping("/benefits/receive-monthly")
+    public Result<Void> receiveMonthlyBenefit() {
+        try {
+            Long userId = UserContext.getUserIdOrNull();
+            if (userId == null) {
+                return Result.fail("用户未登录");
+            }
+            memberService.receiveMonthlyBenefit(userId);
+            return Result.success(null, "领取成功");
+        } catch (Exception e) {
+            log.error("领取月度权益失败", e);
             return Result.fail(e.getMessage());
         }
     }

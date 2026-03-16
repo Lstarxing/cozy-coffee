@@ -18,4 +18,7 @@ public class UpdateProfileRequest implements Serializable {
 
     @Email(message = "邮箱格式不正确")
     private String email;
+
+    @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "生日格式应为 yyyy-MM-dd")
+    private String birthday;
 }

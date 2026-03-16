@@ -13,6 +13,7 @@ public class PointsTransaction {
     private Integer changeAmount;
     private Integer balanceAfter;
     private String sourceType;
+    private Long sourceId; // v4.2: 用于幂等性保障
     private String description;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

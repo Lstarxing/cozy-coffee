@@ -11,6 +11,7 @@
   "dependencies": {
     "axios": "^1.13.2",
     "element-plus": "^2.13.0",
+    "lucide-vue-next": "^0.562.0",
     "pinia": "^3.0.4",
     "sass": "^1.97.1",
     "unplugin-auto-import": "^20.3.0",

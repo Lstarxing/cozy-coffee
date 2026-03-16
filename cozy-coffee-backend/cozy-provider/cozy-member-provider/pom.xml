@@ -21,6 +21,20 @@
             <groupId>com.cozy</groupId>
             <artifactId>cozy-member-api</artifactId>
         </dependency>
+        
+        <!-- 用户服务API (用于获取生日用户信息) -->
+        <dependency>
+            <groupId>com.cozy</groupId>
+            <artifactId>cozy-user-api</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
+        <!-- 订单服务API (用于获取月度统计) -->
+        <dependency>
+            <groupId>com.cozy</groupId>
+            <artifactId>cozy-order-api</artifactId>
+            <version>1.0.0</version>
+        </dependency>
 
         <!-- 公共模块 -->
         <dependency>
@@ -62,6 +76,13 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

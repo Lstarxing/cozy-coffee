@@ -103,16 +103,23 @@
         <!-- 会员等级体系 -->
         <div class="membership-levels">
           <h2>会员成长体系</h2>
-          <div class="level-cards">
-            <div class="level-card" v-for="level in levels" :key="level.class">
-              <div class="level-header" :class="level.class">
-                <h3>{{ level.name }}</h3>
-                <p>{{ level.desc }}</p>
-              </div>
-              <div class="level-benefits">
-                <ul>
-                  <li v-for="(benefit, idx) in level.benefits" :key="idx">{{ benefit }}</li>
-                </ul>
+          <div class="level-cards-scroll-container">
+            <div class="level-cards">
+              <div class="level-card" v-for="level in levels" :key="level.class" :class="[level.class, { 'highlight-black': level.class === 'black' }]">
+                <div class="level-header">
+                  <h3>{{ level.name.split(' ')[0] }}</h3>
+                  <span class="sub-name">{{ level.name.split(' ')[1] }}</span>
+                  <p class="exp-range">{{ level.desc }}</p>
+                </div>
+                <div class="level-benefits">
+                  <div class="benefit-item" v-for="(b, idx) in level.benefits" :key="idx">
+                    <component :is="b.icon" class="benefit-icon" :size="16" />
+                    <span v-html="b.text"></span>
+                  </div>
+                </div>
+                <div class="level-footer">
+                  Validity: Annual Reset (Jan 1)
+                </div>
               </div>
             </div>
           </div>
@@ -129,7 +136,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, markRaw } from 'vue'
+import { Coins, Gift, Zap, Tag, Ticket, Truck, Crown, Rocket, Shield, Star, Cake, Handshake, Coffee } from 'lucide-vue-next'
 
 // --- Slider Logic ---
 const currentSlide = ref(0)
@@ -194,27 +202,64 @@ const intros = [
 const levels = [
   {
     class: 'basic',
-    name: '基础会员',
-    desc: '开启您的咖啡之旅',
-    benefits: ['积分倍率1元=1积分', '生日当月双倍积分', '每日签到享积分', '积分商城基础兑换资格']
+    name: '基础 Classic',
+    desc: '0 - 499 EXP',
+    benefits: [
+      { icon: markRaw(Coins), text: '消费 1元 = 1.0 积分' },
+      { icon: markRaw(Coffee), text: '每月领加浓缩券' },
+      { icon: markRaw(Zap), text: '周三会员日 1.5x 积分' },
+      { icon: markRaw(Gift), text: '生日：5折券' }
+    ]
   },
   {
     class: 'silver',
-    name: '白银会员',
-    desc: '累计1000积分',
-    benefits: ['积分倍率1元=1.2积分', '生日享免费中杯饮品', '每月2张免配送费券', '积分商城中级兑换资格']
+    name: '白银 Silver',
+    desc: '500 - 1,499 EXP',
+    benefits: [
+      { icon: markRaw(Coins), text: '消费 1元 = 1.1 积分' },
+      { icon: markRaw(Ticket), text: '积分兑换 9.8 折' },
+      { icon: markRaw(Truck), text: '配送费抵扣券×1' },
+      { icon: markRaw(Gift), text: '生日：BOGO券' }
+    ]
   },
   {
     class: 'gold',
-    name: '黄金会员',
-    desc: '累计3000积分',
-    benefits: ['积分倍率1元=1.5积分', '生日享免费大杯饮品+甜品', '新品品鉴会优先邀请', '会员专属休息区使用权', '积分商城高级兑换资格']
+    name: '黄金 Gold',
+    desc: '1,500 - 3,999 EXP',
+    benefits: [
+      { icon: markRaw(Coins), text: '消费 1元 = 1.2 积分' },
+      { icon: markRaw(Ticket), text: '积分兑换 9.5 折' },
+      { icon: markRaw(Gift), text: 'BOGO + 8.8折券×2' },
+      { icon: markRaw(Zap), text: '周三会员日 1.7x' }
+    ]
+  },
+  {
+    class: 'diamond',
+    name: '钻石 Platinum',
+    desc: '4,000 - 8,999 EXP',
+    benefits: [
+      { icon: markRaw(Coins), text: '消费 1元 = 1.3 积分' },
+      { icon: markRaw(Ticket), text: '积分兑换 9.0 折' },
+      { icon: markRaw(Gift), text: '免单券 + BOGO×2' },
+      { icon: markRaw(Truck), text: '配送费抵扣×5' },
+      { icon: markRaw(Cake), text: '生日：全通兑券+蛋糕5折' }
+    ]
   },
   {
     class: 'black',
-    name: '黑金会员',
-    desc: '累计8000积分',
-    benefits: ['积分倍率1元=2积分', '生日享全年任意饮品免单券+200积分', '专属实体黑金卡', '咖啡师上门服务', '无限次免配送费', '年度品牌活动VIP邀请', '积分商城黑金专属兑换资格']
+    name: '黑金 Black',
+    desc: '9,000+ EXP',
+    benefits: [
+      { icon: markRaw(Coins), text: '消费 1元 = 1.5 积分' },
+      { icon: markRaw(Rocket), text: '黑卡加速包 <span class="gold-text">1.7x</span>' },
+      { icon: markRaw(Zap), text: '周三会员日 2.0x 积分' },
+      { icon: markRaw(Gift), text: '免单券×2 + BOGO×5' },
+      { icon: markRaw(Truck), text: '<b>无限次免配送费</b>' },
+      { icon: markRaw(Coffee), text: '新品免费试饮券' },
+      { icon: markRaw(Ticket), text: '积分兑换 8.5 折' },
+      { icon: markRaw(Cake), text: '生日：免单+免费蛋糕' },
+      { icon: markRaw(Shield), text: '荣耀休眠保级机制' }
+    ]
   }
 ]
 

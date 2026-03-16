@@ -1,6 +1,5 @@
 package com.cozy.order.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.order.entity.PickupCodeCounter;
 import com.cozy.order.mapper.PickupCodeCounterMapper;
 import lombok.RequiredArgsConstructor;

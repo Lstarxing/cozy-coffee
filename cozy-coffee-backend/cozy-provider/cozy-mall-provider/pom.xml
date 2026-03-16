@@ -28,6 +28,18 @@
             <artifactId>cozy-member-api</artifactId>
         </dependency>
 
+        <!-- 用户服务API（获取用户信息） -->
+        <dependency>
+            <groupId>com.cozy</groupId>
+            <artifactId>cozy-user-api</artifactId>
+        </dependency>
+
+        <!-- 订单服务API（查询咖啡商品信息） -->
+        <dependency>
+            <groupId>com.cozy</groupId>
+            <artifactId>cozy-order-api</artifactId>
+        </dependency>
+
         <!-- 公共模块 -->
         <dependency>
             <groupId>com.cozy</groupId>

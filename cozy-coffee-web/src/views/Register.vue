@@ -123,10 +123,7 @@ const handleRegister = async () => {
     const data = await response.json()
     
     if (data.success) {
-      const successMsg = form.inviterCode 
-        ? '注册成功！邀请码奖励已发放，请登录' 
-        : '注册成功，请登录'
-      ElMessage.success(successMsg)
+      ElMessage.success('注册成功，请登录')
       router.push('/login')
     } else {
       ElMessage.error(data.message || '注册失败')

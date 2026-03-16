@@ -48,8 +48,9 @@ const TIMEOUT_MS = Math.max(MIN_TIMEOUT_MS, parseInt(process.env.TIMEOUT_MS || '
 const ALLOW_MUTATIONS = process.env.ALLOW_MUTATIONS === 'true';
 
 // 测试账号（需要执行 mysql/test_accounts.sql）
-const ADMIN_CREDENTIALS = { username: 'testadmin', password: 'admin123' };
-const USER_CREDENTIALS = { username: 'testuser', password: 'user123' };
+// 密码统一为: 123456
+const ADMIN_CREDENTIALS = { username: 'testadmin', password: '123456' };
+const USER_CREDENTIALS = { username: 'testuser', password: '123456' };
 
 let adminToken = '';
 let userToken = '';
@@ -75,7 +76,7 @@ async function request(method, path, data = null, token = null) {
 
     try {
         const url = `${API_BASE}${path}`;
-        
+
         // Add timeout support
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -88,24 +89,24 @@ async function request(method, path, data = null, token = null) {
         let json = null;
         const contentType = response.headers.get('content-type');
         const text = await response.text();
-        
+
         if (text && contentType && contentType.includes('application/json')) {
             try {
                 json = JSON.parse(text);
             } catch (parseError) {
-                return { 
-                    status: response.status, 
-                    data: null, 
+                return {
+                    status: response.status,
+                    data: null,
                     error: `JSON parse error: ${parseError.message}`,
-                    rawText: text 
+                    rawText: text
                 };
             }
         } else if (text) {
             // Non-JSON response
-            return { 
-                status: response.status, 
-                data: null, 
-                rawText: text 
+            return {
+                status: response.status,
+                data: null,
+                rawText: text
             };
         }
 
@@ -126,12 +127,12 @@ function validateResponseShape(response, testName) {
         test(`${testName} - Response exists`, false, 'No response data');
         return false;
     }
-    
+
     const data = response.data;
     const hasSuccess = typeof data.success === 'boolean';
     const hasCode = typeof data.code === 'number';
     const hasMessage = typeof data.message === 'string';
-    
+
     if (!hasSuccess || !hasCode || !hasMessage) {
         const missing = [];
         if (!hasSuccess) missing.push('success');
@@ -140,7 +141,7 @@ function validateResponseShape(response, testName) {
         test(`${testName} - Response shape`, false, `Missing fields: ${missing.join(', ')}`);
         return false;
     }
-    
+
     return true;
 }
 
@@ -174,9 +175,9 @@ async function testLogin() {
     section('1. 登录测试');
 
     // 管理员登录
-    const adminRes = await request('POST', '/user/login', ADMIN_CREDENTIALS);
+    const adminRes = await request('POST', '/auth/login', ADMIN_CREDENTIALS);
     if (adminRes.data?.success && adminRes.data?.data) {
-        adminToken = adminRes.data.data;
+        adminToken = adminRes.data?.data?.token;
         test('管理员登录成功', true);
     } else {
         test('管理员登录成功', false, adminRes.data?.message || '登录失败，请确认执行了 test_accounts.sql');
@@ -184,9 +185,9 @@ async function testLogin() {
     }
 
     // 普通用户登录
-    const userRes = await request('POST', '/user/login', USER_CREDENTIALS);
+    const userRes = await request('POST', '/auth/login', USER_CREDENTIALS);
     if (userRes.data?.success && userRes.data?.data) {
-        userToken = userRes.data.data;
+        userToken = userRes.data?.data?.token;
         test('普通用户登录成功', true);
     } else {
         test('普通用户登录成功', false, '可选，不影响主要测试');
@@ -229,7 +230,7 @@ async function testSecurity() {
             `状态: ${acceptRes.status}`);
 
         // Test 3: Try to add product (write operation)
-        const productRes = await request('POST', '/admin/products/coffee', 
+        const productRes = await request('POST', '/admin/products/coffee',
             { name: 'Test', price: 10 }, userToken);
         test('普通用户被拒绝添加商品',
             productRes.status === 403 || productRes.data?.code === 403 || productRes.data?.success === false,
@@ -255,10 +256,10 @@ async function testDashboard() {
 
     const res = await request('GET', '/admin/dashboard/stats', null, adminToken);
     validateResponseShape(res, '获取统计数据');
-    
+
     const data = res.data?.data;
 
-    test('获取统计数据成功', res.data?.success === true, 
+    test('获取统计数据成功', res.data?.success === true,
         res.data?.success ? '' : `失败: ${res.data?.message}`);
     test('返回 totalUsers 字段', typeof data?.totalUsers === 'number', `值: ${data?.totalUsers}`);
     test('返回 todayOrders 字段', typeof data?.todayOrders === 'number', `值: ${data?.todayOrders}`);
@@ -283,42 +284,47 @@ async function testUsers() {
         test('用户包含 memberLevel 字段', user.memberLevel !== undefined, `值: ${user.memberLevel}`);
         test('用户包含 currentPoints 字段', user.currentPoints !== undefined);
 
-        // 测试积分调整 - 验证积分变化并回滚
-        const initialPoints = user.currentPoints;
-        console.log(`  💰 测试积分调整: 初始积分 = ${initialPoints}`);
+        // 测试积分调整 - 找一个有会员记录的用户（currentPoints > 0 或 memberLevel != 'basic'）
+        const userWithMember = res.data.data.find(u => u.currentPoints > 0 || (u.memberLevel && u.memberLevel !== 'basic'));
+        if (userWithMember) {
+            const initialPoints = userWithMember.currentPoints || 0;
+            console.log(`  💰 测试积分调整: 用户ID=${userWithMember.id}, 初始积分=${initialPoints}`);
 
-        // 加积分
-        const adjustRes = await request('POST', `/admin/users/${user.id}/points?amount=10&reason=自动化测试`, null, adminToken);
-        validateResponseShape(adjustRes, '积分调整(+10)');
-        test('积分调整功能(+10)', adjustRes.data?.success === true || adjustRes.data?.message?.includes('成功'),
-            adjustRes.data?.success ? '' : `失败: ${adjustRes.data?.message}`);
+            // 加积分
+            const adjustRes = await request('POST', `/admin/users/${userWithMember.id}/points?amount=10&reason=自动化测试`, null, adminToken);
+            validateResponseShape(adjustRes, '积分调整(+10)');
+            test('积分调整功能(+10)', adjustRes.data?.success === true || adjustRes.data?.message?.includes('成功'),
+                adjustRes.data?.success ? '' : `失败: ${adjustRes.data?.message}`);
 
-        // 验证积分增加
-        if (adjustRes.data?.success) {
-            const verifyRes = await request('GET', '/admin/users', null, adminToken);
-            const updatedUser = verifyRes.data?.data?.find(u => u.id === user.id);
-            if (updatedUser) {
-                const expectedPoints = initialPoints + 10;
-                test('验证积分增加', updatedUser.currentPoints === expectedPoints,
-                    `期望: ${expectedPoints}, 实际: ${updatedUser.currentPoints}`);
+            // 验证积分增加
+            if (adjustRes.data?.success) {
+                const verifyRes = await request('GET', '/admin/users', null, adminToken);
+                const updatedUser = verifyRes.data?.data?.find(u => u.id === userWithMember.id);
+                if (updatedUser) {
+                    const expectedPoints = initialPoints + 10;
+                    test('验证积分增加', updatedUser.currentPoints === expectedPoints,
+                        `期望: ${expectedPoints}, 实际: ${updatedUser.currentPoints}`);
 
-                // 回滚积分 - 减去刚才加的积分
-                const rollbackRes = await request('POST', 
-                    `/admin/users/${user.id}/points?amount=-10&reason=自动化测试回滚`, null, adminToken);
-                validateResponseShape(rollbackRes, '积分回滚(-10)');
-                test('积分调整回滚(-10)', rollbackRes.data?.success === true,
-                    rollbackRes.data?.success ? '' : `失败: ${rollbackRes.data?.message}`);
+                    // 回滚积分 - 减去刚才加的积分
+                    const rollbackRes = await request('POST',
+                        `/admin/users/${userWithMember.id}/points?amount=-10&reason=自动化测试回滚`, null, adminToken);
+                    validateResponseShape(rollbackRes, '积分回滚(-10)');
+                    test('积分调整回滚(-10)', rollbackRes.data?.success === true,
+                        rollbackRes.data?.success ? '' : `失败: ${rollbackRes.data?.message}`);
 
-                // 验证回滚成功
-                if (rollbackRes.data?.success) {
-                    const finalRes = await request('GET', '/admin/users', null, adminToken);
-                    const finalUser = finalRes.data?.data?.find(u => u.id === user.id);
-                    if (finalUser) {
-                        test('验证积分已回滚', finalUser.currentPoints === initialPoints,
-                            `期望: ${initialPoints}, 实际: ${finalUser.currentPoints}`);
+                    // 验证回滚成功
+                    if (rollbackRes.data?.success) {
+                        const finalRes = await request('GET', '/admin/users', null, adminToken);
+                        const finalUser = finalRes.data?.data?.find(u => u.id === userWithMember.id);
+                        if (finalUser) {
+                            test('验证积分已回滚', finalUser.currentPoints === initialPoints,
+                                `期望: ${initialPoints}, 实际: ${finalUser.currentPoints}`);
+                        }
                     }
                 }
             }
+        } else {
+            skip('积分调整功能', '没有找到有会员记录的用户');
         }
     }
 }
@@ -407,23 +413,23 @@ async function testOrders() {
 
 async function testOrderMutations(order) {
     console.log(`\n  🔄 测试订单状态流转 (订单ID: ${order.id})`);
-    
+
     // Accept order: pending -> preparing
     const acceptRes = await request('POST', `/admin/orders/${order.id}/accept`, null, adminToken);
     validateResponseShape(acceptRes, '接受订单');
     test('接受订单 (pending -> preparing)', acceptRes.data?.success === true,
         acceptRes.data?.success ? '' : `失败: ${acceptRes.data?.message}`);
-    
+
     if (acceptRes.data?.success) {
         test('订单状态变为 preparing', acceptRes.data.data?.status === 'preparing',
             `状态: ${acceptRes.data.data?.status}`);
-        
+
         // Complete order: preparing -> completed
         const completeRes = await request('POST', `/admin/orders/${order.id}/complete`, null, adminToken);
         validateResponseShape(completeRes, '完成订单');
         test('完成订单 (preparing -> completed)', completeRes.data?.success === true,
             completeRes.data?.success ? '' : `失败: ${completeRes.data?.message}`);
-        
+
         if (completeRes.data?.success) {
             test('订单状态变为 completed', completeRes.data.data?.status === 'completed',
                 `状态: ${completeRes.data.data?.status}`);
@@ -532,7 +538,7 @@ async function testRedemptions() {
         test('订单包含 id', order.id !== undefined);
         test('订单包含 productName', order.productName !== undefined);
         test('订单包含 status', order.status !== undefined);
-        test('订单包含 pointsUsed', order.pointsUsed !== undefined);
+        test('订单包含 pointsCost', order.pointsCost !== undefined);
     }
 
     // 可选突变测试 - 兑换订单状态流转
@@ -547,37 +553,37 @@ async function testRedemptions() {
 
 async function testRedemptionMutations(redemption) {
     console.log(`\n  🔄 测试兑换订单状态流转 (订单ID: ${redemption.id})`);
-    
+
     // Process: pending -> processing
     const processRes = await request('POST', `/admin/redemptions/${redemption.id}/process`, null, adminToken);
     validateResponseShape(processRes, '备货处理');
     test('兑换订单备货 (pending -> processing)', processRes.data?.success === true,
         processRes.data?.success ? '' : `失败: ${processRes.data?.message}`);
-    
+
     if (processRes.data?.success) {
         test('兑换订单状态变为 processing', processRes.data.data?.status === 'processing',
             `状态: ${processRes.data.data?.status}`);
-        
+
         // Ship: processing -> shipped (需要物流信息)
         const trackingNo = `SF_AUTO_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
-        const shipRes = await request('POST', 
-            `/admin/redemptions/${redemption.id}/ship?company=顺丰速运&trackingNo=${trackingNo}`, 
+        const shipRes = await request('POST',
+            `/admin/redemptions/${redemption.id}/ship?company=顺丰速运&trackingNo=${trackingNo}`,
             null, adminToken);
         validateResponseShape(shipRes, '发货');
         test('兑换订单发货 (processing -> shipped)', shipRes.data?.success === true,
             shipRes.data?.success ? '' : `失败: ${shipRes.data?.message}`);
-        
+
         if (shipRes.data?.success) {
-            test('兑换订单状态变为 shipped', 
+            test('兑换订单状态变为 shipped',
                 shipRes.data.data?.status === 'shipped' || shipRes.data.data?.status === 'completed',
                 `状态: ${shipRes.data.data?.status}`);
-            
+
             // Complete: shipped -> completed
             const completeRes = await request('POST', `/admin/redemptions/${redemption.id}/complete`, null, adminToken);
             validateResponseShape(completeRes, '完成兑换订单');
             test('完成兑换订单 (shipped -> completed)', completeRes.data?.success === true,
                 completeRes.data?.success ? '' : `失败: ${completeRes.data?.message}`);
-            
+
             if (completeRes.data?.success) {
                 test('兑换订单状态变为 completed', completeRes.data.data?.status === 'completed',
                     `状态: ${completeRes.data.data?.status}`);
@@ -603,7 +609,7 @@ async function testBoundaryConditions() {
 
     // 无效的状态筛选
     const invalidStatusRes = await request('GET', '/admin/orders?status=invalid_status', null, adminToken);
-    test('无效状态筛选返回空或错误', 
+    test('无效状态筛选返回空或错误',
         invalidStatusRes.data?.success === true || invalidStatusRes.data?.data?.length === 0,
         `返回 ${invalidStatusRes.data?.data?.length || 0} 条记录`);
 
@@ -632,19 +638,26 @@ async function testBoundaryConditions() {
         zeroPointsRes.data?.success === false,
         `消息: ${zeroPointsRes.data?.message || ''}`);
 
-    // 负数商品价格 (如果有验证)
-    const negPriceRes = await request('POST', '/admin/products/coffee', 
-        { name: '测试', price: -10, category: 'coffee', description: 'test' }, adminToken);
-    test('负数商品价格应失败或被拒绝',
-        negPriceRes.data?.success === false || negPriceRes.data?.data?.price >= 0,
-        negPriceRes.data?.success === false ? `消息: ${negPriceRes.data?.message}` : '价格被规范化');
+    // 负数商品价格应被拒绝
+    const negPriceRes = await request('POST', '/admin/products/coffee',
+        { name: '测试商品', price: -10, category: 'coffee', description: 'test' }, adminToken);
+    test('负数商品价格应被拒绝',
+        negPriceRes.data?.success === false,
+        negPriceRes.data?.message || '');
 
-    // 空字符串商品名称
+    // 空字符串商品名称应被拒绝
     const emptyNameRes = await request('POST', '/admin/products/coffee',
         { name: '', price: 10, category: 'coffee', description: 'test' }, adminToken);
-    test('空商品名称应失败或被拒绝',
+    test('空商品名称应被拒绝',
         emptyNameRes.data?.success === false,
         emptyNameRes.data?.message || '');
+
+    // 空分类应被拒绝
+    const emptyCategoryRes = await request('POST', '/admin/products/coffee',
+        { name: '测试商品', price: 10, category: '', description: 'test' }, adminToken);
+    test('空商品分类应被拒绝',
+        emptyCategoryRes.data?.success === false,
+        emptyCategoryRes.data?.message || '');
 }
 
 // ==================== 运行测试 ====================
@@ -662,7 +675,7 @@ async function runTests() {
     console.log('1. 后端服务已启动 (localhost:8080)');
     console.log('2. 已执行 mysql/admin_role_migration.sql (cozy_user库)');
     console.log('3. 已执行 mysql/test_accounts.sql (cozy_user库)');
-    
+
     if (ALLOW_MUTATIONS) {
         console.log('\n⚠️  突变测试已启用 - 将修改订单和兑换订单状态');
     }
@@ -711,7 +724,7 @@ async function runTests() {
     }
 
     console.log('\n' + '='.repeat(50));
-    
+
     // 环境变量提示
     console.log('\n💡 提示:');
     console.log('• 使用 API_BASE=<url> 配置后端地址');

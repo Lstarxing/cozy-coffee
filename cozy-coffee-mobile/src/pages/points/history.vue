@@ -1,0 +1,275 @@
+<!--
+  积分明细页 - 展示积分流水记录
+-->
+<template>
+  <view class="points-history-page">
+    <!-- 积分概览 -->
+    <view class="points-overview">
+      <view class="overview-item">
+        <text class="value">{{ memberInfo.currentPoints || 0 }}</text>
+        <text class="label">当前积分</text>
+      </view>
+      <view class="divider"></view>
+      <view class="overview-item">
+        <text class="value">{{ memberInfo.totalPoints || 0 }}</text>
+        <text class="label">累计获得</text>
+      </view>
+    </view>
+    
+    <!-- 筛选标签 -->
+    <view class="filter-tabs">
+      <view 
+        class="tab-item" 
+        :class="{ active: filterType === 'all' }"
+        @click="filterType = 'all'"
+      >
+        全部
+      </view>
+      <view 
+        class="tab-item"
+        :class="{ active: filterType === 'earn' }"
+        @click="filterType = 'earn'"
+      >
+        收入
+      </view>
+      <view 
+        class="tab-item"
+        :class="{ active: filterType === 'spend' }"
+        @click="filterType = 'spend'"
+      >
+        支出
+      </view>
+    </view>
+    
+    <!-- 流水列表 -->
+    <view class="history-list">
+      <view class="history-item" v-for="item in filteredHistory" :key="item.id">
+        <view class="item-left">
+          <text class="item-desc">{{ item.description }}</text>
+          <text class="item-time">{{ item.createTime }}</text>
+        </view>
+        <view class="item-right">
+          <text class="item-amount" :class="item.type">
+            {{ item.type === 'earn' ? '+' : '' }}{{ item.amount }}
+          </text>
+          <text class="item-balance">余额: {{ item.balance }}</text>
+        </view>
+      </view>
+      
+      <!-- 空状态 -->
+      <view class="empty-state" v-if="filteredHistory.length === 0">
+        <text class="empty-icon">📊</text>
+        <text class="empty-text">暂无积分记录</text>
+      </view>
+    </view>
+    
+    <!-- 说明 -->
+    <view class="points-tips">
+      <view class="tips-title">积分规则说明</view>
+      <view class="tips-item">• 消费 1 元 = 1 积分（等级越高倍率越高）</view>
+      <view class="tips-item">• 每日签到可获得 10-40 积分</view>
+      <view class="tips-item">• 积分自获得之日起 365 天内有效</view>
+      <view class="tips-item">• 积分可在积分商城兑换精美礼品</view>
+    </view>
+  </view>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { getPointsTransactions, getMemberInfo } from '@/api/member'
+
+const userStore = useUserStore()
+const memberInfo = computed(() => userStore.memberInfo)
+
+const filterType = ref('all')
+const historyList = ref([])
+
+onMounted(async () => {
+  // 刷新会员信息
+  try {
+    const memberRes = await getMemberInfo()
+    if (memberRes.code === 200) {
+      userStore.setMemberInfo(memberRes.data)
+    }
+  } catch (e) {
+    console.error('获取会员信息失败', e)
+  }
+  
+  // 获取积分流水
+  try {
+    const res = await getPointsTransactions(50)
+    if (res.code === 200 && res.data) {
+      // 适配字段名
+      historyList.value = res.data.map(item => ({
+        id: item.id,
+        description: item.description || item.sourceType || '积分变动',
+        createTime: item.createdAt || '',
+        amount: item.changeAmount,
+        balance: item.balanceAfter,
+        type: item.changeAmount >= 0 ? 'earn' : 'spend'
+      }))
+    }
+  } catch (e) {
+    console.error('获取积分流水失败', e)
+    // 降级 Mock 数据
+    historyList.value = [
+      { id: 1, description: '每日签到', createTime: '2026-01-02 10:00', amount: 10, balance: 1590, type: 'earn' },
+      { id: 2, description: '消费获积分', createTime: '2026-01-01 14:30', amount: 32, balance: 1580, type: 'earn' }
+    ]
+  }
+})
+
+const filteredHistory = computed(() => {
+  if (filterType.value === 'all') {
+    return historyList.value
+  }
+  return historyList.value.filter(item => item.type === filterType.value)
+})
+</script>
+
+<style lang="scss" scoped>
+.points-history-page {
+  min-height: 100vh;
+  background: $bg-color;
+}
+
+// 积分概览
+.points-overview {
+  display: flex;
+  background: linear-gradient(135deg, $primary-color, $primary-dark);
+  padding: $spacing-xl $spacing-lg;
+  color: white;
+  
+  .overview-item {
+    flex: 1;
+    text-align: center;
+    
+    .value {
+      font-size: 56rpx;
+      font-weight: 700;
+      display: block;
+    }
+    
+    .label {
+      font-size: $font-size-sm;
+      opacity: 0.8;
+    }
+  }
+  
+  .divider {
+    width: 1rpx;
+    background: rgba(255,255,255,0.3);
+    margin: $spacing-sm 0;
+  }
+}
+
+// 筛选标签
+.filter-tabs {
+  display: flex;
+  background: $bg-white;
+  padding: $spacing-sm 0;
+  
+  .tab-item {
+    flex: 1;
+    text-align: center;
+    padding: $spacing-sm 0;
+    font-size: $font-size-md;
+    color: $text-secondary;
+    
+    &.active {
+      color: $primary-color;
+      font-weight: 600;
+    }
+  }
+}
+
+// 流水列表
+.history-list {
+  padding: $spacing-md;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  background: $bg-white;
+  padding: $spacing-md;
+  border-radius: $border-radius-md;
+  margin-bottom: $spacing-sm;
+  
+  .item-left {
+    .item-desc {
+      font-size: $font-size-md;
+      color: $text-primary;
+      display: block;
+      margin-bottom: $spacing-xs;
+    }
+    
+    .item-time {
+      font-size: $font-size-xs;
+      color: $text-placeholder;
+    }
+  }
+  
+  .item-right {
+    text-align: right;
+    
+    .item-amount {
+      font-size: $font-size-lg;
+      font-weight: 600;
+      display: block;
+      
+      &.earn {
+        color: $success-color;
+      }
+      
+      &.spend {
+        color: $error-color;
+      }
+    }
+    
+    .item-balance {
+      font-size: $font-size-xs;
+      color: $text-placeholder;
+    }
+  }
+}
+
+// 空状态
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 100rpx 0;
+  
+  .empty-icon {
+    font-size: 100rpx;
+    margin-bottom: $spacing-md;
+  }
+  
+  .empty-text {
+    color: $text-placeholder;
+  }
+}
+
+// 说明
+.points-tips {
+  margin: $spacing-md;
+  padding: $spacing-md;
+  background: $bg-white;
+  border-radius: $border-radius-md;
+  
+  .tips-title {
+    font-size: $font-size-md;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: $spacing-sm;
+  }
+  
+  .tips-item {
+    font-size: $font-size-sm;
+    color: $text-secondary;
+    line-height: 2;
+  }
+}
+</style>

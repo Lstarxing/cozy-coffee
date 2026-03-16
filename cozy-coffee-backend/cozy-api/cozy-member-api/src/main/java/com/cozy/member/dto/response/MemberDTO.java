@@ -1,17 +1,67 @@
 package com.cozy.member.dto.response;
 
 import lombok.Data;
+import java.math.BigDecimal;
 import java.io.Serializable;
 import java.time.LocalDate;
 
 @Data
 public class MemberDTO implements Serializable {
     private static final long serialVersionUID = 1L;
+
     private Long id;
     private Long userId;
+
+    // EXP（成长值，仅升级用）
+    private Integer expTotal;
+
+    // POINT（积分，可兑换）
     private Integer currentPoints;
+
+    // 历史累计积分（展示用，不作为升级依据）
     private Integer totalPoints;
+
+    // 会员等级
     private String memberLevel;
+
+    // 月度消费统计（用于黑卡加速包）
+    private BigDecimal monthlySpent;
+    private String monthlySpentMonth;
+    private BigDecimal monthlyAccelerateRemaining;
+
+    // 签到相关
     private LocalDate lastSigninDate;
     private Integer consecutiveSignDays;
+
+    // 即将到期积分（近30天）
+    private Integer expiringPoints;
+
+    // 优惠券数量（可用）
+    private Integer couponCount;
+
+    // 兑换券数量（可用）
+    private Integer exchangeCouponCount;
+
+    // 用户基础信息 (Added for Order Service access)
+    // 用户基础信息 (Added for Order Service access)
+    private String nickname;
+    private String phone;
+    private String avatar;
+
+    // v5.0 月度挑战任务统计 (兜底数据源)
+    private Integer monthlyDeliveryOrders; // 外卖
+    private Integer monthlyOrderCount; // 打卡
+    private Integer morningOrderCount; // 晨间
+    private Integer newProductCount; // 新品
+
+    // v5.3 月度挑战任务状态 (兜底数据源)
+    private Boolean challengeOrderClaimed;
+    private Boolean challengeMorningClaimed;
+    private Boolean challengeDeliveryClaimed;
+    private Boolean challengeNewproductClaimed;
+
+    // Alias for memberLevel for compatibility if needed
+    public String getLevel() {
+        return memberLevel;
+    }
 }

@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication(scanBasePackages = { "com.cozy.member", "com.cozy.common" })
 @EnableDubbo
 @MapperScan("com.cozy.member.mapper")
+@org.springframework.scheduling.annotation.EnableScheduling
 public class MemberProviderApplication {
     public static void main(String[] args) {
         SpringApplication.run(MemberProviderApplication.class, args);

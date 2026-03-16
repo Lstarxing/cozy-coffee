@@ -21,8 +21,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     response => {
         const res = response.data
-        if (res.success === false) {
-            return Promise.reject(new Error(res.message || '请求失败'))
+        // 兼容多种返回格式：success 字段、code=1、code=200
+        const isSuccess = res.success === true || res.code === 1 || res.code === 200
+        if (res.success === false || (res.code !== undefined && res.code !== 1 && res.code !== 200)) {
+            return Promise.reject(new Error(res.message || res.msg || '请求失败'))
         }
         return res
     },
@@ -36,16 +38,33 @@ export default api
 
 // ==================== 管理端 API ====================
 
+// 登录认证
+export const adminLogin = (username, password) =>
+    api.post('/auth/login', { username, password })
+
 // 控制台
-export const getDashboardStats = () => api.get('/admin/dashboard/stats')
+export const getDashboardStats = (startDate, endDate) => api.get('/admin/dashboard/stats', { params: { startDate, endDate } })
+export const getAnalyticsTrend = (params) => api.get('/admin/analytics/trend', { params })
+export const getAnalyticsDistribution = (params) => api.get('/admin/analytics/distribution', { params })
+export const getAnalyticsRank = (params) => api.get('/admin/analytics/rank', { params })
+
+export const getRecentOrders = (limit = 10) => api.get('/admin/orders/recent', { params: { limit } })
+export const getRecentRedemptions = (limit = 10) => api.get('/admin/redemptions/recent', { params: { limit } })
 
 // 用户管理
 export const getUsers = (params) => api.get('/admin/users', { params })
+export const getUserDetail = (userId) => api.get(`/admin/users/${userId}`)
 export const adjustUserPoints = (userId, amount, reason) =>
     api.post(`/admin/users/${userId}/points`, null, { params: { amount, reason } })
+export const updateUserStatus = (userId, status) =>
+    api.put(`/admin/users/${userId}/status`, null, { params: { status } })
 
-// 积分商品
+// 积分商品（管理端CRUD）
 export const getPointsProducts = () => api.get('/admin/products/points')
+export const addPointsProduct = (product) => api.post('/admin/products/points', product)
+export const updatePointsProduct = (productId, product) => api.put(`/admin/products/points/${productId}`, product)
+export const deletePointsProduct = (productId) => api.delete(`/admin/products/points/${productId}`)
+export const togglePointsProductStatus = (productId) => api.put(`/admin/products/points/${productId}/status`)
 
 // 咖啡商品（管理端CRUD）
 export const getCoffeeProducts = () => api.get('/admin/products/coffee')
@@ -55,16 +74,26 @@ export const deleteCoffeeProduct = (productId) => api.delete(`/admin/products/co
 export const toggleCoffeeProductStatus = (productId) => api.put(`/admin/products/coffee/${productId}/status`)
 
 // 咖啡订单管理
-export const getOrders = (status, orderNo, startDate, endDate) =>
-    api.get('/admin/orders', { params: { status, orderNo, startDate, endDate } })
+export const getOrderCounts = () => api.get('/admin/orders/counts')
+export const getOrders = (params) => api.get('/admin/orders', { params })
+export const getOrderDetail = (orderId) => api.get(`/admin/orders/${orderId}`)
 export const acceptOrder = (orderId) => api.post(`/admin/orders/${orderId}/accept`)
 export const completeOrder = (orderId) => api.post(`/admin/orders/${orderId}/complete`)
 export const cancelOrder = (orderId) => api.post(`/admin/orders/${orderId}/cancel`)
 
 // 积分兑换订单
-export const getRedemptions = (status) => api.get('/admin/redemptions', { params: { status } })
+export const getRedemptions = (params) => api.get('/admin/redemptions', { params })
+export const getRedemptionDetail = (orderId) => api.get(`/admin/redemptions/${orderId}`)
 export const processRedemption = (orderId) => api.post(`/admin/redemptions/${orderId}/process`)
 export const shipRedemption = (orderId, company, trackingNo) =>
     api.post(`/admin/redemptions/${orderId}/ship`, null, { params: { company, trackingNo } })
 export const completeRedemption = (orderId) => api.post(`/admin/redemptions/${orderId}/complete`)
+export const deleteRedemption = (orderId) => api.delete(`/admin/redemptions/${orderId}`)
+
+// 文件上传
+export const uploadImage = (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/admin/upload/image', formData)
+}
 
