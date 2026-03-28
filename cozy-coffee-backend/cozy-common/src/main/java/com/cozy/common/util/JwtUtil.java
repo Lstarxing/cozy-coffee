@@ -19,6 +19,10 @@ public class JwtUtil {
     // Token有效期：7天
     private static final long EXPIRATION_TIME = 7 * 24 * 60 * 60 * 1000;
 
+    public static long getExpirationTimeMillis() {
+        return EXPIRATION_TIME;
+    }
+
     /**
      * 生成JWT Token（包含角色信息和Token版本号）
      */
