@@ -1,6 +1,9 @@
 package com.cozy.order.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.common.constant.RedisKeyConstants;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.cozy.member.api.MemberService;
 import com.cozy.order.api.OrderService;
 import com.cozy.order.dto.request.CreateOrderRequest;
@@ -20,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -33,6 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -49,6 +55,8 @@ public class OrderServiceImpl implements OrderService {
     private final ShopOrderItemMapper orderItemMapper;
     private final PickupCodeService pickupCodeService;
     private final ProductSkuValidationService skuValidationService; // v5.3: SKU 验证服务
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
 
     @DubboReference(check = false)
     private MemberService memberService;
@@ -67,6 +75,11 @@ public class OrderServiceImpl implements OrderService {
 
     private void invalidateMenuCache() {
         this.cachedMenu = null;
+        try {
+            stringRedisTemplate.delete(RedisKeyConstants.ORDER_MENU_ACTIVE);
+        } catch (Exception e) {
+            log.warn("清理Redis菜单缓存失败", e);
+        }
         log.info("菜单缓存已清除");
     }
 
@@ -74,11 +87,27 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public List<CoffeeProductDTO> listCoffeeProducts() {
-        // Double-Checked Locking implementation for Cache
+        // L1: in-process local cache
         List<CoffeeProductDTO> cache = this.cachedMenu;
         if (cache != null) {
             return cache;
         }
+
+        // L2: Redis cache (shared across instances)
+        try {
+            String cachedJson = stringRedisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
+            if (cachedJson != null && !cachedJson.isBlank()) {
+                List<CoffeeProductDTO> redisCached = objectMapper.readValue(cachedJson,
+                        new TypeReference<List<CoffeeProductDTO>>() {
+                        });
+                this.cachedMenu = redisCached;
+                return redisCached;
+            }
+        } catch (Exception e) {
+            log.warn("读取Redis菜单缓存失败，回退数据库查询", e);
+        }
+
+        // Double-Checked Locking for DB rebuild
         synchronized (this) {
             if (this.cachedMenu != null)
                 return this.cachedMenu;
@@ -91,6 +120,16 @@ public class OrderServiceImpl implements OrderService {
                     .collect(Collectors.toList());
 
             this.cachedMenu = result;
+            try {
+                long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
+                stringRedisTemplate.opsForValue().set(
+                        RedisKeyConstants.ORDER_MENU_ACTIVE,
+                        objectMapper.writeValueAsString(result),
+                        ttlMinutes,
+                        TimeUnit.MINUTES);
+            } catch (Exception e) {
+                log.warn("写入Redis菜单缓存失败", e);
+            }
             log.info("菜单缓存已更新，共 {} 个商品", result.size());
             return result;
         }
