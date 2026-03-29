@@ -2,7 +2,6 @@ package com.cozy.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.cozy.member.api.MemberService;
 import java.math.BigDecimal;
 import com.cozy.member.dto.response.MemberDTO;
@@ -18,6 +17,7 @@ import com.cozy.member.mapper.PointsTransactionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,8 +44,8 @@ public class MemberServiceImpl implements MemberService {
     private final PointsLotMapper pointsLotMapper;
     private final PointsLotConsumptionMapper consumptionMapper;
     private final com.cozy.member.mapper.MonthlyTaskMapper monthlyTaskMapper;
+    private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
-    private final ObjectMapper objectMapper;
 
     // 等级门槛（EXP）- v5.0 白皮书
     private static final int SILVER_THRESHOLD = 500; // 0-499 basic → 500-1499 silver
@@ -70,9 +70,9 @@ public class MemberServiceImpl implements MemberService {
 
         String cacheKey = RedisKeyConstants.memberProfileByUserId(userId);
         try {
-            String cachedJson = stringRedisTemplate.opsForValue().get(cacheKey);
-            if (cachedJson != null && !cachedJson.isBlank()) {
-                return objectMapper.readValue(cachedJson, MemberDTO.class);
+            Object cachedObj = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedObj != null) {
+                return (MemberDTO) cachedObj;
             }
         } catch (Exception e) {
             log.warn("读取Redis会员缓存失败: userId={}", userId, e);
@@ -193,7 +193,7 @@ public class MemberServiceImpl implements MemberService {
         }
 
         try {
-            stringRedisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(dto), 60, TimeUnit.SECONDS);
+            redisTemplate.opsForValue().set(cacheKey, dto, 60, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.warn("写入Redis会员缓存失败: userId={}", userId, e);
         }

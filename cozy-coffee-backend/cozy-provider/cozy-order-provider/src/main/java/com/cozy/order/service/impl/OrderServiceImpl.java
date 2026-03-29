@@ -2,7 +2,6 @@ package com.cozy.order.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.cozy.member.api.MemberService;
 import com.cozy.order.api.OrderService;
@@ -23,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,6 +58,7 @@ public class OrderServiceImpl implements OrderService {
     private final ShopOrderItemMapper orderItemMapper;
     private final PickupCodeService pickupCodeService;
     private final ProductSkuValidationService skuValidationService; // v5.3: SKU 验证服务
+    private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
 
@@ -79,7 +80,7 @@ public class OrderServiceImpl implements OrderService {
     private void invalidateMenuCache() {
         this.cachedMenu = null;
         try {
-            stringRedisTemplate.delete(RedisKeyConstants.ORDER_MENU_ACTIVE);
+            redisTemplate.delete(RedisKeyConstants.ORDER_MENU_ACTIVE);
         } catch (Exception e) {
             log.warn("清理Redis菜单缓存失败", e);
         }
@@ -98,15 +99,13 @@ public class OrderServiceImpl implements OrderService {
 
         // L2: Redis cache (shared across instances)
         try {
-            String cachedJson = stringRedisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
-            if (EMPTY_CACHE_MARKER.equals(cachedJson)) {
+            Object cachedValue = redisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
+            if (EMPTY_CACHE_MARKER.equals(cachedValue)) {
                 this.cachedMenu = Collections.emptyList();
                 return this.cachedMenu;
             }
-            if (cachedJson != null && !cachedJson.isBlank()) {
-                List<CoffeeProductDTO> redisCached = objectMapper.readValue(cachedJson,
-                        new TypeReference<List<CoffeeProductDTO>>() {
-                        });
+            List<CoffeeProductDTO> redisCached = convertToCoffeeProductList(cachedValue);
+            if (redisCached != null) {
                 this.cachedMenu = redisCached;
                 return redisCached;
             }
@@ -119,15 +118,13 @@ public class OrderServiceImpl implements OrderService {
         if (!locked) {
             try {
                 TimeUnit.MILLISECONDS.sleep(40L);
-                String retryCache = stringRedisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
+                Object retryCache = redisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
                 if (EMPTY_CACHE_MARKER.equals(retryCache)) {
                     this.cachedMenu = Collections.emptyList();
                     return this.cachedMenu;
                 }
-                if (retryCache != null && !retryCache.isBlank()) {
-                    List<CoffeeProductDTO> redisCached = objectMapper.readValue(retryCache,
-                            new TypeReference<List<CoffeeProductDTO>>() {
-                            });
+                List<CoffeeProductDTO> redisCached = convertToCoffeeProductList(retryCache);
+                if (redisCached != null) {
                     this.cachedMenu = redisCached;
                     return redisCached;
                 }
@@ -151,16 +148,16 @@ public class OrderServiceImpl implements OrderService {
                 this.cachedMenu = result;
                 try {
                     if (result.isEmpty()) {
-                        stringRedisTemplate.opsForValue().set(
+                        redisTemplate.opsForValue().set(
                                 RedisKeyConstants.ORDER_MENU_ACTIVE,
                                 EMPTY_CACHE_MARKER,
                                 60,
                                 TimeUnit.SECONDS);
                     } else {
                         long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
-                        stringRedisTemplate.opsForValue().set(
+                        redisTemplate.opsForValue().set(
                                 RedisKeyConstants.ORDER_MENU_ACTIVE,
-                                objectMapper.writeValueAsString(result),
+                            result,
                                 ttlMinutes,
                                 TimeUnit.MINUTES);
                     }
@@ -200,6 +197,16 @@ public class OrderServiceImpl implements OrderService {
         } catch (Exception e) {
             log.warn("释放Redis重建锁失败: key={}", lockKey, e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<CoffeeProductDTO> convertToCoffeeProductList(Object cachedValue) {
+        if (!(cachedValue instanceof List<?> rawList)) {
+            return null;
+        }
+        return rawList.stream()
+                .map(item -> objectMapper.convertValue(item, CoffeeProductDTO.class))
+                .collect(Collectors.toList());
     }
 
     @Override

@@ -2,7 +2,6 @@ package com.cozy.mall.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.cozy.mall.entity.PointsOrder;
@@ -29,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,6 +69,7 @@ public class PointsMallServiceImpl implements PointsMallService {
     private final MonthlyRedemptionMapper monthlyRedemptionMapper;
     private final PointsOrderFulfillmentMapper fulfillmentMapper;
     private final UserCouponMapper userCouponMapper;
+    private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
 
@@ -128,13 +129,13 @@ public class PointsMallServiceImpl implements PointsMallService {
 
     private List<PointsProductDTO> loadActiveProductsWithCache() {
         try {
-            String cachedJson = stringRedisTemplate.opsForValue().get(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
-            if (EMPTY_CACHE_MARKER.equals(cachedJson)) {
+            Object cachedValue = redisTemplate.opsForValue().get(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
+            if (EMPTY_CACHE_MARKER.equals(cachedValue)) {
                 return Collections.emptyList();
             }
-            if (cachedJson != null && !cachedJson.isBlank()) {
-                return objectMapper.readValue(cachedJson, new TypeReference<List<PointsProductDTO>>() {
-                });
+            List<PointsProductDTO> cachedProducts = convertToPointsProductList(cachedValue);
+            if (cachedProducts != null) {
+                return cachedProducts;
             }
         } catch (Exception e) {
             log.warn("读取Redis积分商城商品缓存失败，回退数据库", e);
@@ -145,13 +146,13 @@ public class PointsMallServiceImpl implements PointsMallService {
         if (!locked) {
             try {
                 TimeUnit.MILLISECONDS.sleep(40L);
-                String retryCache = stringRedisTemplate.opsForValue().get(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
+                Object retryCache = redisTemplate.opsForValue().get(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
                 if (EMPTY_CACHE_MARKER.equals(retryCache)) {
                     return Collections.emptyList();
                 }
-                if (retryCache != null && !retryCache.isBlank()) {
-                    return objectMapper.readValue(retryCache, new TypeReference<List<PointsProductDTO>>() {
-                    });
+                List<PointsProductDTO> retryCachedProducts = convertToPointsProductList(retryCache);
+                if (retryCachedProducts != null) {
+                    return retryCachedProducts;
                 }
             } catch (Exception e) {
                 log.warn("重建等待后读取Redis积分商城商品缓存失败", e);
@@ -169,16 +170,16 @@ public class PointsMallServiceImpl implements PointsMallService {
 
             try {
                 if (dbResult.isEmpty()) {
-                    stringRedisTemplate.opsForValue().set(
+                        redisTemplate.opsForValue().set(
                             RedisKeyConstants.MALL_PRODUCTS_ACTIVE,
                             EMPTY_CACHE_MARKER,
                             60,
                             TimeUnit.SECONDS);
                 } else {
                     long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
-                    stringRedisTemplate.opsForValue().set(
+                        redisTemplate.opsForValue().set(
                             RedisKeyConstants.MALL_PRODUCTS_ACTIVE,
-                            objectMapper.writeValueAsString(dbResult),
+                            dbResult,
                             ttlMinutes,
                             TimeUnit.MINUTES);
                 }
@@ -444,10 +445,19 @@ public class PointsMallServiceImpl implements PointsMallService {
 
     private void invalidateMallProductsCache() {
         try {
-            stringRedisTemplate.delete(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
+            redisTemplate.delete(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
         } catch (Exception e) {
             log.warn("清理Redis积分商城商品缓存失败", e);
         }
+    }
+
+    private List<PointsProductDTO> convertToPointsProductList(Object cachedValue) {
+        if (!(cachedValue instanceof List<?> rawList)) {
+            return null;
+        }
+        return rawList.stream()
+                .map(item -> objectMapper.convertValue(item, PointsProductDTO.class))
+                .collect(Collectors.toList());
     }
 
     @Override
