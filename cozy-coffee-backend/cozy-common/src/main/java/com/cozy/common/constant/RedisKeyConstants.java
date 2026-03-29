@@ -11,6 +11,9 @@ public final class RedisKeyConstants {
     public static final String ORDER_MENU_ACTIVE = "cozy:menu:coffee:active";
     public static final String MALL_PRODUCTS_ACTIVE = "cozy:mall:products:active";
 
+    public static final String LOCK_ORDER_MENU_REBUILD = "cozy:lock:menu:coffee:rebuild";
+    public static final String LOCK_MALL_PRODUCTS_REBUILD = "cozy:lock:mall:products:rebuild";
+
     public static String lockMallProductStock(Long productId) {
         return "cozy:lock:mall:stock:" + productId;
     }

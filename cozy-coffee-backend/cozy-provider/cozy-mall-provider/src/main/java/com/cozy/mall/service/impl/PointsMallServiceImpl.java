@@ -62,6 +62,8 @@ import com.cozy.member.dto.response.CouponUsageResult;
 @RequiredArgsConstructor
 public class PointsMallServiceImpl implements PointsMallService {
 
+    private static final String EMPTY_CACHE_MARKER = "__NULL__";
+
     private final PointsProductMapper productMapper;
     private final PointsOrderMapper orderMapper;
     private final MonthlyRedemptionMapper monthlyRedemptionMapper;
@@ -127,6 +129,9 @@ public class PointsMallServiceImpl implements PointsMallService {
     private List<PointsProductDTO> loadActiveProductsWithCache() {
         try {
             String cachedJson = stringRedisTemplate.opsForValue().get(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
+            if (EMPTY_CACHE_MARKER.equals(cachedJson)) {
+                return Collections.emptyList();
+            }
             if (cachedJson != null && !cachedJson.isBlank()) {
                 return objectMapper.readValue(cachedJson, new TypeReference<List<PointsProductDTO>>() {
                 });
@@ -135,25 +140,68 @@ public class PointsMallServiceImpl implements PointsMallService {
             log.warn("读取Redis积分商城商品缓存失败，回退数据库", e);
         }
 
-        LambdaQueryWrapper<PointsProduct> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PointsProduct::getStatus, "active")
-                .orderByAsc(PointsProduct::getPointsPrice);
-
-        List<PointsProductDTO> dbResult = productMapper.selectList(wrapper).stream()
-                .map(this::toProductDTO)
-                .collect(Collectors.toList());
+        String lockToken = UUID.randomUUID().toString();
+        boolean locked = tryAcquireRebuildLock(RedisKeyConstants.LOCK_MALL_PRODUCTS_REBUILD, lockToken, 8);
+        if (!locked) {
+            try {
+                TimeUnit.MILLISECONDS.sleep(40L);
+                String retryCache = stringRedisTemplate.opsForValue().get(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
+                if (EMPTY_CACHE_MARKER.equals(retryCache)) {
+                    return Collections.emptyList();
+                }
+                if (retryCache != null && !retryCache.isBlank()) {
+                    return objectMapper.readValue(retryCache, new TypeReference<List<PointsProductDTO>>() {
+                    });
+                }
+            } catch (Exception e) {
+                log.warn("重建等待后读取Redis积分商城商品缓存失败", e);
+            }
+        }
 
         try {
-            long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
-            stringRedisTemplate.opsForValue().set(
-                    RedisKeyConstants.MALL_PRODUCTS_ACTIVE,
-                    objectMapper.writeValueAsString(dbResult),
-                    ttlMinutes,
-                    TimeUnit.MINUTES);
-        } catch (Exception e) {
-            log.warn("写入Redis积分商城商品缓存失败", e);
+            LambdaQueryWrapper<PointsProduct> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(PointsProduct::getStatus, "active")
+                    .orderByAsc(PointsProduct::getPointsPrice);
+
+            List<PointsProductDTO> dbResult = productMapper.selectList(wrapper).stream()
+                    .map(this::toProductDTO)
+                    .collect(Collectors.toList());
+
+            try {
+                if (dbResult.isEmpty()) {
+                    stringRedisTemplate.opsForValue().set(
+                            RedisKeyConstants.MALL_PRODUCTS_ACTIVE,
+                            EMPTY_CACHE_MARKER,
+                            60,
+                            TimeUnit.SECONDS);
+                } else {
+                    long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
+                    stringRedisTemplate.opsForValue().set(
+                            RedisKeyConstants.MALL_PRODUCTS_ACTIVE,
+                            objectMapper.writeValueAsString(dbResult),
+                            ttlMinutes,
+                            TimeUnit.MINUTES);
+                }
+            } catch (Exception e) {
+                log.warn("写入Redis积分商城商品缓存失败", e);
+            }
+            return dbResult;
+        } finally {
+            if (locked) {
+                releaseLockSafely(RedisKeyConstants.LOCK_MALL_PRODUCTS_REBUILD, lockToken);
+            }
         }
-        return dbResult;
+    }
+
+    private boolean tryAcquireRebuildLock(String lockKey, String lockToken, int ttlSeconds) {
+        try {
+            Boolean lockOk = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, lockToken, ttlSeconds,
+                    TimeUnit.SECONDS);
+            return Boolean.TRUE.equals(lockOk);
+        } catch (Exception e) {
+            log.warn("获取Redis重建锁失败: key={}", lockKey, e);
+            return false;
+        }
     }
 
     @Override
@@ -382,6 +430,7 @@ public class PointsMallServiceImpl implements PointsMallService {
 
     private void releaseLockSafely(String lockKey, String lockToken) {
         try {
+            // 若切换到 Redisson，分布式锁可改为 RLock，自动续约、可重入和简化解锁代码。
             String releaseScript = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
                     "return redis.call('del', KEYS[1]) else return 0 end";
             DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();

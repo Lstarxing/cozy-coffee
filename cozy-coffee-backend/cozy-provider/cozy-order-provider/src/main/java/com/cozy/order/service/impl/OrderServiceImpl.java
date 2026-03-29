@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -49,6 +50,8 @@ import java.util.stream.Collectors;
 @DubboService
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
+
+    private static final String EMPTY_CACHE_MARKER = "__NULL__";
 
     private final CoffeeProductMapper productMapper;
     private final ShopOrderMapper orderMapper;
@@ -96,6 +99,10 @@ public class OrderServiceImpl implements OrderService {
         // L2: Redis cache (shared across instances)
         try {
             String cachedJson = stringRedisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
+            if (EMPTY_CACHE_MARKER.equals(cachedJson)) {
+                this.cachedMenu = Collections.emptyList();
+                return this.cachedMenu;
+            }
             if (cachedJson != null && !cachedJson.isBlank()) {
                 List<CoffeeProductDTO> redisCached = objectMapper.readValue(cachedJson,
                         new TypeReference<List<CoffeeProductDTO>>() {
@@ -107,31 +114,91 @@ public class OrderServiceImpl implements OrderService {
             log.warn("读取Redis菜单缓存失败，回退数据库查询", e);
         }
 
-        // Double-Checked Locking for DB rebuild
-        synchronized (this) {
-            if (this.cachedMenu != null)
-                return this.cachedMenu;
-
-            LambdaQueryWrapper<CoffeeProduct> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(CoffeeProduct::getStatus, "active")
-                    .orderByAsc(CoffeeProduct::getSortOrder);
-            List<CoffeeProductDTO> result = productMapper.selectList(wrapper).stream()
-                    .map(this::toProductDTO)
-                    .collect(Collectors.toList());
-
-            this.cachedMenu = result;
+        String lockToken = UUID.randomUUID().toString();
+        boolean locked = tryAcquireRebuildLock(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken, 8);
+        if (!locked) {
             try {
-                long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
-                stringRedisTemplate.opsForValue().set(
-                        RedisKeyConstants.ORDER_MENU_ACTIVE,
-                        objectMapper.writeValueAsString(result),
-                        ttlMinutes,
-                        TimeUnit.MINUTES);
+                TimeUnit.MILLISECONDS.sleep(40L);
+                String retryCache = stringRedisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
+                if (EMPTY_CACHE_MARKER.equals(retryCache)) {
+                    this.cachedMenu = Collections.emptyList();
+                    return this.cachedMenu;
+                }
+                if (retryCache != null && !retryCache.isBlank()) {
+                    List<CoffeeProductDTO> redisCached = objectMapper.readValue(retryCache,
+                            new TypeReference<List<CoffeeProductDTO>>() {
+                            });
+                    this.cachedMenu = redisCached;
+                    return redisCached;
+                }
             } catch (Exception e) {
-                log.warn("写入Redis菜单缓存失败", e);
+                log.warn("重建等待后读取Redis菜单缓存失败", e);
             }
-            log.info("菜单缓存已更新，共 {} 个商品", result.size());
-            return result;
+        }
+
+        try {
+            synchronized (this) {
+                if (this.cachedMenu != null)
+                    return this.cachedMenu;
+
+                LambdaQueryWrapper<CoffeeProduct> wrapper = new LambdaQueryWrapper<>();
+                wrapper.eq(CoffeeProduct::getStatus, "active")
+                        .orderByAsc(CoffeeProduct::getSortOrder);
+                List<CoffeeProductDTO> result = productMapper.selectList(wrapper).stream()
+                        .map(this::toProductDTO)
+                        .collect(Collectors.toList());
+
+                this.cachedMenu = result;
+                try {
+                    if (result.isEmpty()) {
+                        stringRedisTemplate.opsForValue().set(
+                                RedisKeyConstants.ORDER_MENU_ACTIVE,
+                                EMPTY_CACHE_MARKER,
+                                60,
+                                TimeUnit.SECONDS);
+                    } else {
+                        long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
+                        stringRedisTemplate.opsForValue().set(
+                                RedisKeyConstants.ORDER_MENU_ACTIVE,
+                                objectMapper.writeValueAsString(result),
+                                ttlMinutes,
+                                TimeUnit.MINUTES);
+                    }
+                } catch (Exception e) {
+                    log.warn("写入Redis菜单缓存失败", e);
+                }
+                log.info("菜单缓存已更新，共 {} 个商品", result.size());
+                return result;
+            }
+        } finally {
+            if (locked) {
+                releaseLockSafely(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken);
+            }
+        }
+    }
+
+    private boolean tryAcquireRebuildLock(String lockKey, String lockToken, int ttlSeconds) {
+        try {
+            Boolean lockOk = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, lockToken, ttlSeconds,
+                    TimeUnit.SECONDS);
+            return Boolean.TRUE.equals(lockOk);
+        } catch (Exception e) {
+            log.warn("获取Redis重建锁失败: key={}", lockKey, e);
+            return false;
+        }
+    }
+
+    private void releaseLockSafely(String lockKey, String lockToken) {
+        try {
+            // 若切换到 Redisson，可替换为 RLock.tryLock/unlock，省去Lua解锁与token校验逻辑。
+            String releaseScript = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
+                    "return redis.call('del', KEYS[1]) else return 0 end";
+            org.springframework.data.redis.core.script.DefaultRedisScript<Long> redisScript = new org.springframework.data.redis.core.script.DefaultRedisScript<>();
+            redisScript.setScriptText(releaseScript);
+            redisScript.setResultType(Long.class);
+            stringRedisTemplate.execute(redisScript, Collections.singletonList(lockKey), lockToken);
+        } catch (Exception e) {
+            log.warn("释放Redis重建锁失败: key={}", lockKey, e);
         }
     }
 
