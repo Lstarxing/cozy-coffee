@@ -79,7 +79,8 @@ $redisJob = Start-Job -ScriptBlock {
     param($file, $redisCliPath, $redisHost, $redisPort, $redisPassword)
 
     function Parse-Field([string]$Text, [string]$Name) {
-        $line = ($Text -split "`n") | Where-Object { $_ -match "^$Name:" } | Select-Object -First 1
+        $pattern = "^{0}:" -f [regex]::Escape($Name)
+        $line = ($Text -split "`n") | Where-Object { $_ -match $pattern } | Select-Object -First 1
         if (-not $line) { return "0" }
         return ($line -split ":")[1].Trim()
     }
