@@ -38,8 +38,11 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +55,12 @@ import java.util.stream.Collectors;
 public class OrderServiceImpl implements OrderService {
 
     private static final String EMPTY_CACHE_MARKER = "__NULL__";
+    private static final Semaphore MENU_DB_REBUILD_GUARD = new Semaphore(4);
+    private static final LongAdder MENU_CACHE_HIT = new LongAdder();
+    private static final LongAdder MENU_CACHE_MISS = new LongAdder();
+    private static final LongAdder MENU_CACHE_EMPTY_HIT = new LongAdder();
+    private static final LongAdder MENU_DEGRADE_FAST_FAIL = new LongAdder();
+    private static final AtomicLong MENU_METRIC_SEQ = new AtomicLong();
 
     private final CoffeeProductMapper productMapper;
     private final ShopOrderMapper orderMapper;
@@ -94,6 +103,8 @@ public class OrderServiceImpl implements OrderService {
         // L1: in-process local cache
         List<CoffeeProductDTO> cache = this.cachedMenu;
         if (cache != null) {
+            MENU_CACHE_HIT.increment();
+            logMenuCacheMetricsMaybe();
             return cache;
         }
 
@@ -102,16 +113,21 @@ public class OrderServiceImpl implements OrderService {
             Object cachedValue = redisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
             if (EMPTY_CACHE_MARKER.equals(cachedValue)) {
                 this.cachedMenu = Collections.emptyList();
+                MENU_CACHE_EMPTY_HIT.increment();
+                logMenuCacheMetricsMaybe();
                 return this.cachedMenu;
             }
             List<CoffeeProductDTO> redisCached = convertToCoffeeProductList(cachedValue);
             if (redisCached != null) {
                 this.cachedMenu = redisCached;
+                MENU_CACHE_HIT.increment();
+                logMenuCacheMetricsMaybe();
                 return redisCached;
             }
         } catch (Exception e) {
             log.warn("读取Redis菜单缓存失败，回退数据库查询", e);
         }
+        MENU_CACHE_MISS.increment();
 
         String lockToken = UUID.randomUUID().toString();
         boolean locked = tryAcquireRebuildLock(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken, 8);
@@ -121,16 +137,26 @@ public class OrderServiceImpl implements OrderService {
                 Object retryCache = redisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
                 if (EMPTY_CACHE_MARKER.equals(retryCache)) {
                     this.cachedMenu = Collections.emptyList();
+                    MENU_CACHE_EMPTY_HIT.increment();
+                    logMenuCacheMetricsMaybe();
                     return this.cachedMenu;
                 }
                 List<CoffeeProductDTO> redisCached = convertToCoffeeProductList(retryCache);
                 if (redisCached != null) {
                     this.cachedMenu = redisCached;
+                    MENU_CACHE_HIT.increment();
+                    logMenuCacheMetricsMaybe();
                     return redisCached;
                 }
             } catch (Exception e) {
                 log.warn("重建等待后读取Redis菜单缓存失败", e);
             }
+        }
+
+        if (!acquireDbRebuildPermit()) {
+            MENU_DEGRADE_FAST_FAIL.increment();
+            logMenuCacheMetricsMaybe();
+            return Collections.emptyList();
         }
 
         try {
@@ -165,12 +191,34 @@ public class OrderServiceImpl implements OrderService {
                     log.warn("写入Redis菜单缓存失败", e);
                 }
                 log.info("菜单缓存已更新，共 {} 个商品", result.size());
+                logMenuCacheMetricsMaybe();
                 return result;
             }
         } finally {
+            MENU_DB_REBUILD_GUARD.release();
             if (locked) {
                 releaseLockSafely(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken);
             }
+        }
+    }
+
+    private boolean acquireDbRebuildPermit() {
+        try {
+            return MENU_DB_REBUILD_GUARD.tryAcquire(80, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private void logMenuCacheMetricsMaybe() {
+        long seq = MENU_METRIC_SEQ.incrementAndGet();
+        if (seq % 200 == 0) {
+            log.info("menu-cache-metrics: hit={}, miss={}, emptyHit={}, fastFail={}",
+                    MENU_CACHE_HIT.sum(),
+                    MENU_CACHE_MISS.sum(),
+                    MENU_CACHE_EMPTY_HIT.sum(),
+                    MENU_DEGRADE_FAST_FAIL.sum());
         }
     }
 
