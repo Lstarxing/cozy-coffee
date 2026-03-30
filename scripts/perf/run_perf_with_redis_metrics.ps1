@@ -14,7 +14,8 @@
     [string]$RedisHost = "127.0.0.1",
     [int]$RedisPort = 6379,
     [string]$RedisPassword = "",
-    [string]$RedisCliPath = "redis-cli"
+    [string]$RedisCliPath = "redis-cli",
+    [string]$RedisContainer = "cozy-redis"
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,11 +43,12 @@ function Invoke-MySqlStatus {
 }
 
 function Get-RedisInfo {
-    $args = @("-h", $RedisHost, "-p", $RedisPort.ToString(), "INFO", "stats")
     if ($RedisPassword -ne "") {
-        $args = @("-h", $RedisHost, "-p", $RedisPort.ToString(), "-a", $RedisPassword, "INFO", "stats")
+        docker exec $RedisContainer redis-cli -a $RedisPassword INFO stats
     }
-    & $RedisCliPath @args
+    else {
+        docker exec $RedisContainer redis-cli INFO stats
+    }
 }
 
 function Test-CommandExists([string]$Name) {
@@ -59,9 +61,9 @@ New-Item -ItemType Directory -Path $outDir | Out-Null
 
 Write-Host "===> Output directory: $outDir"
 
-$enableRedisMetrics = Test-CommandExists $RedisCliPath
+$enableRedisMetrics = Test-CommandExists "docker"
 if (-not $enableRedisMetrics) {
-    Write-Warning "redis-cli not found. Continue test but skip Redis metrics. Use -RedisCliPath to set full path."
+    Write-Warning "docker not found. Continue test but skip Redis metrics."
 }
 
 $counterFile = Join-Path $outDir "system_counters.csv"
@@ -93,7 +95,7 @@ if ($enableRedisMetrics) {
     "Timestamp,keyspace_hits,keyspace_misses,hit_rate_percent,evicted_keys,expired_keys,used_memory_human,connected_clients" | Out-File -FilePath $redisInfoFile -Encoding utf8
 
     $redisJob = Start-Job -ScriptBlock {
-        param($file, $redisCliPath, $redisHost, $redisPort, $redisPassword)
+        param($file, $redisContainer, $redisPassword)
 
         function Parse-Field([string]$Text, [string]$Name) {
             $pattern = "^{0}:" -f [regex]::Escape($Name)
@@ -103,23 +105,16 @@ if ($enableRedisMetrics) {
         }
 
         while ($true) {
-            $args = @("-h", $redisHost, "-p", $redisPort.ToString(), "INFO", "stats")
             if ($redisPassword -ne "") {
-                $args = @("-h", $redisHost, "-p", $redisPort.ToString(), "-a", $redisPassword, "INFO", "stats")
+                $stats = docker exec $redisContainer redis-cli -a $redisPassword INFO stats | Out-String
+                $memory = docker exec $redisContainer redis-cli -a $redisPassword INFO memory | Out-String
+                $clients = docker exec $redisContainer redis-cli -a $redisPassword INFO clients | Out-String
             }
-            $stats = & $redisCliPath @args | Out-String
-
-            $serverArgs = @("-h", $redisHost, "-p", $redisPort.ToString(), "INFO", "memory")
-            if ($redisPassword -ne "") {
-                $serverArgs = @("-h", $redisHost, "-p", $redisPort.ToString(), "-a", $redisPassword, "INFO", "memory")
+            else {
+                $stats = docker exec $redisContainer redis-cli INFO stats | Out-String
+                $memory = docker exec $redisContainer redis-cli INFO memory | Out-String
+                $clients = docker exec $redisContainer redis-cli INFO clients | Out-String
             }
-            $memory = & $redisCliPath @serverArgs | Out-String
-
-            $clientArgs = @("-h", $redisHost, "-p", $redisPort.ToString(), "INFO", "clients")
-            if ($redisPassword -ne "") {
-                $clientArgs = @("-h", $redisHost, "-p", $redisPort.ToString(), "-a", $redisPassword, "INFO", "clients")
-            }
-            $clients = & $redisCliPath @clientArgs | Out-String
 
             $hits = [double](Parse-Field $stats "keyspace_hits")
             $misses = [double](Parse-Field $stats "keyspace_misses")
@@ -137,7 +132,7 @@ if ($enableRedisMetrics) {
             "$((Get-Date).ToString("yyyy-MM-dd HH:mm:ss")),$hits,$misses,$hitrate,$evicted,$expired,$usedMemoryHuman,$connectedClients" | Out-File -FilePath $file -Encoding utf8 -Append
             Start-Sleep -Seconds 1
         }
-    } -ArgumentList $redisInfoFile, $RedisCliPath, $RedisHost, $RedisPort, $RedisPassword
+    } -ArgumentList $redisInfoFile, $RedisContainer, $RedisPassword
 }
 
 $preFile = Join-Path $outDir "mysql_status_pre.txt"
