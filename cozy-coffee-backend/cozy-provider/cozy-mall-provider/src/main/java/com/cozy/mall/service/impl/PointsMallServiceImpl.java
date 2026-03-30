@@ -46,8 +46,11 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 import com.cozy.member.dto.response.UserCouponDTO;
 import com.cozy.member.dto.response.CouponUsageResult;
@@ -63,6 +66,12 @@ import com.cozy.member.dto.response.CouponUsageResult;
 public class PointsMallServiceImpl implements PointsMallService {
 
     private static final String EMPTY_CACHE_MARKER = "__NULL__";
+    private static final Semaphore MALL_DB_REBUILD_GUARD = new Semaphore(4);
+    private static final LongAdder MALL_CACHE_HIT = new LongAdder();
+    private static final LongAdder MALL_CACHE_MISS = new LongAdder();
+    private static final LongAdder MALL_CACHE_EMPTY_HIT = new LongAdder();
+    private static final LongAdder MALL_DEGRADE_FAST_FAIL = new LongAdder();
+    private static final AtomicLong MALL_METRIC_SEQ = new AtomicLong();
 
     private final PointsProductMapper productMapper;
     private final PointsOrderMapper orderMapper;
@@ -131,15 +140,20 @@ public class PointsMallServiceImpl implements PointsMallService {
         try {
             Object cachedValue = redisTemplate.opsForValue().get(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
             if (EMPTY_CACHE_MARKER.equals(cachedValue)) {
+                MALL_CACHE_EMPTY_HIT.increment();
+                logMallCacheMetricsMaybe();
                 return Collections.emptyList();
             }
             List<PointsProductDTO> cachedProducts = convertToPointsProductList(cachedValue);
             if (cachedProducts != null) {
+                MALL_CACHE_HIT.increment();
+                logMallCacheMetricsMaybe();
                 return cachedProducts;
             }
         } catch (Exception e) {
             log.warn("读取Redis积分商城商品缓存失败，回退数据库", e);
         }
+        MALL_CACHE_MISS.increment();
 
         String lockToken = UUID.randomUUID().toString();
         boolean locked = tryAcquireRebuildLock(RedisKeyConstants.LOCK_MALL_PRODUCTS_REBUILD, lockToken, 8);
@@ -148,15 +162,25 @@ public class PointsMallServiceImpl implements PointsMallService {
                 TimeUnit.MILLISECONDS.sleep(40L);
                 Object retryCache = redisTemplate.opsForValue().get(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
                 if (EMPTY_CACHE_MARKER.equals(retryCache)) {
+                    MALL_CACHE_EMPTY_HIT.increment();
+                    logMallCacheMetricsMaybe();
                     return Collections.emptyList();
                 }
                 List<PointsProductDTO> retryCachedProducts = convertToPointsProductList(retryCache);
                 if (retryCachedProducts != null) {
+                    MALL_CACHE_HIT.increment();
+                    logMallCacheMetricsMaybe();
                     return retryCachedProducts;
                 }
             } catch (Exception e) {
                 log.warn("重建等待后读取Redis积分商城商品缓存失败", e);
             }
+        }
+
+        if (!acquireDbRebuildPermit()) {
+            MALL_DEGRADE_FAST_FAIL.increment();
+            logMallCacheMetricsMaybe();
+            return Collections.emptyList();
         }
 
         try {
@@ -186,11 +210,33 @@ public class PointsMallServiceImpl implements PointsMallService {
             } catch (Exception e) {
                 log.warn("写入Redis积分商城商品缓存失败", e);
             }
+            logMallCacheMetricsMaybe();
             return dbResult;
         } finally {
+            MALL_DB_REBUILD_GUARD.release();
             if (locked) {
                 releaseLockSafely(RedisKeyConstants.LOCK_MALL_PRODUCTS_REBUILD, lockToken);
             }
+        }
+    }
+
+    private boolean acquireDbRebuildPermit() {
+        try {
+            return MALL_DB_REBUILD_GUARD.tryAcquire(80, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private void logMallCacheMetricsMaybe() {
+        long seq = MALL_METRIC_SEQ.incrementAndGet();
+        if (seq % 200 == 0) {
+            log.info("mall-cache-metrics: hit={}, miss={}, emptyHit={}, fastFail={}",
+                    MALL_CACHE_HIT.sum(),
+                    MALL_CACHE_MISS.sum(),
+                    MALL_CACHE_EMPTY_HIT.sum(),
+                    MALL_DEGRADE_FAST_FAIL.sum());
         }
     }
 
@@ -431,7 +477,7 @@ public class PointsMallServiceImpl implements PointsMallService {
 
     private void releaseLockSafely(String lockKey, String lockToken) {
         try {
-            // 若切换到 Redisson，分布式锁可改为 RLock，自动续约、可重入和简化解锁代码。
+            // 若切换到 Redisson，分布式锁可改为 RLock，自动续约、可重入和看门狗机制可进一步降低锁误释放风险。
             String releaseScript = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
                     "return redis.call('del', KEYS[1]) else return 0 end";
             DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
