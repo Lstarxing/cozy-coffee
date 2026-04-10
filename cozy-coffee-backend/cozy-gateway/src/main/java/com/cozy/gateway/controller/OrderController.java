@@ -37,6 +37,7 @@ public class OrderController {
     private static final String ADMIN_ANALYTICS_DISTRIBUTION_PREFIX = "cozy:admin:analytics:distribution:";
     private static final String ADMIN_ANALYTICS_RANK_PREFIX = "cozy:admin:analytics:rank:";
     private static final String ADMIN_ORDERS_LIST_PREFIX = "cozy:admin:orders:list:";
+    private static final String ADMIN_ORDERS_RECENT_PREFIX = "cozy:admin:orders:recent:";
 
     @DubboReference(check = false)
     private OrderService orderService;
@@ -115,6 +116,7 @@ public class OrderController {
 
     private void evictAdminOrderAndAnalyticsCaches() {
         evictByPrefix(ADMIN_ORDERS_LIST_PREFIX);
+        evictByPrefix(ADMIN_ORDERS_RECENT_PREFIX);
         evictByPrefix(ADMIN_DASHBOARD_STATS_PREFIX);
         evictByPrefix(ADMIN_ANALYTICS_TREND_PREFIX);
         evictByPrefix(ADMIN_ANALYTICS_DISTRIBUTION_PREFIX);

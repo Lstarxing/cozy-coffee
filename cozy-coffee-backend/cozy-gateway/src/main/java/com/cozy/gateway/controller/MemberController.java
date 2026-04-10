@@ -50,6 +50,34 @@ public class MemberController {
         }
     }
 
+    @GetMapping("/signin/calendar")
+    public Result<java.util.Map<String, Object>> getSigninCalendar(@RequestParam(required = false) String month) {
+        try {
+            Long userId = UserContext.getUserIdOrNull();
+            if (userId == null) {
+                return Result.fail("用户未登录");
+            }
+            return Result.success(signinService.getSigninCalendar(userId, month));
+        } catch (Exception e) {
+            log.error("获取签到日历失败", e);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    @GetMapping("/signin/stats")
+    public Result<java.util.Map<String, Object>> getSigninStats(@RequestParam(required = false) String month) {
+        try {
+            Long userId = UserContext.getUserIdOrNull();
+            if (userId == null) {
+                return Result.fail("用户未登录");
+            }
+            return Result.success(signinService.getSigninMonthStats(userId, month));
+        } catch (Exception e) {
+            log.error("获取签到统计失败", e);
+            return Result.fail(e.getMessage());
+        }
+    }
+
     @GetMapping("/test")
     public Result<String> test() {
         return Result.success("Member API is running!");

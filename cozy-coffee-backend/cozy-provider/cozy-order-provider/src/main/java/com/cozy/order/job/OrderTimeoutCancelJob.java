@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -31,6 +32,7 @@ import java.util.stream.Collectors;
 public class OrderTimeoutCancelJob {
 
     private static final String ADMIN_CACHE_ORDERS_LIST_PREFIX = "cozy:admin:orders:list:";
+    private static final String ADMIN_CACHE_ORDERS_RECENT_PREFIX = "cozy:admin:orders:recent:";
     private static final String ADMIN_CACHE_DASHBOARD_PREFIX = "cozy:admin:dashboard:stats:";
     private static final String ADMIN_CACHE_ANALYTICS_PREFIX = "cozy:admin:analytics:";
     private static final String LEGACY_ADMIN_CACHE_ORDERS_LIST_PREFIX = "admin:cache:orders:list:";
@@ -110,6 +112,60 @@ public class OrderTimeoutCancelJob {
     }
 
     private List<Long> fetchTimeoutPendingOrderIds() {
+        List<Long> fromIndex = fetchTimeoutPendingOrderIdsFromZSet();
+        if (!fromIndex.isEmpty()) {
+            return fromIndex;
+        }
+
+        // 兼容兜底：迁移期或索引短暂不可用时，保留一次 DB 扫描路径。
+        return fetchTimeoutPendingOrderIdsByDb();
+    }
+
+    private List<Long> fetchTimeoutPendingOrderIdsFromZSet() {
+        long nowMillis = System.currentTimeMillis();
+        Set<String> dueOrderIds = stringRedisTemplate.opsForZSet().rangeByScore(
+                RedisKeyConstants.ORDER_PENDING_TIMEOUT_ZSET,
+                0,
+                nowMillis,
+                0,
+                batchSize);
+        if (dueOrderIds == null || dueOrderIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> result = new ArrayList<>(dueOrderIds.size());
+        for (String value : dueOrderIds) {
+            Long orderId;
+            try {
+                orderId = Long.parseLong(value);
+            } catch (Exception ex) {
+                stringRedisTemplate.opsForZSet().remove(RedisKeyConstants.ORDER_PENDING_TIMEOUT_ZSET, value);
+                continue;
+            }
+
+            ShopOrder order = orderMapper.selectById(orderId);
+            if (order == null || !"pending".equals(order.getStatus()) || order.getCreatedAt() == null) {
+                stringRedisTemplate.opsForZSet().remove(RedisKeyConstants.ORDER_PENDING_TIMEOUT_ZSET, value);
+                continue;
+            }
+
+            LocalDateTime deadline = LocalDateTime.now().minusMinutes(timeoutMinutes);
+            if (order.getCreatedAt().isAfter(deadline)) {
+                long correctedScore = order.getCreatedAt().plusMinutes(timeoutMinutes)
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli();
+                stringRedisTemplate.opsForZSet().add(RedisKeyConstants.ORDER_PENDING_TIMEOUT_ZSET, value, correctedScore);
+                continue;
+            }
+
+            result.add(orderId);
+        }
+
+        return result;
+    }
+
+    private List<Long> fetchTimeoutPendingOrderIdsByDb() {
         LocalDateTime deadline = LocalDateTime.now().minusMinutes(timeoutMinutes);
 
         LambdaQueryWrapper<ShopOrder> wrapper = new LambdaQueryWrapper<>();
@@ -159,6 +215,7 @@ public class OrderTimeoutCancelJob {
 
     private void evictAdminOrderCaches() {
         evictByPrefix(ADMIN_CACHE_ORDERS_LIST_PREFIX);
+        evictByPrefix(ADMIN_CACHE_ORDERS_RECENT_PREFIX);
         evictByPrefix(ADMIN_CACHE_DASHBOARD_PREFIX);
         evictByPrefix(ADMIN_CACHE_ANALYTICS_PREFIX);
         evictByPrefix(LEGACY_ADMIN_CACHE_ORDERS_LIST_PREFIX);

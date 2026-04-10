@@ -32,6 +32,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Duration;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -789,6 +790,7 @@ public class OrderServiceImpl implements OrderService {
         order.setCreatedAt(now);
         order.setUpdatedAt(now);
         orderMapper.insert(order);
+        syncPendingTimeoutIndex(order);
 
         // 创建订单项
         for (ShopOrderItem item : orderItems) {
@@ -929,6 +931,7 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setStatus(status);
         orderMapper.updateById(order);
+        syncPendingTimeoutIndex(order);
         return toOrderDTO(order, null);
     }
 
@@ -976,6 +979,7 @@ public class OrderServiceImpl implements OrderService {
 
         order.setStatus("preparing");
         orderMapper.updateById(order);
+        syncPendingTimeoutIndex(order);
         log.info("订单接单: orderId={}, orderNo={}", orderId, order.getOrderNo());
         return toOrderDTO(order, null);
     }
@@ -1002,6 +1006,7 @@ public class OrderServiceImpl implements OrderService {
             log.info("订单奖励已发放，跳过: orderId={}", orderId);
             order.setStatus("completed");
             orderMapper.updateById(order);
+            syncPendingTimeoutIndex(order);
             return toOrderDTO(order, null);
         }
 
@@ -1100,6 +1105,7 @@ public class OrderServiceImpl implements OrderService {
         order.setPointsEarned(pointsEarned);
         order.setRewardsGranted(true);
         orderMapper.updateById(order);
+        syncPendingTimeoutIndex(order);
 
         // 2. 再触发月度任务更新（此时当前订单已是 completed 状态）
         // v6.0: 传入当前订单属性，用于精确补偿事务隔离问题
@@ -1161,6 +1167,7 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setStatus("cancelled");
         orderMapper.updateById(order);
+        syncPendingTimeoutIndex(order);
 
         // 如果使用了优惠券，核销回滚
         if (order.getAppliedCouponId() != null) {
@@ -1224,6 +1231,7 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setStatus("cancelled");
         orderMapper.updateById(order);
+        syncPendingTimeoutIndex(order);
 
         // 如果使用了优惠券，核销回滚
         if (order.getAppliedCouponId() != null) {
@@ -1732,6 +1740,42 @@ public class OrderServiceImpl implements OrderService {
         populateExpiryInfo(entity, dto);
 
         return dto;
+    }
+
+    private void syncPendingTimeoutIndex(ShopOrder order) {
+        if (order == null || order.getId() == null) {
+            return;
+        }
+        if (!"pending".equalsIgnoreCase(order.getStatus()) || order.getCreatedAt() == null) {
+            removePendingTimeoutIndex(order.getId());
+            return;
+        }
+        try {
+            long timeoutAtMillis = order.getCreatedAt()
+                    .plusMinutes(orderTimeoutMinutes)
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli();
+            stringRedisTemplate.opsForZSet().add(
+                    RedisKeyConstants.ORDER_PENDING_TIMEOUT_ZSET,
+                    String.valueOf(order.getId()),
+                    timeoutAtMillis);
+        } catch (Exception e) {
+            log.warn("写入订单超时索引失败: orderId={}", order.getId(), e);
+        }
+    }
+
+    private void removePendingTimeoutIndex(Long orderId) {
+        if (orderId == null) {
+            return;
+        }
+        try {
+            stringRedisTemplate.opsForZSet().remove(
+                    RedisKeyConstants.ORDER_PENDING_TIMEOUT_ZSET,
+                    String.valueOf(orderId));
+        } catch (Exception e) {
+            log.warn("移除订单超时索引失败: orderId={}", orderId, e);
+        }
     }
 
     private void populateExpiryInfo(ShopOrder entity, ShopOrderDTO dto) {

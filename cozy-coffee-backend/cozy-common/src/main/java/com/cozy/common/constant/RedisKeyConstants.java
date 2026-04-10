@@ -20,6 +20,8 @@ public final class RedisKeyConstants {
     public static final String ADMIN_ANALYTICS_DISTRIBUTION_PREFIX = "cozy:admin:analytics:distribution:";
     public static final String ADMIN_ANALYTICS_RANK_PREFIX = "cozy:admin:analytics:rank:";
     public static final String ADMIN_ORDERS_LIST_PREFIX = "cozy:admin:orders:list:";
+    public static final String ADMIN_ORDERS_RECENT_PREFIX = "cozy:admin:orders:recent:";
+    public static final String ORDER_PENDING_TIMEOUT_ZSET = "cozy:order:pending:timeout";
 
     public static String lockMallProductStock(Long productId) {
         return "cozy:lock:mall:stock:" + productId;
@@ -39,5 +41,13 @@ public final class RedisKeyConstants {
 
     public static String memberProfileByUserId(Long userId) {
         return "cozy:member:profile:" + userId;
+    }
+
+    public static String signinBitmapByUserAndMonth(Long userId, String yyyyMM) {
+        return "cozy:signin:bitmap:" + userId + ":" + yyyyMM;
+    }
+
+    public static String signinMonthStatsByUserAndMonth(Long userId, String yyyyMM) {
+        return "cozy:signin:month:stats:" + userId + ":" + yyyyMM;
     }
 }

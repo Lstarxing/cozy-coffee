@@ -65,6 +65,7 @@ public class AdminController {
     private static final long ADMIN_DASHBOARD_CACHE_TTL_SECONDS = 45;
     private static final long ADMIN_ANALYTICS_CACHE_TTL_SECONDS = 60;
     private static final long ADMIN_ORDER_LIST_CACHE_TTL_SECONDS = 30;
+    private static final long ADMIN_ORDER_RECENT_CACHE_TTL_SECONDS = 20;
     private static final long ADMIN_CACHE_TTL_JITTER_MAX_SECONDS = 8;
 
     // 使用本地前缀，避免跨模块常量版本不一致导致运行时错误。
@@ -73,6 +74,7 @@ public class AdminController {
     private static final String ADMIN_ANALYTICS_DISTRIBUTION_PREFIX = "cozy:admin:analytics:distribution:";
     private static final String ADMIN_ANALYTICS_RANK_PREFIX = "cozy:admin:analytics:rank:";
     private static final String ADMIN_ORDERS_LIST_PREFIX = "cozy:admin:orders:list:";
+    private static final String ADMIN_ORDERS_RECENT_PREFIX = "cozy:admin:orders:recent:";
 
     // ==================== 控制台统计 ====================
 
@@ -337,6 +339,14 @@ public class AdminController {
     @GetMapping("/orders/recent")
     public Result<List<ShopOrderDTO>> getRecentOrders(@RequestParam(defaultValue = "10") int limit) {
         try {
+            int safeLimit = Math.max(1, Math.min(limit, 100));
+            String cacheKey = buildAdminCacheKey(ADMIN_ORDERS_RECENT_PREFIX, safeLimit);
+            List<ShopOrderDTO> cached = readCacheObject(cacheKey, new TypeReference<List<ShopOrderDTO>>() {
+            });
+            if (cached != null) {
+                return Result.success(cached);
+            }
+
             List<ShopOrderDTO> all = orderService.listAllOrders(null);
             if (all == null)
                 return Result.success(java.util.Collections.emptyList());
@@ -351,7 +361,7 @@ public class AdminController {
             });
 
             // 填充用户信息
-            List<ShopOrderDTO> recent = all.stream().limit(limit).collect(java.util.stream.Collectors.toList());
+            List<ShopOrderDTO> recent = all.stream().limit(safeLimit).collect(java.util.stream.Collectors.toList());
             for (ShopOrderDTO order : recent) {
                 try {
                     if (order.getUserId() != null) {
@@ -366,6 +376,7 @@ public class AdminController {
                 }
             }
 
+            writeCacheObject(cacheKey, recent, ADMIN_ORDER_RECENT_CACHE_TTL_SECONDS);
             return Result.success(recent);
         } catch (Exception e) {
             return Result.error("获取最近订单失败");
@@ -1024,6 +1035,7 @@ public class AdminController {
 
     private void evictOrderAndAnalyticsCaches() {
         evictByPrefix(ADMIN_ORDERS_LIST_PREFIX);
+        evictByPrefix(ADMIN_ORDERS_RECENT_PREFIX);
         evictAnalyticsCaches();
     }
 
