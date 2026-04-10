@@ -233,6 +233,12 @@ public class UserServiceImpl implements UserService {
         try {
             String trimmedToken = token.trim();
             String sessionKey = RedisKeyConstants.userLoginSession(trimmedToken);
+            Long userIdFromToken = null;
+            try {
+                userIdFromToken = JwtUtil.getUserIdFromToken(trimmedToken);
+            } catch (Exception ignore) {
+                // Token 解析失败时，继续走会话键删除兜底
+            }
             String userId = stringRedisTemplate.opsForValue().get(sessionKey);
             stringRedisTemplate.delete(sessionKey);
             if (userId != null && !userId.isBlank()) {
@@ -241,6 +247,10 @@ public class UserServiceImpl implements UserService {
                 if (trimmedToken.equals(mappedToken)) {
                     stringRedisTemplate.delete(userTokenKey);
                 }
+            }
+            if (userIdFromToken != null) {
+                clearUserSessions(userIdFromToken);
+                stringRedisTemplate.delete(RedisKeyConstants.userCurrentTokenById(userIdFromToken));
             }
         } catch (Exception e) {
             log.warn("删除Redis登录会话失败", e);
