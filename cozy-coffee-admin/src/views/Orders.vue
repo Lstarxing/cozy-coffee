@@ -353,7 +353,7 @@ const loadOrders = async ({ force = false, silent = false, fresh = false } = {})
      // Sorting
      list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
      
-     orders.value = list
+    orders.value = normalizeVisibleOrders(list)
      lastUpdated.value = dayjs().format('HH:mm:ss')
      markProviderRecovered()
   } catch (e) {
@@ -431,6 +431,19 @@ const getRemainingSeconds = (row) => {
   return seconds > 0 ? seconds : 0
 }
 
+const isTimedOutPending = (row) => {
+  return row?.status === 'pending' && getRemainingSeconds(row) === 0
+}
+
+const normalizeVisibleOrders = (list) => {
+  if (!Array.isArray(list)) return []
+  if (filters.status === 'pending') {
+    // 倒计时归零后，立即从待处理页隐藏，避免出现短暂的状态错位。
+    return list.filter((o) => !isTimedOutPending(o))
+  }
+  return list
+}
+
 const formatCountdown = (row) => {
   const remaining = getRemainingSeconds(row)
   if (remaining == null) return '即将超时'
@@ -448,7 +461,7 @@ const isExpiringSoon = (row) => {
 
 const getDisplayStatus = (row) => {
   if (!row) return ''
-  if (row.status === 'pending' && getRemainingSeconds(row) === 0) {
+  if (isTimedOutPending(row)) {
     return 'cancelled'
   }
   return row.status
@@ -596,6 +609,7 @@ onMounted(() => {
   expireSyncTimer = window.setInterval(() => {
     const hasZeroPending = orders.value.some((o) => o.status === 'pending' && getRemainingSeconds(o) === 0)
     if (hasZeroPending) {
+      orders.value = normalizeVisibleOrders(orders.value)
       loadOrders({ silent: true, fresh: true })
     }
   }, 2000)
