@@ -22,6 +22,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -180,6 +181,9 @@ public class UserServiceImpl implements UserService {
 
         String token = JwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole(), user.getTokenVersion());
         try {
+            // 强制单会话：先按 userId 清理历史会话键（兼容旧版本遗留键）
+            clearUserSessions(user.getId());
+
             String userTokenKey = RedisKeyConstants.userCurrentTokenById(user.getId());
             String oldToken = stringRedisTemplate.opsForValue().get(userTokenKey);
             if (oldToken != null && !oldToken.isBlank()) {
@@ -201,6 +205,24 @@ public class UserServiceImpl implements UserService {
 
         log.info("用户登录成功: userId={}, username={}, role={}", user.getId(), user.getUsername(), user.getRole());
         return token;
+    }
+
+    private void clearUserSessions(Long userId) {
+        Set<String> sessionKeys = stringRedisTemplate.keys("cozy:auth:session:*");
+        if (sessionKeys == null || sessionKeys.isEmpty()) {
+            return;
+        }
+        String targetUserId = String.valueOf(userId);
+        for (String key : sessionKeys) {
+            try {
+                String cachedUserId = stringRedisTemplate.opsForValue().get(key);
+                if (targetUserId.equals(cachedUserId)) {
+                    stringRedisTemplate.delete(key);
+                }
+            } catch (Exception e) {
+                log.warn("清理历史登录会话失败: key={}", key, e);
+            }
+        }
     }
 
     @Override
