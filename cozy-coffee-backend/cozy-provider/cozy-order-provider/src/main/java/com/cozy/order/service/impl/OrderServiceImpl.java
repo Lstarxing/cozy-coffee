@@ -1374,7 +1374,8 @@ public class OrderServiceImpl implements OrderService {
     public void deleteProduct(Long productId) {
         CoffeeProduct product = productMapper.selectById(productId);
         if (product == null) {
-            throw new RuntimeException("商品不存在");
+            log.info("删除商品幂等返回: productId={} 不存在", productId);
+            return;
         }
         productMapper.deleteById(productId);
         invalidateMenuCache();

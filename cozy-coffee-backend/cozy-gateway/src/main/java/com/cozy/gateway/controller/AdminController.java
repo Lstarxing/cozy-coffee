@@ -1,6 +1,5 @@
 package com.cozy.gateway.controller;
 
-import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.result.Result;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,7 +21,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +63,13 @@ public class AdminController {
     private static final long ADMIN_ANALYTICS_CACHE_TTL_SECONDS = 60;
     private static final long ADMIN_ORDER_LIST_CACHE_TTL_SECONDS = 30;
 
+    // 使用本地前缀，避免跨模块常量版本不一致导致运行时错误。
+    private static final String ADMIN_DASHBOARD_STATS_PREFIX = "cozy:admin:dashboard:stats:";
+    private static final String ADMIN_ANALYTICS_TREND_PREFIX = "cozy:admin:analytics:trend:";
+    private static final String ADMIN_ANALYTICS_DISTRIBUTION_PREFIX = "cozy:admin:analytics:distribution:";
+    private static final String ADMIN_ANALYTICS_RANK_PREFIX = "cozy:admin:analytics:rank:";
+    private static final String ADMIN_ORDERS_LIST_PREFIX = "cozy:admin:orders:list:";
+
     // ==================== 控制台统计 ====================
 
     // ==================== 控制台统计 (Analytics) ====================
@@ -80,13 +85,14 @@ public class AdminController {
             java.time.LocalDate end = endDate != null ? java.time.LocalDate.parse(endDate) : java.time.LocalDate.now();
 
             String cacheKey = buildAdminCacheKey(
-                RedisKeyConstants.ADMIN_DASHBOARD_STATS_PREFIX,
+                ADMIN_DASHBOARD_STATS_PREFIX,
                 start,
                 end);
             Map<String, Object> cached = readCacheObject(cacheKey, new TypeReference<Map<String, Object>>() {
             });
             if (cached != null) {
-            return Result.success(cached);
+                ensureLegacyDashboardFields(cached);
+                return Result.success(cached);
             }
 
             // 1. Users (Total is crucial, maybe daily growth too?)
@@ -116,6 +122,8 @@ public class AdminController {
                     .sum();
             stats.put("pointsSpent", pointsSpent);
 
+                ensureLegacyDashboardFields(stats);
+
             writeCacheObject(cacheKey, stats, ADMIN_DASHBOARD_CACHE_TTL_SECONDS);
 
         } catch (Exception e) {
@@ -136,7 +144,7 @@ public class AdminController {
             java.time.LocalDate end = endDate != null ? java.time.LocalDate.parse(endDate) : java.time.LocalDate.now();
 
             String cacheKey = buildAdminCacheKey(
-                RedisKeyConstants.ADMIN_ANALYTICS_TREND_PREFIX,
+                ADMIN_ANALYTICS_TREND_PREFIX,
                 start,
                 end,
                 granularity);
@@ -209,7 +217,7 @@ public class AdminController {
             java.time.LocalDate end = endDate != null ? java.time.LocalDate.parse(endDate) : java.time.LocalDate.now();
 
             String cacheKey = buildAdminCacheKey(
-                RedisKeyConstants.ADMIN_ANALYTICS_DISTRIBUTION_PREFIX,
+                ADMIN_ANALYTICS_DISTRIBUTION_PREFIX,
                 start,
                 end,
                 domain);
@@ -261,7 +269,7 @@ public class AdminController {
             java.time.LocalDate end = endDate != null ? java.time.LocalDate.parse(endDate) : java.time.LocalDate.now();
 
             String cacheKey = buildAdminCacheKey(
-                RedisKeyConstants.ADMIN_ANALYTICS_RANK_PREFIX,
+                ADMIN_ANALYTICS_RANK_PREFIX,
                 start,
                 end,
                 domain,
@@ -546,7 +554,7 @@ public class AdminController {
             @RequestParam(required = false) String endDate) {
         try {
             String cacheKey = buildAdminCacheKey(
-                    RedisKeyConstants.ADMIN_ORDERS_LIST_PREFIX,
+                ADMIN_ORDERS_LIST_PREFIX,
                     status,
                     orderNo,
                     keyword,
@@ -988,16 +996,30 @@ public class AdminController {
         }
     }
 
+    private void ensureLegacyDashboardFields(Map<String, Object> stats) {
+        if (stats == null) {
+            return;
+        }
+
+        Object coffeeOrders = stats.get("coffeeOrders");
+        Object coffeeRevenue = stats.get("coffeeRevenue");
+
+        // 兼容老前端/测试脚本字段，避免页面初始化报错。
+        stats.putIfAbsent("todayOrders", coffeeOrders != null ? coffeeOrders : 0);
+        stats.putIfAbsent("todayRevenue", coffeeRevenue != null ? coffeeRevenue : BigDecimal.ZERO);
+        stats.putIfAbsent("pendingOrders", 0);
+    }
+
     private void evictOrderAndAnalyticsCaches() {
-        evictByPrefix(RedisKeyConstants.ADMIN_ORDERS_LIST_PREFIX);
+        evictByPrefix(ADMIN_ORDERS_LIST_PREFIX);
         evictAnalyticsCaches();
     }
 
     private void evictAnalyticsCaches() {
-        evictByPrefix(RedisKeyConstants.ADMIN_DASHBOARD_STATS_PREFIX);
-        evictByPrefix(RedisKeyConstants.ADMIN_ANALYTICS_TREND_PREFIX);
-        evictByPrefix(RedisKeyConstants.ADMIN_ANALYTICS_DISTRIBUTION_PREFIX);
-        evictByPrefix(RedisKeyConstants.ADMIN_ANALYTICS_RANK_PREFIX);
+        evictByPrefix(ADMIN_DASHBOARD_STATS_PREFIX);
+        evictByPrefix(ADMIN_ANALYTICS_TREND_PREFIX);
+        evictByPrefix(ADMIN_ANALYTICS_DISTRIBUTION_PREFIX);
+        evictByPrefix(ADMIN_ANALYTICS_RANK_PREFIX);
     }
 
     private void evictByPrefix(String prefix) {
