@@ -492,6 +492,7 @@ onMounted(() => {
   loadOrders()
   unsubscribeSse = sseService.on('new_order', () => {
     hasNewData.value = true
+    loadOrders()
   })
 })
 onUnmounted(() => {
