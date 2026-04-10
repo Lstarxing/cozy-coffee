@@ -15,16 +15,19 @@ import com.cozy.user.dto.response.UserDTO;
 import com.cozy.gateway.sse.SseEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -62,6 +65,7 @@ public class AdminController {
     private static final long ADMIN_DASHBOARD_CACHE_TTL_SECONDS = 45;
     private static final long ADMIN_ANALYTICS_CACHE_TTL_SECONDS = 60;
     private static final long ADMIN_ORDER_LIST_CACHE_TTL_SECONDS = 30;
+    private static final long ADMIN_CACHE_TTL_JITTER_MAX_SECONDS = 8;
 
     // 使用本地前缀，避免跨模块常量版本不一致导致运行时错误。
     private static final String ADMIN_DASHBOARD_STATS_PREFIX = "cozy:admin:dashboard:stats:";
@@ -995,7 +999,10 @@ public class AdminController {
 
     private void writeCacheObject(String cacheKey, Object value, long ttlSeconds) {
         try {
-            redisTemplate.opsForValue().set(cacheKey, value, ttlSeconds, TimeUnit.SECONDS);
+            long jitter = ttlSeconds > 1
+                    ? ThreadLocalRandom.current().nextLong(Math.min(ADMIN_CACHE_TTL_JITTER_MAX_SECONDS, ttlSeconds / 2) + 1)
+                    : 0;
+            redisTemplate.opsForValue().set(cacheKey, value, ttlSeconds + jitter, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.warn("写入管理端缓存失败: cacheKey={}", cacheKey, e);
         }
@@ -1031,12 +1038,22 @@ public class AdminController {
         if (prefix == null || prefix.isEmpty()) {
             return;
         }
+        String pattern = prefix + "*";
+        List<String> batch = new ArrayList<>(200);
         try {
-            Set<String> keys = stringRedisTemplate.keys(prefix + "*");
-            if (keys == null || keys.isEmpty()) {
-                return;
+            ScanOptions options = ScanOptions.scanOptions().match(pattern).count(500).build();
+            try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {
+                while (cursor.hasNext()) {
+                    batch.add(cursor.next());
+                    if (batch.size() >= 200) {
+                        stringRedisTemplate.delete(batch);
+                        batch.clear();
+                    }
+                }
             }
-            stringRedisTemplate.delete(keys);
+            if (!batch.isEmpty()) {
+                stringRedisTemplate.delete(batch);
+            }
         } catch (Exception e) {
             log.warn("按前缀清理缓存失败: prefix={}", prefix, e);
         }

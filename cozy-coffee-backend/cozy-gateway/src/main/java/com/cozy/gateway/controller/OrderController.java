@@ -11,11 +11,13 @@ import com.cozy.order.dto.response.ShopOrderDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * 咖啡订单控制器
@@ -123,12 +125,22 @@ public class OrderController {
         if (prefix == null || prefix.isEmpty()) {
             return;
         }
+        String pattern = prefix + "*";
+        List<String> batch = new ArrayList<>(200);
         try {
-            Set<String> keys = stringRedisTemplate.keys(prefix + "*");
-            if (keys == null || keys.isEmpty()) {
-                return;
+            ScanOptions options = ScanOptions.scanOptions().match(pattern).count(500).build();
+            try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {
+                while (cursor.hasNext()) {
+                    batch.add(cursor.next());
+                    if (batch.size() >= 200) {
+                        stringRedisTemplate.delete(batch);
+                        batch.clear();
+                    }
+                }
             }
-            stringRedisTemplate.delete(keys);
+            if (!batch.isEmpty()) {
+                stringRedisTemplate.delete(batch);
+            }
         } catch (Exception e) {
             log.warn("下单后清理管理端缓存失败: prefix={}", prefix, e);
         }

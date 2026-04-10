@@ -16,13 +16,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -208,20 +209,22 @@ public class UserServiceImpl implements UserService {
     }
 
     private void clearUserSessions(Long userId) {
-        Set<String> sessionKeys = stringRedisTemplate.keys("cozy:auth:session:*");
-        if (sessionKeys == null || sessionKeys.isEmpty()) {
-            return;
-        }
         String targetUserId = String.valueOf(userId);
-        for (String key : sessionKeys) {
-            try {
-                String cachedUserId = stringRedisTemplate.opsForValue().get(key);
-                if (targetUserId.equals(cachedUserId)) {
-                    stringRedisTemplate.delete(key);
+        ScanOptions options = ScanOptions.scanOptions().match("cozy:auth:session:*").count(500).build();
+        try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {
+            while (cursor.hasNext()) {
+                String key = cursor.next();
+                try {
+                    String cachedUserId = stringRedisTemplate.opsForValue().get(key);
+                    if (targetUserId.equals(cachedUserId)) {
+                        stringRedisTemplate.delete(key);
+                    }
+                } catch (Exception e) {
+                    log.warn("清理历史登录会话失败: key={}", key, e);
                 }
-            } catch (Exception e) {
-                log.warn("清理历史登录会话失败: key={}", key, e);
             }
+        } catch (Exception e) {
+            log.warn("扫描历史登录会话失败: userId={}", userId, e);
         }
     }
 

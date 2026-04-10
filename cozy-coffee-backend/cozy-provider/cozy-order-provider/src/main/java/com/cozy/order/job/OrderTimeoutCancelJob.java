@@ -8,11 +8,14 @@ import com.cozy.order.service.impl.OrderServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -27,9 +30,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrderTimeoutCancelJob {
 
-    private static final String ADMIN_CACHE_ORDERS_LIST_PREFIX = "admin:cache:orders:list:";
-    private static final String ADMIN_CACHE_DASHBOARD_PREFIX = "admin:cache:dashboard:";
-    private static final String ADMIN_CACHE_ANALYTICS_PREFIX = "admin:cache:analytics:";
+    private static final String ADMIN_CACHE_ORDERS_LIST_PREFIX = "cozy:admin:orders:list:";
+    private static final String ADMIN_CACHE_DASHBOARD_PREFIX = "cozy:admin:dashboard:stats:";
+    private static final String ADMIN_CACHE_ANALYTICS_PREFIX = "cozy:admin:analytics:";
+    private static final String LEGACY_ADMIN_CACHE_ORDERS_LIST_PREFIX = "admin:cache:orders:list:";
+    private static final String LEGACY_ADMIN_CACHE_DASHBOARD_PREFIX = "admin:cache:dashboard:";
+    private static final String LEGACY_ADMIN_CACHE_ANALYTICS_PREFIX = "admin:cache:analytics:";
 
     private final ShopOrderMapper orderMapper;
     private final OrderServiceImpl orderService;
@@ -155,13 +161,27 @@ public class OrderTimeoutCancelJob {
         evictByPrefix(ADMIN_CACHE_ORDERS_LIST_PREFIX);
         evictByPrefix(ADMIN_CACHE_DASHBOARD_PREFIX);
         evictByPrefix(ADMIN_CACHE_ANALYTICS_PREFIX);
+        evictByPrefix(LEGACY_ADMIN_CACHE_ORDERS_LIST_PREFIX);
+        evictByPrefix(LEGACY_ADMIN_CACHE_DASHBOARD_PREFIX);
+        evictByPrefix(LEGACY_ADMIN_CACHE_ANALYTICS_PREFIX);
     }
 
     private void evictByPrefix(String prefix) {
+        String pattern = prefix + "*";
+        List<String> batch = new ArrayList<>(200);
         try {
-            java.util.Set<String> keys = stringRedisTemplate.keys(prefix + "*");
-            if (keys != null && !keys.isEmpty()) {
-                stringRedisTemplate.delete(keys);
+            ScanOptions options = ScanOptions.scanOptions().match(pattern).count(500).build();
+            try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {
+                while (cursor.hasNext()) {
+                    batch.add(cursor.next());
+                    if (batch.size() >= 200) {
+                        stringRedisTemplate.delete(batch);
+                        batch.clear();
+                    }
+                }
+            }
+            if (!batch.isEmpty()) {
+                stringRedisTemplate.delete(batch);
             }
         } catch (Exception e) {
             log.warn("清理缓存失败: prefix={}", prefix, e);
