@@ -23,6 +23,10 @@ public final class RedisKeyConstants {
         return "cozy:auth:session:" + token;
     }
 
+    public static String userCurrentTokenById(Long userId) {
+        return "cozy:auth:user:token:" + userId;
+    }
+
     public static String userProfileById(Long userId) {
         return "cozy:user:profile:" + userId;
     }

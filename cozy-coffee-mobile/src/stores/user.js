@@ -8,6 +8,7 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { post } from '@/api/request'
 
 export const useUserStore = defineStore('user', () => {
     // ==================== State ====================
@@ -77,14 +78,22 @@ export const useUserStore = defineStore('user', () => {
     /**
      * 登出
      */
-    const logout = () => {
-        token.value = ''
-        userInfo.value = { id: null, nickname: '', avatar: '', phone: '', email: '', birthday: '' }
-        memberInfo.value = { memberLevel: 'basic', currentPoints: 0, totalPoints: 0, expTotal: 0, couponCount: 0 }
+    const logout = async () => {
+        try {
+            if (token.value) {
+                await post('/auth/logout', {})
+            }
+        } catch (e) {
+            console.warn('移动端调用登出接口失败，执行本地清理兜底:', e)
+        } finally {
+            token.value = ''
+            userInfo.value = { id: null, nickname: '', avatar: '', phone: '', email: '', birthday: '' }
+            memberInfo.value = { memberLevel: 'basic', currentPoints: 0, totalPoints: 0, expTotal: 0, couponCount: 0 }
 
-        uni.removeStorageSync('token')
-        uni.removeStorageSync('userInfo')
-        uni.removeStorageSync('memberInfo')
+            uni.removeStorageSync('token')
+            uni.removeStorageSync('userInfo')
+            uni.removeStorageSync('memberInfo')
+        }
     }
 
     /**

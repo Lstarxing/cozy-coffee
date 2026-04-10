@@ -180,9 +180,19 @@ public class UserServiceImpl implements UserService {
 
         String token = JwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole(), user.getTokenVersion());
         try {
+            String userTokenKey = RedisKeyConstants.userCurrentTokenById(user.getId());
+            String oldToken = stringRedisTemplate.opsForValue().get(userTokenKey);
+            if (oldToken != null && !oldToken.isBlank()) {
+                stringRedisTemplate.delete(RedisKeyConstants.userLoginSession(oldToken));
+            }
             stringRedisTemplate.opsForValue().set(
                     RedisKeyConstants.userLoginSession(token),
                     String.valueOf(user.getId()),
+                    JwtUtil.getExpirationTimeMillis(),
+                    TimeUnit.MILLISECONDS);
+            stringRedisTemplate.opsForValue().set(
+                    userTokenKey,
+                    token,
                     JwtUtil.getExpirationTimeMillis(),
                     TimeUnit.MILLISECONDS);
         } catch (Exception e) {
@@ -199,7 +209,17 @@ public class UserServiceImpl implements UserService {
             return;
         }
         try {
-            stringRedisTemplate.delete(RedisKeyConstants.userLoginSession(token.trim()));
+            String trimmedToken = token.trim();
+            String sessionKey = RedisKeyConstants.userLoginSession(trimmedToken);
+            String userId = stringRedisTemplate.opsForValue().get(sessionKey);
+            stringRedisTemplate.delete(sessionKey);
+            if (userId != null && !userId.isBlank()) {
+                String userTokenKey = RedisKeyConstants.userCurrentTokenById(Long.parseLong(userId));
+                String mappedToken = stringRedisTemplate.opsForValue().get(userTokenKey);
+                if (trimmedToken.equals(mappedToken)) {
+                    stringRedisTemplate.delete(userTokenKey);
+                }
+            }
         } catch (Exception e) {
             log.warn("删除Redis登录会话失败", e);
         }
