@@ -551,7 +551,8 @@ public class AdminController {
             @RequestParam(required = false) String keyword, // Added keyword param
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate) {
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "false") boolean noCache) {
         try {
             String cacheKey = buildAdminCacheKey(
                 ADMIN_ORDERS_LIST_PREFIX,
@@ -561,10 +562,12 @@ public class AdminController {
                     userId,
                     startDate,
                     endDate);
-            List<ShopOrderDTO> cached = readCacheObject(cacheKey, new TypeReference<List<ShopOrderDTO>>() {
-            });
-            if (cached != null) {
-                return Result.success(cached);
+            if (!noCache) {
+                List<ShopOrderDTO> cached = readCacheObject(cacheKey, new TypeReference<List<ShopOrderDTO>>() {
+                });
+                if (cached != null) {
+                    return Result.success(cached);
+                }
             }
 
             List<ShopOrderDTO> orders = orderService.listAllOrders(status);
@@ -640,7 +643,9 @@ public class AdminController {
                 return b.getCreatedAt().compareTo(a.getCreatedAt());
             });
 
-            writeCacheObject(cacheKey, orders, ADMIN_ORDER_LIST_CACHE_TTL_SECONDS);
+            if (!noCache) {
+                writeCacheObject(cacheKey, orders, ADMIN_ORDER_LIST_CACHE_TTL_SECONDS);
+            }
 
             return Result.success(orders);
         } catch (Exception e) {

@@ -328,7 +328,7 @@ const paginatedOrders = computed(() => {
 })
 
 // Actions
-const loadOrders = async ({ force = false, silent = false } = {}) => {
+const loadOrders = async ({ force = false, silent = false, fresh = false } = {}) => {
   if (orderServiceUnavailable.value && !force) {
     return
   }
@@ -338,7 +338,8 @@ const loadOrders = async ({ force = false, silent = false } = {}) => {
         keyword: filters.keyword, // Send as keyword
         status: filters.status,
         startDate: filters.dateRange ? filters.dateRange[0] : null,
-        endDate: filters.dateRange ? filters.dateRange[1] : null
+        endDate: filters.dateRange ? filters.dateRange[1] : null,
+        noCache: fresh ? true : undefined
      }
      
     // 如果没有日期过滤，顺便刷新一下角标计数（确保实时）
@@ -606,12 +607,12 @@ onMounted(() => {
 
   unsubscribeSse = sseService.on('new_order', () => {
     hasNewData.value = true
-    loadOrders({ force: orderServiceUnavailable.value, silent: true })
+    loadOrders({ force: orderServiceUnavailable.value, silent: true, fresh: true })
     if (delayedRefreshTimer) {
       window.clearTimeout(delayedRefreshTimer)
     }
     delayedRefreshTimer = window.setTimeout(() => {
-      loadOrders({ force: orderServiceUnavailable.value, silent: true })
+      loadOrders({ force: orderServiceUnavailable.value, silent: true, fresh: true })
     }, 1200)
   })
 })
