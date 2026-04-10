@@ -5,6 +5,25 @@ const api = axios.create({
     timeout: 10000
 })
 
+let isHandlingAuthFailure = false
+
+function handleAuthFailure() {
+    if (isHandlingAuthFailure) {
+        return
+    }
+    isHandlingAuthFailure = true
+    localStorage.removeItem('adminToken')
+    localStorage.removeItem('adminInfo')
+
+    if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+    }
+
+    setTimeout(() => {
+        isHandlingAuthFailure = false
+    }, 1500)
+}
+
 // 请求拦截器
 api.interceptors.request.use(
     config => {
@@ -30,6 +49,15 @@ api.interceptors.response.use(
     },
     error => {
         console.error('API Error:', error)
+
+        const status = error?.response?.status
+        const url = error?.config?.url || ''
+        const isLoginApi = url.includes('/auth/login')
+
+        if (!isLoginApi && (status === 401 || status === 403)) {
+            handleAuthFailure()
+        }
+
         return Promise.reject(error)
     }
 )
