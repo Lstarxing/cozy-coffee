@@ -13,6 +13,7 @@ public final class RedisKeyConstants {
 
     public static final String LOCK_ORDER_MENU_REBUILD = "cozy:lock:menu:coffee:rebuild";
     public static final String LOCK_MALL_PRODUCTS_REBUILD = "cozy:lock:mall:products:rebuild";
+    public static final String LOCK_ORDER_TIMEOUT_CANCEL_JOB = "cozy:lock:order:timeout:cancel:job";
 
     public static String lockMallProductStock(Long productId) {
         return "cozy:lock:mall:stock:" + productId;

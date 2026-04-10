@@ -39,3 +39,12 @@ dubbo:
   consumer:
     timeout: 30000
     check: false
+
+cozy:
+  order:
+    timeout-cancel:
+      enabled: true
+      timeout-minutes: 1
+      batch-size: 200
+      max-rounds: 5
+      scan-interval-ms: 15000
