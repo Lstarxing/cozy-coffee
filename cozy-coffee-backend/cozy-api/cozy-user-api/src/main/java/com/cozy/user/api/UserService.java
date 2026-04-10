@@ -14,6 +14,11 @@ public interface UserService {
 
     String login(LoginRequest request);
 
+    /**
+     * 登出并使当前 token 会话失效。
+     */
+    void logout(String token);
+
     UserDTO getUserById(Long userId);
 
     UserDTO getUserByUsername(String username);

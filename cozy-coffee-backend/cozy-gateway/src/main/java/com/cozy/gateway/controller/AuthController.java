@@ -47,6 +47,20 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/logout")
+    public Result<Void> logout(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        try {
+            if (authorization != null && authorization.startsWith("Bearer ")) {
+                String token = authorization.substring(7).trim();
+                userService.logout(token);
+            }
+            return Result.success(null, "退出成功");
+        } catch (Exception e) {
+            log.error("退出失败", e);
+            return Result.fail("退出失败，请稍后重试");
+        }
+    }
+
     @GetMapping("/userinfo")
     public Result<UserDTO> getUserInfo() {
         try {

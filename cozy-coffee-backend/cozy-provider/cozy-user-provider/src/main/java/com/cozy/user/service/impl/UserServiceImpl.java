@@ -11,6 +11,7 @@ import com.cozy.user.dto.request.UpdateProfileRequest;
 import com.cozy.user.dto.response.UserDTO;
 import com.cozy.user.entity.User;
 import com.cozy.user.mapper.UserMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -20,6 +21,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -31,6 +33,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @DubboReference(check = false, timeout = 60000)
@@ -191,6 +194,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public void logout(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            return;
+        }
+        try {
+            stringRedisTemplate.delete(RedisKeyConstants.userLoginSession(token.trim()));
+        } catch (Exception e) {
+            log.warn("删除Redis登录会话失败", e);
+        }
+    }
+
+    @Override
     public UserDTO getUserById(Long userId) {
         if (userId == null) {
             throw new RuntimeException("用户ID不能为空");
@@ -199,7 +214,15 @@ public class UserServiceImpl implements UserService {
         try {
             Object cachedObj = redisTemplate.opsForValue().get(cacheKey);
             if (cachedObj != null) {
-                return (UserDTO) cachedObj;
+                if (cachedObj instanceof UserDTO) {
+                    return (UserDTO) cachedObj;
+                }
+                if (cachedObj instanceof Map) {
+                    return objectMapper.convertValue(cachedObj, UserDTO.class);
+                }
+                if (cachedObj instanceof String) {
+                    return objectMapper.readValue((String) cachedObj, UserDTO.class);
+                }
             }
         } catch (Exception e) {
             log.warn("读取Redis用户资料缓存失败: userId={}", userId, e);

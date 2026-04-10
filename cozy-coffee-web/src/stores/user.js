@@ -58,11 +58,25 @@ export const useUserStore = defineStore('user', () => {
         localStorage.setItem('userInfo', JSON.stringify(userInfo.value))
     }
 
-    function logout() {
-        token.value = null
-        userInfo.value = null
-        localStorage.removeItem('token')
-        localStorage.removeItem('userInfo')
+    async function logout() {
+        const currentToken = token.value
+        try {
+            if (currentToken) {
+                await fetch('http://localhost:8080/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                })
+            }
+        } catch (error) {
+            console.warn('Logout API failed, fallback to local cleanup:', error)
+        } finally {
+            token.value = null
+            userInfo.value = null
+            localStorage.removeItem('token')
+            localStorage.removeItem('userInfo')
+        }
     }
 
     function signIn() {

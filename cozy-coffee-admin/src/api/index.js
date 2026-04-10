@@ -42,6 +42,9 @@ export default api
 export const adminLogin = (username, password) =>
     api.post('/auth/login', { username, password })
 
+// 退出登录（服务端使会话失效）
+export const adminLogout = () => api.post('/auth/logout')
+
 // 控制台
 export const getDashboardStats = (startDate, endDate) => api.get('/admin/dashboard/stats', { params: { startDate, endDate } })
 export const getAnalyticsTrend = (params) => api.get('/admin/analytics/trend', { params })

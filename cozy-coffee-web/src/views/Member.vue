@@ -2636,8 +2636,8 @@ const getImageUrl = (url) => {
   return `http://localhost:8080${url.startsWith('/') ? '' : '/'}${url}`
 }
 
-const handleLogout = () => {
-  userStore.logout()
+const handleLogout = async () => {
+  await userStore.logout()
   router.push('/')
 }
 
