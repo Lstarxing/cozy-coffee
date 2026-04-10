@@ -4,6 +4,7 @@
 
 - `locust_hot_read_v2.py`: Hot-read API pressure model.
 - `run_perf_with_redis_metrics.ps1`: One-command test runner with system, MySQL, and Redis metrics.
+- `benchmark_order_products.ps1`: Quick benchmark for `/api/order/products` with Avg/P50/P95/P99 and Redis key status.
 
 ## Run
 
@@ -22,6 +23,25 @@ pip install locust
 ```
 
 If `redis-cli` is not in PATH, pass `-RedisCliPath`.
+
+## Quick Benchmark (Order Products)
+
+```powershell
+cd CozyCoffee
+
+.\scripts\perf\benchmark_order_products.ps1 `
+  -BaseUrl "http://localhost:8080" `
+  -Endpoint "/api/order/products" `
+  -WarmupRequests 10 `
+  -Requests 200 `
+  -ClearRedisBefore `
+  -RedisKey "cozy:menu:coffee:active"
+```
+
+Outputs:
+
+- `records.csv`: per-request latency/status.
+- `summary.json`: aggregated Avg/P50/P95/P99, success rate, Redis EXISTS/TTL.
 
 ## Output
 
