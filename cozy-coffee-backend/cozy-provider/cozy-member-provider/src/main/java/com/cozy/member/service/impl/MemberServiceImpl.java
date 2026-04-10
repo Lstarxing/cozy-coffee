@@ -14,6 +14,7 @@ import com.cozy.member.mapper.MemberInfoMapper;
 import com.cozy.member.mapper.PointsLotConsumptionMapper;
 import com.cozy.member.mapper.PointsLotMapper;
 import com.cozy.member.mapper.PointsTransactionMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
@@ -46,6 +47,7 @@ public class MemberServiceImpl implements MemberService {
     private final com.cozy.member.mapper.MonthlyTaskMapper monthlyTaskMapper;
     private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
 
     // 等级门槛（EXP）- v5.0 白皮书
     private static final int SILVER_THRESHOLD = 500; // 0-499 basic → 500-1499 silver
@@ -72,7 +74,15 @@ public class MemberServiceImpl implements MemberService {
         try {
             Object cachedObj = redisTemplate.opsForValue().get(cacheKey);
             if (cachedObj != null) {
-                return (MemberDTO) cachedObj;
+                if (cachedObj instanceof MemberDTO) {
+                    return (MemberDTO) cachedObj;
+                }
+                if (cachedObj instanceof Map) {
+                    return objectMapper.convertValue(cachedObj, MemberDTO.class);
+                }
+                if (cachedObj instanceof String) {
+                    return objectMapper.readValue((String) cachedObj, MemberDTO.class);
+                }
             }
         } catch (Exception e) {
             log.warn("读取Redis会员缓存失败: userId={}", userId, e);
