@@ -27,6 +27,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrderTimeoutCancelJob {
 
+    private static final String ADMIN_CACHE_ORDERS_LIST_PREFIX = "admin:cache:orders:list:";
+    private static final String ADMIN_CACHE_DASHBOARD_PREFIX = "admin:cache:dashboard:";
+    private static final String ADMIN_CACHE_ANALYTICS_PREFIX = "admin:cache:analytics:";
+
     private final ShopOrderMapper orderMapper;
     private final OrderServiceImpl orderService;
     private final StringRedisTemplate stringRedisTemplate;
@@ -90,6 +94,10 @@ public class OrderTimeoutCancelJob {
                         totalFailed,
                         timeoutMinutes);
             }
+
+            if (totalCancelled > 0) {
+                evictAdminOrderCaches();
+            }
         } finally {
             releaseLock(lockToken);
         }
@@ -140,6 +148,23 @@ public class OrderTimeoutCancelJob {
                     lockToken);
         } catch (Exception e) {
             log.warn("释放超时取消任务锁失败", e);
+        }
+    }
+
+    private void evictAdminOrderCaches() {
+        evictByPrefix(ADMIN_CACHE_ORDERS_LIST_PREFIX);
+        evictByPrefix(ADMIN_CACHE_DASHBOARD_PREFIX);
+        evictByPrefix(ADMIN_CACHE_ANALYTICS_PREFIX);
+    }
+
+    private void evictByPrefix(String prefix) {
+        try {
+            java.util.Set<String> keys = stringRedisTemplate.keys(prefix + "*");
+            if (keys != null && !keys.isEmpty()) {
+                stringRedisTemplate.delete(keys);
+            }
+        } catch (Exception e) {
+            log.warn("清理缓存失败: prefix={}", prefix, e);
         }
     }
 }

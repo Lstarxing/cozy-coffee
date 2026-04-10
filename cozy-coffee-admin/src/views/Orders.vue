@@ -281,6 +281,7 @@ const nowTs = ref(Date.now())
 let secondTicker = null
 let pollingTimer = null
 let delayedRefreshTimer = null
+let expireSyncTimer = null
 
 // Computed for pagination
 const paginatedOrders = computed(() => {
@@ -325,14 +326,9 @@ const loadOrderCounts = async () => {
     const res = await getOrderCounts()
     if (res.success) {
       orderCounts.value = res.data
-      // Calculate total active if needed, or just rely on backend map
-      // Assuming backend returns map { pending: 5, preparing: 3 ... }
-      // We can also calc total locally if needed
-      let total = 0
-      if (res.data.pending) total += res.data.pending
-      if (res.data.preparing) total += res.data.preparing
-      // Add other statuses if desired
-      orderCounts.value.total = total 
+      const total = Object.values(res.data || {})
+        .reduce((sum, val) => sum + (Number(val) || 0), 0)
+      orderCounts.value.total = total
     }
   } catch (e) {
     console.warn("Failed to load counts", e)
@@ -535,6 +531,12 @@ onMounted(() => {
   secondTicker = window.setInterval(() => {
     nowTs.value = Date.now()
   }, 1000)
+  expireSyncTimer = window.setInterval(() => {
+    const hasZeroPending = orders.value.some((o) => o.status === 'pending' && getRemainingSeconds(o) === 0)
+    if (hasZeroPending) {
+      loadOrders()
+    }
+  }, 2000)
   pollingTimer = window.setInterval(() => {
     loadOrders()
   }, 8000)
@@ -562,6 +564,7 @@ const handleVisibilityChange = () => {
 onUnmounted(() => {
   if (unsubscribeSse) unsubscribeSse()
   if (secondTicker) window.clearInterval(secondTicker)
+  if (expireSyncTimer) window.clearInterval(expireSyncTimer)
   if (pollingTimer) window.clearInterval(pollingTimer)
   if (delayedRefreshTimer) window.clearTimeout(delayedRefreshTimer)
   document.removeEventListener('visibilitychange', handleVisibilityChange)
