@@ -69,6 +69,9 @@ public class AuthController {
                 return Result.fail("用户未登录");
             }
             UserDTO userDTO = userService.getUserById(userId);
+            if (userDTO == null) {
+                return Result.fail("用户不存在");
+            }
             return Result.success(userDTO);
         } catch (Exception e) {
             log.error("获取用户信息失败", e);

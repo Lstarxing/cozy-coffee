@@ -282,7 +282,8 @@ public class UserServiceImpl implements UserService {
 
         User user = userMapper.selectById(userId);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            log.debug("getUserById未找到用户: userId={}", userId);
+            return null;
         }
         UserDTO dto = toDTO(user);
 
