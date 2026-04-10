@@ -103,6 +103,7 @@ public class OrderServiceImpl implements OrderService {
         // L1: in-process local cache
         List<CoffeeProductDTO> cache = this.cachedMenu;
         if (cache != null) {
+            backfillMenuRedisIfMissing(cache);
             MENU_CACHE_HIT.increment();
             logMenuCacheMetricsMaybe();
             return cache;
@@ -208,6 +209,31 @@ public class OrderServiceImpl implements OrderService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
+        }
+    }
+
+    private void backfillMenuRedisIfMissing(List<CoffeeProductDTO> cache) {
+        try {
+            Boolean hasKey = redisTemplate.hasKey(RedisKeyConstants.ORDER_MENU_ACTIVE);
+            if (Boolean.TRUE.equals(hasKey)) {
+                return;
+            }
+            if (cache.isEmpty()) {
+                redisTemplate.opsForValue().set(
+                        RedisKeyConstants.ORDER_MENU_ACTIVE,
+                        EMPTY_CACHE_MARKER,
+                        60,
+                        TimeUnit.SECONDS);
+            } else {
+                long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
+                redisTemplate.opsForValue().set(
+                        RedisKeyConstants.ORDER_MENU_ACTIVE,
+                        cache,
+                        ttlMinutes,
+                        TimeUnit.MINUTES);
+            }
+        } catch (Exception e) {
+            log.warn("L1命中时回填Redis菜单缓存失败", e);
         }
     }
 
