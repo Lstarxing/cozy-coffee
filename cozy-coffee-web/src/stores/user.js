@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import request from '@/api/request'
 
 export const useUserStore = defineStore('user', () => {
     const token = ref(null)
@@ -62,20 +63,21 @@ export const useUserStore = defineStore('user', () => {
         const currentToken = token.value
         try {
             if (currentToken) {
-                await fetch('http://localhost:8080/api/auth/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${currentToken}`
-                    }
-                })
+                const response = await request.post('/auth/logout')
+                const data = response?.data
+                const isSuccess = data?.success === true || data?.code === 200 || data?.code === 1
+                if (!isSuccess) {
+                    throw new Error(data?.message || data?.msg || '调用退出接口失败')
+                }
             }
-        } catch (error) {
-            console.warn('Logout API failed, fallback to local cleanup:', error)
-        } finally {
             token.value = null
             userInfo.value = null
             localStorage.removeItem('token')
             localStorage.removeItem('userInfo')
+            return true
+        } catch (error) {
+            console.error('Logout API failed:', error)
+            return false
         }
     }
 

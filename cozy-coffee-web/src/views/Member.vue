@@ -2637,8 +2637,12 @@ const getImageUrl = (url) => {
 }
 
 const handleLogout = async () => {
-  await userStore.logout()
-  router.push('/')
+  const ok = await userStore.logout()
+  if (ok) {
+    router.push('/')
+    return
+  }
+  window.alert('退出失败，请检查后端服务或网络后重试')
 }
 
 const startEditNickname = () => {
