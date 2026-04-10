@@ -175,14 +175,14 @@
           <template #default="{ row }">
             <div class="status-cell">
               <el-tag 
-                :type="getOrderStatusTagType(row.status)" 
+                :type="getOrderStatusTagType(getDisplayStatus(row))" 
                 effect="light" 
                 round 
                 class="status-capsule"
               >
-                {{ getOrderStatusText(row.status) }}
+                {{ getOrderStatusText(getDisplayStatus(row)) }}
               </el-tag>
-              <div v-if="row.status === 'pending'" class="expire-text" :class="{ urgent: isExpiringSoon(row) }">
+              <div v-if="row.status === 'pending' && getRemainingSeconds(row) > 0" class="expire-text" :class="{ urgent: isExpiringSoon(row) }">
                 {{ formatCountdown(row) }}
               </div>
             </div>
@@ -214,13 +214,13 @@
               <el-button link type="primary" @click="viewDetail(row)">详情</el-button>
 
               <!-- Pending: Accept & Cancel -->
-              <template v-if="row.status === 'pending'">
+              <template v-if="getDisplayStatus(row) === 'pending'">
                 <el-button link type="success" @click="handleAccept(row)">接单</el-button>
                 <el-button link type="danger" @click="handleCancel(row)">取消</el-button>
               </template>
               
               <!-- Preparing: Complete -->
-              <template v-else-if="row.status === 'preparing'">
+              <template v-else-if="getDisplayStatus(row) === 'preparing'">
                  <el-button link type="warning" @click="handleComplete(row)">出餐</el-button>
               </template>
             </div>
@@ -446,6 +446,14 @@ const isExpiringSoon = (row) => {
   return remaining != null && remaining <= 30
 }
 
+const getDisplayStatus = (row) => {
+  if (!row) return ''
+  if (row.status === 'pending' && getRemainingSeconds(row) === 0) {
+    return 'cancelled'
+  }
+  return row.status
+}
+
 const viewDetail = (row) => {
   selectedOrderId.value = row.id
   detailDialogVisible.value = true
@@ -588,7 +596,7 @@ onMounted(() => {
   expireSyncTimer = window.setInterval(() => {
     const hasZeroPending = orders.value.some((o) => o.status === 'pending' && getRemainingSeconds(o) === 0)
     if (hasZeroPending) {
-      loadOrders()
+      loadOrders({ silent: true, fresh: true })
     }
   }, 2000)
   pollingTimer = window.setInterval(() => {
