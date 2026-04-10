@@ -35,6 +35,15 @@
       </el-form-item>
     </AdminFilterBar>
 
+    <el-alert
+      v-if="orderServiceUnavailable"
+      type="error"
+      :closable="false"
+      show-icon
+      title="订单服务暂不可用（OrderService未注册到Nacos），页面已自动降频重试。"
+      class="service-alert"
+    />
+
     <!-- 4. 快捷筛选标签栏 -->
     <div class="quick-filter-tabs">
        <button 
@@ -277,11 +286,40 @@ const pageSize = ref(10)
 const detailDialogVisible = ref(false)
 const selectedOrderId = ref(null)
 const nowTs = ref(Date.now())
+const orderServiceUnavailable = ref(false)
+let providerProbeCounter = 0
+let lastUnavailableHintAt = 0
 
 let secondTicker = null
 let pollingTimer = null
 let delayedRefreshTimer = null
 let expireSyncTimer = null
+
+const getErrorMessage = (e) => {
+  return e?.response?.data?.message || e?.message || ''
+}
+
+const isOrderProviderUnavailable = (e) => {
+  const msg = getErrorMessage(e)
+  return msg.includes('No provider available') && msg.includes('OrderService')
+}
+
+const markProviderUnavailable = () => {
+  orderServiceUnavailable.value = true
+  const now = Date.now()
+  if (now - lastUnavailableHintAt > 15000) {
+    ElMessage.warning('订单服务暂不可用，已自动降频重试')
+    lastUnavailableHintAt = now
+  }
+}
+
+const markProviderRecovered = () => {
+  if (orderServiceUnavailable.value) {
+    orderServiceUnavailable.value = false
+    providerProbeCounter = 0
+    ElMessage.success('订单服务已恢复')
+  }
+}
 
 // Computed for pagination
 const paginatedOrders = computed(() => {
@@ -290,7 +328,10 @@ const paginatedOrders = computed(() => {
 })
 
 // Actions
-const loadOrders = async () => {
+const loadOrders = async ({ force = false, silent = false } = {}) => {
+  if (orderServiceUnavailable.value && !force) {
+    return
+  }
   loading.value = true
   try {
      const params = {
@@ -301,8 +342,8 @@ const loadOrders = async () => {
      }
      
     // 如果没有日期过滤，顺便刷新一下角标计数（确保实时）
-    if (!filters.dateRange && !filters.keyword) {
-       loadOrderCounts()
+     if (!filters.dateRange && !filters.keyword) {
+       loadOrderCounts({ silent: true })
     }
 
      const res = await getOrders(params)
@@ -313,15 +354,23 @@ const loadOrders = async () => {
      
      orders.value = list
      lastUpdated.value = dayjs().format('HH:mm:ss')
+     markProviderRecovered()
   } catch (e) {
      console.error(e)
-     ElMessage.error('加载订单失败')
+     if (isOrderProviderUnavailable(e)) {
+      markProviderUnavailable()
+     } else if (!silent) {
+      ElMessage.error('加载订单失败')
+     }
   } finally {
      loading.value = false
   }
 }
 
-const loadOrderCounts = async () => {
+const loadOrderCounts = async ({ silent = false } = {}) => {
+  if (orderServiceUnavailable.value) {
+    return
+  }
   try {
     const res = await getOrderCounts()
     if (res.success) {
@@ -331,7 +380,11 @@ const loadOrderCounts = async () => {
       orderCounts.value.total = total
     }
   } catch (e) {
-    console.warn("Failed to load counts", e)
+    if (isOrderProviderUnavailable(e)) {
+      markProviderUnavailable()
+    } else if (!silent) {
+      console.warn('Failed to load counts', e)
+    }
   }
 }
 
@@ -527,7 +580,7 @@ const getSpecTags = (item) => {
 // SSE
 let unsubscribeSse = null
 onMounted(() => {
-  loadOrders()
+  loadOrders({ force: true })
   secondTicker = window.setInterval(() => {
     nowTs.value = Date.now()
   }, 1000)
@@ -538,26 +591,34 @@ onMounted(() => {
     }
   }, 2000)
   pollingTimer = window.setInterval(() => {
-    loadOrders()
+    if (orderServiceUnavailable.value) {
+      providerProbeCounter += 1
+      if (providerProbeCounter % 3 !== 0) {
+        return
+      }
+      loadOrders({ force: true, silent: true })
+      return
+    }
+    loadOrders({ silent: true })
   }, 8000)
 
   document.addEventListener('visibilitychange', handleVisibilityChange)
 
   unsubscribeSse = sseService.on('new_order', () => {
     hasNewData.value = true
-    loadOrders()
+    loadOrders({ force: orderServiceUnavailable.value, silent: true })
     if (delayedRefreshTimer) {
       window.clearTimeout(delayedRefreshTimer)
     }
     delayedRefreshTimer = window.setTimeout(() => {
-      loadOrders()
+      loadOrders({ force: orderServiceUnavailable.value, silent: true })
     }, 1200)
   })
 })
 
 const handleVisibilityChange = () => {
   if (document.visibilityState === 'visible') {
-    loadOrders()
+    loadOrders({ force: true, silent: true })
   }
 }
 
@@ -574,6 +635,10 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .orders-page {
   :deep(.admin-page-header) { margin-bottom: 12px; }
+}
+
+.service-alert {
+  margin-bottom: 12px;
 }
 
 /* Quick Filter Tabs */

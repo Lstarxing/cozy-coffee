@@ -20,11 +20,9 @@ class SseService {
     async connect() {
         // 锁检查：正在连接中或已有连接则跳过
         if (this.isConnecting) {
-            console.log('[SSE] 正在建立连接中，等待...')
             return
         }
         if (this.eventSource) {
-            console.log('[SSE] 已有活跃连接，跳过')
             return
         }
 
@@ -37,6 +35,7 @@ class SseService {
         const token = localStorage.getItem('adminToken')
         if (!token) {
             console.warn('[SSE] 未找到 adminToken，无法建立连接')
+            this.isConnecting = false
             return
         }
 
@@ -45,6 +44,7 @@ class SseService {
         if (parts.length !== 3) {
             console.warn('[SSE] Token 格式无效，清除并跳过连接')
             this._handleAuthFailure()
+            this.isConnecting = false
             return
         }
 
@@ -56,6 +56,7 @@ class SseService {
 
             if (!ticket) {
                 console.error('[SSE] 获取 Ticket 失败：服务器未返回 ticket')
+                this.isConnecting = false
                 return
             }
 
