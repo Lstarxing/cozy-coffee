@@ -7,6 +7,9 @@
     <view class="status-section" :class="order.status">
       <text class="status-icon">{{ getStatusIcon(order.status) }}</text>
       <text class="status-text">{{ getStatusText(order.status) }}</text>
+      <text v-if="order.status === 'pending'" class="countdown-text" :class="{ urgent: isExpiringSoon }">
+        {{ countdownText }}
+      </text>
       <text class="status-desc">{{ getStatusDesc(order.status) }}</text>
     </view>
     
@@ -95,16 +98,83 @@
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
+import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { getOrderDetail, cancelOrder as cancelOrderApi } from '@/api/order'
 
 const order = ref(null)
 const orderId = ref(null)
+const nowTs = ref(Date.now())
+
+let ticker = null
 
 onLoad(async (options) => {
   if (options.id) {
     orderId.value = options.id
+    startTicker()
     loadOrderDetail()
   }
+})
+
+onShow(() => {
+  startTicker()
+})
+
+onHide(() => {
+  stopTicker()
+})
+
+onUnload(() => {
+  stopTicker()
+})
+
+const startTicker = () => {
+  stopTicker()
+  ticker = setInterval(() => {
+    nowTs.value = Date.now()
+  }, 1000)
+}
+
+const stopTicker = () => {
+  if (ticker) {
+    clearInterval(ticker)
+    ticker = null
+  }
+}
+
+const remainingSeconds = computed(() => {
+  if (!order.value || order.value.status !== 'pending') return null
+
+  let expireMs = null
+  if (order.value.expireAt) {
+    const ts = new Date(order.value.expireAt).getTime()
+    if (!Number.isNaN(ts)) {
+      expireMs = ts
+    }
+  }
+
+  if (!expireMs && order.value.createdAt) {
+    const createdTs = new Date(order.value.createdAt).getTime()
+    if (!Number.isNaN(createdTs)) {
+      expireMs = createdTs + 60 * 1000
+    }
+  }
+
+  if (!expireMs) return null
+  const remain = Math.floor((expireMs - nowTs.value) / 1000)
+  return remain > 0 ? remain : 0
+})
+
+const countdownText = computed(() => {
+  if (remainingSeconds.value == null) return '即将超时'
+  if (remainingSeconds.value <= 0) return '即将自动取消'
+  const mm = String(Math.floor(remainingSeconds.value / 60)).padStart(2, '0')
+  const ss = String(remainingSeconds.value % 60).padStart(2, '0')
+  return `剩余 ${mm}:${ss}`
+})
+
+const isExpiringSoon = computed(() => {
+  return remainingSeconds.value != null && remainingSeconds.value <= 30
 })
 
 const loadOrderDetail = async () => {
@@ -221,6 +291,17 @@ const cancelOrder = () => {
   .status-desc {
     font-size: $font-size-sm;
     opacity: 0.8;
+  }
+
+  .countdown-text {
+    margin-bottom: 8rpx;
+    font-size: $font-size-sm;
+    opacity: 0.9;
+
+    &.urgent {
+      font-weight: 600;
+      color: #FFE4E6;
+    }
   }
 }
 

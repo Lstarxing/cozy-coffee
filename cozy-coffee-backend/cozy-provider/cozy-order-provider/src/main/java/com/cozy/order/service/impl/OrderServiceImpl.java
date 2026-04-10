@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -85,6 +87,9 @@ public class OrderServiceImpl implements OrderService {
 
     // 菜单缓存 (Local Cache)
     private volatile List<CoffeeProductDTO> cachedMenu = null;
+
+    @Value("${cozy.order.timeout-cancel.timeout-minutes:1}")
+    private int orderTimeoutMinutes;
 
     private void invalidateMenuCache() {
         this.cachedMenu = null;
@@ -1649,6 +1654,7 @@ public class OrderServiceImpl implements OrderService {
         dto.setDeliveryFee(entity.getDeliveryFee());
         dto.setDeliveryFeeWaived(entity.getDeliveryFeeWaived());
         dto.setDeliveryFeeWaivedReason(entity.getDeliveryFeeWaivedReason());
+        populateExpiryInfo(entity, dto);
 
         return dto;
     }
@@ -1723,8 +1729,28 @@ public class OrderServiceImpl implements OrderService {
         dto.setDeliveryFee(entity.getDeliveryFee());
         dto.setDeliveryFeeWaived(entity.getDeliveryFeeWaived());
         dto.setDeliveryFeeWaivedReason(entity.getDeliveryFeeWaivedReason());
+        populateExpiryInfo(entity, dto);
 
         return dto;
+    }
+
+    private void populateExpiryInfo(ShopOrder entity, ShopOrderDTO dto) {
+        if (entity == null || dto == null) {
+            return;
+        }
+        if (!"pending".equalsIgnoreCase(entity.getStatus()) || entity.getCreatedAt() == null) {
+            return;
+        }
+
+        LocalDateTime expireAt = entity.getCreatedAt().plusMinutes(Math.max(orderTimeoutMinutes, 1));
+        long remainingSeconds = Duration.between(LocalDateTime.now(), expireAt).getSeconds();
+        if (remainingSeconds < 0) {
+            remainingSeconds = 0;
+        }
+
+        dto.setExpireAt(expireAt);
+        dto.setSecondsToExpire(remainingSeconds);
+        dto.setAboutToExpire(remainingSeconds <= 30);
     }
 
     @Override

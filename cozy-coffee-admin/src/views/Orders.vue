@@ -164,14 +164,19 @@
         <!-- 5. 状态 -->
         <el-table-column label="状态" width="120" align="center">
           <template #default="{ row }">
-            <el-tag 
-              :type="getOrderStatusTagType(row.status)" 
-              effect="light" 
-              round 
-              class="status-capsule"
-            >
-              {{ getOrderStatusText(row.status) }}
-            </el-tag>
+            <div class="status-cell">
+              <el-tag 
+                :type="getOrderStatusTagType(row.status)" 
+                effect="light" 
+                round 
+                class="status-capsule"
+              >
+                {{ getOrderStatusText(row.status) }}
+              </el-tag>
+              <div v-if="row.status === 'pending'" class="expire-text" :class="{ urgent: isExpiringSoon(row) }">
+                {{ formatCountdown(row) }}
+              </div>
+            </div>
           </template>
         </el-table-column>
 
@@ -271,6 +276,11 @@ const pageSize = ref(10)
 
 const detailDialogVisible = ref(false)
 const selectedOrderId = ref(null)
+const nowTs = ref(Date.now())
+
+let secondTicker = null
+let pollingTimer = null
+let delayedRefreshTimer = null
 
 // Computed for pagination
 const paginatedOrders = computed(() => {
@@ -329,11 +339,6 @@ const loadOrderCounts = async () => {
   }
 }
 
-onMounted(() => {
-  loadOrders()
-  // loadOrderCounts() called inside loadOrders if mostly empty
-})
-
 const handleSearch = () => { loadOrders() }
 
 const resetFilters = () => {
@@ -352,6 +357,43 @@ const handleQuickFilter = (status) => {
 const handleNewDataRefresh = () => {
   hasNewData.value = false
   loadOrders()
+}
+
+const getExpireMs = (row) => {
+  if (!row) return null
+  if (row.expireAt) {
+    const ts = new Date(row.expireAt).getTime()
+    if (!Number.isNaN(ts)) return ts
+  }
+  if (row.createdAt) {
+    const createdTs = new Date(row.createdAt).getTime()
+    if (!Number.isNaN(createdTs)) {
+      return createdTs + 60 * 1000
+    }
+  }
+  return null
+}
+
+const getRemainingSeconds = (row) => {
+  const expireMs = getExpireMs(row)
+  if (!expireMs) return null
+  const seconds = Math.floor((expireMs - nowTs.value) / 1000)
+  return seconds > 0 ? seconds : 0
+}
+
+const formatCountdown = (row) => {
+  const remaining = getRemainingSeconds(row)
+  if (remaining == null) return '即将超时'
+  if (remaining <= 0) return '即将自动取消'
+
+  const minutes = Math.floor(remaining / 60)
+  const seconds = remaining % 60
+  return `剩余 ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+const isExpiringSoon = (row) => {
+  const remaining = getRemainingSeconds(row)
+  return remaining != null && remaining <= 30
 }
 
 const viewDetail = (row) => {
@@ -490,13 +532,39 @@ const getSpecTags = (item) => {
 let unsubscribeSse = null
 onMounted(() => {
   loadOrders()
+  secondTicker = window.setInterval(() => {
+    nowTs.value = Date.now()
+  }, 1000)
+  pollingTimer = window.setInterval(() => {
+    loadOrders()
+  }, 8000)
+
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+
   unsubscribeSse = sseService.on('new_order', () => {
     hasNewData.value = true
     loadOrders()
+    if (delayedRefreshTimer) {
+      window.clearTimeout(delayedRefreshTimer)
+    }
+    delayedRefreshTimer = window.setTimeout(() => {
+      loadOrders()
+    }, 1200)
   })
 })
+
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible') {
+    loadOrders()
+  }
+}
+
 onUnmounted(() => {
   if (unsubscribeSse) unsubscribeSse()
+  if (secondTicker) window.clearInterval(secondTicker)
+  if (pollingTimer) window.clearInterval(pollingTimer)
+  if (delayedRefreshTimer) window.clearTimeout(delayedRefreshTimer)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>
 
@@ -715,6 +783,23 @@ onUnmounted(() => {
   padding: 0 12px;
   height: 24px;
   line-height: 22px;
+}
+
+.status-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.expire-text {
+  font-size: 11px;
+  color: #6B7280;
+}
+
+.expire-text.urgent {
+  color: #DC2626;
+  font-weight: 600;
 }
 
 /* 6. Time */

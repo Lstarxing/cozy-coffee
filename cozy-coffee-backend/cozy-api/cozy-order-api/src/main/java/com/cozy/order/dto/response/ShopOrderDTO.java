@@ -67,4 +67,9 @@ public class ShopOrderDTO implements Serializable {
     private Boolean deliveryFeeWaived; // 配送费是否已减免
     private String deliveryFeeWaivedReason; // 减免原因 (BLACK_GOLD_UNLIMITED / COUPON)
 
+    // 待处理订单超时信息
+    private LocalDateTime expireAt; // 预计自动取消时间
+    private Long secondsToExpire; // 当前剩余秒数（最小为0）
+    private Boolean aboutToExpire; // 是否即将过期（<=30秒）
+
 }
