@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -46,7 +47,7 @@ public class SigninServiceImpl implements SigninService {
     private final StringRedisTemplate stringRedisTemplate;
 
     // v5.0: 通过 RPC 调用 PointsMallService 发放7日连签券
-    @org.apache.dubbo.config.annotation.DubboReference(check = false)
+    @org.apache.dubbo.config.annotation.DubboReference(check = false, timeout = 2000, retries = 0)
     private com.cozy.member.api.PointsMallService pointsMallService;
 
     @Override
@@ -140,7 +141,8 @@ public class SigninServiceImpl implements SigninService {
 
         // v5.0: 检查7日连签奖励 - 发放"满35减10"券
         if (consecutiveDays == 7) {
-            grant7DayCoupon(userId, record.getId());
+            // 奖励发券异步执行，避免下游波动拖慢签到主链路。
+            CompletableFuture.runAsync(() -> grant7DayCoupon(userId, record.getId()));
         }
 
         return result;
