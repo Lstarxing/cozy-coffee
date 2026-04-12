@@ -173,25 +173,29 @@ flowchart TD
 目标：展示从浏览商品到完成下单的完整体验链路。
 
 ![用户端-首页/菜单](docs/images/frontend-web/01-menu.png)
-![用户端-购物车](docs/images/frontend-web/02-cart.png)
-![用户端-结算页](docs/images/frontend-web/03-checkout.png)
+![用户端-咖啡详情](docs/images/frontend-web/02-coffee-details.png)
+![用户端-购物车](docs/images/frontend-web/03-cart.png)
 ![用户端-下单成功](docs/images/frontend-web/04-order-success.png)
 
 ### 会员与营销体验
 目标：展示会员等级、积分、签到、优惠券规则在前端的实际呈现。
 
 ![会员中心](docs/images/frontend-web/05-member-center.png)
-![签到日历](docs/images/frontend-web/06-signin-calendar.png)
-![积分商城](docs/images/frontend-web/07-points-mall.png)
-![优惠券选择弹窗](docs/images/frontend-web/08-coupon-selector.png)
+![会员权益](docs/images/frontend-web/06-member-benefits.png)
+![积分获取](docs/images/frontend-web/07-points-earn.png)
+![积分商城](docs/images/frontend-web/08-points-mall.png)
+![我的券包](docs/images/frontend-web/09-coupon-wallet.png)
+![优惠券选择](docs/images/frontend-web/10-coupon-selector.png)
 
 ### 管理后台运营视图
 目标：展示后台实时订单处理与经营分析能力。
 
-![后台-实时订单列表](docs/images/frontend-admin/01-order-list.png)
-![后台-订单详情](docs/images/frontend-admin/02-order-detail.png)
-![后台-运营看板](docs/images/frontend-admin/03-dashboard.png)
-
+![后台-运营看板](docs/images/frontend-admin/01-dashboard.png)
+![后台-实时订单列表](docs/images/frontend-admin/02-order-list.png)
+![后台-订单详情](docs/images/frontend-admin/03-order-detail.png)
+![后台-商品管理](docs/images/frontend-admin/04-product-management.png)
+![后台-商品管理](docs/images/frontend-admin/05-mall-management.png)
+![后台-会员管理](docs/images/frontend-admin/06-member-management.png)
 ### 压测与可视化证据
 目标：展示性能优化的结果证据。
 
