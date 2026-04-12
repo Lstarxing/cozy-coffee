@@ -167,8 +167,40 @@ flowchart TD
 - 并发：500
 - 指标：QPS、平均RT、P95/P99、错误率
 
-## 项目截图
-请见 [docs/images/README.md](docs/images/README.md)
+## 前端界面预览
+
+### 用户端核心流程（Web/Mobile）
+目标：展示从浏览商品到完成下单的完整体验链路。
+
+![用户端-首页/菜单](docs/images/frontend-web/01-menu.png)
+![用户端-购物车](docs/images/frontend-web/02-cart.png)
+![用户端-结算页](docs/images/frontend-web/03-checkout.png)
+![用户端-下单成功](docs/images/frontend-web/04-order-success.png)
+
+### 会员与营销体验
+目标：展示会员等级、积分、签到、优惠券规则在前端的实际呈现。
+
+![会员中心](docs/images/frontend-web/05-member-center.png)
+![签到日历](docs/images/frontend-web/06-signin-calendar.png)
+![积分商城](docs/images/frontend-web/07-points-mall.png)
+![优惠券选择弹窗](docs/images/frontend-web/08-coupon-selector.png)
+
+### 管理后台运营视图
+目标：展示后台实时订单处理与经营分析能力。
+
+![后台-实时订单列表](docs/images/frontend-admin/01-order-list.png)
+![后台-订单详情](docs/images/frontend-admin/02-order-detail.png)
+![后台-运营看板](docs/images/frontend-admin/03-dashboard.png)
+
+### 压测与可视化证据
+目标：展示性能优化的结果证据。
+
+![Locust 压测结果](docs/images/frontend-common/01-locust-result.png)
+
+## 项目截图说明
+- 图片命名与目录规范见 [docs/images/README.md](docs/images/README.md)
+- 建议优先补齐“用户端核心流程 + 管理后台看板 + 压测结果”三组图片
+- 所有截图请先做隐私脱敏（手机号、地址、token、订单号）
 
 ## 已知限制与后续计划
 - 当前以单地域部署为主，后续可扩展多实例弹性部署
