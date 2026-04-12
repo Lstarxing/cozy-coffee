@@ -31,8 +31,6 @@ CozyCoffee 是一个面向咖啡零售场景的微服务业务系统，覆盖用
 - 压测：Locust
 
 ## 系统架构图
-![系统架构图](docs/images/architecture-overview.png)
-
 ```mermaid
 flowchart LR
     U[用户端 Web/Mobile] --> G[Gateway 统一鉴权与路由]
@@ -61,8 +59,6 @@ flowchart LR
 ```
 
 ## 下单时序图
-![下单时序图](docs/images/order-sequence.png)
-
 ```mermaid
 sequenceDiagram
     participant C as Client
@@ -81,10 +77,8 @@ sequenceDiagram
     OS-->>GW: 返回订单结果
     GW-->>C: 下单成功响应
 ```
-
+<div style="max-width: 600px; margin: 0 auto;">
 ## 缓存策略图
-![缓存策略图](docs/images/cache-strategy.png)
-
 ```mermaid
 flowchart TD
     Q[请求菜单] --> L1{本地缓存命中?}
@@ -94,14 +88,12 @@ flowchart TD
     L2 -- 否 --> LOCK{获取重建锁?}
     LOCK -- 否 --> DEG[短等待后重试/降级返回]
     LOCK -- 是 --> DBQ[查询MySQL]
-    DBQ --> W1[写入Redis(含TTL抖动)]
+    DBQ --> W1[写入Redis 含TTL抖动]
     W1 --> W2[写入本地缓存]
     W2 --> RET3[返回结果]
 ```
-
+</div>
 ## 订单超时取消图
-![订单超时取消图](docs/images/order-timeout-zset.png)
-
 ```mermaid
 flowchart TD
     T[定时任务触发] --> L{获取分布式锁}
@@ -169,7 +161,7 @@ flowchart TD
 
 ## 前端界面预览
 
-### 用户端核心流程（Web/Mobile）
+### 用户端核心流程（Web）
 目标：展示从浏览商品到完成下单的完整体验链路。
 
 ![用户端-首页/菜单](docs/images/frontend-web/01-menu.png)
@@ -201,10 +193,6 @@ flowchart TD
 
 ![Locust 压测结果](docs/images/frontend-common/01-locust-result.png)
 
-## 项目截图说明
-- 图片命名与目录规范见 [docs/images/README.md](docs/images/README.md)
-- 建议优先补齐“用户端核心流程 + 管理后台看板 + 压测结果”三组图片
-- 所有截图请先做隐私脱敏（手机号、地址、token、订单号）
 
 ## 已知限制与后续计划
 - 当前以单地域部署为主，后续可扩展多实例弹性部署
@@ -212,6 +200,6 @@ flowchart TD
 - 计划完善可观测性（指标、链路、告警）
 
 ## 作者
-- Name: 你的名字
-- Email: 你的邮箱
-- GitHub: 你的仓库链接
+- Name: 苏瑞鑫
+- Email: 3187979459@qq.com
+- GitHub: [你的仓库链接](https://github.com/Lstarxing/cozy-coffee.git)
