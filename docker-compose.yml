@@ -1,4 +1,4 @@
-name: cozycoffee
+name: ${COMPOSE_PROJECT_NAME:-cozycoffee}
 
 services:
   mysql:
@@ -6,23 +6,25 @@ services:
     container_name: cozy-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: "666"
-      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-666}
+      MYSQL_INIT_MODE: ${MYSQL_INIT_MODE:-full}
+      TZ: ${TIMEZONE:-Asia/Shanghai}
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --max_connections=500
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/init/00-bootstrap.sql:/docker-entrypoint-initdb.d/00-bootstrap.sql:ro
+      - ./docker/mysql/init/01-import.sh:/docker-entrypoint-initdb.d/01-import.sh:ro
       - ./cozy-coffee-backend/mysql/当前数据库表sql/cozy_user.sql:/docker-entrypoint-initdb.d/raw/cozy_user.sql:ro
       - ./cozy-coffee-backend/mysql/当前数据库表sql/cozy_member.sql:/docker-entrypoint-initdb.d/raw/cozy_member.sql:ro
       - ./cozy-coffee-backend/mysql/当前数据库表sql/cozy_order.sql:/docker-entrypoint-initdb.d/raw/cozy_order.sql:ro
       - ./cozy-coffee-backend/mysql/当前数据库表sql/cozy_mall.sql:/docker-entrypoint-initdb.d/raw/cozy_mall.sql:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p666"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 15
@@ -34,7 +36,7 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -49,9 +51,9 @@ services:
     restart: unless-stopped
     environment:
       MODE: standalone
-      TZ: Asia/Shanghai
+      TZ: ${TIMEZONE:-Asia/Shanghai}
     ports:
-      - "8848:8848"
+      - "${NACOS_PORT:-8848}:8848"
     volumes:
       - nacos_data:/home/nacos/data
       - nacos_logs:/home/nacos/logs
@@ -74,13 +76,13 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: "666"
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-666}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: "6379"
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
     ports:
-      - "8081:8081"
-      - "20881:20881"
+      - "${USER_PROVIDER_HTTP_PORT:-8081}:8081"
+      - "${USER_PROVIDER_DUBBO_PORT:-20881}:20881"
 
   cozy-member-provider:
     build:
@@ -100,13 +102,13 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_member?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: "666"
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-666}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: "6379"
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
     ports:
-      - "8082:8082"
-      - "20882:20882"
+      - "${MEMBER_PROVIDER_HTTP_PORT:-8082}:8082"
+      - "${MEMBER_PROVIDER_DUBBO_PORT:-20882}:20882"
 
   cozy-order-provider:
     build:
@@ -126,13 +128,13 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: "666"
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-666}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: "6379"
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
     ports:
-      - "8083:8083"
-      - "20883:20883"
+      - "${ORDER_PROVIDER_HTTP_PORT:-8083}:8083"
+      - "${ORDER_PROVIDER_DUBBO_PORT:-20883}:20883"
 
   cozy-mall-provider:
     build:
@@ -152,13 +154,13 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: "666"
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-666}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: "6379"
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
     ports:
-      - "8084:8084"
-      - "20884:20884"
+      - "${MALL_PROVIDER_HTTP_PORT:-8084}:8084"
+      - "${MALL_PROVIDER_DUBBO_PORT:-20884}:20884"
 
   cozy-gateway:
     build:
@@ -186,7 +188,7 @@ services:
       SPRING_DATA_REDIS_PORT: "6379"
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
     ports:
-      - "8080:8080"
+      - "${GATEWAY_PORT:-8080}:8080"
 
 volumes:
   mysql_data:

@@ -159,6 +159,18 @@ flowchart TD
 在仓库根目录执行：
 
 ```bash
+cp .env.example .env
+```
+
+如果你希望只导入表结构、不导入演示数据，将 `.env` 里的：
+
+```bash
+MYSQL_INIT_MODE=schema
+```
+
+默认值为 `full`（会导入 SQL 中的示例数据）。
+
+```bash
 docker compose up -d --build
 ```
 
