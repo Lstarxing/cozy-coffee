@@ -1,0 +1,195 @@
+name: cozycoffee
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: cozy-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "666"
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_connections=500
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init/00-bootstrap.sql:/docker-entrypoint-initdb.d/00-bootstrap.sql:ro
+      - ./cozy-coffee-backend/mysql/当前数据库表sql/cozy_user.sql:/docker-entrypoint-initdb.d/raw/cozy_user.sql:ro
+      - ./cozy-coffee-backend/mysql/当前数据库表sql/cozy_member.sql:/docker-entrypoint-initdb.d/raw/cozy_member.sql:ro
+      - ./cozy-coffee-backend/mysql/当前数据库表sql/cozy_order.sql:/docker-entrypoint-initdb.d/raw/cozy_order.sql:ro
+      - ./cozy-coffee-backend/mysql/当前数据库表sql/cozy_mall.sql:/docker-entrypoint-initdb.d/raw/cozy_mall.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p666"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: cozy-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 15
+
+  nacos:
+    image: nacos/nacos-server:v2.3.2
+    container_name: cozy-nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      TZ: Asia/Shanghai
+    ports:
+      - "8848:8848"
+    volumes:
+      - nacos_data:/home/nacos/data
+      - nacos_logs:/home/nacos/logs
+
+  cozy-user-provider:
+    build:
+      context: ./cozy-coffee-backend
+      dockerfile: Dockerfile.service
+      args:
+        MODULE_PATH: cozy-provider/cozy-user-provider
+    container_name: cozy-user-provider
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: "666"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+    ports:
+      - "8081:8081"
+      - "20881:20881"
+
+  cozy-member-provider:
+    build:
+      context: ./cozy-coffee-backend
+      dockerfile: Dockerfile.service
+      args:
+        MODULE_PATH: cozy-provider/cozy-member-provider
+    container_name: cozy-member-provider
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_member?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: "666"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+    ports:
+      - "8082:8082"
+      - "20882:20882"
+
+  cozy-order-provider:
+    build:
+      context: ./cozy-coffee-backend
+      dockerfile: Dockerfile.service
+      args:
+        MODULE_PATH: cozy-provider/cozy-order-provider
+    container_name: cozy-order-provider
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: "666"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+    ports:
+      - "8083:8083"
+      - "20883:20883"
+
+  cozy-mall-provider:
+    build:
+      context: ./cozy-coffee-backend
+      dockerfile: Dockerfile.service
+      args:
+        MODULE_PATH: cozy-provider/cozy-mall-provider
+    container_name: cozy-mall-provider
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: "666"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+    ports:
+      - "8084:8084"
+      - "20884:20884"
+
+  cozy-gateway:
+    build:
+      context: ./cozy-coffee-backend
+      dockerfile: Dockerfile.service
+      args:
+        MODULE_PATH: cozy-gateway
+    container_name: cozy-gateway
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_started
+      cozy-user-provider:
+        condition: service_started
+      cozy-member-provider:
+        condition: service_started
+      cozy-order-provider:
+        condition: service_started
+      cozy-mall-provider:
+        condition: service_started
+    environment:
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+    ports:
+      - "8080:8080"
+
+volumes:
+  mysql_data:
+  redis_data:
+  nacos_data:
+  nacos_logs:

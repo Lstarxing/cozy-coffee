@@ -1,0 +1,18 @@
+FROM maven:3.9.9-eclipse-temurin-17 AS builder
+
+ARG MODULE_PATH
+WORKDIR /build
+
+COPY . .
+RUN mvn -pl ${MODULE_PATH} -am -DskipTests clean package
+RUN set -eux; \
+    JAR_PATH="$(find ${MODULE_PATH}/target -maxdepth 1 -type f -name '*.jar' ! -name '*original*.jar' | head -n 1)"; \
+    cp "${JAR_PATH}" /tmp/app.jar
+
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+
+COPY --from=builder /tmp/app.jar /app/app.jar
+
+EXPOSE 8080
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/app.jar"]

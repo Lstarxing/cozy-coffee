@@ -152,8 +152,35 @@ flowchart TD
 - 用户端: http://localhost:5173
 - 管理端: http://localhost:5174
 
-## Docker 部署（可选）
-建议提供 docker-compose.yml，包含 mysql、redis、nacos、gateway、providers。
+## Docker 一键部署
+已提供根目录 `docker-compose.yml`，访客只需安装 Docker Desktop 即可快速拉起后端运行环境。
+
+### 1. 一键启动
+在仓库根目录执行：
+
+```bash
+docker compose up -d --build
+```
+
+首次启动会自动完成：
+- MySQL 初始化（自动建库并导入 4 个业务库脚本）
+- Redis 与 Nacos 启动
+- 4 个 Provider 服务 + Gateway 镜像构建与启动
+
+### 2. 验证服务
+- Gateway API: http://localhost:8080
+- Nacos 控制台: http://localhost:8848/nacos
+
+### 3. 停止与清理
+```bash
+docker compose down
+```
+
+若希望同时清空数据库与缓存卷：
+
+```bash
+docker compose down -v
+```
 
 ## API 示例
 - GET /api/order/products：获取菜单
