@@ -1,5 +1,24 @@
-# CozyCoffee 智能点单与会员运营系统
+<div align="center">
 
+# CozyCoffee
+### 点单履约与会员运营系统 
+
+![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?logo=springboot&logoColor=white)
+![Dubbo](https://img.shields.io/badge/Dubbo-2.7.x-718D19?logo=apache&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7.x-DC382D?logo=redis&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)
+![Nacos](https://img.shields.io/badge/Nacos-2.x-0096E0?logo=alibaba&logoColor=white)
+![Vue3](https://img.shields.io/badge/Vue-3-4FC08D?logo=vue.js&logoColor=white)
+
+![License](https://img.shields.io/github/license/Lstarxing/cozy-coffee)
+![GitHub Repo stars](https://img.shields.io/github/stars/Lstarxing/cozy-coffee?style=social)
+
+**高并发微服务咖啡点单与会员运营系统｜多级缓存架构｜会员积分闭环｜订单超时自动取消｜压测驱动性能优化**
+
+</div>
+
+---
 ## 项目简介
 CozyCoffee 是一个面向咖啡零售场景的微服务业务系统，覆盖用户认证、商品点单、订单履约、会员成长、积分权益、优惠券规则与运营后台。
 
@@ -77,7 +96,7 @@ sequenceDiagram
     OS-->>GW: 返回订单结果
     GW-->>C: 下单成功响应
 ```
-<div style="max-width: 600px; margin: 0 auto;">
+
 ## 缓存策略图
 ```mermaid
 flowchart TD
@@ -92,7 +111,7 @@ flowchart TD
     W1 --> W2[写入本地缓存]
     W2 --> RET3[返回结果]
 ```
-</div>
+
 ## 订单超时取消图
 ```mermaid
 flowchart TD
