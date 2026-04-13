@@ -195,6 +195,30 @@ services:
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
 
+  cozy-web:
+    build:
+      context: ./cozy-coffee-web
+      dockerfile: Dockerfile
+    container_name: cozy-web
+    restart: unless-stopped
+    depends_on:
+      cozy-gateway:
+        condition: service_started
+    ports:
+      - "${WEB_PORT:-5173}:80"
+
+  cozy-admin:
+    build:
+      context: ./cozy-coffee-admin
+      dockerfile: Dockerfile
+    container_name: cozy-admin
+    restart: unless-stopped
+    depends_on:
+      cozy-gateway:
+        condition: service_started
+    ports:
+      - "${ADMIN_PORT:-5174}:80"
+
 volumes:
   mysql_data:
   redis_data:

@@ -164,7 +164,14 @@ flowchart TD
 - 管理端: http://localhost:5174
 
 ## Docker 部署（可选）
-建议提供 docker-compose.yml，包含 mysql、redis、nacos、gateway、providers。
+建议直接使用 `docker-compose.yml` 一键启动完整环境，包含 mysql、redis、nacos、gateway、providers、用户端 Web 和管理端 Admin。
+
+启动后访问：
+- Gateway API: http://localhost:8080
+- 用户端: http://localhost:5173
+- 管理端: http://localhost:5174
+
+建议执行：`docker compose up -d --build`
 
 ### Windows/Mac 统一初始化说明
 - 当前 Docker 初始化链路不再依赖 `.sh`，而是统一使用 MySQL 官方镜像可执行的 `init.sql`。
