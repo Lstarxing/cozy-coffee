@@ -80,6 +80,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: "6379"
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+      JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
     ports:
       - "${USER_PROVIDER_HTTP_PORT:-8081}:8081"
       - "${USER_PROVIDER_DUBBO_PORT:-20881}:20881"
@@ -106,6 +107,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: "6379"
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+      JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
     ports:
       - "${MEMBER_PROVIDER_HTTP_PORT:-8082}:8082"
       - "${MEMBER_PROVIDER_DUBBO_PORT:-20882}:20882"
@@ -132,6 +134,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: "6379"
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+      JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
     ports:
       - "${ORDER_PROVIDER_HTTP_PORT:-8083}:8083"
       - "${ORDER_PROVIDER_DUBBO_PORT:-20883}:20883"
@@ -158,6 +161,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: "6379"
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+      JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
     ports:
       - "${MALL_PROVIDER_HTTP_PORT:-8084}:8084"
       - "${MALL_PROVIDER_DUBBO_PORT:-20884}:20884"
@@ -187,6 +191,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: "6379"
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+      JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
 

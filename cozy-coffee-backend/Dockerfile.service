@@ -4,7 +4,8 @@ ARG MODULE_PATH
 WORKDIR /build
 
 COPY . .
-RUN mvn -pl ${MODULE_PATH} -am -DskipTests clean package
+RUN mvn -pl ${MODULE_PATH} -am -DskipTests clean install
+RUN mvn -f ${MODULE_PATH}/pom.xml -DskipTests package spring-boot:repackage
 RUN set -eux; \
     JAR_PATH="$(find ${MODULE_PATH}/target -maxdepth 1 -type f -name '*.jar' ! -name '*original*.jar' | head -n 1)"; \
     cp "${JAR_PATH}" /tmp/app.jar
