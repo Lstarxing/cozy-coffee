@@ -4,7 +4,13 @@
     [int]$SpawnRate = 20,
     [string]$Duration = "5m",
 
-    [string]$LocustFile = ".\scripts\perf\locust_hot_read_v2.py",
+    [string]$LocustFile = ".\scripts\perf\locust_resume_benchmark_v1.py",
+    [string]$Scenario = "hot_read",
+    [string]$UserToken = "",
+    [string]$AdminToken = "",
+    [string]$OrderProductId = "1",
+    [string]$MallProductId = "1",
+    [string]$OutputTag = "",
 
     [string]$MySqlHost = "127.0.0.1",
     [int]$MySqlPort = 3306,
@@ -56,7 +62,9 @@ function Test-CommandExists([string]$Name) {
 }
 
 $ts = Get-Date -Format "yyyyMMdd_HHmmss"
-$outDir = ".\perf_with_redis_$ts"
+$safeScenario = if ($Scenario -and $Scenario.Trim().Length -gt 0) { ($Scenario.Trim() -replace "[^a-zA-Z0-9_-]", "_") } else { "hot_read" }
+$safeTag = if ($OutputTag -and $OutputTag.Trim().Length -gt 0) { "_" + ($OutputTag.Trim() -replace "[^a-zA-Z0-9_-]", "_") } else { "" }
+$outDir = ".\perf_{0}{1}_{2}" -f $safeScenario, $safeTag, $ts
 New-Item -ItemType Directory -Path $outDir | Out-Null
 
 Write-Host "===> Output directory: $outDir"
@@ -92,7 +100,7 @@ $counterJob = Start-Job -ScriptBlock {
 $redisInfoFile = Join-Path $outDir "redis_stats.csv"
 $redisJob = $null
 if ($enableRedisMetrics) {
-    "Timestamp,keyspace_hits,keyspace_misses,hit_rate_percent,evicted_keys,expired_keys,used_memory_human,connected_clients" | Out-File -FilePath $redisInfoFile -Encoding utf8
+    "Timestamp,keyspace_hits,keyspace_misses,hit_rate_percent,evicted_keys,expired_keys,used_memory_human,connected_clients,pending_timeout_zset_size" | Out-File -FilePath $redisInfoFile -Encoding utf8
 
     $redisJob = Start-Job -ScriptBlock {
         param($file, $redisContainer, $redisPassword)
@@ -109,11 +117,13 @@ if ($enableRedisMetrics) {
                 $stats = docker exec $redisContainer redis-cli -a $redisPassword INFO stats | Out-String
                 $memory = docker exec $redisContainer redis-cli -a $redisPassword INFO memory | Out-String
                 $clients = docker exec $redisContainer redis-cli -a $redisPassword INFO clients | Out-String
+                $zsetSize = (docker exec $redisContainer redis-cli -a $redisPassword ZCARD cozy:order:pending:timeout | Out-String).Trim()
             }
             else {
                 $stats = docker exec $redisContainer redis-cli INFO stats | Out-String
                 $memory = docker exec $redisContainer redis-cli INFO memory | Out-String
                 $clients = docker exec $redisContainer redis-cli INFO clients | Out-String
+                $zsetSize = (docker exec $redisContainer redis-cli ZCARD cozy:order:pending:timeout | Out-String).Trim()
             }
 
             $hits = [double](Parse-Field $stats "keyspace_hits")
@@ -128,8 +138,11 @@ if ($enableRedisMetrics) {
             if ($total -gt 0) {
                 $hitrate = [math]::Round(($hits / $total) * 100, 2)
             }
+            if (-not $zsetSize) {
+                $zsetSize = "0"
+            }
 
-            "$((Get-Date).ToString("yyyy-MM-dd HH:mm:ss")),$hits,$misses,$hitrate,$evicted,$expired,$usedMemoryHuman,$connectedClients" | Out-File -FilePath $file -Encoding utf8 -Append
+            "$((Get-Date).ToString("yyyy-MM-dd HH:mm:ss")),$hits,$misses,$hitrate,$evicted,$expired,$usedMemoryHuman,$connectedClients,$zsetSize" | Out-File -FilePath $file -Encoding utf8 -Append
             Start-Sleep -Seconds 1
         }
     } -ArgumentList $redisInfoFile, $RedisContainer, $RedisPassword
@@ -152,9 +165,34 @@ if ($enableRedisMetrics) {
 }
 
 $locustPrefix = Join-Path $outDir "locust"
-$locustCmd = "locust -f `"$LocustFile`" --host `"$BaseUrl`" --headless -u $Users -r $SpawnRate -t $Duration --csv `"$locustPrefix`""
-Write-Host "===> Start pressure test: $locustCmd"
-cmd /c $locustCmd
+$oldScenario = $env:COZY_SCENARIO
+$oldUserToken = $env:COZY_USER_TOKEN
+$oldAdminToken = $env:COZY_ADMIN_TOKEN
+$oldOrderProductId = $env:COZY_ORDER_PRODUCT_ID
+$oldMallProductId = $env:COZY_MALL_PRODUCT_ID
+
+try {
+    $env:COZY_SCENARIO = $Scenario
+    if ($UserToken -ne "") { $env:COZY_USER_TOKEN = $UserToken }
+    if ($AdminToken -ne "") { $env:COZY_ADMIN_TOKEN = $AdminToken }
+    $env:COZY_ORDER_PRODUCT_ID = $OrderProductId
+    $env:COZY_MALL_PRODUCT_ID = $MallProductId
+
+    $locustCmd = "locust -f `"$LocustFile`" --host `"$BaseUrl`" --headless -u $Users -r $SpawnRate -t $Duration --csv `"$locustPrefix`""
+    Write-Host "===> Scenario: $Scenario"
+    Write-Host "===> Start pressure test: $locustCmd"
+    cmd /c $locustCmd
+    if ($LASTEXITCODE -ne 0) {
+        throw "Locust exited with code $LASTEXITCODE"
+    }
+}
+finally {
+    $env:COZY_SCENARIO = $oldScenario
+    $env:COZY_USER_TOKEN = $oldUserToken
+    $env:COZY_ADMIN_TOKEN = $oldAdminToken
+    $env:COZY_ORDER_PRODUCT_ID = $oldOrderProductId
+    $env:COZY_MALL_PRODUCT_ID = $oldMallProductId
+}
 
 $postFile = Join-Path $outDir "mysql_status_post.txt"
 $mysqlCmdPost = @"
@@ -183,6 +221,12 @@ $summaryFile = Join-Path $outDir "SUMMARY_TEMPLATE.md"
 @"
 # Perf Summary with Redis Metrics ($ts)
 
+## Meta
+- Scenario: $Scenario
+- LocustFile: $LocustFile
+- BaseUrl: $BaseUrl
+- Users/SpawnRate/Duration: $Users / $SpawnRate / $Duration
+
 ## Locust
 - Files: locust_stats.csv, locust_failures.csv
 - Focus: Requests/s, Avg RT, P95, P99, Error Rate
@@ -193,7 +237,7 @@ $summaryFile = Join-Path $outDir "SUMMARY_TEMPLATE.md"
 
 ## Redis
 - Files: redis_stats.csv, redis_info_pre.txt, redis_info_post.txt
-- Focus: keyspace_hits, keyspace_misses, hit_rate_percent, evicted_keys, expired_keys
+- Focus: keyspace_hits, keyspace_misses, hit_rate_percent, evicted_keys, expired_keys, pending_timeout_zset_size
 
 ## MySQL
 - Files: mysql_status_pre.txt, mysql_status_post.txt

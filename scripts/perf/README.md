@@ -3,6 +3,7 @@
 ## Files
 
 - `locust_hot_read_v2.py`: Hot-read API pressure model.
+- `locust_resume_benchmark_v1.py`: Multi-scenario benchmark model (`hot_read`, `signin_stats`, `admin_cache`, `timeout_cancel`).
 - `run_perf_with_redis_metrics.ps1`: One-command test runner with system, MySQL, and Redis metrics.
 - `benchmark_order_products.ps1`: Quick benchmark for `/api/order/products` with Avg/P50/P95/P99 and Redis key status.
 
@@ -14,15 +15,27 @@ pip install locust
 
 .\scripts\perf\run_perf_with_redis_metrics.ps1 `
   -BaseUrl "http://localhost:8080" `
+  -LocustFile ".\scripts\perf\locust_resume_benchmark_v1.py" `
+  -Scenario "hot_read" `
+  -UserToken "<user_token>" `
+  -AdminToken "<admin_token>" `
   -Users 100 `
   -SpawnRate 20 `
   -Duration "5m" `
   -MySqlPassword "666" `
   -RedisHost "127.0.0.1" `
-  -RedisPort 6379
+  -RedisPort 6379 `
+  -OutputTag "redis_branch"
 ```
 
 If `redis-cli` is not in PATH, pass `-RedisCliPath`.
+
+### Scenario names
+
+- `hot_read`: `/api/order/products` + `/api/member/mall/products`
+- `signin_stats`: `/api/member/signin/stats` + `/api/member/signin/calendar` (+ low-rate sign-in)
+- `admin_cache`: `/api/admin/orders/recent` + `/api/admin/orders` (+ low-rate create order for invalidation)
+- `timeout_cancel`: pending order creation + admin polling of orders/recent/counts/detail
 
 ## Quick Benchmark (Order Products)
 
@@ -45,7 +58,7 @@ Outputs:
 
 ## Output
 
-The script creates `perf_with_redis_yyyyMMdd_HHmmss` and writes:
+The script creates `perf_<scenario>_<tag>_yyyyMMdd_HHmmss` and writes:
 
 - `locust_stats.csv`
 - `system_counters.csv`
@@ -53,3 +66,5 @@ The script creates `perf_with_redis_yyyyMMdd_HHmmss` and writes:
 - `mysql_status_pre.txt`
 - `mysql_status_post.txt`
 - `SUMMARY_TEMPLATE.md`
+
+`redis_stats.csv` includes `pending_timeout_zset_size` for timeout-cancel observation.
