@@ -14,6 +14,7 @@ MAX_TRACKED_ORDER_IDS = int(os.getenv("COZY_MAX_TRACKED_ORDER_IDS", "200"))
 
 
 class BaseCozyUser(HttpUser):
+    abstract = True
     wait_time = between(0.2, 1.0)
 
     def on_start(self):
