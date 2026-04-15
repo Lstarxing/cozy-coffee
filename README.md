@@ -163,8 +163,22 @@ flowchart TD
 - 用户端: http://localhost:5173
 - 管理端: http://localhost:5174
 
-## Docker 部署（可选）
-建议提供 docker-compose.yml，包含 mysql、redis、nacos、gateway、providers。
+## Docker 部署说明
+建议直接使用 `docker-compose.yml` 一键启动完整环境，包含 mysql、redis、nacos、gateway、providers、用户端 Web 和管理端 Admin。
+
+启动后访问：
+- Gateway API: http://localhost:8080
+- 用户端: http://localhost:5173
+- 管理端: http://localhost:5174
+
+建议执行：`docker compose up -d --build`
+
+### Windows/Mac 统一初始化说明
+- 当前 Docker 初始化链路不再依赖 `.sh`，而是统一使用 MySQL 官方镜像可执行的 `init.sql`。
+- `docker/mysql/init/00-bootstrap.sql` 负责创建业务库，`docker/mysql/init/01-import.sql` 负责切换到对应数据库并导入表结构与数据。
+- Windows 和 macOS 用户都只需要执行 `docker compose up -d` 即可，不需要额外安装 Bash 或 WSL。
+- 如果本地已经存在旧的 MySQL 数据卷，初始化脚本不会再次执行，需要先运行 `docker compose down -v` 清理旧卷后再启动。
+- 如果想保留历史数据，只需保留命名卷，不要删除 `mysql_data`，后续重启会直接复用数据。
 
 ## API 示例
 - GET /api/order/products：获取菜单
