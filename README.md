@@ -226,13 +226,7 @@ flowchart TD
 
 ![Locust 压测结果](docs/images/frontend-common/01-locust-result.png)
 
-
-## 已知限制与后续计划
-- 当前以单地域部署为主，后续可扩展多实例弹性部署
-- 计划补充 CI/CD 与自动化回归测试
-- 计划完善可观测性（指标、链路、告警）
-
 ## 作者
 - Name: 苏瑞鑫
 - Email: 3187979459@qq.com
-- GitHub: [你的仓库链接](https://github.com/Lstarxing/cozy-coffee.git)
+- GitHub: https://github.com/Lstarxing
