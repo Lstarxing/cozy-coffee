@@ -163,7 +163,7 @@ flowchart TD
 - 用户端: http://localhost:5173
 - 管理端: http://localhost:5174
 
-## Docker 部署（可选）
+## Docker 部署说明
 建议直接使用 `docker-compose.yml` 一键启动完整环境，包含 mysql、redis、nacos、gateway、providers、用户端 Web 和管理端 Admin。
 
 启动后访问：
