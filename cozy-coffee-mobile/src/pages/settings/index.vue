@@ -126,9 +126,9 @@ const handleLogout = () => {
   uni.showModal({
     title: '退出登录',
     content: '确定要退出登录吗？',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        userStore.logout()
+        await userStore.logout()
         uni.showToast({ title: '已退出登录', icon: 'success' })
         setTimeout(() => {
           uni.switchTab({ url: '/pages/index/index' })

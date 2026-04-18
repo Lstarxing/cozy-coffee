@@ -39,9 +39,13 @@ import { useRouter } from 'vue-router'
 const userStore = useUserStore()
 const router = useRouter()
 
-const handleLogout = () => {
-  userStore.logout()
-  router.push('/')
+const handleLogout = async () => {
+  const ok = await userStore.logout()
+  if (ok) {
+    router.push('/')
+    return
+  }
+  window.alert('退出失败，请检查后端服务或网络后重试')
 }
 </script>
 

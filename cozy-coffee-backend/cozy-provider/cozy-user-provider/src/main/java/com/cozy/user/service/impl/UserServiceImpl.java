@@ -1,6 +1,7 @@
 package com.cozy.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.util.JwtUtil;
 import com.cozy.member.api.MemberService;
 import com.cozy.user.api.UserService;
@@ -10,14 +11,21 @@ import com.cozy.user.dto.request.UpdateProfileRequest;
 import com.cozy.user.dto.response.UserDTO;
 import com.cozy.user.entity.User;
 import com.cozy.user.mapper.UserMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @DubboService
@@ -25,6 +33,9 @@ import java.util.concurrent.CompletableFuture;
 public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @DubboReference(check = false, timeout = 60000)
@@ -169,8 +180,84 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("密码错误");
         }
 
+        String token = JwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole(), user.getTokenVersion());
+        try {
+            // 强制单会话：先按 userId 清理历史会话键（兼容旧版本遗留键）
+            clearUserSessions(user.getId());
+
+            String userTokenKey = RedisKeyConstants.userCurrentTokenById(user.getId());
+            String oldToken = stringRedisTemplate.opsForValue().get(userTokenKey);
+            if (oldToken != null && !oldToken.isBlank()) {
+                stringRedisTemplate.delete(RedisKeyConstants.userLoginSession(oldToken));
+            }
+            stringRedisTemplate.opsForValue().set(
+                    RedisKeyConstants.userLoginSession(token),
+                    String.valueOf(user.getId()),
+                    JwtUtil.getExpirationTimeMillis(),
+                    TimeUnit.MILLISECONDS);
+            stringRedisTemplate.opsForValue().set(
+                    userTokenKey,
+                    token,
+                    JwtUtil.getExpirationTimeMillis(),
+                    TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            log.warn("写入Redis登录会话失败: userId={}", user.getId(), e);
+        }
+
         log.info("用户登录成功: userId={}, username={}, role={}", user.getId(), user.getUsername(), user.getRole());
-        return JwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole(), user.getTokenVersion());
+        return token;
+    }
+
+    private void clearUserSessions(Long userId) {
+        String targetUserId = String.valueOf(userId);
+        ScanOptions options = ScanOptions.scanOptions().match("cozy:auth:session:*").count(500).build();
+        try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {
+            while (cursor.hasNext()) {
+                String key = cursor.next();
+                try {
+                    String cachedUserId = stringRedisTemplate.opsForValue().get(key);
+                    if (targetUserId.equals(cachedUserId)) {
+                        stringRedisTemplate.delete(key);
+                    }
+                } catch (Exception e) {
+                    log.warn("清理历史登录会话失败: key={}", key, e);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("扫描历史登录会话失败: userId={}", userId, e);
+        }
+    }
+
+    @Override
+    public void logout(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            return;
+        }
+        try {
+            String trimmedToken = token.trim();
+            String sessionKey = RedisKeyConstants.userLoginSession(trimmedToken);
+            Long userIdFromToken = null;
+            try {
+                userIdFromToken = JwtUtil.getUserIdFromToken(trimmedToken);
+            } catch (Exception ignore) {
+                // Token 解析失败时，继续走会话键删除兜底
+            }
+            String userId = stringRedisTemplate.opsForValue().get(sessionKey);
+            stringRedisTemplate.delete(sessionKey);
+            if (userId != null && !userId.isBlank()) {
+                String userTokenKey = RedisKeyConstants.userCurrentTokenById(Long.parseLong(userId));
+                String mappedToken = stringRedisTemplate.opsForValue().get(userTokenKey);
+                if (trimmedToken.equals(mappedToken)) {
+                    stringRedisTemplate.delete(userTokenKey);
+                }
+            }
+            if (userIdFromToken != null) {
+                clearUserSessions(userIdFromToken);
+                stringRedisTemplate.delete(RedisKeyConstants.userCurrentTokenById(userIdFromToken));
+            }
+        } catch (Exception e) {
+            log.warn("删除Redis登录会话失败", e);
+        }
     }
 
     @Override
@@ -178,11 +265,37 @@ public class UserServiceImpl implements UserService {
         if (userId == null) {
             throw new RuntimeException("用户ID不能为空");
         }
+        String cacheKey = RedisKeyConstants.userProfileById(userId);
+        try {
+            Object cachedObj = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedObj != null) {
+                if (cachedObj instanceof UserDTO) {
+                    return (UserDTO) cachedObj;
+                }
+                if (cachedObj instanceof Map) {
+                    return objectMapper.convertValue(cachedObj, UserDTO.class);
+                }
+                if (cachedObj instanceof String) {
+                    return objectMapper.readValue((String) cachedObj, UserDTO.class);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("读取Redis用户资料缓存失败: userId={}", userId, e);
+        }
+
         User user = userMapper.selectById(userId);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            log.debug("getUserById未找到用户: userId={}", userId);
+            return null;
         }
-        return toDTO(user);
+        UserDTO dto = toDTO(user);
+
+        try {
+            redisTemplate.opsForValue().set(cacheKey, dto, 10, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            log.warn("写入Redis用户资料缓存失败: userId={}", userId, e);
+        }
+        return dto;
     }
 
     @Override
@@ -294,6 +407,7 @@ public class UserServiceImpl implements UserService {
 
         try {
             userMapper.updateById(user);
+            stringRedisTemplate.delete(RedisKeyConstants.userProfileById(userId));
         } catch (org.springframework.dao.DuplicateKeyException e) {
             String msg = e.getMessage();
             if (msg.contains("uk_phone")) {

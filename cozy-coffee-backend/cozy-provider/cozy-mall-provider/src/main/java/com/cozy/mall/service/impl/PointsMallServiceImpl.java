@@ -1,6 +1,8 @@
 package com.cozy.mall.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.common.constant.RedisKeyConstants;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.cozy.mall.entity.PointsOrder;
 import com.cozy.mall.entity.PointsOrderFulfillment;
@@ -26,6 +28,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -40,6 +45,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 import com.cozy.member.dto.response.UserCouponDTO;
 import com.cozy.member.dto.response.CouponUsageResult;
@@ -54,11 +65,22 @@ import com.cozy.member.dto.response.CouponUsageResult;
 @RequiredArgsConstructor
 public class PointsMallServiceImpl implements PointsMallService {
 
+    private static final String EMPTY_CACHE_MARKER = "__NULL__";
+    private static final Semaphore MALL_DB_REBUILD_GUARD = new Semaphore(4);
+    private static final LongAdder MALL_CACHE_HIT = new LongAdder();
+    private static final LongAdder MALL_CACHE_MISS = new LongAdder();
+    private static final LongAdder MALL_CACHE_EMPTY_HIT = new LongAdder();
+    private static final LongAdder MALL_DEGRADE_FAST_FAIL = new LongAdder();
+    private static final AtomicLong MALL_METRIC_SEQ = new AtomicLong();
+
     private final PointsProductMapper productMapper;
     private final PointsOrderMapper orderMapper;
     private final MonthlyRedemptionMapper monthlyRedemptionMapper;
     private final PointsOrderFulfillmentMapper fulfillmentMapper;
     private final UserCouponMapper userCouponMapper;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
 
     // 跨服务调用：会员服务（获取积分、扣减积分）
     @DubboReference(check = false)
@@ -79,13 +101,7 @@ public class PointsMallServiceImpl implements PointsMallService {
     @Override
     public List<PointsProductDTO> listActiveProducts(Long userId) {
         log.info("获取积分商城商品列表, userId={}", userId);
-        LambdaQueryWrapper<PointsProduct> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PointsProduct::getStatus, "active")
-                .orderByAsc(PointsProduct::getPointsPrice);
-
-        List<PointsProductDTO> dtoList = productMapper.selectList(wrapper).stream()
-                .map(this::toProductDTO)
-                .collect(Collectors.toList());
+        List<PointsProductDTO> dtoList = loadActiveProductsWithCache();
 
         // 如果用户已登录，填充月度限购进度
         if (userId != null && !dtoList.isEmpty()) {
@@ -120,6 +136,121 @@ public class PointsMallServiceImpl implements PointsMallService {
         return dtoList;
     }
 
+    private List<PointsProductDTO> loadActiveProductsWithCache() {
+        try {
+            Object cachedValue = redisTemplate.opsForValue().get(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
+            if (EMPTY_CACHE_MARKER.equals(cachedValue)) {
+                MALL_CACHE_EMPTY_HIT.increment();
+                logMallCacheMetricsMaybe();
+                return Collections.emptyList();
+            }
+            List<PointsProductDTO> cachedProducts = convertToPointsProductList(cachedValue);
+            if (cachedProducts != null) {
+                MALL_CACHE_HIT.increment();
+                logMallCacheMetricsMaybe();
+                return cachedProducts;
+            }
+        } catch (Exception e) {
+            log.warn("读取Redis积分商城商品缓存失败，回退数据库", e);
+        }
+        MALL_CACHE_MISS.increment();
+
+        String lockToken = UUID.randomUUID().toString();
+        boolean locked = tryAcquireRebuildLock(RedisKeyConstants.LOCK_MALL_PRODUCTS_REBUILD, lockToken, 8);
+        if (!locked) {
+            try {
+                TimeUnit.MILLISECONDS.sleep(40L);
+                Object retryCache = redisTemplate.opsForValue().get(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
+                if (EMPTY_CACHE_MARKER.equals(retryCache)) {
+                    MALL_CACHE_EMPTY_HIT.increment();
+                    logMallCacheMetricsMaybe();
+                    return Collections.emptyList();
+                }
+                List<PointsProductDTO> retryCachedProducts = convertToPointsProductList(retryCache);
+                if (retryCachedProducts != null) {
+                    MALL_CACHE_HIT.increment();
+                    logMallCacheMetricsMaybe();
+                    return retryCachedProducts;
+                }
+            } catch (Exception e) {
+                log.warn("重建等待后读取Redis积分商城商品缓存失败", e);
+            }
+        }
+
+        if (!acquireDbRebuildPermit()) {
+            MALL_DEGRADE_FAST_FAIL.increment();
+            logMallCacheMetricsMaybe();
+            return Collections.emptyList();
+        }
+
+        try {
+            LambdaQueryWrapper<PointsProduct> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(PointsProduct::getStatus, "active")
+                    .orderByAsc(PointsProduct::getPointsPrice);
+
+            List<PointsProductDTO> dbResult = productMapper.selectList(wrapper).stream()
+                    .map(this::toProductDTO)
+                    .collect(Collectors.toList());
+
+            try {
+                if (dbResult.isEmpty()) {
+                        redisTemplate.opsForValue().set(
+                            RedisKeyConstants.MALL_PRODUCTS_ACTIVE,
+                            EMPTY_CACHE_MARKER,
+                            60,
+                            TimeUnit.SECONDS);
+                } else {
+                    long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
+                        redisTemplate.opsForValue().set(
+                            RedisKeyConstants.MALL_PRODUCTS_ACTIVE,
+                            dbResult,
+                            ttlMinutes,
+                            TimeUnit.MINUTES);
+                }
+            } catch (Exception e) {
+                log.warn("写入Redis积分商城商品缓存失败", e);
+            }
+            logMallCacheMetricsMaybe();
+            return dbResult;
+        } finally {
+            MALL_DB_REBUILD_GUARD.release();
+            if (locked) {
+                releaseLockSafely(RedisKeyConstants.LOCK_MALL_PRODUCTS_REBUILD, lockToken);
+            }
+        }
+    }
+
+    private boolean acquireDbRebuildPermit() {
+        try {
+            return MALL_DB_REBUILD_GUARD.tryAcquire(80, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private void logMallCacheMetricsMaybe() {
+        long seq = MALL_METRIC_SEQ.incrementAndGet();
+        if (seq % 200 == 0) {
+            log.info("mall-cache-metrics: hit={}, miss={}, emptyHit={}, fastFail={}",
+                    MALL_CACHE_HIT.sum(),
+                    MALL_CACHE_MISS.sum(),
+                    MALL_CACHE_EMPTY_HIT.sum(),
+                    MALL_DEGRADE_FAST_FAIL.sum());
+        }
+    }
+
+    private boolean tryAcquireRebuildLock(String lockKey, String lockToken, int ttlSeconds) {
+        try {
+            Boolean lockOk = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, lockToken, ttlSeconds,
+                    TimeUnit.SECONDS);
+            return Boolean.TRUE.equals(lockOk);
+        } catch (Exception e) {
+            log.warn("获取Redis重建锁失败: key={}", lockKey, e);
+            return false;
+        }
+    }
+
     @Override
     public PointsProductDTO getProduct(Long id) {
         if (id == null) {
@@ -145,16 +276,33 @@ public class PointsMallServiceImpl implements PointsMallService {
         }
         int quantity = request.getQuantity() != null ? request.getQuantity() : 1;
 
-        // 查询商品
-        PointsProduct product = productMapper.selectById(request.getProductId());
-        if (product == null) {
-            throw new RuntimeException("商品不存在");
+        String lockKey = RedisKeyConstants.lockMallProductStock(request.getProductId());
+        String lockToken = UUID.randomUUID().toString();
+        Boolean lockOk = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, lockToken, 8, TimeUnit.SECONDS);
+        if (!Boolean.TRUE.equals(lockOk)) {
+            throw new RuntimeException("当前兑换请求较多，请稍后重试");
         }
-        if (!"active".equals(product.getStatus())) {
-            throw new RuntimeException("商品已下架");
-        }
-        if (product.getStock() < quantity) {
-            throw new RuntimeException("库存不足");
+
+        PointsProduct product;
+        try {
+            // 查询商品
+            product = productMapper.selectById(request.getProductId());
+            if (product == null) {
+                throw new RuntimeException("商品不存在");
+            }
+            if (!"active".equals(product.getStatus())) {
+                throw new RuntimeException("商品已下架");
+            }
+            if (product.getStock() < quantity) {
+                throw new RuntimeException("库存不足");
+            }
+
+            // 扣减库存
+            product.setStock(product.getStock() - quantity);
+            productMapper.updateById(product);
+            invalidateMallProductsCache();
+        } finally {
+            releaseLockSafely(lockKey, lockToken);
         }
 
         // v4.2: 检查月度限购 (基于计数表)
@@ -215,10 +363,6 @@ public class PointsMallServiceImpl implements PointsMallService {
         if (memberDTO.getCurrentPoints() < totalCost) {
             throw new RuntimeException("积分不足，当前积分: " + memberDTO.getCurrentPoints() + "，需要: " + totalCost);
         }
-
-        // 扣减库存
-        product.setStock(product.getStock() - quantity);
-        productMapper.updateById(product);
 
         // 3. 创建主订单
         LocalDateTime now = LocalDateTime.now();
@@ -331,6 +475,37 @@ public class PointsMallServiceImpl implements PointsMallService {
         return toOrderDTO(order);
     }
 
+    private void releaseLockSafely(String lockKey, String lockToken) {
+        try {
+            // 若切换到 Redisson，分布式锁可改为 RLock，自动续约、可重入和看门狗机制可进一步降低锁误释放风险。
+            String releaseScript = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
+                    "return redis.call('del', KEYS[1]) else return 0 end";
+            DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
+            redisScript.setScriptText(releaseScript);
+            redisScript.setResultType(Long.class);
+            stringRedisTemplate.execute(redisScript, Collections.singletonList(lockKey), lockToken);
+        } catch (Exception e) {
+            log.warn("释放Redis库存锁失败: key={}", lockKey, e);
+        }
+    }
+
+    private void invalidateMallProductsCache() {
+        try {
+            redisTemplate.delete(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
+        } catch (Exception e) {
+            log.warn("清理Redis积分商城商品缓存失败", e);
+        }
+    }
+
+    private List<PointsProductDTO> convertToPointsProductList(Object cachedValue) {
+        if (!(cachedValue instanceof List<?> rawList)) {
+            return null;
+        }
+        return rawList.stream()
+                .map(item -> objectMapper.convertValue(item, PointsProductDTO.class))
+                .collect(Collectors.toList());
+    }
+
     @Override
     public List<PointsOrderDTO> listUserOrders(Long userId) {
         if (userId == null) {
@@ -388,6 +563,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         if (product != null) {
             product.setStock(product.getStock() + order.getQuantity());
             productMapper.updateById(product);
+            invalidateMallProductsCache();
         }
 
         // 跨服务调用：返还积分
@@ -1897,6 +2073,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         product.setUpdatedAt(now);
 
         productMapper.insert(product);
+        invalidateMallProductsCache();
         log.info("积分商品添加成功: id={}, couponType={}, linkedProductId={}",
                 product.getId(), product.getCouponType(), product.getLinkedProductId());
         return toProductDTO(product);
@@ -1955,6 +2132,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         product.setUpdatedAt(LocalDateTime.now());
 
         productMapper.updateById(product);
+        invalidateMallProductsCache();
         log.info("积分商品更新成功: id={}, couponType={}, linkedProductId={}",
                 productId, product.getCouponType(), product.getLinkedProductId());
         return toProductDTO(product);
@@ -1969,6 +2147,7 @@ public class PointsMallServiceImpl implements PointsMallService {
             throw new RuntimeException("商品不存在");
         }
         productMapper.deleteById(productId);
+        invalidateMallProductsCache();
     }
 
     @Override
@@ -1981,6 +2160,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         }
         product.setStatus("active".equals(product.getStatus()) ? "inactive" : "active");
         productMapper.updateById(product);
+        invalidateMallProductsCache();
         log.info("商品状态已切换: id={}, newStatus={}", productId, product.getStatus());
         return toProductDTO(product);
     }

@@ -11,8 +11,12 @@ import com.cozy.order.dto.response.ShopOrderDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -26,6 +30,14 @@ import java.util.List;
 public class OrderController {
 
     private final SseEventPublisher sseEventPublisher;
+    private final StringRedisTemplate stringRedisTemplate;
+
+    private static final String ADMIN_DASHBOARD_STATS_PREFIX = "cozy:admin:dashboard:stats:";
+    private static final String ADMIN_ANALYTICS_TREND_PREFIX = "cozy:admin:analytics:trend:";
+    private static final String ADMIN_ANALYTICS_DISTRIBUTION_PREFIX = "cozy:admin:analytics:distribution:";
+    private static final String ADMIN_ANALYTICS_RANK_PREFIX = "cozy:admin:analytics:rank:";
+    private static final String ADMIN_ORDERS_LIST_PREFIX = "cozy:admin:orders:list:";
+    private static final String ADMIN_ORDERS_RECENT_PREFIX = "cozy:admin:orders:recent:";
 
     @DubboReference(check = false)
     private OrderService orderService;
@@ -85,6 +97,9 @@ public class OrderController {
             }
             ShopOrderDTO order = orderService.createOrder(userId, memberLevel, request);
 
+            // 新订单创建后立即清理管理端缓存，确保订单页和看板可实时看到数据。
+            evictAdminOrderAndAnalyticsCaches();
+
             // 发布 SSE 事件通知管理端
             try {
                 sseEventPublisher.publishNewOrder(order.getId(), order.getOrderNo());
@@ -96,6 +111,40 @@ public class OrderController {
         } catch (Exception e) {
             log.error("创建订单失败", e);
             return Result.fail(e.getMessage());
+        }
+    }
+
+    private void evictAdminOrderAndAnalyticsCaches() {
+        evictByPrefix(ADMIN_ORDERS_LIST_PREFIX);
+        evictByPrefix(ADMIN_ORDERS_RECENT_PREFIX);
+        evictByPrefix(ADMIN_DASHBOARD_STATS_PREFIX);
+        evictByPrefix(ADMIN_ANALYTICS_TREND_PREFIX);
+        evictByPrefix(ADMIN_ANALYTICS_DISTRIBUTION_PREFIX);
+        evictByPrefix(ADMIN_ANALYTICS_RANK_PREFIX);
+    }
+
+    private void evictByPrefix(String prefix) {
+        if (prefix == null || prefix.isEmpty()) {
+            return;
+        }
+        String pattern = prefix + "*";
+        List<String> batch = new ArrayList<>(200);
+        try {
+            ScanOptions options = ScanOptions.scanOptions().match(pattern).count(500).build();
+            try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {
+                while (cursor.hasNext()) {
+                    batch.add(cursor.next());
+                    if (batch.size() >= 200) {
+                        stringRedisTemplate.delete(batch);
+                        batch.clear();
+                    }
+                }
+            }
+            if (!batch.isEmpty()) {
+                stringRedisTemplate.delete(batch);
+            }
+        } catch (Exception e) {
+            log.warn("下单后清理管理端缓存失败: prefix={}", prefix, e);
         }
     }
 

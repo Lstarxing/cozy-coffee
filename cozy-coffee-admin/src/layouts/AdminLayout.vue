@@ -89,8 +89,8 @@ adminStore.init()
 const activeMenu = computed(() => route.path)
 const adminInitial = computed(() => (adminStore.adminInfo?.username?.[0] || 'A').toUpperCase())
 
-const handleLogout = () => {
-  adminStore.logout()
+const handleLogout = async () => {
+  await adminStore.logout()
   router.push('/login')
 }
 </script>

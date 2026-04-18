@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { adminLogin } from '../api'
+import { adminLogout } from '../api'
 
 export const useAdminStore = defineStore('admin', () => {
     const adminInfo = ref(null)
@@ -64,11 +65,19 @@ export const useAdminStore = defineStore('admin', () => {
         }
     }
 
-    const logout = () => {
-        adminInfo.value = null
-        isLoggedIn.value = false
-        localStorage.removeItem('adminToken')
-        localStorage.removeItem('adminInfo')
+    const logout = async () => {
+        try {
+            if (localStorage.getItem('adminToken')) {
+                await adminLogout()
+            }
+        } catch (error) {
+            console.warn('Admin logout API failed, fallback to local cleanup:', error)
+        } finally {
+            adminInfo.value = null
+            isLoggedIn.value = false
+            localStorage.removeItem('adminToken')
+            localStorage.removeItem('adminInfo')
+        }
     }
 
     const init = () => {

@@ -20,7 +20,7 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    @DubboReference(check = false)
+    @DubboReference(check = false, timeout = 3000, retries = 0)
     private UserService userService;
 
     @PostMapping("/register")
@@ -47,6 +47,20 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/logout")
+    public Result<Void> logout(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        try {
+            if (authorization != null && authorization.startsWith("Bearer ")) {
+                String token = authorization.substring(7).trim();
+                userService.logout(token);
+            }
+            return Result.success(null, "退出成功");
+        } catch (Exception e) {
+            log.error("退出失败", e);
+            return Result.fail("退出失败，请稍后重试");
+        }
+    }
+
     @GetMapping("/userinfo")
     public Result<UserDTO> getUserInfo() {
         try {
@@ -55,10 +69,13 @@ public class AuthController {
                 return Result.fail("用户未登录");
             }
             UserDTO userDTO = userService.getUserById(userId);
+            if (userDTO == null) {
+                return Result.fail("用户不存在");
+            }
             return Result.success(userDTO);
         } catch (Exception e) {
             log.error("获取用户信息失败", e);
-            return Result.fail(e.getMessage());
+            return Result.fail(friendlyErrorMessage(e, "获取用户信息"));
         }
     }
 
@@ -106,7 +123,11 @@ public class AuthController {
             }
             return "该账号信息已存在，请核对后重试";
         }
-        if (msg.contains("Connection refused") || msg.contains("timeout")) {
+        if (msg.contains("Connection refused")
+            || msg.contains("timeout")
+            || msg.contains("No provider")
+            || msg.contains("Channel")
+            || msg.contains("inactive")) {
             return "服务繁忙，请稍后重试";
         }
 
@@ -130,7 +151,7 @@ public class AuthController {
             return Result.success(null, "邀请码填写成功！");
         } catch (Exception e) {
             log.error("填写邀请码失败", e);
-            return Result.fail(e.getMessage());
+            return Result.fail(friendlyErrorMessage(e, "填写邀请码"));
         }
     }
 
@@ -150,7 +171,7 @@ public class AuthController {
             return Result.success(result, "邀请码有效");
         } catch (Exception e) {
             log.error("验证邀请码失败", e);
-            return Result.fail(e.getMessage());
+            return Result.fail(friendlyErrorMessage(e, "验证邀请码"));
         }
     }
 

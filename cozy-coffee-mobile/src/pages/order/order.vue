@@ -33,7 +33,12 @@
       <view class="order-card" v-for="order in filteredOrders" :key="order.id" @click="goToDetail(order.id)">
         <view class="order-header">
           <text class="order-no">订单号：{{ order.orderNo }}</text>
-          <text class="order-status" :class="order.status">{{ getStatusText(order.status) }}</text>
+          <view class="order-status-wrap">
+            <text class="order-status" :class="order.status">{{ getStatusText(order.status) }}</text>
+            <text v-if="order.status === 'pending'" class="expire-countdown" :class="{ urgent: isExpiringSoon(order) }">
+              {{ formatCountdown(order) }}
+            </text>
+          </view>
         </view>
         <view class="order-items">
           <view class="order-item" v-for="item in order.items" :key="item.id">
@@ -69,12 +74,15 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { getOrderList } from '@/api/order'
 
 const currentTab = ref('all')
 const orders = ref([])
 const loading = ref(false)
+const nowTs = ref(Date.now())
+
+let ticker = null
 
 // 加载订单
 const loadOrders = async () => {
@@ -103,8 +111,64 @@ const loadOrders = async () => {
 }
 
 onShow(() => {
+  startTicker()
   loadOrders()
 })
+
+onHide(() => {
+  stopTicker()
+})
+
+onUnload(() => {
+  stopTicker()
+})
+
+const startTicker = () => {
+  stopTicker()
+  ticker = setInterval(() => {
+    nowTs.value = Date.now()
+  }, 1000)
+}
+
+const stopTicker = () => {
+  if (ticker) {
+    clearInterval(ticker)
+    ticker = null
+  }
+}
+
+const getExpireMs = (order) => {
+  if (order?.expireAt) {
+    const ts = new Date(order.expireAt).getTime()
+    if (!Number.isNaN(ts)) return ts
+  }
+  if (order?.createdAt) {
+    const createdTs = new Date(order.createdAt).getTime()
+    if (!Number.isNaN(createdTs)) return createdTs + 60 * 1000
+  }
+  return null
+}
+
+const getRemainingSeconds = (order) => {
+  const expireMs = getExpireMs(order)
+  if (!expireMs) return null
+  const remain = Math.floor((expireMs - nowTs.value) / 1000)
+  return remain > 0 ? remain : 0
+}
+
+const formatCountdown = (order) => {
+  const remain = getRemainingSeconds(order)
+  if (remain == null) return '即将超时'
+  if (remain <= 0) return '即将自动取消'
+  const mm = String(Math.floor(remain / 60)).padStart(2, '0')
+  const ss = String(remain % 60).padStart(2, '0')
+  return `剩余 ${mm}:${ss}`
+}
+
+const isExpiringSoon = (order) => {
+  const remain = getRemainingSeconds(order)
+  return remain != null && remain <= 30
+}
 
 // 根据标签过滤订单
 const filteredOrders = computed(() => {
@@ -114,7 +178,7 @@ const filteredOrders = computed(() => {
 
 // 获取状态文本
 const getStatusText = (status) => {
-  const map = { pending: '待处理', processing: '制作中', completed: '已完成', cancelled: '已取消' }
+  const map = { pending: '待处理', preparing: '制作中', processing: '制作中', completed: '已完成', cancelled: '已取消' }
   return map[status] || status
 }
 
@@ -189,7 +253,7 @@ const reOrder = (order) => {
   .order-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     padding-bottom: $spacing-sm;
     border-bottom: 1rpx solid $border-color;
     
@@ -198,15 +262,32 @@ const reOrder = (order) => {
       color: $text-secondary;
     }
     
+    .order-status-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8rpx;
+    }
+
     .order-status {
       font-size: $font-size-sm;
       padding: 4rpx 12rpx;
       border-radius: 4rpx;
-      
+
       &.pending { background: #FFF7E6; color: #FA8C16; }
-      &.processing { background: #E6F7FF; color: #1890FF; }
+      &.preparing, &.processing { background: #E6F7FF; color: #1890FF; }
       &.completed { background: #F6FFED; color: #52C41A; }
       &.cancelled { background: #FFF1F0; color: #FF4D4F; }
+    }
+
+    .expire-countdown {
+      font-size: 22rpx;
+      color: #8c8c8c;
+
+      &.urgent {
+        color: #ff4d4f;
+        font-weight: 600;
+      }
     }
   }
   

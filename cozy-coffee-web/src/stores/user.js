@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import request from '@/api/request'
 
 export const useUserStore = defineStore('user', () => {
     const token = ref(null)
@@ -58,11 +59,26 @@ export const useUserStore = defineStore('user', () => {
         localStorage.setItem('userInfo', JSON.stringify(userInfo.value))
     }
 
-    function logout() {
-        token.value = null
-        userInfo.value = null
-        localStorage.removeItem('token')
-        localStorage.removeItem('userInfo')
+    async function logout() {
+        const currentToken = token.value
+        try {
+            if (currentToken) {
+                const response = await request.post('/auth/logout')
+                const data = response?.data
+                const isSuccess = data?.success === true || data?.code === 200 || data?.code === 1
+                if (!isSuccess) {
+                    throw new Error(data?.message || data?.msg || '调用退出接口失败')
+                }
+            }
+            token.value = null
+            userInfo.value = null
+            localStorage.removeItem('token')
+            localStorage.removeItem('userInfo')
+            return true
+        } catch (error) {
+            console.error('Logout API failed:', error)
+            return false
+        }
     }
 
     function signIn() {

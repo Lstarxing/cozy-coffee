@@ -1,6 +1,7 @@
 package com.cozy.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.member.api.MemberService;
 import java.math.BigDecimal;
 import com.cozy.member.dto.response.MemberDTO;
@@ -13,9 +14,12 @@ import com.cozy.member.mapper.MemberInfoMapper;
 import com.cozy.member.mapper.PointsLotConsumptionMapper;
 import com.cozy.member.mapper.PointsLotMapper;
 import com.cozy.member.mapper.PointsTransactionMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -24,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -40,6 +45,9 @@ public class MemberServiceImpl implements MemberService {
     private final PointsLotMapper pointsLotMapper;
     private final PointsLotConsumptionMapper consumptionMapper;
     private final com.cozy.member.mapper.MonthlyTaskMapper monthlyTaskMapper;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
 
     // 等级门槛（EXP）- v5.0 白皮书
     private static final int SILVER_THRESHOLD = 500; // 0-499 basic → 500-1499 silver
@@ -60,6 +68,24 @@ public class MemberServiceImpl implements MemberService {
     public MemberDTO getMemberByUserId(Long userId) {
         if (userId == null) {
             throw new RuntimeException("用户未登录");
+        }
+
+        String cacheKey = RedisKeyConstants.memberProfileByUserId(userId);
+        try {
+            Object cachedObj = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedObj != null) {
+                if (cachedObj instanceof MemberDTO) {
+                    return (MemberDTO) cachedObj;
+                }
+                if (cachedObj instanceof Map) {
+                    return objectMapper.convertValue(cachedObj, MemberDTO.class);
+                }
+                if (cachedObj instanceof String) {
+                    return objectMapper.readValue((String) cachedObj, MemberDTO.class);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("读取Redis会员缓存失败: userId={}", userId, e);
         }
 
         LambdaQueryWrapper<MemberInfo> wrapper = new LambdaQueryWrapper<>();
@@ -176,6 +202,12 @@ public class MemberServiceImpl implements MemberService {
             log.warn("Failed to fetch monthly task status for member: userId={}, error={}", userId, e.getMessage());
         }
 
+        try {
+            redisTemplate.opsForValue().set(cacheKey, dto, 60, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("写入Redis会员缓存失败: userId={}", userId, e);
+        }
+
         return dto;
     }
 
@@ -262,6 +294,7 @@ public class MemberServiceImpl implements MemberService {
         info.setExpTotal(0); // EXP 初始为 0
         info.setConsecutiveSignDays(0);
         memberInfoMapper.insert(info);
+        evictMemberProfileCache(userId);
 
         // v5.3: 初始积分为0，不需要创建积分批次和流水
         log.info("会员创建成功(初始无积分): userId={}", userId);
@@ -296,6 +329,7 @@ public class MemberServiceImpl implements MemberService {
         memberInfoMapper.updateById(member);
 
         recordTransaction(userId, points, member.getCurrentPoints(), sourceType, null, description);
+        evictMemberProfileCache(userId);
     }
 
     @Override
@@ -327,6 +361,7 @@ public class MemberServiceImpl implements MemberService {
 
         // 自动检查并更新等级
         checkAndUpgradeLevel(userId);
+        evictMemberProfileCache(userId);
         log.info("管理员调整积分成功: userId={}, newPoints={}", userId, member.getCurrentPoints());
     }
 
@@ -435,6 +470,7 @@ public class MemberServiceImpl implements MemberService {
 
         // 3. 记录积分流水（包含 sourceId 用于唯一约束）
         recordTransaction(userId, points, member.getCurrentPoints(), sourceType, sourceId, description);
+        evictMemberProfileCache(userId);
 
         log.info("积分发放成功: userId={}, points={}, sourceType={}, sourceId={}, lotId={}", 
                  userId, points, sourceType, sourceId, lot.getId());
@@ -498,6 +534,7 @@ public class MemberServiceImpl implements MemberService {
 
         // 检查并升级等级（确保 newLevel 正确存储）
         checkAndUpgradeLevel(userId);
+        evictMemberProfileCache(userId);
 
         log.info("EXP结算成功: userId={}, 当前EXP={}, 当月累计消费={}, 加速包剩余={}",
                 userId, member.getExpTotal(), member.getMonthlySpent(), member.getMonthlyAccelerateRemaining());
@@ -611,6 +648,7 @@ public class MemberServiceImpl implements MemberService {
 
         // 3. 记录积分流水
         recordTransaction(userId, -points, member.getCurrentPoints(), consumeType, null, description);
+        evictMemberProfileCache(userId);
 
         log.info("FIFO 积分扣减成功: userId={}, points={}", userId, points);
     }
@@ -676,6 +714,7 @@ public class MemberServiceImpl implements MemberService {
             // Update level first
             member.setMemberLevel(newLevel);
             memberInfoMapper.updateById(member);
+            evictMemberProfileCache(userId);
             log.info("会员等级升级: userId={}, {} -> {}, exp={}", userId, currentLevel, newLevel, expTotal);
 
             // v5.3: 发放晋升礼包 (One-off)
@@ -800,6 +839,17 @@ public class MemberServiceImpl implements MemberService {
         dto.setDescription(entity.getDescription());
         dto.setCreatedAt(entity.getCreatedAt());
         return dto;
+    }
+
+    private void evictMemberProfileCache(Long userId) {
+        if (userId == null) {
+            return;
+        }
+        try {
+            stringRedisTemplate.delete(RedisKeyConstants.memberProfileByUserId(userId));
+        } catch (Exception e) {
+            log.warn("清理Redis会员缓存失败: userId={}", userId, e);
+        }
     }
 
     /**

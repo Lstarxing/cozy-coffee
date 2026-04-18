@@ -1,6 +1,8 @@
 package com.cozy.gateway.controller;
 
 import com.cozy.common.result.Result;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.api.PointsMallService;
 import com.cozy.member.dto.response.PointsOrderDTO;
@@ -11,20 +13,29 @@ import com.cozy.order.dto.response.ShopOrderDTO;
 import com.cozy.user.api.UserService;
 import com.cozy.user.dto.response.UserDTO;
 import com.cozy.gateway.sse.SseEventPublisher;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 管理端 API 控制器
  */
 @RestController
 @RequestMapping("/api/admin")
+@Slf4j
 public class AdminController {
 
     @DubboReference(check = false)
@@ -42,6 +53,29 @@ public class AdminController {
     @Autowired
     private SseEventPublisher sseEventPublisher;
 
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private static final long ADMIN_DASHBOARD_CACHE_TTL_SECONDS = 45;
+    private static final long ADMIN_ANALYTICS_CACHE_TTL_SECONDS = 60;
+    private static final long ADMIN_ORDER_LIST_CACHE_TTL_SECONDS = 30;
+    private static final long ADMIN_ORDER_RECENT_CACHE_TTL_SECONDS = 20;
+    private static final long ADMIN_CACHE_TTL_JITTER_MAX_SECONDS = 8;
+
+    // 使用本地前缀，避免跨模块常量版本不一致导致运行时错误。
+    private static final String ADMIN_DASHBOARD_STATS_PREFIX = "cozy:admin:dashboard:stats:";
+    private static final String ADMIN_ANALYTICS_TREND_PREFIX = "cozy:admin:analytics:trend:";
+    private static final String ADMIN_ANALYTICS_DISTRIBUTION_PREFIX = "cozy:admin:analytics:distribution:";
+    private static final String ADMIN_ANALYTICS_RANK_PREFIX = "cozy:admin:analytics:rank:";
+    private static final String ADMIN_ORDERS_LIST_PREFIX = "cozy:admin:orders:list:";
+    private static final String ADMIN_ORDERS_RECENT_PREFIX = "cozy:admin:orders:recent:";
+
     // ==================== 控制台统计 ====================
 
     // ==================== 控制台统计 (Analytics) ====================
@@ -55,6 +89,17 @@ public class AdminController {
             java.time.LocalDate start = startDate != null ? java.time.LocalDate.parse(startDate)
                     : java.time.LocalDate.now();
             java.time.LocalDate end = endDate != null ? java.time.LocalDate.parse(endDate) : java.time.LocalDate.now();
+
+            String cacheKey = buildAdminCacheKey(
+                ADMIN_DASHBOARD_STATS_PREFIX,
+                start,
+                end);
+            Map<String, Object> cached = readCacheObject(cacheKey, new TypeReference<Map<String, Object>>() {
+            });
+            if (cached != null) {
+                ensureLegacyDashboardFields(cached);
+                return Result.success(cached);
+            }
 
             // 1. Users (Total is crucial, maybe daily growth too?)
             List<UserDTO> users = userService.listAllUsers();
@@ -83,6 +128,10 @@ public class AdminController {
                     .sum();
             stats.put("pointsSpent", pointsSpent);
 
+                ensureLegacyDashboardFields(stats);
+
+            writeCacheObject(cacheKey, stats, ADMIN_DASHBOARD_CACHE_TTL_SECONDS);
+
         } catch (Exception e) {
             e.printStackTrace();
             return Result.error("获取统计失败");
@@ -99,6 +148,17 @@ public class AdminController {
             java.time.LocalDate start = startDate != null ? java.time.LocalDate.parse(startDate)
                     : java.time.LocalDate.now().minusDays(7);
             java.time.LocalDate end = endDate != null ? java.time.LocalDate.parse(endDate) : java.time.LocalDate.now();
+
+            String cacheKey = buildAdminCacheKey(
+                ADMIN_ANALYTICS_TREND_PREFIX,
+                start,
+                end,
+                granularity);
+            List<Map<String, Object>> cached = readCacheObject(cacheKey, new TypeReference<List<Map<String, Object>>>() {
+            });
+            if (cached != null) {
+            return Result.success(cached);
+            }
 
             List<ShopOrderDTO> orders = filterOrdersByDate(orderService.listAllOrders(null), start, end);
 
@@ -144,9 +204,9 @@ public class AdminController {
                 data.put("redemptionOrders", (int) data.getOrDefault("redemptionOrders", 0) + 1);
             }
 
-            // Fill gaps? For now, raw data. Frontend handles gaps or ECharts handles it.
-            // Convert to List
-            return Result.success(new java.util.ArrayList<>(grouped.values()));
+            List<Map<String, Object>> result = new java.util.ArrayList<>(grouped.values());
+            writeCacheObject(cacheKey, result, ADMIN_ANALYTICS_CACHE_TTL_SECONDS);
+            return Result.success(result);
         } catch (Exception e) {
             return Result.error("获取趋势失败");
         }
@@ -161,6 +221,17 @@ public class AdminController {
             java.time.LocalDate start = startDate != null ? java.time.LocalDate.parse(startDate)
                     : java.time.LocalDate.now().minusDays(30);
             java.time.LocalDate end = endDate != null ? java.time.LocalDate.parse(endDate) : java.time.LocalDate.now();
+
+            String cacheKey = buildAdminCacheKey(
+                ADMIN_ANALYTICS_DISTRIBUTION_PREFIX,
+                start,
+                end,
+                domain);
+            List<Map<String, Object>> cached = readCacheObject(cacheKey, new TypeReference<List<Map<String, Object>>>() {
+            });
+            if (cached != null) {
+            return Result.success(cached);
+            }
 
             Map<String, Integer> counts = new HashMap<>();
 
@@ -183,6 +254,8 @@ public class AdminController {
                 item.put("count", v);
                 result.add(item);
             });
+
+            writeCacheObject(cacheKey, result, ADMIN_ANALYTICS_CACHE_TTL_SECONDS);
             return Result.success(result);
         } catch (Exception e) {
             return Result.error("获取分布失败");
@@ -200,6 +273,19 @@ public class AdminController {
             java.time.LocalDate start = startDate != null ? java.time.LocalDate.parse(startDate)
                     : java.time.LocalDate.now().minusDays(30);
             java.time.LocalDate end = endDate != null ? java.time.LocalDate.parse(endDate) : java.time.LocalDate.now();
+
+            String cacheKey = buildAdminCacheKey(
+                ADMIN_ANALYTICS_RANK_PREFIX,
+                start,
+                end,
+                domain,
+                metric,
+                limit);
+            List<Map<String, Object>> cached = readCacheObject(cacheKey, new TypeReference<List<Map<String, Object>>>() {
+            });
+            if (cached != null) {
+            return Result.success(cached);
+            }
 
             Map<String, Double> agg = new HashMap<>();
 
@@ -242,6 +328,8 @@ public class AdminController {
                 item.put("value", sorted.get(i).getValue());
                 result.add(item);
             }
+
+            writeCacheObject(cacheKey, result, ADMIN_ANALYTICS_CACHE_TTL_SECONDS);
             return Result.success(result);
         } catch (Exception e) {
             return Result.error("获取排行失败");
@@ -251,6 +339,14 @@ public class AdminController {
     @GetMapping("/orders/recent")
     public Result<List<ShopOrderDTO>> getRecentOrders(@RequestParam(defaultValue = "10") int limit) {
         try {
+            int safeLimit = Math.max(1, Math.min(limit, 100));
+            String cacheKey = buildAdminCacheKey(ADMIN_ORDERS_RECENT_PREFIX, safeLimit);
+            List<ShopOrderDTO> cached = readCacheObject(cacheKey, new TypeReference<List<ShopOrderDTO>>() {
+            });
+            if (cached != null) {
+                return Result.success(cached);
+            }
+
             List<ShopOrderDTO> all = orderService.listAllOrders(null);
             if (all == null)
                 return Result.success(java.util.Collections.emptyList());
@@ -265,7 +361,7 @@ public class AdminController {
             });
 
             // 填充用户信息
-            List<ShopOrderDTO> recent = all.stream().limit(limit).collect(java.util.stream.Collectors.toList());
+            List<ShopOrderDTO> recent = all.stream().limit(safeLimit).collect(java.util.stream.Collectors.toList());
             for (ShopOrderDTO order : recent) {
                 try {
                     if (order.getUserId() != null) {
@@ -280,6 +376,7 @@ public class AdminController {
                 }
             }
 
+            writeCacheObject(cacheKey, recent, ADMIN_ORDER_RECENT_CACHE_TTL_SECONDS);
             return Result.success(recent);
         } catch (Exception e) {
             return Result.error("获取最近订单失败");
@@ -469,8 +566,25 @@ public class AdminController {
             @RequestParam(required = false) String keyword, // Added keyword param
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate) {
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "false") boolean noCache) {
         try {
+            String cacheKey = buildAdminCacheKey(
+                ADMIN_ORDERS_LIST_PREFIX,
+                    status,
+                    orderNo,
+                    keyword,
+                    userId,
+                    startDate,
+                    endDate);
+            if (!noCache) {
+                List<ShopOrderDTO> cached = readCacheObject(cacheKey, new TypeReference<List<ShopOrderDTO>>() {
+                });
+                if (cached != null) {
+                    return Result.success(cached);
+                }
+            }
+
             List<ShopOrderDTO> orders = orderService.listAllOrders(status);
 
             // Pre-fetch user map if keyword search is needed (for phone search)
@@ -544,6 +658,10 @@ public class AdminController {
                 return b.getCreatedAt().compareTo(a.getCreatedAt());
             });
 
+            if (!noCache) {
+                writeCacheObject(cacheKey, orders, ADMIN_ORDER_LIST_CACHE_TTL_SECONDS);
+            }
+
             return Result.success(orders);
         } catch (Exception e) {
             return Result.error("获取订单列表失败: " + e.getMessage());
@@ -554,6 +672,7 @@ public class AdminController {
     public Result<ShopOrderDTO> acceptOrder(@PathVariable Long orderId) {
         try {
             ShopOrderDTO order = orderService.acceptOrder(orderId);
+            evictOrderAndAnalyticsCaches();
             return Result.success(order);
         } catch (Exception e) {
             return Result.error("接单失败: " + e.getMessage());
@@ -564,6 +683,7 @@ public class AdminController {
     public Result<ShopOrderDTO> completeOrder(@PathVariable Long orderId) {
         try {
             ShopOrderDTO order = orderService.completeOrder(orderId);
+            evictOrderAndAnalyticsCaches();
             // 通知用户订单已完成（SSE）
             try {
                 if (order.getUserId() != null) {
@@ -586,6 +706,7 @@ public class AdminController {
     public Result<ShopOrderDTO> cancelOrder(@PathVariable Long orderId) {
         try {
             ShopOrderDTO order = orderService.cancelOrder(orderId);
+            evictOrderAndAnalyticsCaches();
             return Result.success(order);
         } catch (Exception e) {
             return Result.error("取消订单失败: " + e.getMessage());
@@ -817,6 +938,7 @@ public class AdminController {
     public Result<PointsOrderDTO> processRedemption(@PathVariable Long orderId) {
         try {
             PointsOrderDTO order = pointsMallService.updateOrderStatus(orderId, "processing");
+            evictAnalyticsCaches();
             return Result.success(order);
         } catch (Exception e) {
             return Result.error("备货失败: " + e.getMessage());
@@ -830,6 +952,7 @@ public class AdminController {
             @RequestParam String trackingNo) {
         try {
             PointsOrderDTO order = pointsMallService.updateShipping(orderId, company, trackingNo);
+            evictAnalyticsCaches();
             return Result.success(order);
         } catch (Exception e) {
             return Result.error("发货失败: " + e.getMessage());
@@ -840,6 +963,7 @@ public class AdminController {
     public Result<PointsOrderDTO> completeRedemption(@PathVariable Long orderId) {
         try {
             PointsOrderDTO order = pointsMallService.updateOrderStatus(orderId, "completed");
+            evictAnalyticsCaches();
             return Result.success(order);
         } catch (Exception e) {
             return Result.error("完成订单失败: " + e.getMessage());
@@ -850,9 +974,100 @@ public class AdminController {
     public Result<Void> deleteRedemption(@PathVariable Long orderId) {
         try {
             pointsMallService.deleteOrder(orderId);
+            evictAnalyticsCaches();
             return Result.success(null, "订单已删除");
         } catch (Exception e) {
             return Result.error("删除订单失败: " + e.getMessage());
+        }
+    }
+
+    private String buildAdminCacheKey(String prefix, Object... parts) {
+        StringBuilder key = new StringBuilder(prefix);
+        if (parts == null || parts.length == 0) {
+            return key.toString();
+        }
+        for (int i = 0; i < parts.length; i++) {
+            if (i > 0) {
+                key.append(':');
+            }
+            key.append(parts[i] == null ? "_" : String.valueOf(parts[i]).trim());
+        }
+        return key.toString();
+    }
+
+    private <T> T readCacheObject(String cacheKey, TypeReference<T> typeReference) {
+        try {
+            Object cachedObj = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedObj == null) {
+                return null;
+            }
+            return objectMapper.convertValue(cachedObj, typeReference);
+        } catch (Exception e) {
+            log.warn("读取管理端缓存失败: cacheKey={}", cacheKey, e);
+            return null;
+        }
+    }
+
+    private void writeCacheObject(String cacheKey, Object value, long ttlSeconds) {
+        try {
+            long jitter = ttlSeconds > 1
+                    ? ThreadLocalRandom.current().nextLong(Math.min(ADMIN_CACHE_TTL_JITTER_MAX_SECONDS, ttlSeconds / 2) + 1)
+                    : 0;
+            redisTemplate.opsForValue().set(cacheKey, value, ttlSeconds + jitter, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("写入管理端缓存失败: cacheKey={}", cacheKey, e);
+        }
+    }
+
+    private void ensureLegacyDashboardFields(Map<String, Object> stats) {
+        if (stats == null) {
+            return;
+        }
+
+        Object coffeeOrders = stats.get("coffeeOrders");
+        Object coffeeRevenue = stats.get("coffeeRevenue");
+
+        // 兼容老前端/测试脚本字段，避免页面初始化报错。
+        stats.putIfAbsent("todayOrders", coffeeOrders != null ? coffeeOrders : 0);
+        stats.putIfAbsent("todayRevenue", coffeeRevenue != null ? coffeeRevenue : BigDecimal.ZERO);
+        stats.putIfAbsent("pendingOrders", 0);
+    }
+
+    private void evictOrderAndAnalyticsCaches() {
+        evictByPrefix(ADMIN_ORDERS_LIST_PREFIX);
+        evictByPrefix(ADMIN_ORDERS_RECENT_PREFIX);
+        evictAnalyticsCaches();
+    }
+
+    private void evictAnalyticsCaches() {
+        evictByPrefix(ADMIN_DASHBOARD_STATS_PREFIX);
+        evictByPrefix(ADMIN_ANALYTICS_TREND_PREFIX);
+        evictByPrefix(ADMIN_ANALYTICS_DISTRIBUTION_PREFIX);
+        evictByPrefix(ADMIN_ANALYTICS_RANK_PREFIX);
+    }
+
+    private void evictByPrefix(String prefix) {
+        if (prefix == null || prefix.isEmpty()) {
+            return;
+        }
+        String pattern = prefix + "*";
+        List<String> batch = new ArrayList<>(200);
+        try {
+            ScanOptions options = ScanOptions.scanOptions().match(pattern).count(500).build();
+            try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {
+                while (cursor.hasNext()) {
+                    batch.add(cursor.next());
+                    if (batch.size() >= 200) {
+                        stringRedisTemplate.delete(batch);
+                        batch.clear();
+                    }
+                }
+            }
+            if (!batch.isEmpty()) {
+                stringRedisTemplate.delete(batch);
+            }
+        } catch (Exception e) {
+            log.warn("按前缀清理缓存失败: prefix={}", prefix, e);
         }
     }
 

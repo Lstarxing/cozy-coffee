@@ -1,6 +1,8 @@
 package com.cozy.order.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.common.constant.RedisKeyConstants;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.cozy.member.api.MemberService;
 import com.cozy.order.api.OrderService;
 import com.cozy.order.dto.request.CreateOrderRequest;
@@ -20,12 +22,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,6 +40,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 
 /**
@@ -44,11 +57,22 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
+    private static final String EMPTY_CACHE_MARKER = "__NULL__";
+    private static final Semaphore MENU_DB_REBUILD_GUARD = new Semaphore(4);
+    private static final LongAdder MENU_CACHE_HIT = new LongAdder();
+    private static final LongAdder MENU_CACHE_MISS = new LongAdder();
+    private static final LongAdder MENU_CACHE_EMPTY_HIT = new LongAdder();
+    private static final LongAdder MENU_DEGRADE_FAST_FAIL = new LongAdder();
+    private static final AtomicLong MENU_METRIC_SEQ = new AtomicLong();
+
     private final CoffeeProductMapper productMapper;
     private final ShopOrderMapper orderMapper;
     private final ShopOrderItemMapper orderItemMapper;
     private final PickupCodeService pickupCodeService;
     private final ProductSkuValidationService skuValidationService; // v5.3: SKU 验证服务
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
 
     @DubboReference(check = false)
     private MemberService memberService;
@@ -65,8 +89,16 @@ public class OrderServiceImpl implements OrderService {
     // 菜单缓存 (Local Cache)
     private volatile List<CoffeeProductDTO> cachedMenu = null;
 
+    @Value("${cozy.order.timeout-cancel.timeout-minutes:1}")
+    private int orderTimeoutMinutes;
+
     private void invalidateMenuCache() {
         this.cachedMenu = null;
+        try {
+            redisTemplate.delete(RedisKeyConstants.ORDER_MENU_ACTIVE);
+        } catch (Exception e) {
+            log.warn("清理Redis菜单缓存失败", e);
+        }
         log.info("菜单缓存已清除");
     }
 
@@ -74,26 +106,187 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public List<CoffeeProductDTO> listCoffeeProducts() {
-        // Double-Checked Locking implementation for Cache
+        // L1: in-process local cache
         List<CoffeeProductDTO> cache = this.cachedMenu;
         if (cache != null) {
+            backfillMenuRedisIfMissing(cache);
+            MENU_CACHE_HIT.increment();
+            logMenuCacheMetricsMaybe();
             return cache;
         }
-        synchronized (this) {
-            if (this.cachedMenu != null)
+
+        // L2: Redis cache (shared across instances)
+        try {
+            Object cachedValue = redisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
+            if (EMPTY_CACHE_MARKER.equals(cachedValue)) {
+                this.cachedMenu = Collections.emptyList();
+                MENU_CACHE_EMPTY_HIT.increment();
+                logMenuCacheMetricsMaybe();
                 return this.cachedMenu;
-
-            LambdaQueryWrapper<CoffeeProduct> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(CoffeeProduct::getStatus, "active")
-                    .orderByAsc(CoffeeProduct::getSortOrder);
-            List<CoffeeProductDTO> result = productMapper.selectList(wrapper).stream()
-                    .map(this::toProductDTO)
-                    .collect(Collectors.toList());
-
-            this.cachedMenu = result;
-            log.info("菜单缓存已更新，共 {} 个商品", result.size());
-            return result;
+            }
+            List<CoffeeProductDTO> redisCached = convertToCoffeeProductList(cachedValue);
+            if (redisCached != null) {
+                this.cachedMenu = redisCached;
+                MENU_CACHE_HIT.increment();
+                logMenuCacheMetricsMaybe();
+                return redisCached;
+            }
+        } catch (Exception e) {
+            log.warn("读取Redis菜单缓存失败，回退数据库查询", e);
         }
+        MENU_CACHE_MISS.increment();
+
+        String lockToken = UUID.randomUUID().toString();
+        boolean locked = tryAcquireRebuildLock(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken, 8);
+        if (!locked) {
+            try {
+                TimeUnit.MILLISECONDS.sleep(40L);
+                Object retryCache = redisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
+                if (EMPTY_CACHE_MARKER.equals(retryCache)) {
+                    this.cachedMenu = Collections.emptyList();
+                    MENU_CACHE_EMPTY_HIT.increment();
+                    logMenuCacheMetricsMaybe();
+                    return this.cachedMenu;
+                }
+                List<CoffeeProductDTO> redisCached = convertToCoffeeProductList(retryCache);
+                if (redisCached != null) {
+                    this.cachedMenu = redisCached;
+                    MENU_CACHE_HIT.increment();
+                    logMenuCacheMetricsMaybe();
+                    return redisCached;
+                }
+            } catch (Exception e) {
+                log.warn("重建等待后读取Redis菜单缓存失败", e);
+            }
+        }
+
+        if (!acquireDbRebuildPermit()) {
+            MENU_DEGRADE_FAST_FAIL.increment();
+            logMenuCacheMetricsMaybe();
+            return Collections.emptyList();
+        }
+
+        try {
+            synchronized (this) {
+                if (this.cachedMenu != null)
+                    return this.cachedMenu;
+
+                LambdaQueryWrapper<CoffeeProduct> wrapper = new LambdaQueryWrapper<>();
+                wrapper.eq(CoffeeProduct::getStatus, "active")
+                        .orderByAsc(CoffeeProduct::getSortOrder);
+                List<CoffeeProductDTO> result = productMapper.selectList(wrapper).stream()
+                        .map(this::toProductDTO)
+                        .collect(Collectors.toList());
+
+                this.cachedMenu = result;
+                try {
+                    if (result.isEmpty()) {
+                        redisTemplate.opsForValue().set(
+                                RedisKeyConstants.ORDER_MENU_ACTIVE,
+                                EMPTY_CACHE_MARKER,
+                                60,
+                                TimeUnit.SECONDS);
+                    } else {
+                        long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
+                        redisTemplate.opsForValue().set(
+                                RedisKeyConstants.ORDER_MENU_ACTIVE,
+                            result,
+                                ttlMinutes,
+                                TimeUnit.MINUTES);
+                    }
+                } catch (Exception e) {
+                    log.warn("写入Redis菜单缓存失败", e);
+                }
+                log.info("菜单缓存已更新，共 {} 个商品", result.size());
+                logMenuCacheMetricsMaybe();
+                return result;
+            }
+        } finally {
+            MENU_DB_REBUILD_GUARD.release();
+            if (locked) {
+                releaseLockSafely(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken);
+            }
+        }
+    }
+
+    private boolean acquireDbRebuildPermit() {
+        try {
+            return MENU_DB_REBUILD_GUARD.tryAcquire(80, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private void backfillMenuRedisIfMissing(List<CoffeeProductDTO> cache) {
+        try {
+            Boolean hasKey = redisTemplate.hasKey(RedisKeyConstants.ORDER_MENU_ACTIVE);
+            if (Boolean.TRUE.equals(hasKey)) {
+                return;
+            }
+            if (cache.isEmpty()) {
+                redisTemplate.opsForValue().set(
+                        RedisKeyConstants.ORDER_MENU_ACTIVE,
+                        EMPTY_CACHE_MARKER,
+                        60,
+                        TimeUnit.SECONDS);
+            } else {
+                long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
+                redisTemplate.opsForValue().set(
+                        RedisKeyConstants.ORDER_MENU_ACTIVE,
+                        cache,
+                        ttlMinutes,
+                        TimeUnit.MINUTES);
+            }
+        } catch (Exception e) {
+            log.warn("L1命中时回填Redis菜单缓存失败", e);
+        }
+    }
+
+    private void logMenuCacheMetricsMaybe() {
+        long seq = MENU_METRIC_SEQ.incrementAndGet();
+        if (seq % 200 == 0) {
+            log.info("menu-cache-metrics: hit={}, miss={}, emptyHit={}, fastFail={}",
+                    MENU_CACHE_HIT.sum(),
+                    MENU_CACHE_MISS.sum(),
+                    MENU_CACHE_EMPTY_HIT.sum(),
+                    MENU_DEGRADE_FAST_FAIL.sum());
+        }
+    }
+
+    private boolean tryAcquireRebuildLock(String lockKey, String lockToken, int ttlSeconds) {
+        try {
+            Boolean lockOk = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, lockToken, ttlSeconds,
+                    TimeUnit.SECONDS);
+            return Boolean.TRUE.equals(lockOk);
+        } catch (Exception e) {
+            log.warn("获取Redis重建锁失败: key={}", lockKey, e);
+            return false;
+        }
+    }
+
+    private void releaseLockSafely(String lockKey, String lockToken) {
+        try {
+            // 若切换到 Redisson，可替换为 RLock.tryLock/unlock，省去Lua解锁与token校验逻辑。
+            String releaseScript = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
+                    "return redis.call('del', KEYS[1]) else return 0 end";
+            org.springframework.data.redis.core.script.DefaultRedisScript<Long> redisScript = new org.springframework.data.redis.core.script.DefaultRedisScript<>();
+            redisScript.setScriptText(releaseScript);
+            redisScript.setResultType(Long.class);
+            stringRedisTemplate.execute(redisScript, Collections.singletonList(lockKey), lockToken);
+        } catch (Exception e) {
+            log.warn("释放Redis重建锁失败: key={}", lockKey, e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<CoffeeProductDTO> convertToCoffeeProductList(Object cachedValue) {
+        if (!(cachedValue instanceof List<?> rawList)) {
+            return null;
+        }
+        return rawList.stream()
+                .map(item -> objectMapper.convertValue(item, CoffeeProductDTO.class))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -597,6 +790,7 @@ public class OrderServiceImpl implements OrderService {
         order.setCreatedAt(now);
         order.setUpdatedAt(now);
         orderMapper.insert(order);
+        syncPendingTimeoutIndex(order);
 
         // 创建订单项
         for (ShopOrderItem item : orderItems) {
@@ -737,6 +931,7 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setStatus(status);
         orderMapper.updateById(order);
+        syncPendingTimeoutIndex(order);
         return toOrderDTO(order, null);
     }
 
@@ -784,6 +979,7 @@ public class OrderServiceImpl implements OrderService {
 
         order.setStatus("preparing");
         orderMapper.updateById(order);
+        syncPendingTimeoutIndex(order);
         log.info("订单接单: orderId={}, orderNo={}", orderId, order.getOrderNo());
         return toOrderDTO(order, null);
     }
@@ -810,6 +1006,7 @@ public class OrderServiceImpl implements OrderService {
             log.info("订单奖励已发放，跳过: orderId={}", orderId);
             order.setStatus("completed");
             orderMapper.updateById(order);
+            syncPendingTimeoutIndex(order);
             return toOrderDTO(order, null);
         }
 
@@ -908,6 +1105,7 @@ public class OrderServiceImpl implements OrderService {
         order.setPointsEarned(pointsEarned);
         order.setRewardsGranted(true);
         orderMapper.updateById(order);
+        syncPendingTimeoutIndex(order);
 
         // 2. 再触发月度任务更新（此时当前订单已是 completed 状态）
         // v6.0: 传入当前订单属性，用于精确补偿事务隔离问题
@@ -969,6 +1167,7 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setStatus("cancelled");
         orderMapper.updateById(order);
+        syncPendingTimeoutIndex(order);
 
         // 如果使用了优惠券，核销回滚
         if (order.getAppliedCouponId() != null) {
@@ -1032,6 +1231,7 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setStatus("cancelled");
         orderMapper.updateById(order);
+        syncPendingTimeoutIndex(order);
 
         // 如果使用了优惠券，核销回滚
         if (order.getAppliedCouponId() != null) {
@@ -1187,7 +1387,8 @@ public class OrderServiceImpl implements OrderService {
     public void deleteProduct(Long productId) {
         CoffeeProduct product = productMapper.selectById(productId);
         if (product == null) {
-            throw new RuntimeException("商品不存在");
+            log.info("删除商品幂等返回: productId={} 不存在", productId);
+            return;
         }
         productMapper.deleteById(productId);
         invalidateMenuCache();
@@ -1461,6 +1662,7 @@ public class OrderServiceImpl implements OrderService {
         dto.setDeliveryFee(entity.getDeliveryFee());
         dto.setDeliveryFeeWaived(entity.getDeliveryFeeWaived());
         dto.setDeliveryFeeWaivedReason(entity.getDeliveryFeeWaivedReason());
+        populateExpiryInfo(entity, dto);
 
         return dto;
     }
@@ -1535,8 +1737,64 @@ public class OrderServiceImpl implements OrderService {
         dto.setDeliveryFee(entity.getDeliveryFee());
         dto.setDeliveryFeeWaived(entity.getDeliveryFeeWaived());
         dto.setDeliveryFeeWaivedReason(entity.getDeliveryFeeWaivedReason());
+        populateExpiryInfo(entity, dto);
 
         return dto;
+    }
+
+    private void syncPendingTimeoutIndex(ShopOrder order) {
+        if (order == null || order.getId() == null) {
+            return;
+        }
+        if (!"pending".equalsIgnoreCase(order.getStatus()) || order.getCreatedAt() == null) {
+            removePendingTimeoutIndex(order.getId());
+            return;
+        }
+        try {
+            long timeoutAtMillis = order.getCreatedAt()
+                    .plusMinutes(orderTimeoutMinutes)
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli();
+            stringRedisTemplate.opsForZSet().add(
+                    RedisKeyConstants.ORDER_PENDING_TIMEOUT_ZSET,
+                    String.valueOf(order.getId()),
+                    timeoutAtMillis);
+        } catch (Exception e) {
+            log.warn("写入订单超时索引失败: orderId={}", order.getId(), e);
+        }
+    }
+
+    private void removePendingTimeoutIndex(Long orderId) {
+        if (orderId == null) {
+            return;
+        }
+        try {
+            stringRedisTemplate.opsForZSet().remove(
+                    RedisKeyConstants.ORDER_PENDING_TIMEOUT_ZSET,
+                    String.valueOf(orderId));
+        } catch (Exception e) {
+            log.warn("移除订单超时索引失败: orderId={}", orderId, e);
+        }
+    }
+
+    private void populateExpiryInfo(ShopOrder entity, ShopOrderDTO dto) {
+        if (entity == null || dto == null) {
+            return;
+        }
+        if (!"pending".equalsIgnoreCase(entity.getStatus()) || entity.getCreatedAt() == null) {
+            return;
+        }
+
+        LocalDateTime expireAt = entity.getCreatedAt().plusMinutes(Math.max(orderTimeoutMinutes, 1));
+        long remainingSeconds = Duration.between(LocalDateTime.now(), expireAt).getSeconds();
+        if (remainingSeconds < 0) {
+            remainingSeconds = 0;
+        }
+
+        dto.setExpireAt(expireAt);
+        dto.setSecondsToExpire(remainingSeconds);
+        dto.setAboutToExpire(remainingSeconds <= 30);
     }
 
     @Override
