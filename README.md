@@ -41,14 +41,6 @@ CozyCoffee 是一个面向咖啡零售场景的微服务业务系统，覆盖用
   - P99 延迟下降 16%
   - 0 失败请求
 
-## 技术栈
-- 后端：Java 17, Spring Boot, Dubbo, MyBatis-Plus
-- 注册配置：Nacos
-- 缓存：Redis
-- 数据库：MySQL
-- 前端：Vue3 + Vite（用户端/管理端）
-- 压测：Locust
-
 ## 系统架构图
 ```mermaid
 flowchart LR
@@ -135,34 +127,6 @@ flowchart TD
 - cozy-coffee-mobile：移动端
 - scripts：测试与运维脚本
 
-## 快速启动（本地开发）
-### 1. 环境准备
-- JDK 17+
-- Maven 3.8+
-- Node.js 18+
-- MySQL 8.0+
-- Redis 6+
-- Nacos 2.x
-
-### 2. 初始化
-- 导入数据库脚本（member/order/mall 等）
-- 启动 Redis 与 MySQL
-- 启动 Nacos（默认 8848）
-
-### 3. 启动后端（建议顺序）
-1. cozy-common / cozy-api（依赖模块）
-2. provider 服务（user/member/order/mall）
-3. cozy-gateway
-
-### 4. 启动前端
-- 用户端：cozy-coffee-web
-- 管理端：cozy-coffee-admin
-
-### 5. 访问地址（按本地配置调整）
-- Gateway API: http://localhost:8080
-- 用户端: http://localhost:5173
-- 管理端: http://localhost:5174
-
 ## Docker 部署说明
 建议直接使用 `docker-compose.yml` 一键启动完整环境，包含 mysql、redis、nacos、gateway、providers、用户端 Web 和管理端 Admin。
 
@@ -179,12 +143,6 @@ flowchart TD
 - Windows 和 macOS 用户都只需要执行 `docker compose up -d` 即可，不需要额外安装 Bash 或 WSL。
 - 如果本地已经存在旧的 MySQL 数据卷，初始化脚本不会再次执行，需要先运行 `docker compose down -v` 清理旧卷后再启动。
 - 如果想保留历史数据，只需保留命名卷，不要删除 `mysql_data`，后续重启会直接复用数据。
-
-## API 示例
-- GET /api/order/products：获取菜单
-- POST /api/order/create：创建订单
-- POST /api/member/signin：签到
-- GET /api/admin/orders/recent：管理端最近订单
 
 ## 压测说明
 - 工具：Locust
