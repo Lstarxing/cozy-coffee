@@ -72,4 +72,8 @@ public class ShopOrderDTO implements Serializable {
     private Long secondsToExpire; // 当前剩余秒数（最小为0）
     private Boolean aboutToExpire; // 是否即将过期（<=30秒）
 
+    // v6.2: MQ 解耦用 —— OrderServiceImpl.completeOrder 内计算，controller 组装事件发给 MQ
+    private Boolean isFirstOrder; // 本单是否为用户首单
+    private Boolean hasNewProduct; // 订单项中是否包含新品商品
+
 }
