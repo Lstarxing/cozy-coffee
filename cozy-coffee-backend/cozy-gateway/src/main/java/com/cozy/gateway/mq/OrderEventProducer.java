@@ -2,6 +2,7 @@ package com.cozy.gateway.mq;
 
 import com.cozy.common.mq.MqTags;
 import com.cozy.common.mq.MqTopics;
+import com.cozy.common.mq.OrderCompletedEvent;
 import com.cozy.common.mq.OrderCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,10 +12,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * 订单事件生产者。
- * 使用 sendOneWay 保证下单主流程不因 MQ 抖动而阻塞：
- * - 不等待 broker 确认
- * - 失败仅记日志，事件会丢，但订单本身已落库
- * 对可靠性要求更高的事件（如积分发放）应改用 sendSync + 本地事务表兜底。
+ * sendOneWay 不等待 broker ACK，保证主流程不被 MQ 抖动阻塞。
+ * 失败仅记日志，事件丢失但订单本身已落库。
  */
 @Slf4j
 @Component
@@ -27,17 +26,27 @@ public class OrderEventProducer {
         if (event == null || event.getOrderId() == null) {
             return;
         }
-        String destination = MqTopics.ORDER_EVENTS + ":" + MqTags.ORDER_CREATED;
+        send(MqTags.ORDER_CREATED, event, event.getOrderId());
+    }
+
+    public void publishOrderCompleted(OrderCompletedEvent event) {
+        if (event == null || event.getOrderId() == null) {
+            return;
+        }
+        send(MqTags.ORDER_COMPLETED, event, event.getOrderId());
+    }
+
+    private void send(String tag, Object payload, Long orderId) {
+        String destination = MqTopics.ORDER_EVENTS + ":" + tag;
         try {
             rocketMQTemplate.sendOneWay(
                     destination,
-                    MessageBuilder.withPayload(event)
-                            .setHeader("KEYS", String.valueOf(event.getOrderId()))
+                    MessageBuilder.withPayload(payload)
+                            .setHeader("KEYS", String.valueOf(orderId))
                             .build());
-            log.debug("MQ 派发 order_created: orderId={}, orderNo={}", event.getOrderId(), event.getOrderNo());
+            log.debug("MQ 派发 {}: orderId={}", tag, orderId);
         } catch (Exception e) {
-            log.warn("MQ 派发 order_created 失败，降级为丢弃: orderId={}, orderNo={}",
-                    event.getOrderId(), event.getOrderNo(), e);
+            log.warn("MQ 派发 {} 失败，降级为丢弃: orderId={}", tag, orderId, e);
         }
     }
 }

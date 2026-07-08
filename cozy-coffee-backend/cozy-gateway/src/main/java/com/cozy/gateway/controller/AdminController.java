@@ -54,6 +54,9 @@ public class AdminController {
     private SseEventPublisher sseEventPublisher;
 
     @Autowired
+    private com.cozy.gateway.mq.OrderEventProducer orderEventProducer;
+
+    @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
@@ -684,7 +687,23 @@ public class AdminController {
         try {
             ShopOrderDTO order = orderService.completeOrder(orderId);
             evictOrderAndAnalyticsCaches();
-            // 通知用户订单已完成（SSE）
+
+            // 派发订单完成事件：积分/EXP/首单奖励/月度任务走 MQ 异步链路
+            com.cozy.common.mq.OrderCompletedEvent event = com.cozy.common.mq.OrderCompletedEvent.builder()
+                    .orderId(order.getId())
+                    .orderNo(order.getOrderNo())
+                    .userId(order.getUserId())
+                    .payAmount(order.getPayAmount())
+                    .expEarned(order.getExpEarned())
+                    .pointsEarned(order.getPointsEarned())
+                    .isFirstOrder(order.getIsFirstOrder())
+                    .hasNewProduct(order.getHasNewProduct())
+                    .isDelivery("DELIVERY".equals(order.getDiningMethod()))
+                    .occurredAt(java.time.LocalDateTime.now())
+                    .build();
+            orderEventProducer.publishOrderCompleted(event);
+
+            // 通知用户订单已完成（SSE，PR2 将解耦到 consumer）
             try {
                 if (order.getUserId() != null) {
                     sseEventPublisher.notifyOrderCompleted(
