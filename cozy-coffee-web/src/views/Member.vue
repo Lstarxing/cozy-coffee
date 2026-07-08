@@ -35,7 +35,7 @@
           <span class="nav-text">咖啡下单</span>
         </a>
         <a href="#" class="nav-link" :class="{ active: currentTab === 'points-mall' }"
-          @click.prevent="currentTab = 'points-mall'; loadProducts()">
+          @click.prevent="currentTab = 'points-mall'">
           <span class="indicator"></span>
           <ShoppingBag :size="20" class="nav-icon" />
           <span class="nav-text">积分商城</span>
@@ -53,12 +53,12 @@
           </a>
           <div class="nav-submenu" :class="{ expanded: isOrdersExpanded }">
             <a href="#" class="nav-link sub-link" :class="{ active: currentTab === 'coffee-orders-history' }"
-              @click.prevent="currentTab = 'coffee-orders-history'; loadCoffeeOrders()">
+              @click.prevent="currentTab = 'coffee-orders-history'">
               <span class="left-dot"></span>
               <span class="nav-text">咖啡订单</span>
             </a>
             <a href="#" class="nav-link sub-link" :class="{ active: currentTab === 'redeem-orders-history' }"
-              @click.prevent="currentTab = 'redeem-orders-history'; loadRedeemOrders()">
+              @click.prevent="currentTab = 'redeem-orders-history'">
               <span class="left-dot"></span>
               <span class="nav-text">兑换订单</span>
             </a>
@@ -1172,7 +1172,7 @@
 <script setup>
 import { ref, computed, onMounted, watch, onUnmounted, markRaw } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import chinaRegions from '@/data/china-regions.json'
 import { cancelOrder } from '@/api/order'
@@ -1184,7 +1184,21 @@ import { Tag, Ticket, Gift, TrendingUp, CalendarCheck, Target, Check, Sun, Truck
 
 const userStore = useUserStore()
 const router = useRouter()
-const currentTab = ref('member-center')
+const route = useRoute()
+
+// 会员中心各 tab 与 URL ?tab= 双向同步，刷新后回到原 tab
+const VALID_TABS = [
+  'member-center',
+  'coffee-order',
+  'points-mall',
+  'coffee-orders-history',
+  'redeem-orders-history',
+  'personal-info',
+  'my-coupons',
+  'member-benefits'
+]
+const queryTab = route.query.tab
+const currentTab = ref(VALID_TABS.includes(queryTab) ? queryTab : 'member-center')
 const isOrdersExpanded = ref(false)  // 历史订单菜单展开状态
 const activeLevelTab = ref(userStore.userLevel || 'basic') // Default to User Level
 
@@ -3107,18 +3121,30 @@ onMounted(async () => {
     userStore.fetchMemberInfo()
     loadProducts()
     loadAddresses()
-    
+
     // v5.3: 等待月度任务数据加载完成后再启动轮询
     await loadMonthlyTaskData()
     console.log('[Member] 月度任务数据加载完成:', monthlyTaskData.value)
-    
+
+    // 刷新后从 URL 恢复的 tab：触发对应数据加载，确保"回到刷新前的界面"
+    // （member-center / personal-info 已由上面统一加载或 await loadMonthlyTaskData 覆盖）
+    if (currentTab.value === 'coffee-orders-history') {
+      loadCoffeeOrders()
+    } else if (currentTab.value === 'redeem-orders-history') {
+      loadRedeemOrders()
+    } else if (currentTab.value === 'member-benefits') {
+      checkMonthlyBenefitStatus()
+    }
+
     connectSSE()
     // v5.3: 启动月度任务轮询
     startMonthlyTaskPolling()
   }
 })
 
-// 监听标签切换，进入个人信息页时刷新数据
+// 监听标签切换，触发各 tab 对应的数据加载
+// 注意：onMounted 已无条件加载 loadProducts / loadMonthlyTaskData，
+// 这里仅处理后续切换或刷新后从 URL 恢复时需要的数据
 watch(currentTab, (newTab) => {
   if (newTab === 'personal-info') {
     userStore.fetchUserInfo()
@@ -3130,6 +3156,32 @@ watch(currentTab, (newTab) => {
   // v5.5: 切换到权益页时检查本月领取状态
   if (newTab === 'member-benefits') {
      checkMonthlyBenefitStatus()
+  }
+  if (newTab === 'points-mall') {
+    loadProducts()
+  }
+  if (newTab === 'coffee-orders-history') {
+    loadCoffeeOrders()
+  }
+  if (newTab === 'redeem-orders-history') {
+    loadRedeemOrders()
+  }
+})
+
+// currentTab <-> URL ?tab= 双向同步：URL 驱动（浏览器前进/后退/刷新恢复）时更新 tab，
+// tab 变化时用 router.replace 写回 URL，避免污染历史
+watch(currentTab, (newTab) => {
+  if (route.query.tab !== newTab) {
+    router.replace({ query: { ...route.query, tab: newTab } })
+  }
+})
+watch(() => route.query.tab, (newTab) => {
+  if (newTab !== currentTab.value) {
+    if (VALID_TABS.includes(newTab)) {
+      currentTab.value = newTab
+    } else {
+      currentTab.value = 'member-center'
+    }
   }
 })
 
