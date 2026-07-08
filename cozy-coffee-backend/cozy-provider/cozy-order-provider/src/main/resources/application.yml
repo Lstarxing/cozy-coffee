@@ -41,6 +41,14 @@ dubbo:
     timeout: 30000
     check: false
 
+# RocketMQ：Outbox 模式投递 order_cancelled
+rocketmq:
+  name-server: ${ROCKETMQ_NAME_SERVER:localhost:9876}
+  producer:
+    group: cozy-order-producer
+    send-message-timeout: 2000
+    retry-times-when-send-failed: 1
+
 cozy:
   order:
     timeout-cancel:

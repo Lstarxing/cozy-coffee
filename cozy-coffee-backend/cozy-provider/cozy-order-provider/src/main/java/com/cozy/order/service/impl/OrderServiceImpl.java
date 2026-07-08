@@ -86,6 +86,8 @@ public class OrderServiceImpl implements OrderService {
     @DubboReference(check = false)
     private com.cozy.user.api.UserService userService; // v5.0: 用于首单邀请奖励发放
 
+    private final com.cozy.order.mq.OutboxService outboxService;
+
     // 菜单缓存 (Local Cache)
     private volatile List<CoffeeProductDTO> cachedMenu = null;
 
@@ -1099,42 +1101,8 @@ public class OrderServiceImpl implements OrderService {
         orderMapper.updateById(order);
         syncPendingTimeoutIndex(order);
 
-        // 如果使用了优惠券，核销回滚
-        if (order.getAppliedCouponId() != null) {
-            log.info("订单取消，准备回滚优惠券: orderId={}, couponId={}, userId={}",
-                    orderId, order.getAppliedCouponId(), order.getUserId());
-            try {
-                pointsMallService.rollbackCoupon(order.getAppliedCouponId(), order.getUserId());
-                log.info("优惠券回滚成功: orderId={}, couponId={}", orderId, order.getAppliedCouponId());
-            } catch (Exception e) {
-                log.error("取消订单回滚优惠券失败: orderId={}, couponId={}, error={}",
-                        orderId, order.getAppliedCouponId(), e.getMessage(), e);
-            }
-        } else {
-            log.info("订单未使用优惠券，无需回滚: orderId={}", orderId);
-        }
-
-        // v5.0: 附加券回滚
-        if (order.getAppliedAddonCouponIds() != null && !order.getAppliedAddonCouponIds().isEmpty()) {
-            log.info("订单取消，准备回滚附加券: orderId={}, addonCouponIds={}", orderId, order.getAppliedAddonCouponIds());
-            try {
-                java.util.List<Long> addonCouponIds = new com.fasterxml.jackson.databind.ObjectMapper()
-                        .readValue(order.getAppliedAddonCouponIds(),
-                                new com.fasterxml.jackson.core.type.TypeReference<java.util.List<Long>>() {
-                                });
-                for (Long addonCouponId : addonCouponIds) {
-                    try {
-                        pointsMallService.rollbackCoupon(addonCouponId, order.getUserId());
-                        log.info("附加券回滚成功: orderId={}, addonCouponId={}", orderId, addonCouponId);
-                    } catch (Exception e) {
-                        log.error("附加券回滚失败: orderId={}, addonCouponId={}, error={}",
-                                orderId, addonCouponId, e.getMessage());
-                    }
-                }
-            } catch (Exception e) {
-                log.error("解析附加券ID失败: orderId={}, error={}", orderId, e.getMessage());
-            }
-        }
+        // v6.3: 券回滚走 Outbox 模式异步投递，跨库最终一致
+        publishCouponRollbackEvent(order);
 
         log.info("订单取消: orderId={}, orderNo={}", orderId, order.getOrderNo());
         return toOrderDTO(order, null);
@@ -1163,44 +1131,56 @@ public class OrderServiceImpl implements OrderService {
         orderMapper.updateById(order);
         syncPendingTimeoutIndex(order);
 
-        // 如果使用了优惠券，核销回滚
-        if (order.getAppliedCouponId() != null) {
-            log.info("用户取消订单，准备回滚优惠券: orderId={}, couponId={}, userId={}",
-                    orderId, order.getAppliedCouponId(), userId);
-            try {
-                pointsMallService.rollbackCoupon(order.getAppliedCouponId(), userId);
-                log.info("优惠券回滚成功: orderId={}, couponId={}", orderId, order.getAppliedCouponId());
-            } catch (Exception e) {
-                log.error("用户取消订单回滚优惠券失败: orderId={}, couponId={}, error={}",
-                        orderId, order.getAppliedCouponId(), e.getMessage(), e);
-            }
-        } else {
-            log.info("订单未使用优惠券，无需回滚: orderId={}", orderId);
-        }
-
-        // v5.0: 附加券回滚
-        if (order.getAppliedAddonCouponIds() != null && !order.getAppliedAddonCouponIds().isEmpty()) {
-            log.info("用户取消订单，准备回滚附加券: orderId={}, addonCouponIds={}", orderId, order.getAppliedAddonCouponIds());
-            try {
-                java.util.List<Long> addonCouponIds = new com.fasterxml.jackson.databind.ObjectMapper()
-                        .readValue(order.getAppliedAddonCouponIds(),
-                                new com.fasterxml.jackson.core.type.TypeReference<java.util.List<Long>>() {
-                                });
-                for (Long addonCouponId : addonCouponIds) {
-                    try {
-                        pointsMallService.rollbackCoupon(addonCouponId, userId);
-                        log.info("附加券回滚成功: orderId={}, addonCouponId={}", orderId, addonCouponId);
-                    } catch (Exception e) {
-                        log.error("附加券回滚失败: orderId={}, addonCouponId={}, error={}",
-                                orderId, addonCouponId, e.getMessage());
-                    }
-                }
-            } catch (Exception e) {
-                log.error("解析附加券ID失败: orderId={}, error={}", orderId, e.getMessage());
-            }
-        }
+        // v6.3: 券回滚走 Outbox 模式异步投递
+        publishCouponRollbackEvent(order);
 
         return toOrderDTO(order, null);
+    }
+
+    /**
+     * v6.3: 统一构造 OrderCancelledEvent 写入 outbox 表。
+     * 与订单状态变更在同一事务内原子提交，确保消息不丢。
+     */
+    private void publishCouponRollbackEvent(ShopOrder order) {
+        Long mainCouponId = order.getAppliedCouponId();
+        java.util.List<Long> addonCouponIds = parseAddonCouponIds(order);
+
+        if (mainCouponId == null && addonCouponIds.isEmpty()) {
+            log.info("订单未使用优惠券，无需回滚: orderId={}", order.getId());
+            return;
+        }
+
+        com.cozy.common.mq.OrderCancelledEvent event = com.cozy.common.mq.OrderCancelledEvent.builder()
+                .orderId(order.getId())
+                .userId(order.getUserId())
+                .appliedCouponId(mainCouponId)
+                .addonCouponIds(addonCouponIds)
+                .occurredAt(LocalDateTime.now())
+                .build();
+
+        outboxService.publish(
+                com.cozy.common.mq.MqTopics.ORDER_EVENTS,
+                com.cozy.common.mq.MqTags.ORDER_CANCELLED,
+                "coupon_rollback",
+                order.getId(),
+                event);
+        log.info("OrderCancelledEvent 已写入 outbox: orderId={}, mainCoupon={}, addonCount={}",
+                order.getId(), mainCouponId, addonCouponIds.size());
+    }
+
+    private java.util.List<Long> parseAddonCouponIds(ShopOrder order) {
+        String json = order.getAppliedAddonCouponIds();
+        if (json == null || json.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        try {
+            return objectMapper.readValue(json,
+                    new com.fasterxml.jackson.core.type.TypeReference<java.util.List<Long>>() {
+                    });
+        } catch (Exception e) {
+            log.warn("解析附加券ID失败: orderId={}, error={}", order.getId(), e.getMessage());
+            return java.util.Collections.emptyList();
+        }
     }
 
     // ==================== 商品管理 ====================
