@@ -216,29 +216,17 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
         if (stats == null)
             return;
 
-        // v6.0 修复: 事务隔离问题补偿
-        // getMonthlyStats 在另一个事务中查询，可能看不到当前事务刚更新的订单状态
-        // 但我们知道当前订单一定是完成的（否则不会调用到这里），所以手动 +1
-        // 这确保了当完成第4单时，统计值是4而不是3
-        int actualOrderCount = stats.getOrderCount() + 1;
-        log.info("月度挑战检查: userId={}, orderId={}, statsOrderCount={}, actualOrderCount={}",
-                userId, orderId, stats.getOrderCount(), actualOrderCount);
-
-        String month = YearMonth.now().toString();
-
-        // v6.0: 根据当前订单属性精确补偿统计值
+        // v6.2 修复: MQ 解耦后调用时机已晚于订单状态提交，getMonthlyStats 能正确统计到当前订单。
+        // 早期 +1 补偿逻辑（针对事务内调用看不到当前订单的情况）已不再需要，
+        // 否则会导致重复计数，使挑战任务提前触发奖励。
+        int actualOrderCount = stats.getOrderCount();
         int actualMorningCount = stats.getMorningOrderCount();
         int actualDeliveryCount = stats.getDeliveryOrderCount();
         int actualNewProductCount = stats.getNewProductCount();
+        log.info("月度挑战检查: userId={}, orderId={}, orderCount={}, morning={}, delivery={}, newProduct={}",
+                userId, orderId, actualOrderCount, actualMorningCount, actualDeliveryCount, actualNewProductCount);
 
-        // 外卖尝鲜：如果当前订单是外卖，+1 补偿
-        if (isDelivery) {
-            actualDeliveryCount++;
-        }
-        // 新品猎人：如果当前订单包含新品，+1 补偿
-        if (hasNewProduct) {
-            actualNewProductCount++;
-        }
+        String month = YearMonth.now().toString();
 
         // 打卡达人: 本月下单4次
         if (actualOrderCount >= 4) {
@@ -259,10 +247,6 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
         }
 
         // 晨间唤醒: 10点前下单3次
-        // 补偿: 如果当前时间是10点前，+1
-        if (java.time.LocalTime.now().getHour() < 10) {
-            actualMorningCount++;
-        }
         if (actualMorningCount >= 3) {
             MonthlyTask latestTask = getOrCreateTask(userId, month);
             if (latestTask.getChallengeMorningClaimed() == null || !latestTask.getChallengeMorningClaimed()) {
@@ -279,7 +263,6 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
         }
 
         // 外卖尝鲜: 完成2笔外卖
-        // 注意：外卖订单需要根据当前订单的 diningMethod 判断，这里暂不补偿
         if (actualDeliveryCount >= 2) {
             MonthlyTask latestTask = getOrCreateTask(userId, month);
             if (latestTask.getChallengeDeliveryClaimed() == null || !latestTask.getChallengeDeliveryClaimed()) {
@@ -296,7 +279,6 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
         }
 
         // 新品猎人: 尝试3款新品
-        // 注意：新品订单需要根据当前订单的商品判断，这里暂不补偿
         if (actualNewProductCount >= 3) {
             MonthlyTask latestTask = getOrCreateTask(userId, month);
             if (latestTask.getChallengeNewproductClaimed() == null || !latestTask.getChallengeNewproductClaimed()) {
