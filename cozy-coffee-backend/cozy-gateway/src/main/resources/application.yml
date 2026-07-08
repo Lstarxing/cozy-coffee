@@ -42,4 +42,5 @@ rocketmq:
 
 logging:
   level:
-    com.cozy: DEBUG
+    com.cozy: INFO
+    com.cozy.gateway.mq: DEBUG
