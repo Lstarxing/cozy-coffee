@@ -12,7 +12,6 @@ import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
 import com.cozy.user.api.UserService;
 import com.cozy.user.dto.response.UserDTO;
-import com.cozy.gateway.sse.SseEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.data.redis.core.Cursor;
@@ -51,7 +50,7 @@ public class AdminController {
     private OrderService orderService;
 
     @Autowired
-    private SseEventPublisher sseEventPublisher;
+    private com.cozy.gateway.mq.OrderEventProducer orderEventProducer;
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
@@ -684,18 +683,22 @@ public class AdminController {
         try {
             ShopOrderDTO order = orderService.completeOrder(orderId);
             evictOrderAndAnalyticsCaches();
-            // 通知用户订单已完成（SSE）
-            try {
-                if (order.getUserId() != null) {
-                    sseEventPublisher.notifyOrderCompleted(
-                            order.getUserId(),
-                            order.getId(),
-                            order.getPointsEarned() != null ? order.getPointsEarned() : 0,
-                            order.getExpEarned() != null ? order.getExpEarned() : 0);
-                }
-            } catch (Exception e) {
-                // SSE 通知失败不影响主流程
-            }
+
+            // 派发订单完成事件：积分/EXP/首单奖励/月度任务走 MQ 异步链路
+            com.cozy.common.mq.OrderCompletedEvent event = com.cozy.common.mq.OrderCompletedEvent.builder()
+                    .orderId(order.getId())
+                    .orderNo(order.getOrderNo())
+                    .userId(order.getUserId())
+                    .payAmount(order.getPayAmount())
+                    .expEarned(order.getExpEarned())
+                    .pointsEarned(order.getPointsEarned())
+                    .isFirstOrder(order.getIsFirstOrder())
+                    .hasNewProduct(order.getHasNewProduct())
+                    .isDelivery("DELIVERY".equals(order.getDiningMethod()))
+                    .occurredAt(java.time.LocalDateTime.now())
+                    .build();
+            orderEventProducer.publishOrderCompleted(event);
+
             return Result.success(order);
         } catch (Exception e) {
             return Result.error("完成订单失败: " + e.getMessage());

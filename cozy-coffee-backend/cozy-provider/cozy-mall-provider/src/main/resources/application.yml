@@ -8,7 +8,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/cozy_mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
-    password: 666
+    password: ${MYSQL_ROOT_PASSWORD:123456}
   data:
     redis:
       host: localhost
@@ -29,6 +29,7 @@ mybatis-plus:
 dubbo:
   application:
     name: cozy-mall-provider
+    qos-enable: false
   registry:
     address: nacos://localhost:8848
   protocol:
@@ -39,3 +40,7 @@ dubbo:
   consumer:
     timeout: 30000
     check: false
+
+# RocketMQ：消费 order_cancelled 触发券回滚
+rocketmq:
+  name-server: ${ROCKETMQ_NAME_SERVER:localhost:9876}

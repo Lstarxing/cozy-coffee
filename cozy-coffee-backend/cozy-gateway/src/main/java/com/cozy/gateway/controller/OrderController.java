@@ -1,8 +1,9 @@
 package com.cozy.gateway.controller;
 
-import com.cozy.common.result.Result;
 import com.cozy.common.context.UserContext;
-import com.cozy.gateway.sse.SseEventPublisher;
+import com.cozy.common.mq.OrderCreatedEvent;
+import com.cozy.common.result.Result;
+import com.cozy.gateway.mq.OrderEventProducer;
 import com.cozy.member.api.MemberService;
 import com.cozy.order.api.OrderService;
 import com.cozy.order.dto.request.CreateOrderRequest;
@@ -11,12 +12,9 @@ import com.cozy.order.dto.response.ShopOrderDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
-import org.springframework.data.redis.core.Cursor;
-import org.springframework.data.redis.core.ScanOptions;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -29,15 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderController {
 
-    private final SseEventPublisher sseEventPublisher;
-    private final StringRedisTemplate stringRedisTemplate;
-
-    private static final String ADMIN_DASHBOARD_STATS_PREFIX = "cozy:admin:dashboard:stats:";
-    private static final String ADMIN_ANALYTICS_TREND_PREFIX = "cozy:admin:analytics:trend:";
-    private static final String ADMIN_ANALYTICS_DISTRIBUTION_PREFIX = "cozy:admin:analytics:distribution:";
-    private static final String ADMIN_ANALYTICS_RANK_PREFIX = "cozy:admin:analytics:rank:";
-    private static final String ADMIN_ORDERS_LIST_PREFIX = "cozy:admin:orders:list:";
-    private static final String ADMIN_ORDERS_RECENT_PREFIX = "cozy:admin:orders:recent:";
+    private final OrderEventProducer orderEventProducer;
 
     @DubboReference(check = false)
     private OrderService orderService;
@@ -87,64 +77,34 @@ public class OrderController {
             }
             // 获取会员等级传递给订单服务
             String memberLevel = "basic";
+            String nickname = null;
             try {
                 var memberInfo = memberService.getMemberByUserId(userId);
                 if (memberInfo != null) {
                     memberLevel = memberInfo.getMemberLevel();
+                    nickname = memberInfo.getNickname();
                 }
             } catch (Exception e) {
                 log.warn("获取会员等级失败，使用默认等级", e);
             }
             ShopOrderDTO order = orderService.createOrder(userId, memberLevel, request);
 
-            // 新订单创建后立即清理管理端缓存，确保订单页和看板可实时看到数据。
-            evictAdminOrderAndAnalyticsCaches();
-
-            // 发布 SSE 事件通知管理端
-            try {
-                sseEventPublisher.publishNewOrder(order.getId(), order.getOrderNo());
-            } catch (Exception e) {
-                log.warn("发布新订单 SSE 事件失败", e);
-            }
+            // 派发下单成功事件：SSE 广播 + 管理端缓存清理走异步链路，避免拖慢下单接口
+            OrderCreatedEvent event = OrderCreatedEvent.builder()
+                    .orderId(order.getId())
+                    .orderNo(order.getOrderNo())
+                    .userId(userId)
+                    .username(nickname)
+                    .payAmount(order.getPayAmount())
+                    .itemCount(order.getTotalQuantity())
+                    .occurredAt(LocalDateTime.now())
+                    .build();
+            orderEventProducer.publishOrderCreated(event);
 
             return Result.success(order, "下单成功！获得 " + order.getPointsEarned() + " 积分");
         } catch (Exception e) {
             log.error("创建订单失败", e);
             return Result.fail(e.getMessage());
-        }
-    }
-
-    private void evictAdminOrderAndAnalyticsCaches() {
-        evictByPrefix(ADMIN_ORDERS_LIST_PREFIX);
-        evictByPrefix(ADMIN_ORDERS_RECENT_PREFIX);
-        evictByPrefix(ADMIN_DASHBOARD_STATS_PREFIX);
-        evictByPrefix(ADMIN_ANALYTICS_TREND_PREFIX);
-        evictByPrefix(ADMIN_ANALYTICS_DISTRIBUTION_PREFIX);
-        evictByPrefix(ADMIN_ANALYTICS_RANK_PREFIX);
-    }
-
-    private void evictByPrefix(String prefix) {
-        if (prefix == null || prefix.isEmpty()) {
-            return;
-        }
-        String pattern = prefix + "*";
-        List<String> batch = new ArrayList<>(200);
-        try {
-            ScanOptions options = ScanOptions.scanOptions().match(pattern).count(500).build();
-            try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {
-                while (cursor.hasNext()) {
-                    batch.add(cursor.next());
-                    if (batch.size() >= 200) {
-                        stringRedisTemplate.delete(batch);
-                        batch.clear();
-                    }
-                }
-            }
-            if (!batch.isEmpty()) {
-                stringRedisTemplate.delete(batch);
-            }
-        } catch (Exception e) {
-            log.warn("下单后清理管理端缓存失败: prefix={}", prefix, e);
         }
     }
 

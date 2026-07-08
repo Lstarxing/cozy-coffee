@@ -77,17 +77,22 @@ sequenceDiagram
     participant OS as OrderService
     participant RS as Redis
     participant DB as MySQL
+    participant MQ as RocketMQ
     participant SSE as SSE Publisher
 
     C->>GW: POST /api/order/create
     GW->>OS: createOrder(userId, request)
     OS->>RS: 校验缓存/规则数据
     OS->>DB: 写订单与明细
-    OS->>RS: 失效订单与看板相关缓存
-    OS->>SSE: 发布新订单事件
     OS-->>GW: 返回订单结果
+    GW->>MQ: sendOneWay OrderCreatedEvent
     GW-->>C: 下单成功响应
+    MQ-->>GW: 广播消费(BROADCASTING)
+    GW->>RS: 失效管理端订单与看板缓存
+    GW->>SSE: 推送新订单事件
 ```
+
+> v6.2 变更：SSE 广播与管理端缓存失效改为通过 RocketMQ 异步派发（Topic `cozy-order-events`，Tag `order_created`），下单接口不再等待这两个副作用完成。生产端使用 `sendOneWay` 保证 Broker 抖动时下单主流程不受影响；消费端 `cozy-gateway-sse` 组以 BROADCASTING 模式部署，多 Gateway 实例各自推送自己持有的 SSE 长连接。
 
 ## 缓存策略图
 ```mermaid

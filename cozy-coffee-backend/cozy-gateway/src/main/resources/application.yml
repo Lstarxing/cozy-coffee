@@ -30,6 +30,17 @@ dubbo:
     check: false
     timeout: 30000
 
+# RocketMQ：异步派发下单成功事件（SSE 广播 + 管理端缓存清理）
+# 生产者使用 sendOneWay，Broker 不可用不会阻塞下单主流程
+rocketmq:
+  name-server: ${ROCKETMQ_NAME_SERVER:localhost:9876}
+  producer:
+    group: cozy-gateway-producer
+    send-message-timeout: 2000
+    retry-times-when-send-failed: 0
+    retry-times-when-send-async-failed: 0
+
 logging:
   level:
-    com.cozy: DEBUG
+    com.cozy: INFO
+    com.cozy.gateway.mq: DEBUG

@@ -34,6 +34,7 @@
         <mybatis-plus.version>3.5.3.1</mybatis-plus.version>
         <jjwt.version>0.11.5</jjwt.version>
         <lombok.version>1.18.30</lombok.version>
+        <rocketmq-spring.version>2.2.3</rocketmq-spring.version>
     </properties>
 
     <dependencyManagement>
@@ -144,6 +145,13 @@
                 <groupId>com.cozy</groupId>
                 <artifactId>cozy-mall-api</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+
+            <!-- RocketMQ Spring Boot Starter (兼容 SB 3.0) -->
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>rocketmq-spring-boot-starter</artifactId>
+                <version>${rocketmq-spring.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

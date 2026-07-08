@@ -63,6 +63,12 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>
+
+        <!-- RocketMQ：异步下发下单成功事件，解耦 SSE 与管理端缓存清理 -->
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-spring-boot-starter</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

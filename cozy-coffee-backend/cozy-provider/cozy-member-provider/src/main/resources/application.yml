@@ -8,7 +8,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/cozy_member?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
-    password: 666
+    password: ${MYSQL_ROOT_PASSWORD:123456}
   data:
     redis:
       host: localhost
@@ -29,6 +29,7 @@ mybatis-plus:
 dubbo:
   application:
     name: cozy-member-provider
+    qos-enable: false
   registry:
     address: nacos://localhost:8848
   protocol:
@@ -36,3 +37,11 @@ dubbo:
     port: 20882
   provider:
     timeout: 30000
+  consumer:
+    check: false
+    timeout: 30000
+
+# RocketMQ：消费订单完成事件（积分/EXP/首单/月度任务）
+# 使用 CLUSTERING 模式，多实例时只有一个实例消费，避免重复发放
+rocketmq:
+  name-server: ${ROCKETMQ_NAME_SERVER:localhost:9876}

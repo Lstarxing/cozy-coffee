@@ -78,6 +78,13 @@
             <artifactId>lombok</artifactId>
         </dependency>
 
+        <!-- RocketMQ：异步消费订单完成事件（积分/EXP/首单/月度任务） -->
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-spring-boot-starter</artifactId>
+            <version>${rocketmq-spring.version}</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

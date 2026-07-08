@@ -1,12 +1,18 @@
 name: ${COMPOSE_PROJECT_NAME:-cozycoffee}
 
+# ====================================================================
+# 说明：5 个后端微服务（user/member/order/mall-provider + gateway）已切换到
+# IDEA 本地运行，本文件只保留基础设施。
+# 需要时把下方对应 service 块的 `# ` 前缀去掉即可恢复 Docker 跑法。
+# ====================================================================
+
 services:
   mysql:
     image: mysql:8.0
     container_name: cozy-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-666}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
       MYSQL_INIT_MODE: ${MYSQL_INIT_MODE:-full}
       TZ: ${TIMEZONE:-Asia/Shanghai}
     command:
@@ -54,146 +60,187 @@ services:
       TZ: ${TIMEZONE:-Asia/Shanghai}
     ports:
       - "${NACOS_PORT:-8848}:8848"
+      - "${NACOS_GRPC_PORT:-9848}:9848"
+      - "${NACOS_RAFT_PORT:-9849}:9849"
     volumes:
       - nacos_data:/home/nacos/data
       - nacos_logs:/home/nacos/logs
 
-  cozy-user-provider:
-    build:
-      context: ./cozy-coffee-backend
-      dockerfile: Dockerfile.service
-      args:
-        MODULE_PATH: cozy-provider/cozy-user-provider
-    container_name: cozy-user-provider
+  rocketmq-namesrv:
+    image: apache/rocketmq:4.9.4
+    container_name: cozy-rocketmq-namesrv
     restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      nacos:
-        condition: service_started
+    command: sh mqnamesrv
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-666}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: "6379"
-      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
-      JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
+      JAVA_OPT_EXT: "-server -Xms256m -Xmx256m -Xmn128m"
+      TZ: ${TIMEZONE:-Asia/Shanghai}
     ports:
-      - "${USER_PROVIDER_HTTP_PORT:-8081}:8081"
-      - "${USER_PROVIDER_DUBBO_PORT:-20881}:20881"
+      - "${ROCKETMQ_NAMESRV_PORT:-9876}:9876"
 
-  cozy-member-provider:
-    build:
-      context: ./cozy-coffee-backend
-      dockerfile: Dockerfile.service
-      args:
-        MODULE_PATH: cozy-provider/cozy-member-provider
-    container_name: cozy-member-provider
+  rocketmq-broker:
+    image: apache/rocketmq:4.9.4
+    container_name: cozy-rocketmq-broker
     restart: unless-stopped
     depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      nacos:
+      rocketmq-namesrv:
         condition: service_started
+    command: sh mqbroker -n rocketmq-namesrv:9876 -c /home/rocketmq/conf/broker.conf
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_member?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-666}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: "6379"
-      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
-      JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
+      NAMESRV_ADDR: rocketmq-namesrv:9876
+      JAVA_OPT_EXT: "-server -Xms512m -Xmx512m -Xmn256m"
+      TZ: ${TIMEZONE:-Asia/Shanghai}
+    volumes:
+      - ./docker/rocketmq/broker.conf:/home/rocketmq/conf/broker.conf:ro
     ports:
-      - "${MEMBER_PROVIDER_HTTP_PORT:-8082}:8082"
-      - "${MEMBER_PROVIDER_DUBBO_PORT:-20882}:20882"
+      - "${ROCKETMQ_BROKER_PORT:-10911}:10911"
+      - "10909:10909"
 
-  cozy-order-provider:
-    build:
-      context: ./cozy-coffee-backend
-      dockerfile: Dockerfile.service
-      args:
-        MODULE_PATH: cozy-provider/cozy-order-provider
-    container_name: cozy-order-provider
-    restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      nacos:
-        condition: service_started
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-666}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: "6379"
-      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
-      JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
-    ports:
-      - "${ORDER_PROVIDER_HTTP_PORT:-8083}:8083"
-      - "${ORDER_PROVIDER_DUBBO_PORT:-20883}:20883"
+  # ====================================================================
+  # 以下 5 个后端微服务已在 IDE 本地运行，平时不需要 Docker 跑。
+  # 需要全链路 Docker 验证时取消注释即可。
+  # ====================================================================
 
-  cozy-mall-provider:
-    build:
-      context: ./cozy-coffee-backend
-      dockerfile: Dockerfile.service
-      args:
-        MODULE_PATH: cozy-provider/cozy-mall-provider
-    container_name: cozy-mall-provider
-    restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      nacos:
-        condition: service_started
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-666}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: "6379"
-      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
-      JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
-    ports:
-      - "${MALL_PROVIDER_HTTP_PORT:-8084}:8084"
-      - "${MALL_PROVIDER_DUBBO_PORT:-20884}:20884"
+  # cozy-user-provider:
+  #   build:
+  #     context: ./cozy-coffee-backend
+  #     dockerfile: Dockerfile.service
+  #     args:
+  #       MODULE_PATH: cozy-provider/cozy-user-provider
+  #   container_name: cozy-user-provider
+  #   restart: unless-stopped
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     nacos:
+  #       condition: service_started
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+  #     SPRING_DATASOURCE_USERNAME: root
+  #     SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+  #     SPRING_DATA_REDIS_HOST: redis
+  #     SPRING_DATA_REDIS_PORT: "6379"
+  #     DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+  #     JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
+  #   ports:
+  #     - "${USER_PROVIDER_HTTP_PORT:-8081}:8081"
+  #     - "${USER_PROVIDER_DUBBO_PORT:-20881}:20881"
 
-  cozy-gateway:
-    build:
-      context: ./cozy-coffee-backend
-      dockerfile: Dockerfile.service
-      args:
-        MODULE_PATH: cozy-gateway
-    container_name: cozy-gateway
-    restart: unless-stopped
-    depends_on:
-      redis:
-        condition: service_healthy
-      nacos:
-        condition: service_started
-      cozy-user-provider:
-        condition: service_started
-      cozy-member-provider:
-        condition: service_started
-      cozy-order-provider:
-        condition: service_started
-      cozy-mall-provider:
-        condition: service_started
-    environment:
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: "6379"
-      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
-      JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
-    ports:
-      - "${GATEWAY_PORT:-8080}:8080"
+  # cozy-member-provider:
+  #   build:
+  #     context: ./cozy-coffee-backend
+  #     dockerfile: Dockerfile.service
+  #     args:
+  #       MODULE_PATH: cozy-provider/cozy-member-provider
+  #   container_name: cozy-member-provider
+  #   restart: unless-stopped
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     nacos:
+  #       condition: service_started
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_member?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+  #     SPRING_DATASOURCE_USERNAME: root
+  #     SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+  #     SPRING_DATA_REDIS_HOST: redis
+  #     SPRING_DATA_REDIS_PORT: "6379"
+  #     DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+  #     JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
+  #   ports:
+  #     - "${MEMBER_PROVIDER_HTTP_PORT:-8082}:8082"
+  #     - "${MEMBER_PROVIDER_DUBBO_PORT:-20882}:20882"
+
+  # cozy-order-provider:
+  #   build:
+  #     context: ./cozy-coffee-backend
+  #     dockerfile: Dockerfile.service
+  #     args:
+  #       MODULE_PATH: cozy-provider/cozy-order-provider
+  #   container_name: cozy-order-provider
+  #   restart: unless-stopped
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     nacos:
+  #       condition: service_started
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+  #     SPRING_DATASOURCE_USERNAME: root
+  #     SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+  #     SPRING_DATA_REDIS_HOST: redis
+  #     SPRING_DATA_REDIS_PORT: "6379"
+  #     DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+  #     JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
+  #   ports:
+  #     - "${ORDER_PROVIDER_HTTP_PORT:-8083}:8083"
+  #     - "${ORDER_PROVIDER_DUBBO_PORT:-20883}:20883"
+
+  # cozy-mall-provider:
+  #   build:
+  #     context: ./cozy-coffee-backend
+  #     dockerfile: Dockerfile.service
+  #     args:
+  #       MODULE_PATH: cozy-provider/cozy-mall-provider
+  #   container_name: cozy-mall-provider
+  #   restart: unless-stopped
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     nacos:
+  #       condition: service_started
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+  #     SPRING_DATASOURCE_USERNAME: root
+  #     SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+  #     SPRING_DATA_REDIS_HOST: redis
+  #     SPRING_DATA_REDIS_PORT: "6379"
+  #     DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+  #     JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848
+  #   ports:
+  #     - "${MALL_PROVIDER_HTTP_PORT:-8084}:8084"
+  #     - "${MALL_PROVIDER_DUBBO_PORT:-20884}:20884"
+
+  # cozy-gateway:
+  #   build:
+  #     context: ./cozy-coffee-backend
+  #     dockerfile: Dockerfile.service
+  #     args:
+  #       MODULE_PATH: cozy-gateway
+  #   container_name: cozy-gateway
+  #   restart: unless-stopped
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #     nacos:
+  #       condition: service_started
+  #     rocketmq-namesrv:
+  #       condition: service_started
+  #     rocketmq-broker:
+  #       condition: service_started
+  #     cozy-user-provider:
+  #       condition: service_started
+  #     cozy-member-provider:
+  #       condition: service_started
+  #     cozy-order-provider:
+  #       condition: service_started
+  #     cozy-mall-provider:
+  #       condition: service_started
+  #   environment:
+  #     SPRING_DATA_REDIS_HOST: redis
+  #     SPRING_DATA_REDIS_PORT: "6379"
+  #     DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+  #     ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
+  #     JAVA_TOOL_OPTIONS: -Ddubbo.registry.address=nacos://nacos:8848 -Drocketmq.name-server=rocketmq-namesrv:9876
+  #   ports:
+  #     - "${GATEWAY_PORT:-8080}:8080"
 
   cozy-web:
     build:
@@ -201,9 +248,10 @@ services:
       dockerfile: Dockerfile
     container_name: cozy-web
     restart: unless-stopped
-    depends_on:
-      cozy-gateway:
-        condition: service_started
+    # gateway 已在 IDE 本地运行，不再依赖容器
+    # depends_on:
+    #   cozy-gateway:
+    #     condition: service_started
     ports:
       - "${WEB_PORT:-5173}:80"
 
@@ -213,9 +261,10 @@ services:
       dockerfile: Dockerfile
     container_name: cozy-admin
     restart: unless-stopped
-    depends_on:
-      cozy-gateway:
-        condition: service_started
+    # gateway 已在 IDE 本地运行，不再依赖容器
+    # depends_on:
+    #   cozy-gateway:
+    #     condition: service_started
     ports:
       - "${ADMIN_PORT:-5174}:80"
 
