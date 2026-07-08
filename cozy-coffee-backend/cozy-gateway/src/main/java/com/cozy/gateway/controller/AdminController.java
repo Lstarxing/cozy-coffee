@@ -12,7 +12,6 @@ import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
 import com.cozy.user.api.UserService;
 import com.cozy.user.dto.response.UserDTO;
-import com.cozy.gateway.sse.SseEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.data.redis.core.Cursor;
@@ -49,9 +48,6 @@ public class AdminController {
 
     @DubboReference(check = false)
     private OrderService orderService;
-
-    @Autowired
-    private SseEventPublisher sseEventPublisher;
 
     @Autowired
     private com.cozy.gateway.mq.OrderEventProducer orderEventProducer;
@@ -703,18 +699,6 @@ public class AdminController {
                     .build();
             orderEventProducer.publishOrderCompleted(event);
 
-            // 通知用户订单已完成（SSE，PR2 将解耦到 consumer）
-            try {
-                if (order.getUserId() != null) {
-                    sseEventPublisher.notifyOrderCompleted(
-                            order.getUserId(),
-                            order.getId(),
-                            order.getPointsEarned() != null ? order.getPointsEarned() : 0,
-                            order.getExpEarned() != null ? order.getExpEarned() : 0);
-                }
-            } catch (Exception e) {
-                // SSE 通知失败不影响主流程
-            }
             return Result.success(order);
         } catch (Exception e) {
             return Result.error("完成订单失败: " + e.getMessage());
