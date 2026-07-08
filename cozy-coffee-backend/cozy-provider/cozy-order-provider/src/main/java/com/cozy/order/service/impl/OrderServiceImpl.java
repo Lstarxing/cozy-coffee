@@ -985,7 +985,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 完成订单 - 幂等发放 EXP/POINT
+     * 完成订单 - v6.2 积分/EXP/首单奖励/月度任务已解耦到 MQ 消费者
      */
     @Override
     @Transactional
@@ -1001,7 +1001,7 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("只有制作中的订单可以完成");
         }
 
-        // 幂等检查：如果已发放奖励，直接返回
+        // 幂等检查
         if (Boolean.TRUE.equals(order.getRewardsGranted())) {
             log.info("订单奖励已发放，跳过: orderId={}", orderId);
             order.setStatus("completed");
@@ -1014,7 +1014,7 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal payAmount = order.getPayAmount() != null ? order.getPayAmount() : order.getTotalAmount();
         int expEarned = payAmount.setScale(0, RoundingMode.HALF_UP).intValue();
 
-        // 获取用户会员等级
+        // 获取用户会员等级（供积分计算用）
         String memberLevel = "basic";
         try {
             var memberInfo = memberService.getMemberInfo(order.getUserId());
@@ -1025,81 +1025,49 @@ public class OrderServiceImpl implements OrderService {
             log.warn("获取会员信息失败，使用默认倍率: userId={}", order.getUserId(), e);
         }
 
-        // 直接使用订单创建时预计算的 POINT（包含精准的跨级和加速逻辑）
         int pointsEarned = (order.getPointsEarned() != null) ? order.getPointsEarned() : 0;
-
-        // v4.2 修正：如果预计算积分为 0 但实付金额 > 0，重新计算积分
-        // 这处理了历史订单或者旧版本创建的使用兑换券的订单
         if (pointsEarned <= 0 && payAmount.compareTo(BigDecimal.ZERO) > 0) {
-            log.info("订单预计算积分为 0 但有实付金额，重新计算: orderId={}, payAmount={}", orderId, payAmount);
             BigDecimal rate = getPointsRate(memberLevel);
             pointsEarned = payAmount.multiply(rate).setScale(0, RoundingMode.HALF_UP).intValue();
-            log.info("重新计算后的积分: orderId={}, points={}, rate={}", orderId, pointsEarned, rate);
         }
 
-        if (pointsEarned > 0) {
-            log.info("订单积分结算: orderId={}, points={}", orderId, pointsEarned);
-        } else {
-            log.info("订单无积分奖励（实付金额为 0）: orderId={}", orderId);
-        }
-        // 调用会员服务发放奖励
-        try {
-            // 发放积分（会自动创建 lot）
-            memberService.addPointsWithLot(order.getUserId(), pointsEarned, "order_completed",
-                    order.getId(), "咖啡订单完成: " + order.getOrderNo());
-
-            // 发放 EXP
-            memberService.addExp(order.getUserId(), expEarned, order.getId());
-
-            log.info("订单奖励发放成功: orderId={}, exp={}, points={}, level={}",
-                    orderId, expEarned, pointsEarned, memberLevel);
-        } catch (Exception e) {
-            log.error("订单奖励发放失败: orderId={}", orderId, e);
-            // 不抛异常，继续完成订单
-        }
-
-        // v4.2: 检测首单并发放奖励 (+300积分)
-        // 注意：此时当前订单还未更新为completed，检测历史已完成订单数
+        // 首单检测（在更新状态前查询，排除当前自身）
+        boolean isFirstOrder = false;
         try {
             LambdaQueryWrapper<ShopOrder> firstOrderCheck = new LambdaQueryWrapper<>();
             firstOrderCheck.eq(ShopOrder::getUserId, order.getUserId())
                     .eq(ShopOrder::getStatus, "completed")
-                    .ne(ShopOrder::getId, order.getId()); // 排除当前订单
-            long historyCompletedCount = orderMapper.selectCount(firstOrderCheck);
-
-            if (historyCompletedCount == 0) {
-                // 没有历史已完成订单，当前是第一单
-                // v5.3: 新用户首单奖励 (+200积分)
-                log.info("新用户完成首单，发放200积分奖励: userId={}", order.getUserId());
-                memberService.addPointsWithLot(order.getUserId(), 200, "first_order_bonus",
-                        order.getId(), "新用户首单奖励");
-
-                // v5.0: 触发邀请奖励（给邀请人发放买一送一券）
-                try {
-                    if (userService != null) {
-                        boolean granted = userService.grantInviteRewardOnFirstOrder(order.getUserId());
-                        if (granted) {
-                            log.info("首单邀请奖励发放成功: userId={}", order.getUserId());
-                        }
-                    }
-                } catch (Exception ex) {
-                    log.warn("首单邀请奖励发放失败: userId={}, error={}",
-                            order.getUserId(), ex.getMessage());
-                }
-            } else {
-                log.debug("非首单,跳过首单奖励: userId={}, historyCount={}",
-                        order.getUserId(), historyCompletedCount);
-            }
+                    .ne(ShopOrder::getId, order.getId());
+            isFirstOrder = orderMapper.selectCount(firstOrderCheck) == 0;
         } catch (Exception e) {
             log.warn("首单检测失败: orderId={}", orderId, e);
         }
 
-        // v4.2: 触发月度任务更新
-        // v6.0 修复: 必须先更新订单状态为 completed，再触发月度任务更新
-        // 原因: getMonthlyStats 只统计 completed 状态的订单
-        // 如果先调用 updateMonthlySpent，此时当前订单尚未 completed，不会被计入统计
+        // 新品检测
+        boolean hasNewProduct = false;
+        try {
+            LambdaQueryWrapper<ShopOrderItem> itemWrapper = new LambdaQueryWrapper<>();
+            itemWrapper.eq(ShopOrderItem::getOrderId, order.getId());
+            List<ShopOrderItem> items = orderItemMapper.selectList(itemWrapper);
+            if (!items.isEmpty()) {
+                List<Long> productIds = items.stream()
+                        .map(ShopOrderItem::getProductId)
+                        .distinct().collect(Collectors.toList());
+                LambdaQueryWrapper<CoffeeProduct> productWrapper = new LambdaQueryWrapper<>();
+                productWrapper.in(CoffeeProduct::getId, productIds)
+                        .eq(CoffeeProduct::getIsNewProduct, true);
+                hasNewProduct = productMapper.selectCount(productWrapper) > 0;
+            }
+        } catch (Exception e) {
+            log.warn("新品检测失败: orderId={}", orderId, e);
+        }
 
-        // 1. 先更新订单状态
+        boolean isDelivery = "DELIVERY".equals(order.getDiningMethod());
+
+        log.info("订单完成(奖励已解耦到MQ): orderId={}, exp={}, points={}, isFirst={}, isDelivery={}, hasNew={}",
+                orderId, expEarned, pointsEarned, isFirstOrder, isDelivery, hasNewProduct);
+
+        // 更新订单状态（积分/EXP/首单奖励/月度任务由 MQ 消费者异步处理）
         order.setStatus("completed");
         order.setExpEarned(expEarned);
         order.setPointsEarned(pointsEarned);
@@ -1107,49 +1075,11 @@ public class OrderServiceImpl implements OrderService {
         orderMapper.updateById(order);
         syncPendingTimeoutIndex(order);
 
-        // 2. 再触发月度任务更新（此时当前订单已是 completed 状态）
-        // v6.0: 传入当前订单属性，用于精确补偿事务隔离问题
-        try {
-            if (monthlyTaskService != null && order.getPayAmount() != null
-                    && order.getPayAmount().compareTo(BigDecimal.ZERO) > 0) {
-
-                // 判断是否外卖订单
-                boolean isDelivery = "DELIVERY".equals(order.getDiningMethod());
-
-                // 判断是否包含新品 - 查询订单项是否包含新品商品
-                boolean hasNewProduct = false;
-                try {
-                    LambdaQueryWrapper<ShopOrderItem> itemWrapper = new LambdaQueryWrapper<>();
-                    itemWrapper.eq(ShopOrderItem::getOrderId, order.getId());
-                    List<ShopOrderItem> items = orderItemMapper.selectList(itemWrapper);
-
-                    if (!items.isEmpty()) {
-                        List<Long> productIds = items.stream()
-                                .map(ShopOrderItem::getProductId)
-                                .distinct()
-                                .collect(Collectors.toList());
-
-                        LambdaQueryWrapper<CoffeeProduct> productWrapper = new LambdaQueryWrapper<>();
-                        productWrapper.in(CoffeeProduct::getId, productIds)
-                                .eq(CoffeeProduct::getIsNewProduct, true);
-                        hasNewProduct = productMapper.selectCount(productWrapper) > 0;
-                    }
-                } catch (Exception e) {
-                    log.warn("检测新品订单失败: orderId={}", orderId, e);
-                }
-
-                monthlyTaskService.updateMonthlySpentWithDetails(order.getUserId(), order.getId(),
-                        order.getPayAmount(), isDelivery, hasNewProduct);
-                log.info("月度任务更新成功: userId={}, orderId={}, amount={}, isDelivery={}, hasNewProduct={}",
-                        order.getUserId(), order.getId(), order.getPayAmount(), isDelivery, hasNewProduct);
-            }
-        } catch (Exception e) {
-            log.warn("月度任务更新失败: orderId={}", orderId, e);
-        }
-
-        return
-
-        toOrderDTO(order, null);
+        ShopOrderDTO dto = toOrderDTO(order, null);
+        dto.setIsFirstOrder(isFirstOrder);
+        dto.setHasNewProduct(hasNewProduct);
+        // diningMethod 已在 toOrderDTO 中映射，isDelivery 由 controller 根据 diningMethod 判断
+        return dto;
     }
 
     @Override
