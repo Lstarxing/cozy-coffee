@@ -1,5 +1,5 @@
 <template>
-  <div class="address-modal" v-if="modelValue" @click.self="closeModal">
+  <div v-if="modelValue" class="address-modal" @click.self="closeModal">
     <div class="modal-content address-modal-content">
       <h3>{{ isEditing ? '编辑收货地址' : '添加收货地址' }}</h3>
 
@@ -50,14 +50,14 @@
 
       <div class="form-item checkbox">
         <label>
-          <input type="checkbox" v-model="newAddress.isDefault" />
+          <input v-model="newAddress.isDefault" type="checkbox" />
           设为默认收货地址
         </label>
       </div>
 
       <div class="modal-actions">
-        <button @click="closeModal" class="cancel-btn">取消</button>
-        <button @click="saveAddress" class="confirm-btn">{{ isEditing ? '保存修改' : '确认添加' }}</button>
+        <button class="cancel-btn" @click="closeModal">取消</button>
+        <button class="confirm-btn" @click="saveAddress">{{ isEditing ? '保存修改' : '确认添加' }}</button>
       </div>
     </div>
   </div>
@@ -67,6 +67,7 @@
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import chinaRegions from '@/data/china-regions.json'
+import { createAddress, updateAddress } from '@/api/member'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -169,43 +170,26 @@ const saveAddress = async () => {
     return
   }
 
-  // 构建 payload，映射字段以兼容后端
-  const payload = {
-    ...newAddress.value,
-    contactName: newAddress.value.receiverName,
-    phone: newAddress.value.receiverPhone,
-    province: provinceName,
-    city: cityName,
-    district: districtName
-  }
-  // 移除为了显示兼容而可能多余的字段（视情况而定，这里保留也没事）
-
   try {
-    const token = localStorage.getItem('token')
-    const url = isEditing.value 
-      ? `http://localhost:8080/api/member/addresses/${props.initialData.id}`
-      : `http://localhost:8080/api/member/addresses`
-    const method = isEditing.value ? 'PUT' : 'POST'
-
-    const res = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(payload)
-    })
-    const data = await res.json()
-    if (data.success) {
-      ElMessage.success(isEditing.value ? '修改成功' : '添加成功')
-      closeModal()
-      emit('saved')
-    } else {
-      ElMessage.error(data.message || '操作失败')
+    const payload = {
+      receiverName: newAddress.value.receiverName,
+      phone: newAddress.value.receiverPhone,
+      province: provinceName,
+      city: cityName,
+      district: districtName
     }
-  } catch (e) {
-    console.error(e)
-    ElMessage.error('系统错误')
+
+    if (isEditing.value && props.initialData?.id) {
+      await updateAddress(props.initialData.id, payload)
+      ElMessage.success('修改成功')
+    } else {
+      await createAddress(payload)
+      ElMessage.success('添加成功')
+    }
+    closeModal()
+    emit('saved')
+  } catch (error) {
+    ElMessage.error(error.message || '操作失败')
   }
 }
 

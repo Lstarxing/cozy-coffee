@@ -3,7 +3,7 @@
     <div class="customizer-panel">
       <!-- 顶部大图区域 (无价格) -->
       <div class="product-banner">
-        <img :src="getImageUrl(product.imageUrl)" @error="handleImageError" :alt="product.name">
+        <img :src="getImageUrl(product.imageUrl)" :alt="product.name" @error="handleImageError">
         <button class="close-btn-float" @click="$emit('close')">×</button>
       </div>
 
@@ -11,15 +11,16 @@
       <div class="panel-body">
         <div class="product-header">
           <h3>{{ product.name }}</h3>
-          <p class="product-desc-text" v-if="product.description">{{ product.description }}</p>
+          <p v-if="product.description" class="product-desc-text">{{ product.description }}</p>
         </div>
 
         <div class="options-section">
           <!-- 杯型 v6.1: 支持禁用状态 -->
-          <div class="option-group" v-if="showCupSize">
+          <div v-if="showCupSize" class="option-group">
             <label>杯型</label>
             <div class="option-buttons grid-layout">
-              <button v-for="size in cupSizes" :key="size.value"
+              <button
+v-for="size in cupSizes" :key="size.value"
                 :class="{ 
                   active: customization.cupSize === size.value,
                   disabled: size.disabled 
@@ -35,10 +36,11 @@
           </div>
 
           <!-- 糖度 (免费) v6.1: 支持禁用状态 -->
-          <div class="option-group" v-if="showSugar">
+          <div v-if="showSugar" class="option-group">
             <label>糖度</label>
             <div class="option-buttons grid-layout">
-              <button v-for="sugar in sugarLevels" :key="sugar.value"
+              <button
+v-for="sugar in sugarLevels" :key="sugar.value"
                 :class="{ 
                   active: customization.sugarLevel === sugar.value,
                   disabled: sugar.disabled 
@@ -53,10 +55,11 @@
           </div>
 
           <!-- 温度 (免费) v6.1: 支持禁用状态 -->
-          <div class="option-group" v-if="showTemp">
+          <div v-if="showTemp" class="option-group">
             <label>温度</label>
             <div class="option-buttons grid-layout">
-              <button v-for="temp in temperatures" :key="temp.value"
+              <button
+v-for="temp in temperatures" :key="temp.value"
                 :class="{ 
                   active: customization.temperature === temp.value,
                   disabled: temp.disabled 
@@ -71,10 +74,11 @@
           </div>
 
           <!-- 浓度 (含付费加浓) -->
-          <div class="option-group" v-if="showStrength">
+          <div v-if="showStrength" class="option-group">
             <label>浓度</label>
             <div class="option-buttons grid-layout-large"> <!-- 使用大按钮布局 -->
-              <button v-for="strength in coffeeStrengths" :key="strength.value"
+              <button
+v-for="strength in coffeeStrengths" :key="strength.value"
                 :class="{ active: customization.coffeeStrength === strength.value }"
                 @click="customization.coffeeStrength = strength.value">
                 <span class="opt-label">{{ strength.label }}</span>
@@ -86,10 +90,11 @@
           </div>
 
           <!-- 基底/奶类 (含付费选项) -->
-          <div class="option-group" v-if="showMilk">
+          <div v-if="showMilk" class="option-group">
             <label>基底</label>
             <div class="option-buttons grid-layout">
-              <button v-for="milk in milkOptions" :key="milk.value"
+              <button
+v-for="milk in milkOptions" :key="milk.value"
                 :class="{ active: customization.milkType === milk.value }"
                 @click="customization.milkType = milk.value">
                 <span class="opt-label">{{ milk.label }}</span>
@@ -104,7 +109,7 @@
       <div class="panel-footer-fixed">
         <div class="footer-content">
           <div class="quantity-wrapper">
-             <button @click="quantity > 1 && quantity--" :disabled="quantity <= 1">-</button>
+             <button :disabled="quantity <= 1" @click="quantity > 1 && quantity--">-</button>
              <span>{{ quantity }}</span>
              <button @click="quantity < 99 && quantity++">+</button>
           </div>
@@ -122,6 +127,7 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { getUserCoupons } from '@/api/mall'
+import { getImageUrl, handleImageError } from '@/utils/image'
 
 const props = defineProps({
   product: {
@@ -455,17 +461,6 @@ const addToCart = () => {
 
   emit('add-to-cart', payload)
   emit('close')
-}
-
-// 统一图片处理逻辑
-const getImageUrl = (url) => {
-  if (!url) return 'https://placehold.co/400x400/F5F5F0/8D6E63?text=Coffee'
-  if (url.startsWith('http')) return url
-  return `http://localhost:8080${url.startsWith('/') ? '' : '/'}${url}`
-}
-
-const handleImageError = (e) => {
-  e.target.src = 'https://placehold.co/400x400/F5F5F0/8D6E63?text=Coffee'
 }
 </script>
 

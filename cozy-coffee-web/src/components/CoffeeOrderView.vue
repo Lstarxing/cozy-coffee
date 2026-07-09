@@ -6,7 +6,7 @@
         <span class="points-hint"><Sparkles :size="14" :stroke-width="2" /> 消费享 {{ pointsMultiplier }}倍积分</span>
         <button class="cart-trigger" @click="showCart = true">
           <ShoppingCartIcon :size="20" :stroke-width="2" />
-          <span class="cart-count" v-if="cartItems.length > 0">{{ cartItems.length }}</span>
+          <span v-if="cartItems.length > 0" class="cart-count">{{ cartItems.length }}</span>
         </button>
       </div>
     </div>
@@ -25,19 +25,19 @@
       </button>
     </div>
 
-    <div class="products-grid" v-if="!isLoading">
+    <div v-if="!isLoading" class="products-grid">
       <div v-if="filteredProducts.length === 0" class="empty-state">
         <Coffee :size="48" class="empty-icon" />
         <p>暂无商品</p>
       </div>
 
-      <div v-else class="product-card" v-for="product in filteredProducts" :key="product.id">
+      <div v-for="product in filteredProducts" v-else :key="product.id" class="product-card">
         <div class="product-image-wrapper">
           <img 
             :src="getImageUrl(product.imageUrl)" 
-            @error="handleImageError"
             class="product-img"
             :alt="product.name"
+            @error="handleImageError"
           >
           <!-- Plan A: Floating Pill NEW Label -->
           <div v-if="product.isNewProduct" class="new-badge-pill">
@@ -66,7 +66,8 @@
     </div>
 
     <!-- 产品定制器 -->
-    <ProductCustomizer v-if="showCustomizer" :product="selectedProduct" @close="showCustomizer = false"
+    <ProductCustomizer
+v-if="showCustomizer" :product="selectedProduct" @close="showCustomizer = false"
       @add-to-cart="handleAddToCart" />
 
     <!-- 购物车 -->
@@ -83,14 +84,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, markRaw } from 'vue'
+import { ref, computed, onMounted, markRaw } from 'vue'
 import { getCoffeeProducts, createOrder } from '@/api/order'
+import { getImageUrl, handleImageError } from '@/utils/image'
+import { useCart } from '@/composables/useCart'
 import ProductCustomizer from './ProductCustomizer.vue'
-import ShoppingCart from './ShoppingCart.vue'
+import ShoppingCart from './cart/ShoppingCart.vue'
 import { ElMessage } from 'element-plus'
-import { 
+import {
   Coffee, Sparkles, ShoppingCart as ShoppingCartIcon,
-  Tag, Flame, Star, Cake, Plus 
+  Tag, Flame, Star, Cake, Plus
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -108,7 +111,8 @@ const isLoading = ref(false)
 const showCustomizer = ref(false)
 const selectedProduct = ref(null)
 const showCart = ref(false)
-const cartItems = ref([])
+
+const { cartItems, addToCart, clearCart } = useCart()
 
 // 筛选凑单商品 (燕麦曲奇、牛角包)
 const upsellProducts = computed(() => {
@@ -141,34 +145,6 @@ const filteredProducts = computed(() => {
   return displayProducts.filter(p => p.category === activeCategory.value)
 })
 
-// 图片 URL 处理增强
-const getImageUrl = (url) => {
-  if (!url) return 'https://placehold.co/400x400/F5F5F0/8D6E63?text=Coffee' // 默认兜底图
-  if (url.startsWith('http')) return url
-  return `http://localhost:8080${url.startsWith('/') ? '' : '/'}${url}`
-}
-
-const handleImageError = (e) => {
-  e.target.src = 'https://placehold.co/400x400/F5F5F0/8D6E63?text=Coffee'
-}
-
-// 购物车持久化
-onMounted(() => {
-  try {
-     // 加载购物车
-    const savedCart = localStorage.getItem('cozy_coffee_cart')
-    if (savedCart) {
-      cartItems.value = JSON.parse(savedCart)
-    }
-  } catch (e) {
-    console.error('Failed to parse cart', e)
-    localStorage.removeItem('cozy_coffee_cart')
-  }
-})
-
-watch(cartItems, (newVal) => {
-  localStorage.setItem('cozy_coffee_cart', JSON.stringify(newVal))
-}, { deep: true })
 
 const loadProducts = async () => {
   isLoading.value = true
@@ -203,24 +179,7 @@ const openCustomizer = (product) => {
 }
 
 const handleAddToCart = (item) => {
-  // 检查是否已经有相同配置的商品
-  const existingIndex = cartItems.value.findIndex(
-    cartItem =>
-      cartItem.productId === item.productId &&
-      cartItem.cupSize === item.cupSize &&
-      cartItem.sugarLevel === item.sugarLevel &&
-      cartItem.temperature === item.temperature &&
-      cartItem.coffeeStrength === item.coffeeStrength
-  )
-
-  if (existingIndex > -1) {
-    // 如果存在，增加数量
-    cartItems.value[existingIndex].quantity += item.quantity
-  } else {
-    // 否则添加新项
-    cartItems.value.push(item)
-  }
-
+  addToCart(item)
   ElMessage.success('已加入购物车')
 }
 
@@ -253,7 +212,7 @@ const handleCheckout = async (orderData) => {
     if (res.data.success) {
       ElMessage.success('订单创建成功！')
       // 清空购物车
-      cartItems.value = []
+      clearCart()
       showCart.value = false
       // 通知父组件刷新用户信息和订单列表
       emit('order-created', res.data.data)

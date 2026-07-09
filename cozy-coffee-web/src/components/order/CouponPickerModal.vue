@@ -20,7 +20,7 @@
               @click="selectCoupon('')"
             >
               <div class="radio-indicator">
-                <div class="radio-dot" v-if="selectedCode === ''"></div>
+                <div v-if="selectedCode === ''" class="radio-dot"></div>
               </div>
               <div class="coupon-info">
                 <span class="coupon-name">不使用优惠券</span>
@@ -48,7 +48,7 @@
               
               <!-- 单选按钮 -->
               <div class="radio-indicator">
-                <div class="radio-dot" v-if="selectedCode === coupon.couponCode"></div>
+                <div v-if="selectedCode === coupon.couponCode" class="radio-dot"></div>
               </div>
               
               <!-- 券信息 -->

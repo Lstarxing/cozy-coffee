@@ -9,17 +9,17 @@
         <label>用餐方式</label>
         <div class="dining-method-selector">
           <label class="method-option" :class="{ active: diningMethod === 'DINE_IN' }">
-            <input type="radio" v-model="diningMethod" value="DINE_IN" />
+            <input v-model="diningMethod" type="radio" value="DINE_IN" />
             <span class="icon">🍽️</span>
             <span>堂食</span>
           </label>
           <label class="method-option" :class="{ active: diningMethod === 'TAKEOUT' }">
-            <input type="radio" v-model="diningMethod" value="TAKEOUT" />
+            <input v-model="diningMethod" type="radio" value="TAKEOUT" />
             <span class="icon">🥤</span>
             <span>外带</span>
           </label>
           <label class="method-option" :class="{ active: diningMethod === 'DELIVERY' }">
-            <input type="radio" v-model="diningMethod" value="DELIVERY" />
+            <input v-model="diningMethod" type="radio" value="DELIVERY" />
             <span class="icon">🛵</span>
             <span>外卖</span>
           </label>
@@ -30,8 +30,8 @@
       <div class="form-item">
         <label>订单总额 (¥)</label>
         <input 
-          type="number" 
           v-model.number="orderAmount" 
+          type="number" 
           min="1" 
           placeholder="请输入金额" 
           @input="validateAmount"
@@ -56,7 +56,7 @@
           <span>商品总额</span>
           <span>¥{{ orderAmount || 0 }}</span>
         </div>
-        <div class="row discount" v-if="discountAmount > 0">
+        <div v-if="discountAmount > 0" class="row discount">
           <span>优惠抵扣</span>
           <span>-¥{{ discountAmount }}</span>
         </div>
@@ -83,9 +83,9 @@
     <!-- 优惠券弹窗 -->
     <CouponPickerDialog 
       v-model:visible="showCouponPicker"
-      :orderAmount="orderAmount || 0"
+      :order-amount="orderAmount || 0"
       :items="mockItems"
-      :currentCouponId="selectedCoupon?.id"
+      :current-coupon-id="selectedCoupon?.id"
       @select="handleCouponSelect"
     />
   </div>

@@ -12,15 +12,15 @@
       </div>
     </div>
 
-    <div class="coupon-list" v-loading="loading">
+    <div v-loading="loading" class="coupon-list">
       <div v-if="coupons.length === 0" class="empty-state">
         <div class="empty-icon">📭</div>
         <p>暂无优惠券</p>
       </div>
       
       <div 
-        v-else
-        v-for="coupon in coupons" 
+        v-for="coupon in coupons"
+        v-else 
         :key="coupon.id" 
         class="coupon-card"
         :class="['theme-' + getCouponTheme(coupon), { expired: isExpired(coupon) }]"
@@ -40,11 +40,11 @@
             <span class="title" :class="{ premium: isPremium(coupon) }">
               {{ getPremiumIcon(coupon) }}{{ coupon.productName || getCouponTitle(coupon) }}
             </span>
-            <span class="source-tag" v-if="getSourceTag(coupon)">{{ getSourceTag(coupon) }}</span>
+            <span v-if="getSourceTag(coupon)" class="source-tag">{{ getSourceTag(coupon) }}</span>
           </div>
 
           <!-- 限制标签 -->
-          <div class="limit-tags" v-if="getRestrictionTags(coupon).length > 0">
+          <div v-if="getRestrictionTags(coupon).length > 0" class="limit-tags">
             <span 
               v-for="(tag, index) in getRestrictionTags(coupon)" 
               :key="index"
@@ -59,7 +59,7 @@
             <span class="date" :class="{ urgent: getDaysLeft(coupon) <= 3 && getDaysLeft(coupon) > 0 }">
               {{ getExpiryText(coupon) }}
             </span>
-            <span class="days-left" v-if="getDaysLeft(coupon) > 0 && getDaysLeft(coupon) <= 7">
+            <span v-if="getDaysLeft(coupon) > 0 && getDaysLeft(coupon) <= 7" class="days-left">
               剩{{ getDaysLeft(coupon) }}天
             </span>
           </div>
@@ -67,7 +67,7 @@
 
         <!-- 右侧：行动区 -->
         <div class="card-right">
-          <div class="urgent-tip" v-if="activeTab === 'ISSUED' && getDaysLeft(coupon) <= 3 && getDaysLeft(coupon) > 0">
+          <div v-if="activeTab === 'ISSUED' && getDaysLeft(coupon) <= 3 && getDaysLeft(coupon) > 0" class="urgent-tip">
             即将过期
           </div>
           <button 

@@ -15,28 +15,28 @@
         @click="changeTab(tab.value)"
       >
         <span>{{ tab.label }}</span>
-        <span class="count" v-if="tab.count > 0">{{ tab.count }}</span>
+        <span v-if="tab.count > 0" class="count">{{ tab.count }}</span>
       </div>
     </div>
 
     <!-- 券列表 -->
-    <div class="coupon-list" v-loading="loading">
+    <div v-loading="loading" class="coupon-list">
       <div v-if="coupons.length === 0" class="empty-state">
         <div class="empty-icon">📭</div>
         <p>{{ emptyText }}</p>
       </div>
 
       <CouponCardPremium 
-        v-else
-        v-for="coupon in coupons" 
+        v-for="coupon in coupons"
+        v-else 
         :key="coupon.id"
         :coupon="coupon"
       />
     </div>
 
     <!-- 加载更多 -->
-    <div class="load-more" v-if="hasMore && coupons.length > 0">
-      <button @click="loadMore" :disabled="loading">
+    <div v-if="hasMore && coupons.length > 0" class="load-more">
+      <button :disabled="loading" @click="loadMore">
         {{ loading ? '加载中...' : '加载更多' }}
       </button>
     </div>
