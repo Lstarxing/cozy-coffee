@@ -88,14 +88,17 @@ public class OrderServiceImpl implements OrderService {
 
     private final com.cozy.order.mq.OutboxService outboxService;
 
-    // 菜单缓存 (Local Cache)
+    // 菜单缓存 (L1 in-process + L2 Redis)
     private volatile List<CoffeeProductDTO> cachedMenu = null;
+    private volatile long cachedMenuAt = 0;
+    private static final long L1_TTL_MS = TimeUnit.MINUTES.toMillis(10);
 
     @Value("${cozy.order.timeout-cancel.timeout-minutes:1}")
     private int orderTimeoutMinutes;
 
     private void invalidateMenuCache() {
         this.cachedMenu = null;
+        this.cachedMenuAt = 0;
         try {
             redisTemplate.delete(RedisKeyConstants.ORDER_MENU_ACTIVE);
         } catch (Exception e) {
@@ -108,20 +111,23 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public List<CoffeeProductDTO> listCoffeeProducts() {
-        // L1: in-process local cache
-        List<CoffeeProductDTO> cache = this.cachedMenu;
-        if (cache != null) {
-            backfillMenuRedisIfMissing(cache);
+        // L1: in-process cache（10 分钟 TTL，到期自动失效绕开脏数据永存问题）
+        List<CoffeeProductDTO> l1 = this.cachedMenu;
+        if (l1 != null && System.currentTimeMillis() - this.cachedMenuAt < L1_TTL_MS) {
             MENU_CACHE_HIT.increment();
             logMenuCacheMetricsMaybe();
-            return cache;
+            return l1;
         }
+        // L1 过期或为空 → 清掉让后续流程重建
+        this.cachedMenu = null;
+        this.cachedMenuAt = 0;
 
-        // L2: Redis cache (shared across instances)
+        // L2: Redis cache（共享缓存，TTL 5-8 分钟由写入方控制）
         try {
             Object cachedValue = redisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
             if (EMPTY_CACHE_MARKER.equals(cachedValue)) {
                 this.cachedMenu = Collections.emptyList();
+                this.cachedMenuAt = System.currentTimeMillis();
                 MENU_CACHE_EMPTY_HIT.increment();
                 logMenuCacheMetricsMaybe();
                 return this.cachedMenu;
@@ -129,6 +135,7 @@ public class OrderServiceImpl implements OrderService {
             List<CoffeeProductDTO> redisCached = convertToCoffeeProductList(cachedValue);
             if (redisCached != null) {
                 this.cachedMenu = redisCached;
+                this.cachedMenuAt = System.currentTimeMillis();
                 MENU_CACHE_HIT.increment();
                 logMenuCacheMetricsMaybe();
                 return redisCached;
@@ -138,6 +145,7 @@ public class OrderServiceImpl implements OrderService {
         }
         MENU_CACHE_MISS.increment();
 
+        // DB 重建（带分布式锁防击穿）
         String lockToken = UUID.randomUUID().toString();
         boolean locked = tryAcquireRebuildLock(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken, 8);
         if (!locked) {
@@ -146,6 +154,7 @@ public class OrderServiceImpl implements OrderService {
                 Object retryCache = redisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
                 if (EMPTY_CACHE_MARKER.equals(retryCache)) {
                     this.cachedMenu = Collections.emptyList();
+                    this.cachedMenuAt = System.currentTimeMillis();
                     MENU_CACHE_EMPTY_HIT.increment();
                     logMenuCacheMetricsMaybe();
                     return this.cachedMenu;
@@ -153,6 +162,7 @@ public class OrderServiceImpl implements OrderService {
                 List<CoffeeProductDTO> redisCached = convertToCoffeeProductList(retryCache);
                 if (redisCached != null) {
                     this.cachedMenu = redisCached;
+                    this.cachedMenuAt = System.currentTimeMillis();
                     MENU_CACHE_HIT.increment();
                     logMenuCacheMetricsMaybe();
                     return redisCached;
@@ -181,6 +191,7 @@ public class OrderServiceImpl implements OrderService {
                         .collect(Collectors.toList());
 
                 this.cachedMenu = result;
+                this.cachedMenuAt = System.currentTimeMillis();
                 try {
                     if (result.isEmpty()) {
                         redisTemplate.opsForValue().set(
@@ -192,7 +203,7 @@ public class OrderServiceImpl implements OrderService {
                         long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
                         redisTemplate.opsForValue().set(
                                 RedisKeyConstants.ORDER_MENU_ACTIVE,
-                            result,
+                                result,
                                 ttlMinutes,
                                 TimeUnit.MINUTES);
                     }
@@ -217,31 +228,6 @@ public class OrderServiceImpl implements OrderService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
-        }
-    }
-
-    private void backfillMenuRedisIfMissing(List<CoffeeProductDTO> cache) {
-        try {
-            Boolean hasKey = redisTemplate.hasKey(RedisKeyConstants.ORDER_MENU_ACTIVE);
-            if (Boolean.TRUE.equals(hasKey)) {
-                return;
-            }
-            if (cache.isEmpty()) {
-                redisTemplate.opsForValue().set(
-                        RedisKeyConstants.ORDER_MENU_ACTIVE,
-                        EMPTY_CACHE_MARKER,
-                        60,
-                        TimeUnit.SECONDS);
-            } else {
-                long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
-                redisTemplate.opsForValue().set(
-                        RedisKeyConstants.ORDER_MENU_ACTIVE,
-                        cache,
-                        ttlMinutes,
-                        TimeUnit.MINUTES);
-            }
-        } catch (Exception e) {
-            log.warn("L1命中时回填Redis菜单缓存失败", e);
         }
     }
 

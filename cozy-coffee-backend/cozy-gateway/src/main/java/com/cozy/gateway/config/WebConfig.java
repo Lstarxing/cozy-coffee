@@ -3,14 +3,10 @@ package com.cozy.gateway.config;
 import com.cozy.common.interceptor.AdminAuthInterceptor;
 import com.cozy.common.interceptor.JwtAuthInterceptor;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import java.nio.file.Paths;
 
 /**
  * Web配置类
@@ -22,10 +18,6 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final JwtAuthInterceptor jwtAuthInterceptor;
     private final AdminAuthInterceptor adminAuthInterceptor;
-
-    // 与 FileUploadController 保持一致的上传目录配置
-    @Value("${file.upload-dir:${user.home}/.cozycoffee/uploads}")
-    private String uploadDir;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -54,13 +46,5 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedHeaders("*")
                 .allowCredentials(true)
                 .maxAge(3600);
-    }
-
-    @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // 静态资源映射：/uploads/** -> 绝对路径
-        String absolutePath = Paths.get(uploadDir).toAbsolutePath().toString();
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + absolutePath + "/");
     }
 }

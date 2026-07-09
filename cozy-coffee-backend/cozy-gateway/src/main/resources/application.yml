@@ -44,3 +44,13 @@ logging:
   level:
     com.cozy: INFO
     com.cozy.gateway.mq: DEBUG
+
+# 对象存储配置（环境变量注入，敏感信息不放仓库）
+storage:
+  type: ${STORAGE_TYPE:oss}
+  endpoint: ${STORAGE_ENDPOINT:}
+  bucket: ${STORAGE_BUCKET:}
+  access-key-id: ${STORAGE_ACCESS_KEY_ID:}
+  access-key-secret: ${STORAGE_ACCESS_KEY_SECRET:}
+  dir-prefix: ${STORAGE_DIR_PREFIX:images/}
+  public-base-url: ${STORAGE_PUBLIC_BASE_URL:}

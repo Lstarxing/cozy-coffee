@@ -1,6 +1,7 @@
 # ===================== 通用过滤规则 =====================
 # 敏感配置文件（核心！禁止上传）
 application.yml
+application-local.yml
 application.properties
 application-prod.yml
 application-prod.properties
