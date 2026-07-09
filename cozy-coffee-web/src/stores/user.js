@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import request from '@/api/request'
+import { getUserInfo as fetchUserInfoApi } from '@/api/auth'
+import { getMemberInfo as fetchMemberInfoApi } from '@/api/member'
 
 export const useUserStore = defineStore('user', () => {
     const token = ref(null)
@@ -63,12 +65,7 @@ export const useUserStore = defineStore('user', () => {
         const currentToken = token.value
         try {
             if (currentToken) {
-                const response = await request.post('/auth/logout')
-                const data = response?.data
-                const isSuccess = data?.success === true || data?.code === 200 || data?.code === 1
-                if (!isSuccess) {
-                    throw new Error(data?.message || data?.msg || '调用退出接口失败')
-                }
+                await request.post('/auth/logout')
             }
             token.value = null
             userInfo.value = null
@@ -104,25 +101,17 @@ export const useUserStore = defineStore('user', () => {
         if (!token.value) return
 
         try {
-            const response = await fetch('http://localhost:8080/api/auth/userinfo', {
-                headers: {
-                    'Authorization': `Bearer ${token.value}`
-                }
-            })
-            const data = await response.json()
-            if (data.success && data.data) {
-                // 排除积分和等级字段，防止Auth接口返回空值覆盖Member接口的数据
+            const data = await fetchUserInfoApi()
+            if (data && data.data) {
                 const { currentPoints, totalPoints, memberLevel, level, expTotal, ...authData } = data.data
 
                 userInfo.value = {
                     ...userInfo.value,
                     ...authData,
-                    // 映射可能的字段名差异
                     signInDays: data.data.signInDays || userInfo.value?.signInDays || 0,
                     hasAppliedInviteCode: data.data.hasAppliedInviteCode !== undefined ? data.data.hasAppliedInviteCode : (userInfo.value?.hasAppliedInviteCode || false)
                 }
                 localStorage.setItem('userInfo', JSON.stringify(userInfo.value))
-                console.log('User info updated (with inviteCode)')
             }
         } catch (error) {
             console.error('Failed to fetch user info:', error)
@@ -134,14 +123,8 @@ export const useUserStore = defineStore('user', () => {
         if (!token.value) return
 
         try {
-            const response = await fetch('http://localhost:8080/api/member/info', {
-                headers: {
-                    'Authorization': `Bearer ${token.value}`
-                }
-            })
-            const data = await response.json()
-            if (data.success && data.data) {
-                // 合并会员信息到 userInfo
+            const data = await fetchMemberInfoApi()
+            if (data && data.data) {
                 userInfo.value = {
                     ...userInfo.value,
                     ...data.data,
@@ -152,7 +135,6 @@ export const useUserStore = defineStore('user', () => {
                     expiringPoints: data.data.expiringPoints || 0
                 }
                 localStorage.setItem('userInfo', JSON.stringify(userInfo.value))
-                console.log('Member info updated:', userInfo.value.memberLevel, 'EXP:', userInfo.value.expTotal)
             }
         } catch (error) {
             console.error('Failed to fetch member info:', error)

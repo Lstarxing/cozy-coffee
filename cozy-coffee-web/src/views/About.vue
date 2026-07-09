@@ -26,7 +26,7 @@
     </section>
 
     <!-- 品牌愿景 -->
-    <section class="brand-vision" ref="visionSection">
+    <section ref="visionSection" class="brand-vision">
         <div class="vision-content">
             <h2>品牌愿景</h2>
             <div class="vision-text-container">

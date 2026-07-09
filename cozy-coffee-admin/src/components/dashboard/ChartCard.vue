@@ -9,9 +9,9 @@
 
     <!-- 关键：body 使用固定高度，内部 flex 让图表填满 -->
     <div
+      v-loading="loading"
       class="card-body"
       :style="{ height: computedBodyHeight }"
-      v-loading="loading"
     >
       <div v-if="!loading && empty" class="empty-state">
         <el-empty description="暂无数据" :image-size="60" />

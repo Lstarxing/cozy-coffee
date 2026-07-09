@@ -10,7 +10,7 @@
         </div>
 
         <!-- 登录表单 -->
-        <form @submit.prevent="handleLogin" class="login-form">
+        <form class="login-form" @submit.prevent="handleLogin">
           <h2>登录</h2>
           
           <!-- 用户名输入框 -->
@@ -38,7 +38,7 @@
           <!-- 记住密码和忘记密码 -->
           <div class="remember-forgot">
             <label class="remember">
-              <input type="checkbox" v-model="loginForm.remember">
+              <input v-model="loginForm.remember" type="checkbox">
               <span>记住密码</span>
             </label>
             <div class="forgot-links">
@@ -67,6 +67,8 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import * as authApi from '@/api/auth'
+import * as memberApi from '@/api/member'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -87,47 +89,20 @@ const handleLogin = async () => {
   loading.value = true
   try {
     // 1. 调用后端登录API
-    const loginResponse = await fetch('http://localhost:8080/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        username: loginForm.username,
-        password: loginForm.password
-      })
-    })
-    
-    const loginData = await loginResponse.json()
-    
-    if (!loginData.success) {
-      ElMessage.error(loginData.message || '登录失败')
-      return
-    }
-    
+    const loginData = await authApi.login(loginForm.username, loginForm.password)
     const token = loginData.data?.token || loginData.token
-    
+
+    // 先存 token 到 localStorage，供后续请求拦截器自动注入
+    localStorage.setItem('token', token)
+
     // 2. 获取用户个人信息
-    const userResponse = await fetch('http://localhost:8080/api/auth/userinfo', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-    const userData = await userResponse.json()
-    
+    const userData = await authApi.getUserInfo()
+
     // 3. 获取会员信息
-    const memberResponse = await fetch('http://localhost:8080/api/member/info', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-    const memberData = await memberResponse.json()
-    
+    const memberData = await memberApi.getMemberInfo()
+
     // 4. 合并用户信息和会员信息，保存到store
     userStore.login({
-      // 用户个人信息
       id: userData.data?.id,
       username: loginForm.username,
       nickname: userData.data?.nickname || loginForm.username,
@@ -135,14 +110,13 @@ const handleLogin = async () => {
       memberCode: userData.data?.memberCode,
       phone: userData.data?.phone,
       email: userData.data?.email,
-      // 会员信息
       memberLevel: memberData.data?.memberLevel || 'basic',
       totalPoints: memberData.data?.totalPoints || 0,
       currentPoints: memberData.data?.currentPoints || 0,
       consecutiveSignDays: memberData.data?.consecutiveSignDays || 0,
       lastSigninDate: memberData.data?.lastSigninDate || null
     }, token)
-    
+
     ElMessage.success('登录成功')
     router.push('/member')
   } catch (error) {

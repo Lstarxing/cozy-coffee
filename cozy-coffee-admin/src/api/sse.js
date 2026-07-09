@@ -63,7 +63,8 @@ class SseService {
             console.log('[SSE] Ticket 获取成功，建立 EventSource 连接...')
 
             // 2. 建立 SSE 连接（使用 Ticket，无需 Header）
-            const url = `http://localhost:8080/api/admin/sse/events?ticket=${ticket}`
+            const sseBase = (import.meta.env.VITE_API_BASE_URL || '') + '/api'
+            const url = `${sseBase}/admin/sse/events?ticket=${ticket}`
             const currentSource = new EventSource(url)
             this.eventSource = currentSource
 

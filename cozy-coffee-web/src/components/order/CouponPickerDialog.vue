@@ -1,12 +1,12 @@
 <template>
-  <div class="coupon-picker-mask" v-if="visible" @click.self="handleClose">
+  <div v-if="visible" class="coupon-picker-mask" @click.self="handleClose">
     <div class="picker-panel">
       <div class="picker-header">
         <h3>选择优惠券</h3>
         <span class="close-btn" @click="handleClose">×</span>
       </div>
 
-      <div class="picker-body" v-loading="loading">
+      <div v-loading="loading" class="picker-body">
         <!-- 不使用优惠券选项 -->
         <div 
           class="coupon-item no-use"
@@ -14,7 +14,7 @@
           @click="selectCoupon(null)"
         >
           <div class="item-main">不使用优惠券</div>
-          <div class="item-check" v-if="!selectedId">✓</div>
+          <div v-if="!selectedId" class="item-check">✓</div>
         </div>
 
         <div v-if="coupons.length === 0" class="empty-tip">
@@ -23,10 +23,10 @@
 
         <!-- 优惠券列表 -->
         <div 
-          v-else
-          class="coupon-item"
           v-for="coupon in coupons"
+          v-else
           :key="coupon.id"
+          class="coupon-item"
           :class="{ 
             disabled: !coupon.available,
             selected: selectedId === coupon.id 
@@ -34,18 +34,18 @@
           @click="selectCoupon(coupon)"
         >
           <div class="coupon-left">
-             <span class="amount" v-if="coupon.couponType === 'DISCOUNT'">{{ getDiscountDisplay(coupon) }}折</span>
-             <span class="amount" v-else-if="coupon.couponType === 'FULL_REDUCE'">¥{{ coupon.value }}</span>
-             <span class="amount" v-else>兑</span>
+             <span v-if="coupon.couponType === 'DISCOUNT'" class="amount">{{ getDiscountDisplay(coupon) }}折</span>
+             <span v-else-if="coupon.couponType === 'FULL_REDUCE'" class="amount">¥{{ coupon.value }}</span>
+             <span v-else class="amount">兑</span>
              <span class="type-name">{{ getTypeName(coupon.couponType) }}</span>
           </div>
           <div class="coupon-center">
             <div class="title">{{ getCouponTitle(coupon) }}</div>
             <div class="time">有效期至 {{ formatDate(coupon.expiresAt) }}</div>
-            <div class="reason" v-if="!coupon.available">{{ coupon.unavailableReason }}</div>
+            <div v-if="!coupon.available" class="reason">{{ coupon.unavailableReason }}</div>
           </div>
           <div class="coupon-right">
-             <div class="check-mark" v-if="selectedId === coupon.id">✓</div>
+             <div v-if="selectedId === coupon.id" class="check-mark">✓</div>
           </div>
         </div>
       </div>

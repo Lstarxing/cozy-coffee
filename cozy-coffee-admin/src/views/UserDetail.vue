@@ -5,7 +5,7 @@
       show-back
     />
 
-    <div v-loading="loading" class="content-wrapper" v-if="user">
+    <div v-if="user" v-loading="loading" class="content-wrapper">
        <!-- Top Row: Basic Info & Member Info -->
        <el-row :gutter="20">
           <el-col :span="14">
@@ -60,7 +60,7 @@
                       <div class="label">当前积分</div>
                       <div class="value points-text">{{ user.currentPoints || 0 }}</div>
                    </div>
-                   <div class="stat-item" v-if="user.expiringPoints > 0">
+                   <div v-if="user.expiringPoints > 0" class="stat-item">
                       <div class="label">即将到期</div>
                       <div class="value expiring-text">{{ user.expiringPoints }}</div>
                    </div>
@@ -91,7 +91,7 @@
              </div>
           </template>
           
-          <el-table :data="filteredOrders" v-loading="ordersLoading" size="small" empty-text="暂无交易记录">
+          <el-table v-loading="ordersLoading" :data="filteredOrders" size="small" empty-text="暂无交易记录">
              <el-table-column label="类型" width="90" align="center">
                 <template #default="{ row }">
                    <el-tag :type="row._type === 'coffee' ? '' : 'warning'" size="small" effect="plain">
@@ -147,7 +147,7 @@
       <template #footer>
         <div class="dialog-footer">
            <el-button @click="pointsDialogVisible = false">取消</el-button>
-           <el-button type="primary" @click="submitPointsAdjust" :loading="adjusting">确定</el-button>
+           <el-button type="primary" :loading="adjusting" @click="submitPointsAdjust">确定</el-button>
         </div>
       </template>
     </el-dialog>
@@ -155,7 +155,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserDetail, adjustUserPoints, updateUserStatus, getOrders, getRedemptions } from '../api'
@@ -283,26 +283,21 @@ const submitPointsAdjust = async () => {
 const handleDisable = async () => {
   try {
     await ElMessageBox.confirm(
-      '',
+      h('div', { style: 'font-size:14px;color:#374151;line-height:1.6' }, [
+        h('p', { style: 'margin-bottom:8px;font-weight:500' }, '禁用后将产生以下影响：'),
+        h('ul', { style: 'margin:0;padding-left:20px;color:#6B7280;list-style-type:disc' }, [
+          h('li', '用户将无法登录小程序或商城'),
+          h('li', '用户无法进行下单、支付或积分兑换'),
+          h('li', '已有订单的履约流程不受影响'),
+          h('li', '您可以随时重新启用该用户')
+        ])
+      ]),
       '确认禁用该用户？',
       {
         confirmButtonText: '确认禁用',
         cancelButtonText: '取消',
-        type: 'warning',
-        dangerouslyUseHTMLString: true,
-        message: `
-          <div style="font-size: 14px; color: #374151; line-height: 1.6;">
-            <p style="margin-bottom: 8px; font-weight: 500;">禁用后将产生以下影响：</p>
-            <ul style="margin: 0; padding-left: 20px; color: #6B7280; list-style-type: disc;">
-              <li>用户将无法登录小程序或商城</li>
-              <li>用户无法进行下单、支付或积分兑换</li>
-              <li>已有订单的履约流程不受影响</li>
-              <li>您可以随时重新启用该用户</li>
-            </ul>
-          </div>
-        `
-      }
-    )
+        type: 'warning'
+      })
     await updateUserStatus(userId.value, 'disabled')
     ElMessage.success('用户已禁用')
     await loadUser()

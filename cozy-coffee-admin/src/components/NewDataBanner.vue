@@ -6,7 +6,7 @@
       <el-button type="primary" size="small" @click="handleRefresh">
         刷新
       </el-button>
-      <el-button text size="small" @click="handleDismiss" class="dismiss-btn">
+      <el-button text size="small" class="dismiss-btn" @click="handleDismiss">
         <el-icon><Close /></el-icon>
       </el-button>
     </div>

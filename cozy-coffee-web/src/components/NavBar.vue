@@ -26,7 +26,7 @@
         <router-link to="/member" class="nav-btn member">
           <span class="user-greeting">{{ userStore.userInfo?.nickname || '会员中心' }}</span>
         </router-link>
-        <button @click="handleLogout" class="nav-btn logout">退出</button>
+        <button class="nav-btn logout" @click="handleLogout">退出</button>
       </template>
     </div>
   </nav>

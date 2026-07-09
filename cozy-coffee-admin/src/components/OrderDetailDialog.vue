@@ -33,7 +33,7 @@
           <el-tag size="small" type="info">{{ getDiningMethodText(order.diningMethod) }}</el-tag>
         </el-descriptions-item>
 
-        <el-descriptions-item label="优惠券" v-if="order.couponCode">
+        <el-descriptions-item v-if="order.couponCode" label="优惠券">
           <el-tag size="small" type="warning">{{ order.couponCode }}</el-tag>
         </el-descriptions-item>
       </el-descriptions>
@@ -55,12 +55,12 @@
       <div class="order-items">
         <!-- 多商品模式：显示 items 数组 -->
         <template v-if="order.items && order.items.length > 0">
-          <div class="order-item" v-for="item in order.items" :key="item.id">
+          <div v-for="item in order.items" :key="item.id" class="order-item">
             <div class="item-main">
               <span class="item-name">{{ item.productName }}</span>
               <span class="item-qty">x{{ item.quantity }}</span>
             </div>
-            <div class="item-specs text-secondary" v-if="getItemSpecsText(item)">
+            <div v-if="getItemSpecsText(item)" class="item-specs text-secondary">
               {{ getItemSpecsText(item) }}
             </div>
             <div class="item-price">
@@ -73,23 +73,23 @@
           <div class="order-item">
             <div class="item-main">
               <span class="item-name">{{ order.productName || order.itemsSummary || '-' }}</span>
-              <span class="item-qty" v-if="order.quantity">x{{ order.quantity }}</span>
+              <span v-if="order.quantity" class="item-qty">x{{ order.quantity }}</span>
             </div>
             <div class="item-specs text-secondary">
               {{ getSpecsText(order) }}
             </div>
-            <div class="item-price" v-if="order.unitPrice">
+            <div v-if="order.unitPrice" class="item-price">
               单价: ¥{{ order.unitPrice }} | 总计: <span class="total-price">¥{{ order.totalAmount }}</span>
             </div>
           </div>
         </template>
         <!-- 金额汇总 -->
-        <div class="order-summary" v-if="order.items && order.items.length > 0">
+        <div v-if="order.items && order.items.length > 0" class="order-summary">
           <div class="summary-row">
             <span>商品总计</span>
             <span>¥{{ order.totalAmount }}</span>
           </div>
-          <div class="summary-row" v-if="order.discountAmount > 0">
+          <div v-if="order.discountAmount > 0" class="summary-row">
             <span>优惠</span>
             <span class="discount">-¥{{ order.discountAmount }}</span>
           </div>
@@ -103,7 +103,7 @@
       <el-divider border-style="dashed" />
 
       <!-- 备注 -->
-      <div class="remark-section" v-if="order.remark">
+      <div v-if="order.remark" class="remark-section">
         <span class="label">备注:</span>
         <span class="content">{{ order.remark }}</span>
       </div>
@@ -112,7 +112,7 @@
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleRefresh" :loading="refreshing" :icon="Refresh">刷新</el-button>
+        <el-button :loading="refreshing" :icon="Refresh" @click="handleRefresh">刷新</el-button>
         <el-button @click="handleClose">关闭</el-button>
 
         <template v-if="order?.status === 'pending'">

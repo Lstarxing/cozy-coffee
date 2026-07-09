@@ -25,12 +25,12 @@
            
            <el-divider direction="vertical" />
            <span class="last-updated">更新于 {{ lastUpdated }}</span>
-           <el-button :icon="Refresh" circle size="small" @click="refreshData" :loading="loading" />
+           <el-button :icon="Refresh" circle size="small" :loading="loading" @click="refreshData" />
         </div>
       </template>
     </AdminPageHeader>
 
-    <div class="dashboard-content" v-loading="loading && !stats.coffeeOrders"> <!-- Only block if init load -->
+    <div v-loading="loading && !stats.coffeeOrders" class="dashboard-content"> <!-- Only block if init load -->
       
       <!-- KPI Tiles -->
       <el-row :gutter="16">
@@ -102,8 +102,8 @@
                     </el-select>
                     <el-select v-model="rankMetric" size="small" style="width: 90px" @change="loadRank">
                         <el-option label="销量" value="count" />
-                        <el-option label="金额" value="amount" v-if="rankDomain==='coffee'" />
-                        <el-option label="积分" value="points" v-if="rankDomain==='redemption'" />
+                        <el-option v-if="rankDomain==='coffee'" label="金额" value="amount" />
+                        <el-option v-if="rankDomain==='redemption'" label="积分" value="points" />
                     </el-select>
                 </template>
                 <RankBarChart :data="rankData" />

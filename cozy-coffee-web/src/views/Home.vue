@@ -40,11 +40,11 @@
 
     <!-- 品牌特色部分 -->
     <section id="features" class="features-section">
-      <div class="feature-block bean-source" id="bean-source">
+      <div id="bean-source" class="feature-block bean-source">
         <div class="feature-content">
           <h2 class="animate-title">臻选产地 | Premium Origins</h2>
           <div class="origin-cards">
-            <div class="origin-card" v-for="origin in origins" :key="origin.name">
+            <div v-for="origin in origins" :key="origin.name" class="origin-card">
               <div class="card-image">
                 <img :src="origin.image" :alt="origin.name">
                 <div class="image-overlay"></div>
@@ -73,7 +73,7 @@
         <h1 class="section-title">精品推荐 | Best Sellers</h1>
         <p class="section-subtitle" style="text-align: center;">一杯咖啡，一种心情</p>
         <div class="menu-grid"> 
-          <div class="menu-item" v-for="item in menuItems" :key="item.name">
+          <div v-for="item in menuItems" :key="item.name" class="menu-item">
             <img :src="item.image" :alt="item.name">
             <div class="menu-item-content">
               <h3>{{ item.name }}</h3>
@@ -93,7 +93,7 @@
         
         <!-- 会员权益概览 -->
         <div class="membership-intro">
-          <div class="intro-card" v-for="intro in intros" :key="intro.title">
+          <div v-for="intro in intros" :key="intro.title" class="intro-card">
             <div class="intro-icon">{{ intro.icon }}</div>
             <h3>{{ intro.title }}</h3>
             <p>{{ intro.desc }}</p>
@@ -105,16 +105,16 @@
           <h2>会员成长体系</h2>
           <div class="level-cards-scroll-container">
             <div class="level-cards">
-              <div class="level-card" v-for="level in levels" :key="level.class" :class="[level.class, { 'highlight-black': level.class === 'black' }]">
+              <div v-for="level in levels" :key="level.class" class="level-card" :class="[level.class, { 'highlight-black': level.class === 'black' }]">
                 <div class="level-header">
                   <h3>{{ level.name.split(' ')[0] }}</h3>
                   <span class="sub-name">{{ level.name.split(' ')[1] }}</span>
                   <p class="exp-range">{{ level.desc }}</p>
                 </div>
                 <div class="level-benefits">
-                  <div class="benefit-item" v-for="(b, idx) in level.benefits" :key="idx">
+                  <div v-for="(b, idx) in level.benefits" :key="idx" class="benefit-item">
                     <component :is="b.icon" class="benefit-icon" :size="16" />
-                    <span v-html="b.text"></span>
+                    <span>{{ b.text }}</span>
                   </div>
                 </div>
                 <div class="level-footer">
@@ -251,10 +251,10 @@ const levels = [
     desc: '9,000+ EXP',
     benefits: [
       { icon: markRaw(Coins), text: '消费 1元 = 1.5 积分' },
-      { icon: markRaw(Rocket), text: '黑卡加速包 <span class="gold-text">1.7x</span>' },
+      { icon: markRaw(Rocket), text: '黑卡加速包 1.7x' },
       { icon: markRaw(Zap), text: '周三会员日 2.0x 积分' },
       { icon: markRaw(Gift), text: '免单券×2 + BOGO×5' },
-      { icon: markRaw(Truck), text: '<b>无限次免配送费</b>' },
+      { icon: markRaw(Truck), text: '无限次免配送费' },
       { icon: markRaw(Coffee), text: '新品免费试饮券' },
       { icon: markRaw(Ticket), text: '积分兑换 8.5 折' },
       { icon: markRaw(Cake), text: '生日：免单+免费蛋糕' },

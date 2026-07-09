@@ -3,7 +3,7 @@
     <div class="login-container">
       <!-- 只有右侧注册区域，将居中显示 -->
       <div class="login-form-container">
-        <form @submit.prevent="handleRegister" class="login-form">
+        <form class="login-form" @submit.prevent="handleRegister">
           <h2>注册</h2>
 
           <!-- 用户名/手机号/邮箱 -->
@@ -51,13 +51,13 @@
               @input="form.inviterCode = form.inviterCode.toUpperCase()"
             >
           </div>
-          <p class="invite-hint" v-if="form.inviterCode">
+          <p v-if="form.inviterCode" class="invite-hint">
             填写好友邀请码，双方各得积分奖励 🎁
           </p>
 
           <!-- 协议 -->
           <div class="agreement-checkbox">
-            <input type="checkbox" id="agreement" required>
+            <input id="agreement" type="checkbox" required>
             <span>
               我已阅读并同意
               <a href="#" class="terms-link">《用户协议》</a>
@@ -83,6 +83,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { register as registerApi } from '@/api/auth'
 
 const router = useRouter()
 const loading = ref(false)
@@ -107,27 +108,9 @@ const handleRegister = async () => {
 
   loading.value = true
   try {
-    // 调用后端注册API
-    const response = await fetch('http://localhost:8080/api/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        username: form.username,
-        password: form.password,
-        inviterCode: form.inviterCode || undefined  // 可选邀请码
-      })
-    })
-    
-    const data = await response.json()
-    
-    if (data.success) {
-      ElMessage.success('注册成功，请登录')
-      router.push('/login')
-    } else {
-      ElMessage.error(data.message || '注册失败')
-    }
+    await registerApi(form.username, form.password, form.inviterCode || undefined)
+    ElMessage.success('注册成功，请登录')
+    router.push('/login')
   } catch (error) {
     ElMessage.error('注册失败: ' + error.message)
   } finally {

@@ -14,11 +14,11 @@
         <span class="title" :class="{ premium: isPremium }">
           {{ premiumIcon }}{{ coupon.productName || getCouponTitle() }}
         </span>
-        <span class="source-tag" v-if="sourceTag">{{ sourceTag }}</span>
+        <span v-if="sourceTag" class="source-tag">{{ sourceTag }}</span>
       </div>
 
       <!-- 结构化限制区 -->
-      <div class="limit-tags" v-if="restrictionTags.length > 0">
+      <div v-if="restrictionTags.length > 0" class="limit-tags">
         <span 
           v-for="(tag, index) in restrictionTags" 
           :key="index"
@@ -33,7 +33,7 @@
         <span class="date" :class="{ urgent: daysLeft <= 3 && daysLeft > 0 }">
           {{ expiryText }}
         </span>
-        <span class="days-left" v-if="daysLeft > 0 && daysLeft <= 7">
+        <span v-if="daysLeft > 0 && daysLeft <= 7" class="days-left">
           剩{{ daysLeft }}天
         </span>
       </div>
@@ -41,14 +41,14 @@
 
     <!-- 右侧：行动区 -->
     <div class="card-right">
-      <div class="urgent-tip" v-if="daysLeft <= 3 && daysLeft > 0">
+      <div v-if="daysLeft <= 3 && daysLeft > 0" class="urgent-tip">
         即将过期
       </div>
       <button 
         class="btn-use" 
         :class="{ premium: isPremium, disabled: isExpired }"
-        @click="handleUse"
         :disabled="isExpired"
+        @click="handleUse"
       >
         {{ isExpired ? '已过期' : '去使用' }}
       </button>

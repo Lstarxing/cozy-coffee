@@ -1,7 +1,9 @@
 import axios from 'axios'
 
+const baseURL = (import.meta.env.VITE_API_BASE_URL || '') + '/api'
+
 const api = axios.create({
-    baseURL: 'http://localhost:8080/api',
+    baseURL,
     timeout: 10000
 })
 
@@ -40,9 +42,8 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     response => {
         const res = response.data
-        // 兼容多种返回格式：success 字段、code=1、code=200
         const isSuccess = res.success === true || res.code === 1 || res.code === 200
-        if (res.success === false || (res.code !== undefined && res.code !== 1 && res.code !== 200)) {
+        if (!isSuccess) {
             return Promise.reject(new Error(res.message || res.msg || '请求失败'))
         }
         return res
