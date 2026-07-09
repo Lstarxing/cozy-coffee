@@ -1,6 +1,7 @@
 package com.cozy.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.api.MonthlyTaskService;
 import com.cozy.member.dto.response.MonthlyTaskDTO;
@@ -48,28 +49,44 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
     private static final int REWARD_NEWPRODUCT = 80; // 新品猎人(3款新品)
 
     @Override
-    @Transactional
     public void updateMonthlySpent(Long userId, Long orderId, BigDecimal amount) {
         // 向后兼容：调用新方法，默认不补偿外卖和新品
         updateMonthlySpentWithDetails(userId, orderId, amount, false, false);
     }
 
+    /**
+     * C3 修复：事务内只做本地更新，Dubbo 远程调用移到事务外。
+     */
     @Override
-    @Transactional
     public void updateMonthlySpentWithDetails(Long userId, Long orderId, BigDecimal amount,
             boolean isDelivery, boolean hasNewProduct) {
         if (userId == null || orderId == null || amount == null) {
             return;
         }
 
-        String month = YearMonth.now().toString(); // 2025-12
+        String month = YearMonth.now().toString();
 
+        // ===== 事务内：本地 DB 操作 =====
+        MonthlyTask task = doMonthlySpentInTx(userId, orderId, month, amount);
+        if (task == null) {
+            return;
+        }
+
+        log.info("月度任务更新: userId={}, month={}, orderId={}, amount={}, total={}, isDelivery={}, hasNewProduct={}",
+                userId, month, orderId, amount, task.getCurrentSpent(), isDelivery, hasNewProduct);
+
+        // ===== 事务外：Dubbo 远程调用 + 奖励发放 =====
+        checkAndGrantRewards(userId, task, orderId, isDelivery, hasNewProduct);
+    }
+
+    @Transactional
+    private MonthlyTask doMonthlySpentInTx(Long userId, Long orderId, String month, BigDecimal amount) {
         // 1. 防重复: 检查订单是否已计入
         LambdaQueryWrapper<MonthlyTaskOrder> orderWrapper = new LambdaQueryWrapper<>();
         orderWrapper.eq(MonthlyTaskOrder::getOrderId, orderId);
         if (orderMapper.selectCount(orderWrapper) > 0) {
             log.info("订单已计入月度任务,跳过: orderId={}", orderId);
-            return;
+            return null;
         }
 
         // 2. 记录订单 (unique约束防并发)
@@ -83,19 +100,14 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
             orderMapper.insert(taskOrder);
         } catch (DuplicateKeyException e) {
             log.info("订单重复插入被拦截: orderId={}", orderId);
-            return;
+            return null;
         }
 
         // 3. 更新或创建月度任务
         MonthlyTask task = getOrCreateTask(userId, month);
         task.setCurrentSpent(task.getCurrentSpent().add(amount));
         taskMapper.updateById(task);
-
-        log.info("月度任务更新: userId={}, month={}, orderId={}, amount={}, total={}, isDelivery={}, hasNewProduct={}",
-                userId, month, orderId, amount, task.getCurrentSpent(), isDelivery, hasNewProduct);
-
-        // 4. 检查并发放奖励 (逐级) - 传入当前订单属性用于补偿
-        checkAndGrantRewards(userId, task, orderId, isDelivery, hasNewProduct);
+        return task;
     }
 
     @Override
@@ -185,24 +197,14 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
     }
 
     /**
-     * v5.3.1: 检查并发放挑战任务积分奖励
-     * 根据前端定义的任务（基于完成订单统计，已排除取消订单）：
-     * - 打卡达人: 本月完成订单4次 → +40积分
-     * - 晨间唤醒: 10点前完成订单3次 → +60积分
-     * - 外卖尝鲜: 完成2笔外卖订单 → +50积分
-     * - 新品猎人: 尝试3款新品（完成订单） → +80积分
-     * 
-     * 幂等性保障:
-     * - task.challengeXxxClaimed字段防止重复发放
-     * - getMonthlyStats已排除cancelled状态订单
-     * - addPointsWithLot中的sourceId用于防重
-     * 
-     * v5.3.3: 每次发放前重新查询最新状态，确保使用最新的 claimed 标志
-     * v6.0: 接收当前订单属性进行精确补偿
+     * v5.3.1 + C3/H5/H6 修复：
+     * - C3: 本方法已移到 @Transactional 外，不再持事务调 Dubbo
+     * - H5: 4 个挑战任务块抽为 tryGrantChallenge 模板，消除 80 行重复
+     * - H6: claimed 标志改为 UPDATE WHERE id=? AND claimed=false（乐观锁），
+     *   配合 Phase 2 DuplicateKeyException 兜底，消除并发双发窗口
      */
     private void checkAndGrantRewards(Long userId, MonthlyTask task, Long orderId,
             boolean isDelivery, boolean hasNewProduct) {
-        // 获取月度订单统计
         com.cozy.order.dto.response.MonthlyStatsDTO stats = null;
         try {
             if (orderService != null) {
@@ -213,85 +215,63 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
             return;
         }
 
-        if (stats == null)
-            return;
+        if (stats == null) return;
 
-        // v6.2 修复: MQ 解耦后调用时机已晚于订单状态提交，getMonthlyStats 能正确统计到当前订单。
-        // 早期 +1 补偿逻辑（针对事务内调用看不到当前订单的情况）已不再需要，
-        // 否则会导致重复计数，使挑战任务提前触发奖励。
-        int actualOrderCount = stats.getOrderCount();
-        int actualMorningCount = stats.getMorningOrderCount();
-        int actualDeliveryCount = stats.getDeliveryOrderCount();
-        int actualNewProductCount = stats.getNewProductCount();
+        // v6.2 修复: MQ 解耦后调用时机已晚于订单状态提交，+1 补偿逻辑已移除
+        int orderCount = stats.getOrderCount();
+        int morningCount = stats.getMorningOrderCount();
+        int deliveryCount = stats.getDeliveryOrderCount();
+        int newProductCount = stats.getNewProductCount();
         log.info("月度挑战检查: userId={}, orderId={}, orderCount={}, morning={}, delivery={}, newProduct={}",
-                userId, orderId, actualOrderCount, actualMorningCount, actualDeliveryCount, actualNewProductCount);
+                userId, orderId, orderCount, morningCount, deliveryCount, newProductCount);
 
         String month = YearMonth.now().toString();
 
-        // 打卡达人: 本月下单4次
-        if (actualOrderCount >= 4) {
-            // 重新查询最新状态，避免使用过期的内存对象
-            MonthlyTask latestTask = getOrCreateTask(userId, month);
-            if (latestTask.getChallengeOrderClaimed() == null || !latestTask.getChallengeOrderClaimed()) {
-                try {
-                    memberService.addPointsWithLot(userId, REWARD_ORDER, "challenge_order",
-                            orderId, "挑战任务【打卡达人】完成奖励");
-                    // 只有积分发放成功，才更新标志位
-                    latestTask.setChallengeOrderClaimed(true);
-                    taskMapper.updateById(latestTask);
-                    log.info("挑战任务【打卡达人】奖励发放成功: userId={}, points={}", userId, REWARD_ORDER);
-                } catch (Exception e) {
-                    log.error("打卡达人奖励发放失败，不更新claimed标志: userId={}, error={}", userId, e.getMessage(), e);
-                }
-            }
-        }
+        tryGrantChallenge(userId, month, orderId,
+                orderCount, 4, MonthlyTask::getChallengeOrderClaimed,
+                "challenge_order_claimed", "challenge_order",
+                REWARD_ORDER, "挑战任务【打卡达人】完成奖励");
+        tryGrantChallenge(userId, month, orderId,
+                morningCount, 3, MonthlyTask::getChallengeMorningClaimed,
+                "challenge_morning_claimed", "challenge_morning",
+                REWARD_MORNING, "挑战任务【晨间唤醒】完成奖励");
+        tryGrantChallenge(userId, month, orderId,
+                deliveryCount, 2, MonthlyTask::getChallengeDeliveryClaimed,
+                "challenge_delivery_claimed", "challenge_delivery",
+                REWARD_DELIVERY, "挑战任务【外卖尝鲜】完成奖励");
+        tryGrantChallenge(userId, month, orderId,
+                newProductCount, 3, MonthlyTask::getChallengeNewproductClaimed,
+                "challenge_newproduct_claimed", "challenge_newproduct",
+                REWARD_NEWPRODUCT, "挑战任务【新品猎人】完成奖励");
+    }
 
-        // 晨间唤醒: 10点前下单3次
-        if (actualMorningCount >= 3) {
-            MonthlyTask latestTask = getOrCreateTask(userId, month);
-            if (latestTask.getChallengeMorningClaimed() == null || !latestTask.getChallengeMorningClaimed()) {
-                try {
-                    memberService.addPointsWithLot(userId, REWARD_MORNING, "challenge_morning",
-                            orderId, "挑战任务【晨间唤醒】完成奖励");
-                    latestTask.setChallengeMorningClaimed(true);
-                    taskMapper.updateById(latestTask);
-                    log.info("挑战任务【晨间唤醒】奖励发放成功: userId={}, points={}", userId, REWARD_MORNING);
-                } catch (Exception e) {
-                    log.error("晨间唤醒奖励发放失败，不更新claimed标志: userId={}, error={}", userId, e.getMessage(), e);
-                }
-            }
-        }
+    /**
+     * H5+H6: 挑战任务奖励通用发放逻辑。
+     * 乐观锁 UPDATE WHERE id=? AND claimed=false 防并发双发，
+     * DuplicateKeyException 兜底（Phase 2 已加固 consumer 侧）。
+     */
+    private void tryGrantChallenge(Long userId, String month, Long orderId,
+            int actualCount, int threshold,
+            java.util.function.Function<MonthlyTask, Boolean> claimedGetter,
+            String claimedColumn, String sourceType, int points, String description) {
+        if (actualCount < threshold) return;
 
-        // 外卖尝鲜: 完成2笔外卖
-        if (actualDeliveryCount >= 2) {
-            MonthlyTask latestTask = getOrCreateTask(userId, month);
-            if (latestTask.getChallengeDeliveryClaimed() == null || !latestTask.getChallengeDeliveryClaimed()) {
-                try {
-                    memberService.addPointsWithLot(userId, REWARD_DELIVERY, "challenge_delivery",
-                            orderId, "挑战任务【外卖尝鲜】完成奖励");
-                    latestTask.setChallengeDeliveryClaimed(true);
-                    taskMapper.updateById(latestTask);
-                    log.info("挑战任务【外卖尝鲜】奖励发放成功: userId={}, points={}", userId, REWARD_DELIVERY);
-                } catch (Exception e) {
-                    log.error("外卖尝鲜奖励发放失败，不更新claimed标志: userId={}, error={}", userId, e.getMessage(), e);
-                }
-            }
-        }
+        MonthlyTask latestTask = getOrCreateTask(userId, month);
+        if (Boolean.TRUE.equals(claimedGetter.apply(latestTask))) return;
 
-        // 新品猎人: 尝试3款新品
-        if (actualNewProductCount >= 3) {
-            MonthlyTask latestTask = getOrCreateTask(userId, month);
-            if (latestTask.getChallengeNewproductClaimed() == null || !latestTask.getChallengeNewproductClaimed()) {
-                try {
-                    memberService.addPointsWithLot(userId, REWARD_NEWPRODUCT, "challenge_newproduct",
-                            orderId, "挑战任务【新品猎人】完成奖励");
-                    latestTask.setChallengeNewproductClaimed(true);
-                    taskMapper.updateById(latestTask);
-                    log.info("挑战任务【新品猎人】奖励发放成功: userId={}, points={}", userId, REWARD_NEWPRODUCT);
-                } catch (Exception e) {
-                    log.error("新品猎人奖励发放失败，不更新claimed标志: userId={}, error={}", userId, e.getMessage(), e);
-                }
-            }
+        try {
+            memberService.addPointsWithLot(userId, points, sourceType, orderId, description);
+
+            // H6: 乐观锁 — UPDATE monthly_task SET claimed=1 WHERE id=? AND claimed=0
+            LambdaUpdateWrapper<MonthlyTask> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(MonthlyTask::getId, latestTask.getId())
+                    .apply("AND {0} = 0", claimedColumn);
+            updateWrapper.setSql(claimedColumn + " = 1");
+            taskMapper.update(null, updateWrapper);
+
+            log.info("{}奖励发放成功: userId={}, points={}", description, userId, points);
+        } catch (Exception e) {
+            log.error("{}奖励发放失败，不更新claimed标志: userId={}, error={}", description, userId, e.getMessage(), e);
         }
     }
 }

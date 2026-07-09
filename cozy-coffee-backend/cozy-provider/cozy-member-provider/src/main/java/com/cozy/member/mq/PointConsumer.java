@@ -13,6 +13,7 @@ import org.apache.rocketmq.spring.annotation.ConsumeMode;
 import org.apache.rocketmq.spring.annotation.MessageModel;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
 /**
@@ -46,9 +47,14 @@ public class PointConsumer implements RocketMQListener<OrderCompletedEvent> {
             log.debug("积分已发放，跳过: orderId={}", event.getOrderId());
             return;
         }
-        memberService.addPointsWithLot(event.getUserId(), event.getPointsEarned(),
-                "order_completed", event.getOrderId(),
-                "咖啡订单完成: " + event.getOrderNo());
+        try {
+            memberService.addPointsWithLot(event.getUserId(), event.getPointsEarned(),
+                    "order_completed", event.getOrderId(),
+                    "咖啡订单完成: " + event.getOrderNo());
+        } catch (DuplicateKeyException e) {
+            log.info("积分并发发放被拦截(幂等): orderId={}", event.getOrderId());
+            return;
+        }
         log.info("积分发放成功: orderId={}, points={}", event.getOrderId(), event.getPointsEarned());
     }
 }

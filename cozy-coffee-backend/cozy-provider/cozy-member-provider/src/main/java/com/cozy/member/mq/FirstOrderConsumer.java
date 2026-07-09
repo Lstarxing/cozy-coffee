@@ -15,6 +15,7 @@ import org.apache.rocketmq.spring.annotation.ConsumeMode;
 import org.apache.rocketmq.spring.annotation.MessageModel;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
 /**
@@ -51,8 +52,13 @@ public class FirstOrderConsumer implements RocketMQListener<OrderCompletedEvent>
             log.debug("首单奖励已发放，跳过: orderId={}", event.getOrderId());
             return;
         }
-        memberService.addPointsWithLot(event.getUserId(), 200, "first_order_bonus",
-                event.getOrderId(), "新用户首单奖励");
+        try {
+            memberService.addPointsWithLot(event.getUserId(), 200, "first_order_bonus",
+                    event.getOrderId(), "新用户首单奖励");
+        } catch (DuplicateKeyException e) {
+            log.info("首单奖励并发发放被拦截(幂等): orderId={}", event.getOrderId());
+            return;
+        }
         log.info("首单奖励发放成功: userId={}, orderId={}", event.getUserId(), event.getOrderId());
 
         try {
