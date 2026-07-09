@@ -10,6 +10,9 @@
 
 <script setup>
 import { computed } from 'vue'
+import { ORDER_STATUS_MAP } from '@/constants/order'
+import { REDEMPTION_STATUS_MAP } from '@/constants/redemption'
+import { PRODUCT_STATUS_MAP } from '@/constants/product'
 
 const props = defineProps({
   status: {
@@ -22,44 +25,23 @@ const props = defineProps({
   }
 })
 
-// Mappings (use lowercase keys, normalize input)
 const MAPPINGS = {
-  // Coffee Shop Orders
-  order: {
-    pending: { label: '待处理', type: 'info' },
-    paid: { label: '已支付', type: 'warning' },
-    preparing: { label: '制作中', type: 'warning' },
-    completed: { label: '已完成', type: 'success' },
-    cancelled: { label: '已取消', type: 'info' }
-  },
-  // Redemptions
-  redemption: {
-    pending: { label: '待处理', type: 'info' },
-    processing: { label: '处理中', type: 'warning' },
-    shipped: { label: '已发货', type: 'primary' },
-    completed: { label: '已完成', type: 'success' },
-    cancelled: { label: '已取消', type: 'info' }
-  },
-  // Products
-  product: {
-    active: { label: '上架', type: 'success' },
-    inactive: { label: '下架', type: 'info' },
-    sold_out: { label: '售罄', type: 'warning' }
-  },
-  // Common Active/Disabled
+  order: ORDER_STATUS_MAP,
+  redemption: REDEMPTION_STATUS_MAP,
+  product: PRODUCT_STATUS_MAP,
   common: {
-    active: { label: '启用', type: 'success' },
-    disabled: { label: '禁用', type: 'danger' }
+    active: { label: '启用', tagType: 'success' },
+    disabled: { label: '禁用', tagType: 'danger' }
   }
 }
 
 const computedConfig = computed(() => {
   const map = MAPPINGS[props.type] || MAPPINGS.common
   const key = (props.status || '').toLowerCase()
-  return map[key] || { label: props.status || '-', type: 'info' }
+  return map[key] || { label: props.status || '-', tagType: 'info' }
 })
 
-const tagType = computed(() => computedConfig.value.type)
+const tagType = computed(() => computedConfig.value.tagType)
 const computedLabel = computed(() => computedConfig.value.label)
 </script>
 

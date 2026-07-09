@@ -1,0 +1,29 @@
+export const COUPON_TYPE = {
+  EXCHANGE: 'EXCHANGE',
+  DISCOUNT: 'DISCOUNT',
+  FULL_REDUCE: 'FULL_REDUCE',
+  BOGO: 'BOGO',
+  SHOT: 'SHOT',
+  DELIVERY_FEE: 'DELIVERY_FEE'
+}
+
+export const COUPON_TYPE_MAP = {
+  [COUPON_TYPE.EXCHANGE]: '兑换券',
+  [COUPON_TYPE.DISCOUNT]: '折扣券',
+  [COUPON_TYPE.FULL_REDUCE]: '满减券',
+  [COUPON_TYPE.BOGO]: '买一赠一券',
+  [COUPON_TYPE.SHOT]: '加浓缩券',
+  [COUPON_TYPE.DELIVERY_FEE]: '免配送费券'
+}
+
+export const COUPON_STATUS = {
+  ISSUED: 'ISSUED',
+  USED: 'USED',
+  EXPIRED: 'EXPIRED'
+}
+
+export const COUPON_STATUS_MAP = {
+  [COUPON_STATUS.ISSUED]: '可使用',
+  [COUPON_STATUS.USED]: '已使用',
+  [COUPON_STATUS.EXPIRED]: '已过期'
+}
