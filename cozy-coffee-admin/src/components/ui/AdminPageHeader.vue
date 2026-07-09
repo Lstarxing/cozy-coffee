@@ -19,8 +19,8 @@
             :icon="ArrowLeft" 
             circle 
             size="small" 
-            @click="handleBack"
             class="back-btn"
+            @click="handleBack"
           />
           <h1 class="page-title">{{ title }}</h1>
         </div>

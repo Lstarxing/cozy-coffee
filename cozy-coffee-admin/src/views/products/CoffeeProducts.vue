@@ -1,0 +1,506 @@
+<template>
+  <div class="products-page">
+    <AdminPageHeader
+      title="咖啡菜单管理"
+      subtitle="管理咖啡与甜品菜单"
+    >
+      <template #actions>
+        <el-button type="primary" @click="showAddModal">
+          <el-icon class="el-icon--left"><Plus /></el-icon>
+          添加商品
+        </el-button>
+      </template>
+    </AdminPageHeader>
+
+    <AdminFilterBar @search="handleSearch" @reset="resetFilters">
+      <el-form-item label="关键词">
+        <el-input
+          v-model="filters.keyword"
+          placeholder="商品名称"
+          clearable
+          @keyup.enter="handleSearch"
+        />
+      </el-form-item>
+      <el-form-item label="分类">
+        <el-select v-model="filters.category" placeholder="全部" clearable style="width: 140px">
+          <el-option label="意式咖啡" value="espresso" />
+          <el-option label="季节限定" value="signature" />
+          <el-option label="精品手冲" value="soe" />
+          <el-option label="烘焙甜品" value="bakery" />
+          <el-option label="加料/配料" value="addon" />
+          <el-option label="其他" value="other" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="状态">
+        <el-select v-model="filters.status" placeholder="全部" clearable style="width: 140px">
+          <el-option label="上架" value="active" />
+          <el-option label="下架" value="inactive" />
+        </el-select>
+      </el-form-item>
+    </AdminFilterBar>
+
+    <ProductTable
+      v-model:current-page="currentPage"
+      v-model:page-size="pageSize"
+      :loading="loading"
+      :data="paginatedData"
+      :total="filteredData.length"
+      :last-updated="lastUpdated"
+      @refresh="loadData"
+    >
+      <template #productInfo>
+        <el-table-column label="商品信息" min-width="240">
+          <template #default="{ row }">
+            <div class="product-info-cell">
+              <el-image
+                :src="getImageUrl(row.imageUrl)"
+                class="product-thumb-rounded"
+                fit="cover"
+              >
+                <template #error>
+                  <div class="image-placeholder-rounded">
+                    <el-icon><Picture /></el-icon>
+                  </div>
+                </template>
+              </el-image>
+              <div class="product-meta-clean">
+                <div class="product-title-bold">{{ row.name }}</div>
+                <el-tooltip
+                  v-if="row.description"
+                  :content="row.description"
+                  placement="top"
+                  :show-after="500"
+                >
+                  <div class="product-desc-grey truncate">{{ row.description }}</div>
+                </el-tooltip>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+      </template>
+
+      <template #price>
+        <el-table-column label="价格" width="150" align="center">
+          <template #default="{ row }">
+            <div class="price-stack">
+              <template v-if="row.category === 'espresso' && row.priceLarge">
+                <div class="price-row">
+                  <span class="price-num">¥{{ row.priceMedium || row.price }}</span>
+                  <span class="price-label">(中)</span>
+                </div>
+                <div class="price-row">
+                  <span class="price-num">¥{{ row.priceLarge }}</span>
+                  <span class="price-label">(大)</span>
+                </div>
+              </template>
+              <template v-else>
+                <div class="price-row">
+                  <span class="price-num">¥{{ row.priceMedium || row.price }}</span>
+                  <span class="price-label">(标)</span>
+                </div>
+              </template>
+            </div>
+          </template>
+        </el-table-column>
+      </template>
+
+      <template #category>
+        <el-table-column label="分类" width="120" align="center">
+          <template #default="{ row }">
+            <el-tag
+              :color="getCategoryColor(row.category)"
+              effect="dark"
+              class="category-pill"
+              style="border: none;"
+            >
+              {{ getCategoryLabel(row.category) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </template>
+
+      <template #stock />
+
+      <template #status>
+        <el-table-column label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-switch
+              :model-value="row.status === 'active'"
+              active-color="#13ce66"
+              inactive-color="#ff4949"
+              :loading="row.statusLoading"
+              @change="toggleStatus(row)"
+            />
+          </template>
+        </el-table-column>
+      </template>
+
+      <template #actions>
+        <el-table-column label="操作" width="140" fixed="right" align="center">
+          <template #default="{ row }">
+            <div class="action-icons">
+              <el-tooltip content="编辑" placement="top">
+                <el-button link type="primary" class="icon-btn blue" @click="editProduct(row)">
+                  <el-icon :size="18"><Edit /></el-icon>
+                </el-button>
+              </el-tooltip>
+
+              <el-popconfirm title="确定删除吗？" @confirm="deleteProduct(row)">
+                <template #reference>
+                  <div style="display: inline-block;">
+                    <el-tooltip content="删除" placement="top">
+                      <el-button link type="danger" class="icon-btn red">
+                        <el-icon :size="18"><Delete /></el-icon>
+                      </el-button>
+                    </el-tooltip>
+                  </div>
+                </template>
+              </el-popconfirm>
+            </div>
+          </template>
+        </el-table-column>
+      </template>
+    </ProductTable>
+
+    <!-- Add/Edit Dialog -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="isEdit ? '编辑商品' : '添加商品'"
+      width="700px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="productForm" label-width="120px" label-position="left">
+        <CoffeeProductForm :form="productForm" />
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button size="large" @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" size="large" @click="saveProduct">
+            <el-icon class="el-icon--left"><Check /></el-icon>
+            保存
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, reactive } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Plus, Picture, Check, Edit, Delete } from '@element-plus/icons-vue'
+import dayjs from 'dayjs'
+import {
+  getCoffeeProducts, addCoffeeProduct, updateCoffeeProduct,
+  deleteCoffeeProduct, toggleCoffeeProductStatus
+} from '@/api'
+
+import AdminPageHeader from '@/components/ui/AdminPageHeader.vue'
+import AdminFilterBar from '@/components/ui/AdminFilterBar.vue'
+import ProductTable from './components/ProductTable.vue'
+import CoffeeProductForm from './components/CoffeeProductForm.vue'
+import { getImageUrl } from '@/utils/image'
+import { PRODUCT_CATEGORY_MAP } from '@/constants/product'
+
+// State
+const loading = ref(false)
+const rawData = ref([])
+const lastUpdated = ref('')
+const dialogVisible = ref(false)
+const isEdit = ref(false)
+const editingId = ref(null)
+
+const filters = reactive({
+  keyword: '',
+  category: '',
+  status: ''
+})
+
+const currentPage = ref(1)
+const pageSize = ref(10)
+
+// Category helpers
+const getCategoryColor = (cat) => {
+  return PRODUCT_CATEGORY_MAP[cat]?.color || '#607D8B'
+}
+
+const getCategoryLabel = (cat) => {
+  return PRODUCT_CATEGORY_MAP[cat]?.label || cat
+}
+
+const productForm = ref(createEmptyForm())
+
+function createEmptyForm() {
+  return {
+    name: '', description: '', imageUrl: '',
+    price: 0, priceMedium: null, priceLarge: null,
+    category: 'espresso',
+    isNewProduct: false,
+    sizeType: 'MEDIUM_LARGE',
+    sugarType: 'FREE_CHOICE',
+    tempType: 'ALL_OK'
+  }
+}
+
+// Computed
+const filteredData = computed(() => {
+  let list = rawData.value
+  if (filters.keyword) {
+    const kw = filters.keyword.toLowerCase()
+    list = list.filter(item => item.name && item.name.toLowerCase().includes(kw))
+  }
+  if (filters.category) {
+    list = list.filter(item => item.category === filters.category)
+  }
+  if (filters.status) {
+    list = list.filter(item => item.status === filters.status)
+  }
+  return list
+})
+
+const paginatedData = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredData.value.slice(start, start + pageSize.value)
+})
+
+// Actions
+const loadData = async () => {
+  loading.value = true
+  try {
+    const res = await getCoffeeProducts()
+    rawData.value = res.data || []
+    lastUpdated.value = dayjs().format('HH:mm:ss')
+  } catch (e) {
+    ElMessage.error('加载失败: ' + e.message)
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleSearch = () => { currentPage.value = 1 }
+const resetFilters = () => {
+  filters.keyword = ''
+  filters.category = ''
+  filters.status = ''
+  currentPage.value = 1
+}
+
+const showAddModal = () => {
+  isEdit.value = false
+  editingId.value = null
+  productForm.value = {
+    ...createEmptyForm(),
+    category: 'espresso'
+  }
+  dialogVisible.value = true
+}
+
+const editProduct = (row) => {
+  isEdit.value = true
+  editingId.value = row.id
+  productForm.value = {
+    name: row.name,
+    description: row.description,
+    imageUrl: row.imageUrl,
+    price: row.price,
+    priceMedium: row.priceMedium || null,
+    priceLarge: row.priceLarge || null,
+    category: row.category,
+    isNewProduct: row.isNewProduct || false,
+    sizeType: row.sizeType || 'MEDIUM_LARGE',
+    sugarType: row.sugarType || 'FREE_CHOICE',
+    tempType: row.tempType || 'ALL_OK'
+  }
+  dialogVisible.value = true
+}
+
+const saveProduct = async () => {
+  if (!productForm.value.name) return ElMessage.warning('请输入名称')
+
+  try {
+    const data = {
+      name: productForm.value.name,
+      description: productForm.value.description,
+      imageUrl: productForm.value.imageUrl,
+      category: productForm.value.category,
+      price: productForm.value.priceMedium || productForm.value.price || 0,
+      priceMedium: productForm.value.priceMedium || null,
+      priceLarge: productForm.value.priceLarge || null,
+      isNewProduct: productForm.value.isNewProduct || false,
+      sizeType: productForm.value.sizeType || 'MEDIUM_LARGE',
+      sugarType: productForm.value.sugarType || 'FREE_CHOICE',
+      tempType: productForm.value.tempType || 'ALL_OK'
+    }
+
+    if (isEdit.value) await updateCoffeeProduct(editingId.value, data)
+    else await addCoffeeProduct(data)
+
+    ElMessage.success('保存成功')
+    dialogVisible.value = false
+    loadData()
+  } catch (e) {
+    ElMessage.error('保存失败: ' + e.message)
+  }
+}
+
+const toggleStatus = async (row) => {
+  try {
+    const res = await toggleCoffeeProductStatus(row.id)
+    row.status = res.data.status
+    const msg = row.status === 'active' ? '上架商品成功' : '下架商品成功'
+    ElMessage.success(msg)
+  } catch (e) {
+    ElMessage.error('操作失败: ' + e.message)
+  }
+}
+
+const deleteProduct = async (row) => {
+  try {
+    await deleteCoffeeProduct(row.id)
+    ElMessage.success('删除成功')
+    loadData()
+  } catch (e) {
+    ElMessage.error('删除失败: ' + e.message)
+  }
+}
+
+onMounted(() => {
+  loadData()
+})
+</script>
+
+<style scoped lang="scss">
+.product-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.product-thumb-rounded {
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.image-placeholder-rounded {
+  width: 100%;
+  height: 100%;
+  background: #f9f9f9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #e0e0e0;
+  border-radius: 12px;
+}
+
+.product-meta-clean {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.product-title-bold {
+  font-weight: 700;
+  font-size: 14px;
+  color: #333;
+  line-height: 1.2;
+}
+
+.product-desc-grey {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.3;
+}
+
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.category-pill {
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 0 12px;
+  height: 24px;
+  line-height: 24px;
+  border: none !important;
+}
+
+.action-icons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
+
+.icon-btn {
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.icon-btn.blue {
+  color: #409EFF;
+}
+.icon-btn.blue:hover {
+  background: #ecf5ff;
+}
+
+.icon-btn.red {
+  color: #F56C6C;
+}
+.icon-btn.red:hover {
+  background: #fef0f0;
+}
+
+.price-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  line-height: 1.2;
+}
+
+.price-num {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: #2c3e50;
+}
+
+.price-label {
+  font-size: 12px;
+  color: #909399;
+  transform: scale(0.9);
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+:deep(.el-switch__core) {
+  border-color: #e4e7ed;
+  background-color: #dcdfe6;
+  min-width: 60px;
+}
+:deep(.el-switch.is-checked .el-switch__core) {
+  border-color: #13ce66;
+  background-color: #13ce66;
+}
+</style>

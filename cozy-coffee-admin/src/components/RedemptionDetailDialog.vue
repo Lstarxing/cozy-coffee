@@ -66,7 +66,7 @@
           <el-descriptions-item label="兑换码">
             <span class="virtual-code">{{ order.virtualCode || '待发放' }}</span>
           </el-descriptions-item>
-          <el-descriptions-item label="发放时间" v-if="order.issuedAt">{{ formatDate(order.issuedAt) }}</el-descriptions-item>
+          <el-descriptions-item v-if="order.issuedAt" label="发放时间">{{ formatDate(order.issuedAt) }}</el-descriptions-item>
         </el-descriptions>
       </template>
 
@@ -90,11 +90,11 @@
         </el-descriptions>
 
         <el-descriptions
+          v-if="order.status === 'shipped' || order.status === 'completed'"
           title="物流状态"
           :column="2"
           border
           class="detail-descriptions"
-          v-if="order.status === 'shipped' || order.status === 'completed'"
         >
           <el-descriptions-item label="快递公司">{{ order.shippingCompany }}</el-descriptions-item>
           <el-descriptions-item label="运单号">
@@ -110,7 +110,7 @@
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleRefresh" :loading="loading" :icon="Refresh">刷新</el-button>
+        <el-button :loading="loading" :icon="Refresh" @click="handleRefresh">刷新</el-button>
         <el-button @click="handleClose">关闭</el-button>
 
         <template v-if="order?.status === 'pending'">

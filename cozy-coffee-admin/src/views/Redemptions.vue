@@ -11,14 +11,14 @@
       </template>
     </AdminPageHeader>
 
-    <AdminFilterBar @search="handleSearch" @reset="resetFilters" class="compact-filter">
+    <AdminFilterBar class="compact-filter" @search="handleSearch" @reset="resetFilters">
       <el-form-item label="关键词">
         <el-input 
           v-model="filters.keyword" 
           placeholder="订单号/手机号/商品名" 
           clearable 
-          @keyup.enter="handleSearch"
           style="width: 220px"
+          @keyup.enter="handleSearch"
         />
       </el-form-item>
       <el-form-item label="交付方式">
@@ -55,8 +55,8 @@
        <TableToolbar :last-updated="lastUpdated" @refresh="loadRedemptions" />
 
        <el-table 
-        :data="paginatedRedemptions" 
-        v-loading="loading"
+        v-loading="loading" 
+        :data="paginatedRedemptions"
         stripe
         size="default"
         header-row-class-name="warm-header"
@@ -110,7 +110,7 @@
             <div class="fulfillment-cell">
               <!-- 实物订单 -->
               <template v-if="row.fulfillmentType !== 'VIRTUAL'">
-                 <div class="pickup-code-large" v-if="row.pickupCode">{{ row.pickupCode }}</div>
+                 <div v-if="row.pickupCode" class="pickup-code-large">{{ row.pickupCode }}</div>
                  <el-tag :type="getStatusTagType(row.status)" size="small" effect="plain" class="status-tag-pill">
                     {{ getStatusText(row.status) }}
                  </el-tag>

@@ -6,14 +6,14 @@
       </template>
     </AdminPageHeader>
 
-    <AdminFilterBar @search="handleSearch" @reset="resetFilters" class="compact-filter">
+    <AdminFilterBar class="compact-filter" @search="handleSearch" @reset="resetFilters">
       <el-form-item label="关键词">
         <el-input 
           v-model="filters.keyword" 
           placeholder="用户名/手机号/ID" 
           clearable 
-          @keyup.enter="handleSearch"
           style="width: 220px"
+          @keyup.enter="handleSearch"
         />
       </el-form-item>
        <el-form-item label="会员等级">
@@ -43,8 +43,8 @@
        <TableToolbar :last-updated="lastUpdated" @refresh="loadUsers" />
 
        <el-table 
-        :data="paginatedUsers" 
-        v-loading="loading"
+        v-loading="loading" 
+        :data="paginatedUsers"
         size="small"
         header-cell-class-name="table-header"
        >
@@ -95,8 +95,8 @@
               <el-divider direction="vertical" />
               <el-button link type="primary" @click="handleAdjustPoints(row)">调分</el-button>
               <el-divider direction="vertical" />
-              <el-button link type="danger" v-if="row.status !== 'disabled'" @click="handleDisable(row)">禁用</el-button>
-              <el-button link type="success" v-else @click="handleEnable(row)">启用</el-button>
+              <el-button v-if="row.status !== 'disabled'" link type="danger" @click="handleDisable(row)">禁用</el-button>
+              <el-button v-else link type="success" @click="handleEnable(row)">启用</el-button>
            </template>
         </el-table-column>
        </el-table>
@@ -133,7 +133,7 @@
       <template #footer>
          <div class="dialog-footer">
             <el-button @click="pointsDialogVisible = false">取消</el-button>
-            <el-button type="primary" @click="submitPointsAdjust" :loading="submittingPoints">确定</el-button>
+            <el-button type="primary" :loading="submittingPoints" @click="submitPointsAdjust">确定</el-button>
          </div>
       </template>
     </el-dialog>

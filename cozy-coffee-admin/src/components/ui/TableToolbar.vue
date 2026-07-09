@@ -10,7 +10,7 @@
           <el-icon><Refresh /></el-icon>
         </el-button>
       </el-tooltip>
-      <el-tooltip content="密度设置" placement="top" v-if="showDensity">
+      <el-tooltip v-if="showDensity" content="密度设置" placement="top">
          <el-dropdown trigger="click" @command="handleDensity">
           <el-button circle size="small">
             <el-icon><Operation /></el-icon>

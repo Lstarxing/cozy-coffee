@@ -17,7 +17,7 @@
         </div>
 
         <!-- 登录表单 -->
-        <form @submit.prevent="handleLogin" class="login-form">
+        <form class="login-form" @submit.prevent="handleLogin">
           <h2>管理员登录</h2>
           
           <!-- 用户名输入框 -->
