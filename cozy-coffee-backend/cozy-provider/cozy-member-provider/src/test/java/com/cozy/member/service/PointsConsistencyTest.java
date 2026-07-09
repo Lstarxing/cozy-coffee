@@ -8,6 +8,7 @@ import com.cozy.member.mapper.PointsLotMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
+@ActiveProfiles("test")
 public class PointsConsistencyTest {
 
     @Autowired
@@ -57,7 +59,7 @@ public class PointsConsistencyTest {
     public void testAdminAdjustPositive() {
         Long userId = 998L;
         memberService.createMember(userId);
-        int initialPoints = memberService.getMemberByUserId(userId).getCurrentPoints(); // 100 bonus
+        int initialPoints = memberService.getMemberByUserId(userId).getCurrentPoints(); // v5.3 后新用户 0 初始积分
 
         memberService.adminAdjustPoints(userId, 200, "测试加分");
 
@@ -73,16 +75,16 @@ public class PointsConsistencyTest {
     @Transactional
     public void testAdminAdjustNegative() {
         Long userId = 997L;
-        memberService.createMember(userId);
-        memberService.adminAdjustPoints(userId, 500, "充值"); // Total 600
+       memberService.createMember(userId);
+        memberService.adminAdjustPoints(userId, 500, "充值"); // v5.3 后 0 + 500 = 500
 
         memberService.adminAdjustPoints(userId, -200, "调整扣分");
 
         var member = memberService.getMemberByUserId(userId);
-        assertEquals(400, member.getCurrentPoints());
+        assertEquals(300, member.getCurrentPoints());
 
         int sumLots = pointsLotMapper.selectAvailableLotsForUpdate(userId).stream()
                 .mapToInt(PointsLot::getRemaining).sum();
-        assertEquals(400, sumLots, "扣分后 Lot 必须同步扣减");
+        assertEquals(300, sumLots, "扣分后 Lot 必须同步扣减");
     }
 }

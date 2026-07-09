@@ -1,0 +1,49 @@
+# 测试环境配置：避免与 IDE 跑的同名 provider 抢 Dubbo 端口 + 不污染 Nacos 注册表
+# 配合 @ActiveProfiles("test") 使用
+server:
+  port: 0   # 随机 HTTP 端口，避免冲突
+
+spring:
+  application:
+    name: cozy-order-provider-test
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 测试仍连真实 cozy_order 库（与 IDE 共享数据），用 @Transactional 回滚保证不污染
+    url: jdbc:mysql://localhost:3306/cozy_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD:123456}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 1   # 测试用独立 Redis db（避开业务用的 db 0）
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+dubbo:
+  application:
+    name: cozy-order-provider-test
+    qos-enable: false
+  registry:
+    address: nacos://localhost:8848?register=false   # 不注册到 Nacos，避免污染注册表
+  protocol:
+    name: dubbo
+    port: -1   # 随机 Dubbo 端口，避免与 IDE 服务抢 20883
+  provider:
+    timeout: 30000
+  consumer:
+    check: false
+    timeout: 30000
+
+# 测试不消费 RocketMQ
+rocketmq:
+  name-server: localhost:9876
+  consumer:
+    enabled: false
+
+logging:
+  level:
+    org.apache.dubbo: WARN
+    com.alibaba.nacos: WARN

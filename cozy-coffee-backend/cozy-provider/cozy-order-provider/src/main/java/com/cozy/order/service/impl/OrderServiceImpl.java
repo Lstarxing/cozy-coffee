@@ -73,6 +73,9 @@ public class OrderServiceImpl implements OrderService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
+    private final OrderDtoConverter dtoConverter;
+    private final OrderRewardService rewardService;
+    private final MenuCacheService menuCacheService;
 
     @DubboReference(check = false)
     private MemberService memberService;
@@ -111,6 +114,12 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public List<CoffeeProductDTO> listCoffeeProducts() {
+        return menuCacheService.getMenu();
+    }
+
+    // ====== 旧缓存逻辑（已迁移到 MenuCacheService，保留仅供参考）======
+    @Deprecated
+    private List<CoffeeProductDTO> listCoffeeProductsLegacy() {
         // L1: in-process cache（10 分钟 TTL，到期自动失效绕开脏数据永存问题）
         List<CoffeeProductDTO> l1 = this.cachedMenu;
         if (l1 != null && System.currentTimeMillis() - this.cachedMenuAt < L1_TTL_MS) {
@@ -132,7 +141,7 @@ public class OrderServiceImpl implements OrderService {
                 logMenuCacheMetricsMaybe();
                 return this.cachedMenu;
             }
-            List<CoffeeProductDTO> redisCached = convertToCoffeeProductList(cachedValue);
+            List<CoffeeProductDTO> redisCached = dtoConverter.convertToCoffeeProductList(cachedValue);
             if (redisCached != null) {
                 this.cachedMenu = redisCached;
                 this.cachedMenuAt = System.currentTimeMillis();
@@ -159,7 +168,7 @@ public class OrderServiceImpl implements OrderService {
                     logMenuCacheMetricsMaybe();
                     return this.cachedMenu;
                 }
-                List<CoffeeProductDTO> redisCached = convertToCoffeeProductList(retryCache);
+                List<CoffeeProductDTO> redisCached = dtoConverter.convertToCoffeeProductList(retryCache);
                 if (redisCached != null) {
                     this.cachedMenu = redisCached;
                     this.cachedMenuAt = System.currentTimeMillis();
@@ -187,7 +196,7 @@ public class OrderServiceImpl implements OrderService {
                 wrapper.eq(CoffeeProduct::getStatus, "active")
                         .orderByAsc(CoffeeProduct::getSortOrder);
                 List<CoffeeProductDTO> result = productMapper.selectList(wrapper).stream()
-                        .map(this::toProductDTO)
+                        .map(dtoConverter::toProductDTO)
                         .collect(Collectors.toList());
 
                 this.cachedMenu = result;
@@ -267,16 +276,6 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private List<CoffeeProductDTO> convertToCoffeeProductList(Object cachedValue) {
-        if (!(cachedValue instanceof List<?> rawList)) {
-            return null;
-        }
-        return rawList.stream()
-                .map(item -> objectMapper.convertValue(item, CoffeeProductDTO.class))
-                .collect(Collectors.toList());
-    }
-
     @Override
     public CoffeeProductDTO getProduct(Long productId) {
         if (productId == null) {
@@ -286,13 +285,15 @@ public class OrderServiceImpl implements OrderService {
         if (product == null) {
             throw new RuntimeException("商品不存在");
         }
-        return toProductDTO(product);
+        return dtoConverter.toProductDTO(product);
     }
 
     // ==================== 订单创建（多商品 + 券核销）====================
 
+    // C1 修复：移除 @Transactional，useCouponWithResult 在事务外执行。
+    // 仅 DB 写入段 doCreateOrderInTx 有独立事务。
+    // 若 DB 写入失败但券已核销，通过 Outbox 异步触发券回滚。
     @Override
-    @Transactional
     public ShopOrderDTO createOrder(Long userId, String memberLevel, CreateOrderRequest request) {
         if (userId == null) {
             throw new RuntimeException("用户未登录");
@@ -360,7 +361,6 @@ public class OrderServiceImpl implements OrderService {
             // 2. 加料费用（如加浓缩 +5元）- 单独计算，不参与主券折扣
             if (itemReq.getAddonsJson() != null && !itemReq.getAddonsJson().trim().isEmpty()) {
                 try {
-                    com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
                     com.fasterxml.jackson.databind.JsonNode addons = objectMapper.readTree(itemReq.getAddonsJson());
 
                     BigDecimal addonsFee = BigDecimal.ZERO;
@@ -375,7 +375,7 @@ public class OrderServiceImpl implements OrderService {
 
                     if (addonsFee.compareTo(BigDecimal.ZERO) > 0) {
                         itemAddonsAmount = addonsFee.multiply(BigDecimal.valueOf(qty));
-                        log.info("商品加料费用: productId={}, addonsFee={}, quantity={}, addonsTotal={}",
+                        log.debug("商品加料费用: productId={}, addonsFee={}, quantity={}, addonsTotal={}",
                                 product.getId(), addonsFee, qty, itemAddonsAmount);
                     }
                 } catch (Exception e) {
@@ -495,8 +495,7 @@ public class OrderServiceImpl implements OrderService {
                     for (ShopOrderItem item : orderItems) {
                         if (item.getAddonsJson() != null && !item.getAddonsJson().trim().isEmpty()) {
                             try {
-                                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                                com.fasterxml.jackson.databind.JsonNode addons = mapper.readTree(item.getAddonsJson());
+                                com.fasterxml.jackson.databind.JsonNode addons = objectMapper.readTree(item.getAddonsJson());
                                 if (addons.isArray()) {
                                     for (com.fasterxml.jackson.databind.JsonNode addon : addons) {
                                         if (addon.has("price")) {
@@ -702,11 +701,11 @@ public class OrderServiceImpl implements OrderService {
                             accelerateRemaining);
 
                     // 使用加速包剩余额度计算积分（而非 monthlySpent）
-                    estimatedPoints = calculateBlackCardPoints(payAmount, accelerateRemaining);
+                    estimatedPoints = rewardService.calculateBlackCardPoints(payAmount, accelerateRemaining);
 
                     effectiveRate = payAmount.compareTo(BigDecimal.ZERO) > 0
                             ? new BigDecimal(estimatedPoints).divide(payAmount, 2, RoundingMode.HALF_UP)
-                            : getPointsRate("black");
+                            : rewardService.getPointsRate("black");
 
                     log.info("黑卡加速包预估: userId={}, payAmount={}, points={}, effectiveRate={}", userId, payAmount,
                             estimatedPoints, effectiveRate);
@@ -718,21 +717,21 @@ public class OrderServiceImpl implements OrderService {
                     BigDecimal postUpgradeAmount = payAmount.subtract(preUpgradeAmount);
 
                     // 升级前的部分（按当前等级倍率计算）
-                    int prePoints = preUpgradeAmount.multiply(getPointsRate(memberLevel))
+                    int prePoints = preUpgradeAmount.multiply(rewardService.getPointsRate(memberLevel))
                             .setScale(0, RoundingMode.HALF_UP).intValue();
                     // 升级后的部分（按黑卡 1.70x 加速逻辑计算，此时加速包从满额 300 开始计）
-                    int postPoints = calculateBlackCardPoints(postUpgradeAmount, new BigDecimal("300"));
+                    int postPoints = rewardService.calculateBlackCardPoints(postUpgradeAmount, new BigDecimal("300"));
 
                     estimatedPoints = prePoints + postPoints;
                     effectiveRate = payAmount.compareTo(BigDecimal.ZERO) > 0
                             ? new BigDecimal(estimatedPoints).divide(payAmount, 2, RoundingMode.HALF_UP)
-                            : getPointsRate(memberLevel);
+                            : rewardService.getPointsRate(memberLevel);
 
                     log.info("跨级订单积分预估: userId={}, pre={}@{}, post={}@加速包, total={}",
-                            userId, preUpgradeAmount, getPointsRate(memberLevel), postUpgradeAmount, estimatedPoints);
+                            userId, preUpgradeAmount, rewardService.getPointsRate(memberLevel), postUpgradeAmount, estimatedPoints);
                 } else {
                     // 3. 普通等级：简单倍率
-                    BigDecimal baseRate = getPointsRate(memberLevel);
+                    BigDecimal baseRate = rewardService.getPointsRate(memberLevel);
                     estimatedPoints = payAmount.multiply(baseRate).setScale(0, RoundingMode.HALF_UP).intValue();
                     effectiveRate = baseRate;
                 }
@@ -769,7 +768,7 @@ public class OrderServiceImpl implements OrderService {
         // v5.0: 保存附加券ID列表用于取消时回滚
         if (!addonCouponIds.isEmpty()) {
             try {
-                order.setAppliedAddonCouponIds(new com.fasterxml.jackson.databind.ObjectMapper()
+                order.setAppliedAddonCouponIds(objectMapper
                         .writeValueAsString(addonCouponIds));
             } catch (Exception e) {
                 log.warn("序列化附加券ID失败: {}", e.getMessage());
@@ -777,19 +776,34 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setCreatedAt(now);
         order.setUpdatedAt(now);
-        orderMapper.insert(order);
-        syncPendingTimeoutIndex(order);
 
-        // 创建订单项
-        for (ShopOrderItem item : orderItems) {
-            item.setOrderId(order.getId());
-            orderItemMapper.insert(item);
+        // C1: DB 写入独立事务。useCouponWithResult 已在外层非 TX 执行。
+        // 如果此处失败但券已核销，publishCouponRollbackEvent 通过 Outbox 异步回滚。
+        try {
+            doCreateOrderInTx(order, orderItems);
+        } catch (Exception e) {
+            if (appliedCouponId != null || !addonCouponIds.isEmpty()) {
+                log.error("订单落库失败，触发券回滚: orderNo={}, couponId={}, addonIds={}",
+                        order.getOrderNo(), appliedCouponId, addonCouponIds);
+                publishCouponRollbackEvent(order);
+            }
+            throw new RuntimeException("订单创建失败", e);
         }
 
         log.info("订单创建成功: orderNo={}, userId={}, totalAmount={}, items={}",
                 order.getOrderNo(), userId, totalAmount, itemsSummary);
 
         return toOrderDTO(order, orderItems);
+    }
+
+    @Transactional
+    private void doCreateOrderInTx(ShopOrder order, List<ShopOrderItem> orderItems) {
+        orderMapper.insert(order);
+        syncPendingTimeoutIndex(order);
+        for (ShopOrderItem item : orderItems) {
+            item.setOrderId(order.getId());
+            orderItemMapper.insert(item);
+        }
     }
 
     // ==================== 订单查询 ====================
@@ -974,9 +988,9 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 完成订单 - v6.2 积分/EXP/首单奖励/月度任务已解耦到 MQ 消费者
+     * C2 修复：Dubbo 远程调用移出 @Transactional，事务仅保护状态更新。
      */
     @Override
-    @Transactional
     public ShopOrderDTO completeOrder(Long orderId) {
         if (orderId == null) {
             throw new RuntimeException("订单ID不能为空");
@@ -998,41 +1012,60 @@ public class OrderServiceImpl implements OrderService {
             return toOrderDTO(order, null);
         }
 
-        // 计算 EXP（实付金额，四舍五入取整）
+        // ===== 事务外：所有计算和远程调用 =====
         BigDecimal payAmount = order.getPayAmount() != null ? order.getPayAmount() : order.getTotalAmount();
         int expEarned = payAmount.setScale(0, RoundingMode.HALF_UP).intValue();
 
-        // 获取用户会员等级（供积分计算用）
-        String memberLevel = "basic";
+        // C2: Dubbo 远程调用移出 @Transactional
+        String memberLevel = resolveMemberLevel(order.getUserId());
+
+        int pointsEarned = resolvePointsEarned(order, payAmount, memberLevel);
+        boolean isFirstOrder = checkFirstOrder(order);
+        boolean hasNewProduct = checkNewProduct(order);
+        boolean isDelivery = "DELIVERY".equals(order.getDiningMethod());
+
+        log.info("订单完成(奖励已解耦到MQ): orderId={}, exp={}, points={}, isFirst={}, isDelivery={}, hasNew={}",
+                orderId, expEarned, pointsEarned, isFirstOrder, isDelivery, hasNewProduct);
+
+        // ===== 事务内：仅状态更新 =====
+        return doCompleteInTx(order, expEarned, pointsEarned);
+    }
+
+    private String resolveMemberLevel(Long userId) {
         try {
-            var memberInfo = memberService.getMemberInfo(order.getUserId());
+            var memberInfo = memberService.getMemberInfo(userId);
             if (memberInfo != null && memberInfo.getMemberLevel() != null) {
-                memberLevel = memberInfo.getMemberLevel();
+                return memberInfo.getMemberLevel();
             }
         } catch (Exception e) {
-            log.warn("获取会员信息失败，使用默认倍率: userId={}", order.getUserId(), e);
+            log.warn("获取会员信息失败，使用默认倍率: userId={}", userId, e);
         }
+        return "basic";
+    }
 
+    private int resolvePointsEarned(ShopOrder order, BigDecimal payAmount, String memberLevel) {
         int pointsEarned = (order.getPointsEarned() != null) ? order.getPointsEarned() : 0;
         if (pointsEarned <= 0 && payAmount.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal rate = getPointsRate(memberLevel);
+            BigDecimal rate = rewardService.getPointsRate(memberLevel);
             pointsEarned = payAmount.multiply(rate).setScale(0, RoundingMode.HALF_UP).intValue();
         }
+        return pointsEarned;
+    }
 
-        // 首单检测（在更新状态前查询，排除当前自身）
-        boolean isFirstOrder = false;
+    private boolean checkFirstOrder(ShopOrder order) {
         try {
             LambdaQueryWrapper<ShopOrder> firstOrderCheck = new LambdaQueryWrapper<>();
             firstOrderCheck.eq(ShopOrder::getUserId, order.getUserId())
                     .eq(ShopOrder::getStatus, "completed")
                     .ne(ShopOrder::getId, order.getId());
-            isFirstOrder = orderMapper.selectCount(firstOrderCheck) == 0;
+            return orderMapper.selectCount(firstOrderCheck) == 0;
         } catch (Exception e) {
-            log.warn("首单检测失败: orderId={}", orderId, e);
+            log.warn("首单检测失败: orderId={}", order.getId(), e);
+            return false;
         }
+    }
 
-        // 新品检测
-        boolean hasNewProduct = false;
+    private boolean checkNewProduct(ShopOrder order) {
         try {
             LambdaQueryWrapper<ShopOrderItem> itemWrapper = new LambdaQueryWrapper<>();
             itemWrapper.eq(ShopOrderItem::getOrderId, order.getId());
@@ -1044,17 +1077,16 @@ public class OrderServiceImpl implements OrderService {
                 LambdaQueryWrapper<CoffeeProduct> productWrapper = new LambdaQueryWrapper<>();
                 productWrapper.in(CoffeeProduct::getId, productIds)
                         .eq(CoffeeProduct::getIsNewProduct, true);
-                hasNewProduct = productMapper.selectCount(productWrapper) > 0;
+                return productMapper.selectCount(productWrapper) > 0;
             }
         } catch (Exception e) {
-            log.warn("新品检测失败: orderId={}", orderId, e);
+            log.warn("新品检测失败: orderId={}", order.getId(), e);
         }
+        return false;
+    }
 
-        boolean isDelivery = "DELIVERY".equals(order.getDiningMethod());
-
-        log.info("订单完成(奖励已解耦到MQ): orderId={}, exp={}, points={}, isFirst={}, isDelivery={}, hasNew={}",
-                orderId, expEarned, pointsEarned, isFirstOrder, isDelivery, hasNewProduct);
-
+    @Transactional
+    private ShopOrderDTO doCompleteInTx(ShopOrder order, int expEarned, int pointsEarned) {
         // 更新订单状态（积分/EXP/首单奖励/月度任务由 MQ 消费者异步处理）
         order.setStatus("completed");
         order.setExpEarned(expEarned);
@@ -1063,11 +1095,7 @@ public class OrderServiceImpl implements OrderService {
         orderMapper.updateById(order);
         syncPendingTimeoutIndex(order);
 
-        ShopOrderDTO dto = toOrderDTO(order, null);
-        dto.setIsFirstOrder(isFirstOrder);
-        dto.setHasNewProduct(hasNewProduct);
-        // diningMethod 已在 toOrderDTO 中映射，isDelivery 由 controller 根据 diningMethod 判断
-        return dto;
+        return toOrderDTO(order, null);
     }
 
     @Override
@@ -1176,7 +1204,7 @@ public class OrderServiceImpl implements OrderService {
         LambdaQueryWrapper<CoffeeProduct> wrapper = new LambdaQueryWrapper<>();
         wrapper.orderByAsc(CoffeeProduct::getSortOrder);
         return productMapper.selectList(wrapper).stream()
-                .map(this::toProductDTO)
+                .map(dtoConverter::toProductDTO)
                 .collect(Collectors.toList());
     }
 
@@ -1220,7 +1248,7 @@ public class OrderServiceImpl implements OrderService {
 
         productMapper.insert(product);
         invalidateMenuCache();
-        return toProductDTO(product);
+        return dtoConverter.toProductDTO(product);
     }
 
     @Override
@@ -1275,7 +1303,7 @@ public class OrderServiceImpl implements OrderService {
 
         productMapper.updateById(product);
         invalidateMenuCache();
-        return toProductDTO(product);
+        return dtoConverter.toProductDTO(product);
     }
 
     @Override
@@ -1299,7 +1327,7 @@ public class OrderServiceImpl implements OrderService {
         }
         product.setStatus("active".equals(product.getStatus()) ? "inactive" : "active");
         productMapper.updateById(product);
-        return toProductDTO(product);
+        return dtoConverter.toProductDTO(product);
     }
 
     // ==================== 辅助方法 ====================
@@ -1315,32 +1343,11 @@ public class OrderServiceImpl implements OrderService {
      * v5.0: basic=1.0, silver=1.1, gold=1.2, diamond=1.3, black=1.5
      * v6.1 会员日: 周五倍率 +0.5x
      */
-    private BigDecimal getPointsRate(String level) {
-        if (level == null)
-            level = "basic";
-        BigDecimal baseRate = switch (level) {
-            case "silver" -> new BigDecimal("1.1");
-            case "gold" -> new BigDecimal("1.2");
-            case "diamond" -> new BigDecimal("1.3");
-            case "black" -> new BigDecimal("1.5"); // v5.0: 1.35→1.5
-            default -> BigDecimal.ONE;
-        };
-
-        // v6.1 会员日: 周五积分翻倍 (+0.5x)
-        if (isCozyDay()) {
-            baseRate = baseRate.add(new BigDecimal("0.5"));
-            log.debug("会员日加成生效: 原倍率+0.5, 当前等级={}", level);
-        }
-        return baseRate;
-    }
 
     /**
      * 判断今天是否为会员日 (Cozy Day)
      * v6.1: 每周五
      */
-    private boolean isCozyDay() {
-        return java.time.LocalDate.now().getDayOfWeek() == java.time.DayOfWeek.FRIDAY;
-    }
 
     /**
      * 黑卡加速包：加速包剩余额度内 1.70 倍积分，超出部分 1.5 倍（v5.0）
@@ -1349,35 +1356,6 @@ public class OrderServiceImpl implements OrderService {
      * @param payAmount           本次支付金额
      * @param accelerateRemaining 加速包剩余额度（由 MemberService 维护，每月重置为300）
      */
-    private int calculateBlackCardPoints(BigDecimal payAmount, BigDecimal accelerateRemaining) {
-        if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            return 0;
-        }
-
-        final BigDecimal ACCELERATE_RATE = new BigDecimal("1.70");
-        final BigDecimal NORMAL_RATE = new BigDecimal("1.5"); // v5.0: 1.35→1.5
-
-        // 加速包剩余额度（传入值已由 MemberService 计算好）
-        BigDecimal remainingCap = accelerateRemaining != null ? accelerateRemaining.max(BigDecimal.ZERO)
-                : new BigDecimal("300");
-
-        // 分段计算
-        BigDecimal acceleratedAmount = payAmount.min(remainingCap);
-        BigDecimal normalAmount = payAmount.subtract(acceleratedAmount);
-
-        int acceleratedPoints = acceleratedAmount.multiply(ACCELERATE_RATE)
-                .setScale(0, RoundingMode.HALF_UP).intValue();
-        int normalPoints = normalAmount.multiply(NORMAL_RATE)
-                .setScale(0, RoundingMode.HALF_UP).intValue();
-
-        int totalPoints = acceleratedPoints + normalPoints;
-
-        log.info("黑卡加速包计算明细: payAmount={}, accelerateRemaining={}, accelerated={}@{}, normal={}@{}, total={}",
-                payAmount, accelerateRemaining, acceleratedAmount, ACCELERATE_RATE, normalAmount, NORMAL_RATE,
-                totalPoints);
-
-        return totalPoints;
-    }
 
     /**
      * v5.3: 构建修饰符 JSON (用于 SHOT 券校验)
@@ -1416,55 +1394,6 @@ public class OrderServiceImpl implements OrderService {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         int random = new Random().nextInt(9000) + 1000;
         return "CF" + timestamp + random;
-    }
-
-    private CoffeeProductDTO toProductDTO(CoffeeProduct entity) {
-        CoffeeProductDTO dto = new CoffeeProductDTO();
-        dto.setId(entity.getId());
-        dto.setName(entity.getName());
-        dto.setDescription(entity.getDescription());
-        dto.setPrice(entity.getPrice());
-        dto.setPriceMedium(entity.getPriceMedium()); // v5.0
-        dto.setPriceLarge(entity.getPriceLarge()); // v5.0
-        dto.setImageUrl(entity.getImageUrl());
-        dto.setCategory(entity.getCategory());
-        dto.setStatus(entity.getStatus());
-        dto.setIsNewProduct(entity.getIsNewProduct()); // v5.0
-
-        // v5.2: SKU 配置字段（已启用）
-        dto.setSizeType(entity.getSizeType());
-        dto.setSugarType(entity.getSugarType());
-        dto.setTempType(entity.getTempType());
-
-        return dto;
-    }
-
-    private ShopOrderItemDTO toItemDTO(ShopOrderItem entity) {
-        ShopOrderItemDTO dto = new ShopOrderItemDTO();
-        dto.setId(entity.getId());
-        dto.setOrderId(entity.getOrderId());
-        dto.setProductId(entity.getProductId());
-        dto.setProductName(entity.getProductName());
-        dto.setUnitPrice(entity.getUnitPrice());
-        dto.setQuantity(entity.getQuantity());
-        dto.setItemAmount(entity.getItemAmount());
-        dto.setCupSize(entity.getCupSize());
-        dto.setSugarLevel(entity.getSugarLevel());
-        dto.setTemperature(entity.getTemperature());
-        dto.setCoffeeStrength(entity.getCoffeeStrength());
-        dto.setOptionsJson(entity.getOptionsJson());
-
-        // 获取商品图片
-        try {
-            CoffeeProduct product = productMapper.selectById(entity.getProductId());
-            if (product != null) {
-                dto.setProductImage(product.getImageUrl());
-            }
-        } catch (Exception e) {
-            log.warn("获取订单项商品图片失败: productId={}", entity.getProductId());
-        }
-
-        return dto;
     }
 
     private ShopOrderDTO toOrderDTO(ShopOrder entity, List<ShopOrderItem> items) {
@@ -1534,7 +1463,7 @@ public class OrderServiceImpl implements OrderService {
 
         // 商品明细
         if (items != null && !items.isEmpty()) {
-            dto.setItems(items.stream().map(this::toItemDTO).collect(Collectors.toList()));
+            dto.setItems(dtoConverter.toItemDTOList(items));
             // 生成摘要
             String summary = items.stream()
                     .map(i -> i.getProductName() + " x" + i.getQuantity())
@@ -1548,7 +1477,7 @@ public class OrderServiceImpl implements OrderService {
                         .map(i -> i.getProductName() + " x" + i.getQuantity())
                         .collect(Collectors.joining(", "));
                 dto.setItemsSummary(summary);
-                dto.setItems(loadedItems.stream().map(this::toItemDTO).collect(Collectors.toList()));
+                dto.setItems(dtoConverter.toItemDTOList(loadedItems));
             }
         }
 
@@ -1565,77 +1494,12 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 转换订单DTO（支持预加载的会员信息，避免N+1查询）
+     * 委托给 toOrderDTO(entity, items, member) -- 两个方法逻辑完全一致，
+     * 仅 member 参数语义不同：null=自行查询, 非null=使用预加载值
      */
     private ShopOrderDTO toOrderDTOWithMember(ShopOrder entity, List<ShopOrderItem> items,
             com.cozy.member.dto.response.MemberDTO member) {
-        ShopOrderDTO dto = new ShopOrderDTO();
-        dto.setId(entity.getId());
-        dto.setOrderNo(entity.getOrderNo());
-        dto.setUserId(entity.getUserId());
-        dto.setStatus(entity.getStatus());
-        dto.setCreatedAt(entity.getCreatedAt());
-        dto.setUpdatedAt(entity.getUpdatedAt());
-        dto.setStoreId(entity.getStoreId());
-        dto.setBusinessDate(entity.getBusinessDate());
-        dto.setPickupCode(entity.getPickupCode());
-        dto.setPickupCodeGeneratedAt(entity.getPickupCodeGeneratedAt());
-        dto.setDiningMethod(entity.getDiningMethod());
-        dto.setRemark(entity.getRemark());
-
-        // 金额信息
-        dto.setTotalAmount(entity.getTotalAmount());
-        dto.setDiscountAmount(entity.getDiscountAmount());
-        dto.setPayAmount(entity.getPayAmount());
-        dto.setTotalQuantity(entity.getTotalQuantity());
-        dto.setAppliedCouponId(entity.getAppliedCouponId());
-
-        // 积分信息
-        dto.setExpEarned(entity.getExpEarned());
-        dto.setPointsEarned(entity.getPointsEarned());
-        dto.setRewardsGranted(entity.getRewardsGranted());
-
-        // 使用预加载的会员信息（避免N+1查询）
-        if (member != null) {
-            dto.setNickname(member.getNickname());
-            dto.setUsername(member.getNickname() != null ? member.getNickname() : "User_" + member.getId());
-            String phone = member.getPhone();
-            if (phone != null && phone.length() >= 7) {
-                dto.setPhoneMasked(phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4));
-            } else {
-                dto.setPhoneMasked(phone);
-            }
-            if (member.getLevel() != null) {
-                dto.setMemberLevel(member.getLevel());
-            }
-        }
-
-        // 商品明细
-        if (items != null && !items.isEmpty()) {
-            dto.setItems(items.stream().map(this::toItemDTO).collect(Collectors.toList()));
-            String summary = items.stream()
-                    .map(i -> i.getProductName() + " x" + i.getQuantity())
-                    .collect(Collectors.joining(", "));
-            dto.setItemsSummary(summary);
-        } else {
-            List<ShopOrderItem> loadedItems = getOrderItemsByOrderId(entity.getId());
-            if (!loadedItems.isEmpty()) {
-                String summary = loadedItems.stream()
-                        .map(i -> i.getProductName() + " x" + i.getQuantity())
-                        .collect(Collectors.joining(", "));
-                dto.setItemsSummary(summary);
-                dto.setItems(loadedItems.stream().map(this::toItemDTO).collect(Collectors.toList()));
-            }
-        }
-
-        dto.setPointsMultiplier(entity.getPointsMultiplier());
-
-        // v5.3: 配送费信息
-        dto.setDeliveryFee(entity.getDeliveryFee());
-        dto.setDeliveryFeeWaived(entity.getDeliveryFeeWaived());
-        dto.setDeliveryFeeWaivedReason(entity.getDeliveryFeeWaivedReason());
-        populateExpiryInfo(entity, dto);
-
-        return dto;
+        return toOrderDTO(entity, items, member);
     }
 
     private void syncPendingTimeoutIndex(ShopOrder order) {

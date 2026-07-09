@@ -34,6 +34,9 @@ target/
 build/
 classes/
 resources/
+# 但保留 src/test/resources/ 和 src/main/resources/（源码资源目录）
+!**/src/test/resources/
+!**/src/main/resources/
 *.jar
 *.war
 *.ear

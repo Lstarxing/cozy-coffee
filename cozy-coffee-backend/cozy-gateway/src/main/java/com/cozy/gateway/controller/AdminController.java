@@ -14,7 +14,7 @@ import com.cozy.user.api.UserService;
 import com.cozy.user.dto.response.UserDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
-import org.springframework.data.redis.core.Cursor;
+import com.cozy.gateway.cache.AdminOrderCacheEvictor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
@@ -60,6 +60,9 @@ public class AdminController {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private AdminOrderCacheEvictor cacheEvictor;
 
     private static final long ADMIN_DASHBOARD_CACHE_TTL_SECONDS = 45;
     private static final long ADMIN_ANALYTICS_CACHE_TTL_SECONDS = 60;
@@ -132,7 +135,7 @@ public class AdminController {
             writeCacheObject(cacheKey, stats, ADMIN_DASHBOARD_CACHE_TTL_SECONDS);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("获取统计失败", e);
             return Result.error("获取统计失败");
         }
         return Result.success(stats);
@@ -984,7 +987,7 @@ public class AdminController {
         }
     }
 
-    private String buildAdminCacheKey(String prefix, Object... parts) {
+    private static String buildAdminCacheKey(String prefix, Object... parts) {
         StringBuilder key = new StringBuilder(prefix);
         if (parts == null || parts.length == 0) {
             return key.toString();
@@ -1037,41 +1040,16 @@ public class AdminController {
     }
 
     private void evictOrderAndAnalyticsCaches() {
-        evictByPrefix(ADMIN_ORDERS_LIST_PREFIX);
-        evictByPrefix(ADMIN_ORDERS_RECENT_PREFIX);
+        cacheEvictor.evictByPrefix(ADMIN_ORDERS_LIST_PREFIX);
+        cacheEvictor.evictByPrefix(ADMIN_ORDERS_RECENT_PREFIX);
         evictAnalyticsCaches();
     }
 
     private void evictAnalyticsCaches() {
-        evictByPrefix(ADMIN_DASHBOARD_STATS_PREFIX);
-        evictByPrefix(ADMIN_ANALYTICS_TREND_PREFIX);
-        evictByPrefix(ADMIN_ANALYTICS_DISTRIBUTION_PREFIX);
-        evictByPrefix(ADMIN_ANALYTICS_RANK_PREFIX);
-    }
-
-    private void evictByPrefix(String prefix) {
-        if (prefix == null || prefix.isEmpty()) {
-            return;
-        }
-        String pattern = prefix + "*";
-        List<String> batch = new ArrayList<>(200);
-        try {
-            ScanOptions options = ScanOptions.scanOptions().match(pattern).count(500).build();
-            try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {
-                while (cursor.hasNext()) {
-                    batch.add(cursor.next());
-                    if (batch.size() >= 200) {
-                        stringRedisTemplate.delete(batch);
-                        batch.clear();
-                    }
-                }
-            }
-            if (!batch.isEmpty()) {
-                stringRedisTemplate.delete(batch);
-            }
-        } catch (Exception e) {
-            log.warn("按前缀清理缓存失败: prefix={}", prefix, e);
-        }
+        cacheEvictor.evictByPrefix(ADMIN_DASHBOARD_STATS_PREFIX);
+        cacheEvictor.evictByPrefix(ADMIN_ANALYTICS_TREND_PREFIX);
+        cacheEvictor.evictByPrefix(ADMIN_ANALYTICS_DISTRIBUTION_PREFIX);
+        cacheEvictor.evictByPrefix(ADMIN_ANALYTICS_RANK_PREFIX);
     }
 
     // 手机号脱敏工具方法

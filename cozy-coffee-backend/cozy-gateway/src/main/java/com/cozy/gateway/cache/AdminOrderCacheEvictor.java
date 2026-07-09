@@ -37,7 +37,7 @@ public class AdminOrderCacheEvictor {
         evictByPrefix(ADMIN_ANALYTICS_RANK_PREFIX);
     }
 
-    private void evictByPrefix(String prefix) {
+    public void evictByPrefix(String prefix) {
         if (prefix == null || prefix.isEmpty()) {
             return;
         }
