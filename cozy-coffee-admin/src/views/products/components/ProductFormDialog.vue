@@ -5,7 +5,7 @@
     v-bind="$attrs"
     @update:model-value="$emit('update:visible', $event)"
   >
-    <el-form v-bind="$attrs" :model="form" label-width="120px" label-position="left">
+    <el-form :model="form" label-width="120px" label-position="left">
       <slot />
     </el-form>
 
