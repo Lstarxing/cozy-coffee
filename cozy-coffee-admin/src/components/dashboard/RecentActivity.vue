@@ -4,33 +4,33 @@
         <el-tab-pane label="最近咖啡订单" name="coffee">
            <el-table v-loading="loading" :data="orders" size="small" style="width: 100%">
               <el-table-column label="订单号" width="180">
-                 <template #default>
+                 <template #default="{ row }">
                    <CopyText :text="row.orderNo" />
                  </template>
               </el-table-column>
               <el-table-column label="用户" min-width="120">
-                 <template #default>
+                 <template #default="{ row }">
                     <span v-if="row.nickname || row.username">{{ row.nickname || row.username }}</span>
                     <span v-else class="text-secondary">-</span>
                  </template>
               </el-table-column>
               <el-table-column label="金额" width="100" align="right">
-                 <template #default>
+                 <template #default="{ row }">
                     <span class="font-mono">¥{{ row.totalAmount }}</span>
                  </template>
               </el-table-column>
               <el-table-column label="状态" width="100" align="center">
-                 <template #default>
+                 <template #default="{ row }">
                     <StatusTag :status="row.status" type="order" />
                  </template>
               </el-table-column>
               <el-table-column label="时间" width="140" align="right">
-                 <template #default>
+                 <template #default="{ row }">
                     <span class="text-secondary text-xs">{{ formatDate(row.createdAt) }}</span>
                  </template>
               </el-table-column>
               <el-table-column width="80" align="center">
-                 <template #default>
+                 <template #default="{ row }">
                     <el-button link type="primary" size="small" @click="$router.push('/orders')">查看</el-button>
                  </template>
               </el-table-column>
@@ -40,30 +40,30 @@
         <el-tab-pane label="最近兑换" name="redemption">
             <el-table v-loading="loading" :data="redemptions" size="small" style="width: 100%">
               <el-table-column label="订单号" width="180">
-                 <template #default>
+                 <template #default="{ row }">
                    <CopyText :text="row.orderNo" />
                  </template>
               </el-table-column>
               <el-table-column label="商品" min-width="120" show-overflow-tooltip>
-                  <template #default>{{ row.productName }}</template>
+                  <template #default="{ row }">{{ row.productName }}</template>
               </el-table-column>
               <el-table-column label="消耗" width="100" align="right">
-                 <template #default>
+                 <template #default="{ row }">
                     <span class="font-mono text-amber">{{ row.pointsCost }}</span>
                  </template>
               </el-table-column>
               <el-table-column label="状态" width="100" align="center">
-                 <template #default>
+                 <template #default="{ row }">
                     <StatusTag :status="row.status" type="redemption" />
                  </template>
               </el-table-column>
               <el-table-column label="时间" width="140" align="right">
-                 <template #default>
+                 <template #default="{ row }">
                     <span class="text-secondary text-xs">{{ formatDate(row.createdAt) }}</span>
                  </template>
               </el-table-column>
               <el-table-column width="80" align="center">
-                 <template #default>
+                 <template #default="{ row }">
                     <el-button link type="primary" size="small" @click="$router.push('/redemptions')">查看</el-button>
                  </template>
               </el-table-column>
