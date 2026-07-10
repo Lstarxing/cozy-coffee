@@ -37,39 +37,42 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
                 request.getRequestURI(),
                 authHeader != null ? authHeader.substring(0, Math.min(20, authHeader.length())) + "..." : "null");
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            try {
-                // 验证 token 并提取用户ID和角色
-                if (JwtUtil.validateToken(token)) {
-                    if (stringRedisTemplate != null) {
-                        String sessionKey = RedisKeyConstants.userLoginSession(token);
-                        String cachedUserId = stringRedisTemplate.opsForValue().get(sessionKey);
-                        if (cachedUserId == null || cachedUserId.isBlank()) {
-                            log.warn("JwtAuthInterceptor - Session missing in Redis, reject token: uri={}",
-                                    request.getRequestURI());
-                            return sendUnauthorized(response, "登录已失效，请重新登录");
-                        }
-                    }
-
-                    Long userId = JwtUtil.getUserIdFromToken(token);
-                    String role = JwtUtil.getRoleFromToken(token);
-                    // 将用户ID和角色放入上下文，并设置到请求属性中以兼容某些控制器
-                    UserContext.setUserId(userId);
-                    UserContext.setRole(role);
-                    request.setAttribute("userId", userId);
-                    log.debug("JwtAuthInterceptor - Token valid, userId: {}, role: {}", userId, role);
-                } else {
-                    log.warn("JwtAuthInterceptor - Token validation failed");
-                }
-            } catch (Exception e) {
-                log.warn("JwtAuthInterceptor - Token parse error: {}", e.getMessage());
-            }
-        } else {
-            log.debug("JwtAuthInterceptor - No Bearer token found");
+        // 无 token：匿名访问放行，由 Service 层 getUserId() 决定是否需要登录
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.debug("JwtAuthInterceptor - No Bearer token, anonymous access");
+            return true;
         }
 
-        return true; // 继续执行，由具体接口决定是否需要登录
+        String token = authHeader.substring(7);
+        try {
+            // 验证 token，无效直接拒绝（区别于匿名访问）
+            if (!JwtUtil.validateToken(token)) {
+                log.warn("JwtAuthInterceptor - Invalid token, reject: uri={}", request.getRequestURI());
+                return sendUnauthorized(response, "无效的登录凭证");
+            }
+
+            if (stringRedisTemplate != null) {
+                String sessionKey = RedisKeyConstants.userLoginSession(token);
+                String cachedUserId = stringRedisTemplate.opsForValue().get(sessionKey);
+                if (cachedUserId == null || cachedUserId.isBlank()) {
+                    log.warn("JwtAuthInterceptor - Session missing in Redis, reject token: uri={}",
+                            request.getRequestURI());
+                    return sendUnauthorized(response, "登录已失效，请重新登录");
+                }
+            }
+
+            Long userId = JwtUtil.getUserIdFromToken(token);
+            String role = JwtUtil.getRoleFromToken(token);
+            // 将用户ID和角色放入上下文，并设置到请求属性中以兼容某些控制器
+            UserContext.setUserId(userId);
+            UserContext.setRole(role);
+            request.setAttribute("userId", userId);
+            log.debug("JwtAuthInterceptor - Token valid, userId: {}, role: {}", userId, role);
+            return true;
+        } catch (Exception e) {
+            log.warn("JwtAuthInterceptor - Token parse error: {}", e.getMessage());
+            return sendUnauthorized(response, "登录凭证解析失败");
+        }
     }
 
     private boolean sendUnauthorized(HttpServletResponse response, String message) throws Exception {
