@@ -24,11 +24,6 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/init/00-bootstrap.sql:/docker-entrypoint-initdb.d/00-bootstrap.sql:ro
-      - ./docker/mysql/init/01-import.sql:/docker-entrypoint-initdb.d/01-import.sql:ro
-      - ./cozy-coffee-backend/mysql/当前数据库表sql/cozy_user.sql:/docker-entrypoint-initdb.d/raw/cozy_user.sql:ro
-      - ./cozy-coffee-backend/mysql/当前数据库表sql/cozy_member.sql:/docker-entrypoint-initdb.d/raw/cozy_member.sql:ro
-      - ./cozy-coffee-backend/mysql/当前数据库表sql/cozy_order.sql:/docker-entrypoint-initdb.d/raw/cozy_order.sql:ro
-      - ./cozy-coffee-backend/mysql/当前数据库表sql/cozy_mall.sql:/docker-entrypoint-initdb.d/raw/cozy_mall.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s

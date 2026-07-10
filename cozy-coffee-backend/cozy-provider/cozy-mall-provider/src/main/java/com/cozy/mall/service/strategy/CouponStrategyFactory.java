@@ -1,6 +1,5 @@
 package com.cozy.mall.service.strategy;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,7 +13,6 @@ import java.util.stream.Collectors;
  * 新增券类型 = 新增 Strategy Bean，工厂自动注册。
  */
 @Component
-@RequiredArgsConstructor
 public class CouponStrategyFactory {
 
     private final Map<String, CouponStrategy> strategyMap;

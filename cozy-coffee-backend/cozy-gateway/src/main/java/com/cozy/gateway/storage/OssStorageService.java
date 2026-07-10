@@ -11,6 +11,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -20,8 +22,18 @@ public class OssStorageService implements StorageService {
     private final StorageProperties properties;
     private final OSS ossClient;
 
+    private static final List<String> ALLOWED_TYPES = Arrays.asList(
+            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp");
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
+
     @Override
     public String upload(MultipartFile file, String subdir) {
+        if (file == null || file.isEmpty()) throw new StorageException("请选择要上传的文件");
+        if (file.getSize() > MAX_FILE_SIZE) throw new StorageException("文件大小不能超过5MB");
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_TYPES.contains(contentType.toLowerCase()))
+            throw new StorageException("只支持 jpg/png/gif/webp 格式的图片");
+
         String key = buildKey(file, subdir);
         try {
             ObjectMetadata meta = new ObjectMetadata();

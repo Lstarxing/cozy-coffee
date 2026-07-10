@@ -3,10 +3,13 @@ package com.cozy.member.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.member.api.MemberService;
+import com.cozy.member.api.PointsMallService;
 import java.math.BigDecimal;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.member.dto.response.PointsTransactionDTO;
 import com.cozy.member.entity.MemberInfo;
+import com.cozy.order.api.OrderService;
+import com.cozy.user.api.UserService;
 import com.cozy.member.entity.PointsLot;
 import com.cozy.member.entity.PointsLotConsumption;
 import com.cozy.member.entity.PointsTransaction;
@@ -17,6 +20,7 @@ import com.cozy.member.mapper.PointsTransactionMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -55,14 +59,14 @@ public class MemberServiceImpl implements MemberService {
     private static final int DIAMOND_THRESHOLD = 4000; // 4000-8999 diamond
     private static final int BLACK_THRESHOLD = 9000; // 9000+ black
 
-    @org.apache.dubbo.config.annotation.DubboReference(check = false)
-    private com.cozy.user.api.UserService userService;
+    @DubboReference(check = false)
+    private UserService userService;
 
-    @org.apache.dubbo.config.annotation.DubboReference(check = false)
-    private com.cozy.member.api.PointsMallService pointsMallService;
+    @DubboReference(check = false)
+    private PointsMallService pointsMallService;
 
-    @org.apache.dubbo.config.annotation.DubboReference(check = false)
-    private com.cozy.order.api.OrderService orderService;
+    @DubboReference(check = false)
+    private OrderService orderService;
 
     @Override
     public MemberDTO getMemberByUserId(Long userId) {
@@ -93,7 +97,9 @@ public class MemberServiceImpl implements MemberService {
         MemberInfo info = memberInfoMapper.selectOne(wrapper);
 
         if (info == null) {
-            throw new RuntimeException("会员信息不存在，请联系客服");
+            log.info("会员信息不存在，自动创建: userId={}", userId);
+            createMember(userId);
+            info = memberInfoMapper.selectOne(wrapper);
         }
 
         MemberDTO dto = new MemberDTO();

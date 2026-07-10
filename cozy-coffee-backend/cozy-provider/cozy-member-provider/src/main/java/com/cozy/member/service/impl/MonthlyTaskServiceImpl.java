@@ -9,8 +9,10 @@ import com.cozy.member.entity.MonthlyTask;
 import com.cozy.member.entity.MonthlyTaskOrder;
 import com.cozy.member.mapper.MonthlyTaskMapper;
 import com.cozy.member.mapper.MonthlyTaskOrderMapper;
+import com.cozy.order.api.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -39,8 +41,8 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
     private final MonthlyTaskOrderMapper orderMapper;
     private final MemberService memberService;
 
-    @org.apache.dubbo.config.annotation.DubboReference(check = false)
-    private com.cozy.order.api.OrderService orderService;
+    @DubboReference(check = false)
+    private OrderService orderService;
 
     // v5.0: 挑战任务奖励积分（与前端展示一致）
     private static final int REWARD_ORDER = 40; // 打卡达人(4次下单)

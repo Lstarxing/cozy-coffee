@@ -1,97 +1,53 @@
 package com.cozy.gateway.controller;
 
-import com.cozy.common.context.UserContext;
 import com.cozy.common.result.Result;
-import com.cozy.user.api.UserService;
+import com.cozy.gateway.dto.ApplyInviteCodeRequest;
+import com.cozy.gateway.dto.InviteCodeValidationResult;
+import com.cozy.gateway.service.AuthService;
+import com.cozy.gateway.util.AuthUtil;
 import com.cozy.user.dto.request.LoginRequest;
 import com.cozy.user.dto.request.RegisterRequest;
 import com.cozy.user.dto.request.UpdateProfileRequest;
 import com.cozy.user.dto.response.UserDTO;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.dubbo.config.annotation.DubboReference;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.util.HashMap;
 import java.util.Map;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
-    @DubboReference(check = false, timeout = 3000, retries = 0)
-    private UserService userService;
+    private final AuthService authService;
 
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterRequest request) {
-        try {
-            userService.register(request);
-            return Result.success(null, "注册成功");
-        } catch (Exception e) {
-            log.error("注册失败", e);
-            return Result.fail(friendlyErrorMessage(e, "注册"));
-        }
+        authService.register(request);
+        return Result.success(null, "注册成功");
     }
 
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
-        try {
-            String token = userService.login(request);
-            Map<String, Object> data = new HashMap<>();
-            data.put("token", token);
-            return Result.success(data, "登录成功");
-        } catch (Exception e) {
-            log.error("登录失败", e);
-            return Result.fail(friendlyErrorMessage(e, "登录"));
-        }
+        return Result.success(authService.login(request), "登录成功");
     }
 
     @PostMapping("/logout")
     public Result<Void> logout(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        try {
-            if (authorization != null && authorization.startsWith("Bearer ")) {
-                String token = authorization.substring(7).trim();
-                userService.logout(token);
-            }
-            return Result.success(null, "退出成功");
-        } catch (Exception e) {
-            log.error("退出失败", e);
-            return Result.fail("退出失败，请稍后重试");
-        }
+        authService.logout(authorization);
+        return Result.success(null, "退出成功");
     }
 
     @GetMapping("/userinfo")
     public Result<UserDTO> getUserInfo() {
-        try {
-            Long userId = UserContext.getUserIdOrNull();
-            if (userId == null) {
-                return Result.fail("用户未登录");
-            }
-            UserDTO userDTO = userService.getUserById(userId);
-            if (userDTO == null) {
-                return Result.fail("用户不存在");
-            }
-            return Result.success(userDTO);
-        } catch (Exception e) {
-            log.error("获取用户信息失败", e);
-            return Result.fail(friendlyErrorMessage(e, "获取用户信息"));
-        }
+        return Result.success(authService.getUserInfo(AuthUtil.requireUserId()));
     }
 
     @PutMapping("/profile")
     public Result<Void> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
-        try {
-            Long userId = UserContext.getUserIdOrNull();
-            if (userId == null) {
-                return Result.fail("用户未登录");
-            }
-            userService.updateProfile(userId, request);
-            return Result.success(null, "更新成功");
-        } catch (Exception e) {
-            log.error("更新资料失败", e);
-            return Result.fail(friendlyErrorMessage(e, "更新资料"));
-        }
+        authService.updateProfile(AuthUtil.requireUserId(), request);
+        return Result.success(null, "更新成功");
     }
 
     @PostMapping("/update-profile")
@@ -104,108 +60,14 @@ public class AuthController {
         return Result.success("Gateway is running!");
     }
 
-    /**
-     * 转换异常为友好的错误信息
-     */
-    private String friendlyErrorMessage(Exception e, String operation) {
-        String msg = e.getMessage();
-        if (msg == null) {
-            return operation + "失败，请稍后重试";
-        }
-
-        // 处理常见数据库异常
-        if (msg.contains("Duplicate entry") || msg.contains("账号已存在")) {
-            if (msg.contains("uk_phone") || msg.contains("phone")) {
-                return "该手机号已被其他账号绑定";
-            }
-            if (msg.contains("uk_email") || msg.contains("email")) {
-                return "该邮箱已被其他账号绑定";
-            }
-            return "该账号信息已存在，请核对后重试";
-        }
-        if (msg.contains("Connection refused")
-            || msg.contains("timeout")
-            || msg.contains("No provider")
-            || msg.contains("Channel")
-            || msg.contains("inactive")) {
-            return "服务繁忙，请稍后重试";
-        }
-
-        // 返回原始消息（如果是友好的RuntimeException）
-        return msg;
-    }
-
-    // ========== 邀请码功能 API ==========
-
-    /**
-     * 填写邀请码获取积分
-     */
     @PostMapping("/invite/apply")
     public Result<Void> applyInviteCode(@RequestBody ApplyInviteCodeRequest request) {
-        try {
-            Long userId = UserContext.getUserIdOrNull();
-            if (userId == null) {
-                return Result.fail("用户未登录");
-            }
-            userService.applyInviteCode(userId, request.getInviteCode());
-            return Result.success(null, "邀请码填写成功！");
-        } catch (Exception e) {
-            log.error("填写邀请码失败", e);
-            return Result.fail(friendlyErrorMessage(e, "填写邀请码"));
-        }
+        authService.applyInviteCode(AuthUtil.requireUserId(), request.getInviteCode());
+        return Result.success(null, "邀请码填写成功！");
     }
 
-    /**
-     * 验证邀请码是否有效
-     */
     @GetMapping("/invite/validate")
     public Result<InviteCodeValidationResult> validateInviteCode(@RequestParam String inviteCode) {
-        try {
-            UserDTO inviter = userService.getUserByInviteCode(inviteCode);
-            if (inviter == null) {
-                return Result.fail("邀请码无效");
-            }
-            InviteCodeValidationResult result = new InviteCodeValidationResult();
-            result.setValid(true);
-            result.setInviterNickname(inviter.getNickname());
-            return Result.success(result, "邀请码有效");
-        } catch (Exception e) {
-            log.error("验证邀请码失败", e);
-            return Result.fail(friendlyErrorMessage(e, "验证邀请码"));
-        }
-    }
-
-    // 请求/响应类
-    public static class ApplyInviteCodeRequest {
-        private String inviteCode;
-
-        public String getInviteCode() {
-            return inviteCode;
-        }
-
-        public void setInviteCode(String inviteCode) {
-            this.inviteCode = inviteCode;
-        }
-    }
-
-    public static class InviteCodeValidationResult {
-        private boolean valid;
-        private String inviterNickname;
-
-        public boolean isValid() {
-            return valid;
-        }
-
-        public void setValid(boolean valid) {
-            this.valid = valid;
-        }
-
-        public String getInviterNickname() {
-            return inviterNickname;
-        }
-
-        public void setInviterNickname(String inviterNickname) {
-            this.inviterNickname = inviterNickname;
-        }
+        return Result.success(authService.validateInviteCode(inviteCode), "邀请码有效");
     }
 }

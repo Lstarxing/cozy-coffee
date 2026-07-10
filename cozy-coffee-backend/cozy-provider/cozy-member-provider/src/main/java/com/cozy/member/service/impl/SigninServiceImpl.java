@@ -2,6 +2,7 @@ package com.cozy.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
+import com.cozy.member.api.PointsMallService;
 import com.cozy.member.api.SigninService;
 import com.cozy.member.dto.response.SigninResultDTO;
 import com.cozy.member.entity.MemberInfo;
@@ -14,6 +15,7 @@ import com.cozy.member.mapper.SigninRecordMapper;
 import com.cozy.member.mapper.PointsTransactionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,8 +49,8 @@ public class SigninServiceImpl implements SigninService {
     private final StringRedisTemplate stringRedisTemplate;
 
     // v5.0: 通过 RPC 调用 PointsMallService 发放7日连签券
-    @org.apache.dubbo.config.annotation.DubboReference(check = false, timeout = 2000, retries = 0)
-    private com.cozy.member.api.PointsMallService pointsMallService;
+    @DubboReference(check = false, timeout = 2000, retries = 0)
+    private PointsMallService pointsMallService;
 
     @Override
     @Transactional

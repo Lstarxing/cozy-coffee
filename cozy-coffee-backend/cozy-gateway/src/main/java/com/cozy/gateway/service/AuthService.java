@@ -1,0 +1,68 @@
+package com.cozy.gateway.service;
+
+import com.cozy.gateway.dto.InviteCodeValidationResult;
+import com.cozy.gateway.exception.NotFoundException;
+import com.cozy.user.api.UserService;
+import com.cozy.user.dto.request.LoginRequest;
+import com.cozy.user.dto.request.RegisterRequest;
+import com.cozy.user.dto.request.UpdateProfileRequest;
+import com.cozy.user.dto.response.UserDTO;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.dubbo.config.annotation.DubboReference;
+import org.springframework.stereotype.Service;
+
+import java.util.Map;
+
+/**
+ * 认证编排服务。
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+
+    @DubboReference(check = false, timeout = 3000, retries = 0)
+    private final UserService userService;
+
+    public Map<String, Object> login(LoginRequest request) {
+        return Map.of("token", userService.login(request));
+    }
+
+    public void register(RegisterRequest request) {
+        userService.register(request);
+    }
+
+    public void logout(String authorization) {
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            userService.logout(authorization.substring(7).trim());
+        }
+    }
+
+    public UserDTO getUserInfo(Long userId) {
+        UserDTO user = userService.getUserById(userId);
+        if (user == null) {
+            throw new NotFoundException("用户不存在");
+        }
+        return user;
+    }
+
+    public void updateProfile(Long userId, UpdateProfileRequest request) {
+        userService.updateProfile(userId, request);
+    }
+
+    public void applyInviteCode(Long userId, String inviteCode) {
+        userService.applyInviteCode(userId, inviteCode);
+    }
+
+    public InviteCodeValidationResult validateInviteCode(String inviteCode) {
+        UserDTO inviter = userService.getUserByInviteCode(inviteCode);
+        if (inviter == null) {
+            throw new NotFoundException("邀请码无效");
+        }
+        InviteCodeValidationResult result = new InviteCodeValidationResult();
+        result.setValid(true);
+        result.setInviterNickname(inviter.getNickname());
+        return result;
+    }
+}
