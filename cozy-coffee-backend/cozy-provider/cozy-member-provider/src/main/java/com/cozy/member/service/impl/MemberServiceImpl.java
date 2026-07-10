@@ -785,16 +785,26 @@ public class MemberServiceImpl implements MemberService {
     }
 
     private void grantOneOffPoints(Long userId, int points, String uniqueSourceIdStr, String desc) {
-        // 利用 sourceId 的唯一性进行防重 (Hash String to Long)
-        long sourceId = Math.abs((long) uniqueSourceIdStr.hashCode());
-        // 检查流水
+        // 使用 SHA-256 截取 8 字节生成稳定的正 long，避免 String.hashCode() 碰撞
+        long sourceId;
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(uniqueSourceIdStr.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            sourceId = 0;
+            for (int i = 0; i < 8; i++) {
+                sourceId = (sourceId << 8) | (hash[i] & 0xFF);
+            }
+            sourceId = Math.abs(sourceId);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
+        }
+
+        // 通过 sourceType + sourceId 进行幂等检查
         LambdaQueryWrapper<PointsTransaction> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PointsTransaction::getUserId, userId)
                 .eq(PointsTransaction::getSourceType, "upgrade_reward")
-                .eq(PointsTransaction::getDescription, desc); // 稍微弱一点的防重，最好结合 sourceId 如果表支持
+                .eq(PointsTransaction::getSourceId, sourceId);
 
-        // 由于 PointsTransaction 表设计可能没有 sourceId 字段或者不一定是这个用途
-        // 我们通过查询类似记录来防重
         if (transactionMapper.selectCount(wrapper) == 0) {
             addPointsWithLot(userId, points, "upgrade_reward", sourceId, desc);
         }
