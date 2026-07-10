@@ -38,7 +38,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
@@ -1387,8 +1386,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private String generateOrderNo() {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        int random = new Random().nextInt(9000) + 1000;
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        int random = ThreadLocalRandom.current().nextInt(1000, 10000);
         return "CF" + timestamp + random;
     }
 
