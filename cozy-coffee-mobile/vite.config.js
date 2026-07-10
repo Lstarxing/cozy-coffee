@@ -23,5 +23,16 @@ export default defineConfig({
                 secure: false
             }
         }
+    },
+    build: {
+        // H5 端拆分 vendor chunk，优化首屏加载
+        // 小程序端（mp-weixin）走自己的分包机制，此配置不影响
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    vendor: ['vue', 'pinia']
+                }
+            }
+        }
     }
 })
