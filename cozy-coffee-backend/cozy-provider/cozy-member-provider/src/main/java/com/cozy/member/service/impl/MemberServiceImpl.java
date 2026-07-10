@@ -25,7 +25,9 @@ import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -68,6 +70,8 @@ public class MemberServiceImpl implements MemberService {
 
     @DubboReference(check = false)
     private OrderService orderService;
+
+    private final PlatformTransactionManager transactionManager;
 
     @Override
     public MemberDTO getMemberByUserId(Long userId) {
@@ -371,18 +375,25 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
-    @Transactional
     public void fixPointsConsistency(Long userId) {
+        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
         if (userId == null) {
-            // 全局修复：寻找不一致的用户
+            // 全局修复：每个用户独立事务，单个失败不影响其他用户
             List<Long> inconsistentUserIds = memberInfoMapper.findInconsistentUserIds();
             log.info("开始全局一致性修复，预计用户数: {}", inconsistentUserIds.size());
             for (Long uid : inconsistentUserIds) {
-                fixPointsConsistency(uid);
+                try {
+                    txTemplate.executeWithoutResult(status -> doRepairUserPoints(uid));
+                } catch (Exception e) {
+                    log.error("修复用户 {} 积分失败，跳过: {}", uid, e.getMessage());
+                }
             }
             return;
         }
+        txTemplate.executeWithoutResult(status -> doRepairUserPoints(userId));
+    }
 
+    private void doRepairUserPoints(Long userId) {
         MemberInfo member = memberInfoMapper.selectByUserIdForUpdate(userId);
         if (member == null)
             return;

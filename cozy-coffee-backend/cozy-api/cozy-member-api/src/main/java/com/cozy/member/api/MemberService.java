@@ -81,7 +81,7 @@ public interface MemberService {
 
     /**
      * 修复用户积分一致性故障（方案 B：补齐或扣减 Lot 使其 SUM 等于 current_points）
-     * 
+     *
      * @param userId 用户ID（若为 null 则修复所有不一致用户）
      */
     void fixPointsConsistency(Long userId);
