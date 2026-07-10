@@ -1,14 +1,18 @@
 package com.cozy.gateway.exception;
 
 import com.cozy.common.result.Result;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.rpc.RpcException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.stream.Collectors;
 
 /**
  * 全局异常处理器（Phase 7 M7）。
@@ -17,6 +21,28 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /** JSR-303 @RequestBody 校验失败 */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<?> handleValidation(MethodArgumentNotValidException e) {
+        String errors = e.getBindingResult().getFieldErrors().stream()
+                .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+                .collect(Collectors.joining("; "));
+        log.warn("参数校验失败: {}", errors);
+        return Result.fail(errors);
+    }
+
+    /** JSR-303 @RequestParam / @PathVariable 校验失败 */
+    @ExceptionHandler(ConstraintViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<?> handleConstraintViolation(ConstraintViolationException e) {
+        String errors = e.getConstraintViolations().stream()
+                .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
+                .collect(Collectors.joining("; "));
+        log.warn("参数约束违反: {}", errors);
+        return Result.fail(errors);
+    }
 
     @ExceptionHandler(UnauthorizedException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)

@@ -89,6 +89,13 @@
             <artifactId>jaxb-runtime</artifactId>
             <version>2.3.9</version>
         </dependency>
+
+        <!-- 测试：Spring Boot Test + MockMvc -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
