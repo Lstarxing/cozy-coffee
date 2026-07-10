@@ -1,32 +1,17 @@
 package com.cozy.gateway.dto;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+
+@Data
 public class AddPointsRequest {
 
+    @Min(value = 1, message = "积分数量必须大于0")
     private int points;
+
+    @NotBlank(message = "积分来源类型不能为空")
     private String sourceType;
+
     private String description;
-
-    public int getPoints() {
-        return points;
-    }
-
-    public void setPoints(int points) {
-        this.points = points;
-    }
-
-    public String getSourceType() {
-        return sourceType;
-    }
-
-    public void setSourceType(String sourceType) {
-        this.sourceType = sourceType;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
 }

@@ -61,7 +61,7 @@ public class AuthController {
     }
 
     @PostMapping("/invite/apply")
-    public Result<Void> applyInviteCode(@RequestBody ApplyInviteCodeRequest request) {
+    public Result<Void> applyInviteCode(@Valid @RequestBody ApplyInviteCodeRequest request) {
         authService.applyInviteCode(AuthUtil.requireUserId(), request.getInviteCode());
         return Result.success(null, "邀请码填写成功！");
     }

@@ -68,7 +68,7 @@ public class PointsMallController {
     }
 
     @PostMapping("/coupons/available")
-    public Result<List<UserCouponDTO>> listAvailableCoupons(@RequestBody AvailableCouponRequest request) {
+    public Result<List<UserCouponDTO>> listAvailableCoupons(@Valid @RequestBody AvailableCouponRequest request) {
         return Result.success(pointsMallService.getAvailableCoupons(AuthUtil.requireUserId(), request.getOrderAmount(), request.getItems()));
     }
 }

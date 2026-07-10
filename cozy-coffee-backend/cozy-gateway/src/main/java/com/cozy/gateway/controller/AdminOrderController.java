@@ -6,6 +6,7 @@ import com.cozy.gateway.service.AdminOrderCommandService;
 import com.cozy.order.api.OrderService;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.web.bind.annotation.*;
@@ -65,10 +66,10 @@ public class AdminOrderController {
     public Result<List<CoffeeProductDTO>> listCoffeeProducts() { return Result.success(orderService.listAllProducts()); }
 
     @PostMapping("/products/coffee")
-    public Result<CoffeeProductDTO> addCoffeeProduct(@RequestBody CoffeeProductDTO product) { return Result.success(orderService.addProduct(product)); }
+    public Result<CoffeeProductDTO> addCoffeeProduct(@Valid @RequestBody CoffeeProductDTO product) { return Result.success(orderService.addProduct(product)); }
 
     @PutMapping("/products/coffee/{productId}")
-    public Result<CoffeeProductDTO> updateCoffeeProduct(@PathVariable Long productId, @RequestBody CoffeeProductDTO product) { return Result.success(orderService.updateProduct(productId, product)); }
+    public Result<CoffeeProductDTO> updateCoffeeProduct(@PathVariable Long productId, @Valid @RequestBody CoffeeProductDTO product) { return Result.success(orderService.updateProduct(productId, product)); }
 
     @DeleteMapping("/products/coffee/{productId}")
     public Result<Void> deleteCoffeeProduct(@PathVariable Long productId) { orderService.deleteProduct(productId); return Result.success(null); }

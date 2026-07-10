@@ -10,6 +10,7 @@ import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.member.dto.response.MonthlyTaskDTO;
 import com.cozy.member.dto.response.PointsTransactionDTO;
 import com.cozy.member.dto.response.SigninResultDTO;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -60,7 +61,7 @@ public class MemberController {
     }
 
     @PostMapping("/points/add")
-    public Result<Void> addPoints(@RequestBody AddPointsRequest request) {
+    public Result<Void> addPoints(@Valid @RequestBody AddPointsRequest request) {
         memberService.addPoints(AuthUtil.requireUserId(), request.getPoints(), request.getSourceType(), request.getDescription());
         return Result.success(null, "积分添加成功");
     }

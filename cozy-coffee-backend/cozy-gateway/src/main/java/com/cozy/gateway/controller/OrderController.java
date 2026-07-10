@@ -7,6 +7,7 @@ import com.cozy.order.api.OrderService;
 import com.cozy.order.dto.request.CreateOrderRequest;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.web.bind.annotation.*;
@@ -34,7 +35,7 @@ public class OrderController {
     }
 
     @PostMapping("/create")
-    public Result<ShopOrderDTO> createOrder(@RequestBody CreateOrderRequest request) {
+    public Result<ShopOrderDTO> createOrder(@Valid @RequestBody CreateOrderRequest request) {
         ShopOrderDTO order = orderCoordinatorService.createOrder(AuthUtil.requireUserId(), request);
         return Result.success(order, "下单成功！获得 " + order.getPointsEarned() + " 积分");
     }

@@ -6,6 +6,7 @@ import com.cozy.gateway.service.AdminOrderCommandService;
 import com.cozy.member.api.PointsMallService;
 import com.cozy.member.dto.response.PointsOrderDTO;
 import com.cozy.member.dto.response.PointsProductDTO;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.web.bind.annotation.*;
@@ -27,10 +28,10 @@ public class AdminMallController {
     public Result<List<PointsProductDTO>> listPointsProducts() { return Result.success(pointsMallService.listAllProducts()); }
 
     @PostMapping("/products/points")
-    public Result<PointsProductDTO> addPointsProduct(@RequestBody PointsProductDTO product) { return Result.success(pointsMallService.addProduct(product)); }
+    public Result<PointsProductDTO> addPointsProduct(@Valid @RequestBody PointsProductDTO product) { return Result.success(pointsMallService.addProduct(product)); }
 
     @PutMapping("/products/points/{productId}")
-    public Result<PointsProductDTO> updatePointsProduct(@PathVariable Long productId, @RequestBody PointsProductDTO product) { return Result.success(pointsMallService.updateProduct(productId, product)); }
+    public Result<PointsProductDTO> updatePointsProduct(@PathVariable Long productId, @Valid @RequestBody PointsProductDTO product) { return Result.success(pointsMallService.updateProduct(productId, product)); }
 
     @DeleteMapping("/products/points/{productId}")
     public Result<Void> deletePointsProduct(@PathVariable Long productId) { pointsMallService.deleteProduct(productId); return Result.success(null); }
