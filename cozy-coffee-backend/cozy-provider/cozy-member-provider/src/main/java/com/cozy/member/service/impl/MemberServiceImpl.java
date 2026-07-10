@@ -681,13 +681,15 @@ public class MemberServiceImpl implements MemberService {
         if (userId == null) {
             throw new RuntimeException("用户ID不能为空");
         }
+        int safeLimit = Math.min(Math.max(limit, 1), 100);
 
         LambdaQueryWrapper<PointsTransaction> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PointsTransaction::getUserId, userId)
-                .orderByDesc(PointsTransaction::getCreatedAt)
-                .last("LIMIT " + Math.min(limit, 100));
+                .orderByDesc(PointsTransaction::getCreatedAt);
 
-        return transactionMapper.selectList(wrapper).stream()
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<PointsTransaction> page =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, safeLimit);
+        return transactionMapper.selectPage(page, wrapper).getRecords().stream()
                 .map(this::toTransactionDTO)
                 .collect(Collectors.toList());
     }
