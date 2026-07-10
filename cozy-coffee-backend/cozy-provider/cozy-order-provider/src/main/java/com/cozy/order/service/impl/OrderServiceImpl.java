@@ -39,12 +39,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 
 /**
@@ -55,14 +50,6 @@ import java.util.stream.Collectors;
 @DubboService
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
-
-    private static final String EMPTY_CACHE_MARKER = "__NULL__";
-    private static final Semaphore MENU_DB_REBUILD_GUARD = new Semaphore(4);
-    private static final LongAdder MENU_CACHE_HIT = new LongAdder();
-    private static final LongAdder MENU_CACHE_MISS = new LongAdder();
-    private static final LongAdder MENU_CACHE_EMPTY_HIT = new LongAdder();
-    private static final LongAdder MENU_DEGRADE_FAST_FAIL = new LongAdder();
-    private static final AtomicLong MENU_METRIC_SEQ = new AtomicLong();
 
     private final CoffeeProductMapper productMapper;
     private final ShopOrderMapper orderMapper;
@@ -90,17 +77,10 @@ public class OrderServiceImpl implements OrderService {
 
     private final com.cozy.order.mq.OutboxService outboxService;
 
-    // 菜单缓存 (L1 in-process + L2 Redis)
-    private volatile List<CoffeeProductDTO> cachedMenu = null;
-    private volatile long cachedMenuAt = 0;
-    private static final long L1_TTL_MS = TimeUnit.MINUTES.toMillis(10);
-
     @Value("${cozy.order.timeout-cancel.timeout-minutes:1}")
     private int orderTimeoutMinutes;
 
     private void invalidateMenuCache() {
-        this.cachedMenu = null;
-        this.cachedMenuAt = 0;
         try {
             redisTemplate.delete(RedisKeyConstants.ORDER_MENU_ACTIVE);
         } catch (Exception e) {
@@ -114,165 +94,6 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<CoffeeProductDTO> listCoffeeProducts() {
         return menuCacheService.getMenu();
-    }
-
-    // ====== 旧缓存逻辑（已迁移到 MenuCacheService，保留仅供参考）======
-    @Deprecated
-    private List<CoffeeProductDTO> listCoffeeProductsLegacy() {
-        // L1: in-process cache（10 分钟 TTL，到期自动失效绕开脏数据永存问题）
-        List<CoffeeProductDTO> l1 = this.cachedMenu;
-        if (l1 != null && System.currentTimeMillis() - this.cachedMenuAt < L1_TTL_MS) {
-            MENU_CACHE_HIT.increment();
-            logMenuCacheMetricsMaybe();
-            return l1;
-        }
-        // L1 过期或为空 → 清掉让后续流程重建
-        this.cachedMenu = null;
-        this.cachedMenuAt = 0;
-
-        // L2: Redis cache（共享缓存，TTL 5-8 分钟由写入方控制）
-        try {
-            Object cachedValue = redisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
-            if (EMPTY_CACHE_MARKER.equals(cachedValue)) {
-                this.cachedMenu = Collections.emptyList();
-                this.cachedMenuAt = System.currentTimeMillis();
-                MENU_CACHE_EMPTY_HIT.increment();
-                logMenuCacheMetricsMaybe();
-                return this.cachedMenu;
-            }
-            List<CoffeeProductDTO> redisCached = dtoConverter.convertToCoffeeProductList(cachedValue);
-            if (redisCached != null) {
-                this.cachedMenu = redisCached;
-                this.cachedMenuAt = System.currentTimeMillis();
-                MENU_CACHE_HIT.increment();
-                logMenuCacheMetricsMaybe();
-                return redisCached;
-            }
-        } catch (Exception e) {
-            log.warn("读取Redis菜单缓存失败，回退数据库查询", e);
-        }
-        MENU_CACHE_MISS.increment();
-
-        // DB 重建（带分布式锁防击穿）
-        String lockToken = UUID.randomUUID().toString();
-        boolean locked = tryAcquireRebuildLock(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken, 8);
-        if (!locked) {
-            try {
-                TimeUnit.MILLISECONDS.sleep(40L);
-                Object retryCache = redisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
-                if (EMPTY_CACHE_MARKER.equals(retryCache)) {
-                    this.cachedMenu = Collections.emptyList();
-                    this.cachedMenuAt = System.currentTimeMillis();
-                    MENU_CACHE_EMPTY_HIT.increment();
-                    logMenuCacheMetricsMaybe();
-                    return this.cachedMenu;
-                }
-                List<CoffeeProductDTO> redisCached = dtoConverter.convertToCoffeeProductList(retryCache);
-                if (redisCached != null) {
-                    this.cachedMenu = redisCached;
-                    this.cachedMenuAt = System.currentTimeMillis();
-                    MENU_CACHE_HIT.increment();
-                    logMenuCacheMetricsMaybe();
-                    return redisCached;
-                }
-            } catch (Exception e) {
-                log.warn("重建等待后读取Redis菜单缓存失败", e);
-            }
-        }
-
-        if (!acquireDbRebuildPermit()) {
-            MENU_DEGRADE_FAST_FAIL.increment();
-            logMenuCacheMetricsMaybe();
-            return Collections.emptyList();
-        }
-
-        try {
-            synchronized (this) {
-                if (this.cachedMenu != null)
-                    return this.cachedMenu;
-
-                LambdaQueryWrapper<CoffeeProduct> wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(CoffeeProduct::getStatus, "active")
-                        .orderByAsc(CoffeeProduct::getSortOrder);
-                List<CoffeeProductDTO> result = productMapper.selectList(wrapper).stream()
-                        .map(dtoConverter::toProductDTO)
-                        .collect(Collectors.toList());
-
-                this.cachedMenu = result;
-                this.cachedMenuAt = System.currentTimeMillis();
-                try {
-                    if (result.isEmpty()) {
-                        redisTemplate.opsForValue().set(
-                                RedisKeyConstants.ORDER_MENU_ACTIVE,
-                                EMPTY_CACHE_MARKER,
-                                60,
-                                TimeUnit.SECONDS);
-                    } else {
-                        long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
-                        redisTemplate.opsForValue().set(
-                                RedisKeyConstants.ORDER_MENU_ACTIVE,
-                                result,
-                                ttlMinutes,
-                                TimeUnit.MINUTES);
-                    }
-                } catch (Exception e) {
-                    log.warn("写入Redis菜单缓存失败", e);
-                }
-                log.info("菜单缓存已更新，共 {} 个商品", result.size());
-                logMenuCacheMetricsMaybe();
-                return result;
-            }
-        } finally {
-            MENU_DB_REBUILD_GUARD.release();
-            if (locked) {
-                releaseLockSafely(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken);
-            }
-        }
-    }
-
-    private boolean acquireDbRebuildPermit() {
-        try {
-            return MENU_DB_REBUILD_GUARD.tryAcquire(80, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return false;
-        }
-    }
-
-    private void logMenuCacheMetricsMaybe() {
-        long seq = MENU_METRIC_SEQ.incrementAndGet();
-        if (seq % 200 == 0) {
-            log.info("menu-cache-metrics: hit={}, miss={}, emptyHit={}, fastFail={}",
-                    MENU_CACHE_HIT.sum(),
-                    MENU_CACHE_MISS.sum(),
-                    MENU_CACHE_EMPTY_HIT.sum(),
-                    MENU_DEGRADE_FAST_FAIL.sum());
-        }
-    }
-
-    private boolean tryAcquireRebuildLock(String lockKey, String lockToken, int ttlSeconds) {
-        try {
-            Boolean lockOk = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, lockToken, ttlSeconds,
-                    TimeUnit.SECONDS);
-            return Boolean.TRUE.equals(lockOk);
-        } catch (Exception e) {
-            log.warn("获取Redis重建锁失败: key={}", lockKey, e);
-            return false;
-        }
-    }
-
-    private void releaseLockSafely(String lockKey, String lockToken) {
-        try {
-            // 若切换到 Redisson，可替换为 RLock.tryLock/unlock，省去Lua解锁与token校验逻辑。
-            String releaseScript = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
-                    "return redis.call('del', KEYS[1]) else return 0 end";
-            org.springframework.data.redis.core.script.DefaultRedisScript<Long> redisScript = new org.springframework.data.redis.core.script.DefaultRedisScript<>();
-            redisScript.setScriptText(releaseScript);
-            redisScript.setResultType(Long.class);
-            stringRedisTemplate.execute(redisScript, Collections.singletonList(lockKey), lockToken);
-        } catch (Exception e) {
-            log.warn("释放Redis重建锁失败: key={}", lockKey, e);
-        }
     }
 
     @Override

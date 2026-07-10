@@ -545,33 +545,6 @@ public class MemberServiceImpl implements MemberService {
                 userId, member.getExpTotal(), member.getMonthlySpent(), member.getMonthlyAccelerateRemaining());
     }
 
-    /**
-     * 更新月度消费统计并处理跨月重置
-     * 注意：此方法已废弃，逻辑已整合到 addExp 中
-     */
-    @Deprecated
-    private void updateMonthlyConsumption(MemberInfo member, BigDecimal amount) {
-        String currentMonth = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM").format(java.time.LocalDate.now());
-        BigDecimal currentSpent = member.getMonthlySpent() != null ? member.getMonthlySpent() : BigDecimal.ZERO;
-
-        if (!currentMonth.equals(member.getMonthlySpentMonth())) {
-            // 跨月重置
-            member.setMonthlySpent(amount);
-            member.setMonthlySpentMonth(currentMonth);
-        } else {
-            // 同月累加
-            member.setMonthlySpent(currentSpent.add(amount));
-        }
-
-        // 更新加速包剩余额度（上限 300）
-        BigDecimal cap = new BigDecimal("300");
-        member.setMonthlyAccelerateRemaining(cap.subtract(member.getMonthlySpent()).max(BigDecimal.ZERO));
-
-        memberInfoMapper.updateById(member);
-        log.info("月度消费更新: userId={}, month={}, spent={}, remaining={}",
-                member.getUserId(), currentMonth, member.getMonthlySpent(), member.getMonthlyAccelerateRemaining());
-    }
-
     @Override
     @Transactional
     public boolean consumePointsFIFO(Long userId, int points, String consumeType, Long consumeId) {
