@@ -55,6 +55,17 @@ public class PickupCodeService {
      */
     @Transactional
     public String generatePickupCode(Long storeId, LocalDateTime orderTime) {
+        try {
+            return doGeneratePickupCode(storeId, orderTime);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            // 并发场景下两个线程同时 insert 同一 (storeId, businessDate) 导致唯一约束冲突
+            // 重试一次，此时记录已存在，selectForUpdate 会正常拿到
+            log.warn("Pickup code counter race detected, retrying: storeId={}", storeId);
+            return doGeneratePickupCode(storeId, orderTime);
+        }
+    }
+
+    private String doGeneratePickupCode(Long storeId, LocalDateTime orderTime) {
         LocalDate businessDate = calculateBusinessDate(orderTime);
 
         // 1. 获取或创建计数器（加锁）
