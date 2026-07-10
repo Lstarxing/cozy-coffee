@@ -30,9 +30,10 @@ export const getRecommendProducts = () => {
 }
 
 // 获取轮播图
-// 注意: 后端可能没有移动端专用的 Banner 接口，需要后端补充或使用静态数据
+// TODO(backend): 后端尚未提供 /order/banners 接口，目前返回空数组。
+// 前端 index.vue 会 fallback 到 defaultBanners，不会影响用户体验。
+// 后端补充接口后，将 Promise.resolve 改为 return get('/order/banners')。
 export const getBanners = () => {
-    // 暂时返回 Promise 模拟空数据，待后端补充接口
     return Promise.resolve({ code: 200, data: [] })
 }
 
