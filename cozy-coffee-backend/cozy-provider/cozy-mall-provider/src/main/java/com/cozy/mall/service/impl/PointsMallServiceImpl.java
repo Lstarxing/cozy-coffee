@@ -489,6 +489,35 @@ public class PointsMallServiceImpl implements PointsMallService {
         }
     }
 
+    /**
+     * 恢复商品库存（加分布式锁防止并发取消导致库存错乱）
+     */
+    private void restoreProductStock(Long productId, int quantity) {
+        if (productId == null || quantity <= 0) {
+            return;
+        }
+        String lockKey = "cozy:lock:mall_stock:" + productId;
+        String lockToken = UUID.randomUUID().toString();
+        boolean locked = false;
+        try {
+            locked = tryAcquireRebuildLock(lockKey, lockToken, 10);
+            if (!locked) {
+                log.warn("获取库存恢复锁失败: productId={}", productId);
+                throw new RuntimeException("系统繁忙，请稍后重试");
+            }
+            PointsProduct product = productMapper.selectById(productId);
+            if (product != null) {
+                product.setStock(product.getStock() + quantity);
+                productMapper.updateById(product);
+                invalidateMallProductsCache();
+            }
+        } finally {
+            if (locked) {
+                releaseLockSafely(lockKey, lockToken);
+            }
+        }
+    }
+
     private void invalidateMallProductsCache() {
         try {
             redisTemplate.delete(RedisKeyConstants.MALL_PRODUCTS_ACTIVE);
@@ -558,13 +587,8 @@ public class PointsMallServiceImpl implements PointsMallService {
         order.setUpdatedAt(LocalDateTime.now());
         orderMapper.updateById(order);
 
-        // 恢复库存
-        PointsProduct product = productMapper.selectById(order.getProductId());
-        if (product != null) {
-            product.setStock(product.getStock() + order.getQuantity());
-            productMapper.updateById(product);
-            invalidateMallProductsCache();
-        }
+        // 恢复库存（加分布式锁，防止并发取消导致库存错乱）
+        restoreProductStock(order.getProductId(), order.getQuantity());
 
         // 跨服务调用：返还积分
         memberService.addPoints(userId, order.getPointsCost(), "refund",
