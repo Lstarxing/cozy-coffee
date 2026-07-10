@@ -1,7 +1,9 @@
 package com.cozy.common.config;
 
+import com.cozy.common.interceptor.AdminAuthInterceptor;
 import com.cozy.common.interceptor.JwtAuthInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -16,15 +18,23 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Autowired
     private JwtAuthInterceptor jwtAuthInterceptor;
 
+    @Autowired
+    private AdminAuthInterceptor adminAuthInterceptor;
+
+    @Value("${cozy.security.exclude-test-paths:false}")
+    private boolean excludeTestPaths;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(jwtAuthInterceptor)
-                .addPathPatterns("/api/**") // 拦截所有 API 请求
+                .addPathPatterns("/api/**")
                 .excludePathPatterns(
-                        "/api/auth/login", // 排除登录
-                        "/api/auth/register", // 排除注册
-                        "/api/auth/test", // 排除测试
-                        "/api/member/test" // 排除测试
+                        "/api/auth/login",
+                        "/api/auth/register",
+                        excludeTestPaths ? "/api/auth/test" : "",
+                        excludeTestPaths ? "/api/member/test" : ""
                 );
+        registry.addInterceptor(adminAuthInterceptor)
+                .addPathPatterns("/api/admin/**");
     }
 }
