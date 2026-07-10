@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 /**
@@ -12,9 +13,10 @@ import java.util.Date;
  */
 public class JwtUtil {
 
-    // 密钥（生产环境应从配置中心读取）
-    private static final String SECRET_KEY = "cozy-coffee-secret-key-for-jwt-token-generation-32bytes";
-    private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    // 密钥：从环境变量读取，开发环境使用 fallback
+    private static final String SECRET_KEY = System.getenv()
+            .getOrDefault("JWT_SECRET", "cozy-coffee-dev-secret-key-change-in-production-32bytes");
+    private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));
 
     // Token有效期：7天
     private static final long EXPIRATION_TIME = 7 * 24 * 60 * 60 * 1000;
