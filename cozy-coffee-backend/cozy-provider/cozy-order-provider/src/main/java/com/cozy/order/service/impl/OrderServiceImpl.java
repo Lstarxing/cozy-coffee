@@ -2,12 +2,23 @@ package com.cozy.order.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
+import com.cozy.common.mq.MqTags;
+import com.cozy.common.mq.MqTopics;
+import com.cozy.common.mq.OrderCancelledEvent;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.cozy.member.api.MemberService;
+import com.cozy.member.api.MonthlyTaskService;
+import com.cozy.member.api.PointsMallService;
+import com.cozy.member.dto.request.ItemCheckDTO;
+import com.cozy.member.dto.response.CouponUsageResult;
+import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.order.api.OrderService;
 import com.cozy.order.dto.request.CreateOrderRequest;
 import com.cozy.order.dto.request.OrderItemRequest;
 import com.cozy.order.dto.response.CoffeeProductDTO;
+import com.cozy.order.dto.response.MonthlyStatsDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
 import com.cozy.order.dto.response.ShopOrderItemDTO;
 import com.cozy.order.entity.CoffeeProduct;
@@ -16,8 +27,10 @@ import com.cozy.order.entity.ShopOrderItem;
 import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.mapper.ShopOrderMapper;
 import com.cozy.order.mapper.ShopOrderItemMapper;
+import com.cozy.order.mq.OutboxService;
 import com.cozy.order.service.PickupCodeService;
 import com.cozy.order.service.ProductSkuValidationService;
+import com.cozy.user.api.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -36,6 +49,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -67,15 +81,15 @@ public class OrderServiceImpl implements OrderService {
     private MemberService memberService;
 
     @DubboReference(check = false)
-    private com.cozy.member.api.PointsMallService pointsMallService;
+    private PointsMallService pointsMallService;
 
     @DubboReference(check = false)
-    private com.cozy.member.api.MonthlyTaskService monthlyTaskService;
+    private MonthlyTaskService monthlyTaskService;
 
     @DubboReference(check = false)
-    private com.cozy.user.api.UserService userService; // v5.0: 用于首单邀请奖励发放
+    private UserService userService; // v5.0: 用于首单邀请奖励发放
 
-    private final com.cozy.order.mq.OutboxService outboxService;
+    private final OutboxService outboxService;
 
     @Value("${cozy.order.timeout-cancel.timeout-minutes:1}")
     private int orderTimeoutMinutes;
@@ -135,7 +149,7 @@ public class OrderServiceImpl implements OrderService {
         int totalQuantity = 0;
         List<ShopOrderItem> orderItems = new ArrayList<>();
         // v5.0: 用于券核销的商品检查列表
-        List<com.cozy.member.dto.request.ItemCheckDTO> itemChecks = new ArrayList<>();
+        List<ItemCheckDTO> itemChecks = new ArrayList<>();
         StringBuilder itemsSummary = new StringBuilder();
 
         for (OrderItemRequest itemReq : itemRequests) {
@@ -181,11 +195,11 @@ public class OrderServiceImpl implements OrderService {
             // 2. 加料费用（如加浓缩 +5元）- 单独计算，不参与主券折扣
             if (itemReq.getAddonsJson() != null && !itemReq.getAddonsJson().trim().isEmpty()) {
                 try {
-                    com.fasterxml.jackson.databind.JsonNode addons = objectMapper.readTree(itemReq.getAddonsJson());
+                    JsonNode addons = objectMapper.readTree(itemReq.getAddonsJson());
 
                     BigDecimal addonsFee = BigDecimal.ZERO;
                     if (addons.isArray()) {
-                        for (com.fasterxml.jackson.databind.JsonNode addon : addons) {
+                        for (JsonNode addon : addons) {
                             if (addon.has("price")) {
                                 BigDecimal addonPrice = addon.get("price").decimalValue();
                                 addonsFee = addonsFee.add(addonPrice);
@@ -230,7 +244,7 @@ public class OrderServiceImpl implements OrderService {
             String modifiersJson = buildModifiersJson(itemReq);
             String cupSize = itemReq.getCupSize() != null ? itemReq.getCupSize() : "STANDARD";
             Boolean isNewProduct = product.getIsNewProduct() != null ? product.getIsNewProduct() : false;
-            itemChecks.add(new com.cozy.member.dto.request.ItemCheckDTO(
+            itemChecks.add(new ItemCheckDTO(
                     product.getId(), basePrice, product.getCategory(), qty, modifiersJson, cupSize, isNewProduct));
 
             // 摘要
@@ -299,7 +313,7 @@ public class OrderServiceImpl implements OrderService {
 
                 // v5.3.2: 主券只对基础商品金额（含杯型加价）打折，不包含加料费用
                 // 使用新方法获取券类型信息（传入 itemChecks 以支持精准核销）
-                com.cozy.member.dto.response.CouponUsageResult couponResult = pointsMallService
+                CouponUsageResult couponResult = pointsMallService
                         .useCouponWithResult(userId, couponCode.trim(), baseTotalAmount, itemChecks);
 
                 discountAmount = couponResult.getDiscountAmount();
@@ -311,13 +325,13 @@ public class OrderServiceImpl implements OrderService {
                 int freeAddonCount = couponResult.getFreeAddonCount();
                 if (freeAddonCount > 0 && addonsTotalAmount.compareTo(BigDecimal.ZERO) > 0) {
                     // 收集所有加料价格，找出最高的 N 个免除
-                    java.util.List<BigDecimal> addonPrices = new java.util.ArrayList<>();
+                    List<BigDecimal> addonPrices = new ArrayList<>();
                     for (ShopOrderItem item : orderItems) {
                         if (item.getAddonsJson() != null && !item.getAddonsJson().trim().isEmpty()) {
                             try {
-                                com.fasterxml.jackson.databind.JsonNode addons = objectMapper.readTree(item.getAddonsJson());
+                                JsonNode addons = objectMapper.readTree(item.getAddonsJson());
                                 if (addons.isArray()) {
-                                    for (com.fasterxml.jackson.databind.JsonNode addon : addons) {
+                                    for (JsonNode addon : addons) {
                                         if (addon.has("price")) {
                                             addonPrices.add(addon.get("price").decimalValue());
                                         }
@@ -363,7 +377,7 @@ public class OrderServiceImpl implements OrderService {
         String deliveryFeeWaivedReason = null;
         BigDecimal addonDiscount = BigDecimal.ZERO; // 商品附加券折扣（如加浓缩券）
         BigDecimal deliveryFeeDiscount = BigDecimal.ZERO; // 配送费折扣（如配送费券）
-        List<Long> addonCouponIds = new java.util.ArrayList<>();
+        List<Long> addonCouponIds = new ArrayList<>();
 
         // 仅外卖订单有配送费
         if ("DELIVERY".equals(request.getDiningMethod())) {
@@ -408,7 +422,7 @@ public class OrderServiceImpl implements OrderService {
                             userId, addonCode.trim(), request.getDiningMethod(), itemChecks.size());
 
                     // v5.3: 统一传入商品总额和商品列表，由 PointsMallService 根据券类型自动判断
-                    com.cozy.member.dto.response.CouponUsageResult addonResult = pointsMallService
+                    CouponUsageResult addonResult = pointsMallService
                             .useCouponWithResult(userId, addonCode.trim(), totalAmount, itemChecks);
 
                     if (addonResult != null && addonResult.getDiscountAmount() != null) {
@@ -495,7 +509,7 @@ public class OrderServiceImpl implements OrderService {
             estimatedExp = payAmount.setScale(0, RoundingMode.HALF_UP).intValue();
             try {
                 // 获取会员详细信息（包含 EXP 和月度消费统计）
-                com.cozy.member.dto.response.MemberDTO member = memberService.getMemberByUserId(userId);
+                MemberDTO member = memberService.getMemberByUserId(userId);
                 int currentExp = (member != null && member.getExpTotal() != null) ? member.getExpTotal() : 0;
                 // v5.3.5: 修复黑卡门槛，与 MemberServiceImpl 保持一致 (9000 EXP)
                 final int BLACK_THRESHOLD = 9000;
@@ -652,13 +666,13 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.groupingBy(ShopOrderItem::getOrderId));
 
         // Optimization 2: Pre-fetch member info (once)
-        com.cozy.member.dto.response.MemberDTO memberInfo = null;
+        MemberDTO memberInfo = null;
         try {
             memberInfo = memberService.getMemberByUserId(userId);
         } catch (Exception e) {
             // ignore
         }
-        final com.cozy.member.dto.response.MemberDTO finalMember = memberInfo;
+        final MemberDTO finalMember = memberInfo;
 
         return orders.stream()
                 .map(o -> toOrderDTO(o, itemsMap.get(o.getId()), finalMember))
@@ -722,7 +736,7 @@ public class OrderServiceImpl implements OrderService {
                 .filter(id -> id != null)
                 .collect(Collectors.toSet());
 
-        Map<Long, com.cozy.member.dto.response.MemberDTO> memberMap = new java.util.HashMap<>();
+        Map<Long, MemberDTO> memberMap = new HashMap<>();
         try {
             if (!userIds.isEmpty()) {
                 memberMap = memberService.getMembersByUserIds(userIds);
@@ -732,7 +746,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // 使用 final 引用供 lambda 使用
-        final Map<Long, com.cozy.member.dto.response.MemberDTO> finalMemberMap = memberMap;
+        final Map<Long, MemberDTO> finalMemberMap = memberMap;
 
         return orders.stream()
                 .map(o -> toOrderDTOWithMember(o, itemsMap.get(o.getId()), finalMemberMap.get(o.getUserId())))
@@ -763,7 +777,7 @@ public class OrderServiceImpl implements OrderService {
         wrapper.select("status", "count(*) as cnt").groupBy("status");
         List<Map<String, Object>> list = orderMapper.selectMaps(wrapper);
 
-        Map<String, Long> result = new java.util.HashMap<>();
+        Map<String, Long> result = new HashMap<>();
         for (Map<String, Object> map : list) {
             String status = (String) map.get("status");
             Number cnt = (Number) map.get("cnt");
@@ -973,14 +987,14 @@ public class OrderServiceImpl implements OrderService {
      */
     private void publishCouponRollbackEvent(ShopOrder order) {
         Long mainCouponId = order.getAppliedCouponId();
-        java.util.List<Long> addonCouponIds = parseAddonCouponIds(order);
+        List<Long> addonCouponIds = parseAddonCouponIds(order);
 
         if (mainCouponId == null && addonCouponIds.isEmpty()) {
             log.info("订单未使用优惠券，无需回滚: orderId={}", order.getId());
             return;
         }
 
-        com.cozy.common.mq.OrderCancelledEvent event = com.cozy.common.mq.OrderCancelledEvent.builder()
+        OrderCancelledEvent event = OrderCancelledEvent.builder()
                 .orderId(order.getId())
                 .userId(order.getUserId())
                 .appliedCouponId(mainCouponId)
@@ -989,8 +1003,8 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         outboxService.publish(
-                com.cozy.common.mq.MqTopics.ORDER_EVENTS,
-                com.cozy.common.mq.MqTags.ORDER_CANCELLED,
+                MqTopics.ORDER_EVENTS,
+                MqTags.ORDER_CANCELLED,
                 "coupon_rollback",
                 order.getId(),
                 event);
@@ -998,18 +1012,18 @@ public class OrderServiceImpl implements OrderService {
                 order.getId(), mainCouponId, addonCouponIds.size());
     }
 
-    private java.util.List<Long> parseAddonCouponIds(ShopOrder order) {
+    private List<Long> parseAddonCouponIds(ShopOrder order) {
         String json = order.getAppliedAddonCouponIds();
         if (json == null || json.isEmpty()) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
         }
         try {
             return objectMapper.readValue(json,
-                    new com.fasterxml.jackson.core.type.TypeReference<java.util.List<Long>>() {
+                    new TypeReference<List<Long>>() {
                     });
         } catch (Exception e) {
             log.warn("解析附加券ID失败: orderId={}, error={}", order.getId(), e.getMessage());
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
         }
     }
 
@@ -1217,7 +1231,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private ShopOrderDTO toOrderDTO(ShopOrder entity, List<ShopOrderItem> items,
-            com.cozy.member.dto.response.MemberDTO preLoadedMember) {
+            MemberDTO preLoadedMember) {
         ShopOrderDTO dto = new ShopOrderDTO();
         dto.setId(entity.getId());
         dto.setOrderNo(entity.getOrderNo());
@@ -1247,7 +1261,7 @@ public class OrderServiceImpl implements OrderService {
         // 用户详细信息 (Nickname, Phone) - Fix for Admin List
         try {
             if (entity.getUserId() != null) {
-                com.cozy.member.dto.response.MemberDTO member = preLoadedMember;
+                MemberDTO member = preLoadedMember;
 
                 // Only fetch if not provided
                 if (member == null) {
@@ -1314,7 +1328,7 @@ public class OrderServiceImpl implements OrderService {
      * 仅 member 参数语义不同：null=自行查询, 非null=使用预加载值
      */
     private ShopOrderDTO toOrderDTOWithMember(ShopOrder entity, List<ShopOrderItem> items,
-            com.cozy.member.dto.response.MemberDTO member) {
+            MemberDTO member) {
         return toOrderDTO(entity, items, member);
     }
 
@@ -1374,8 +1388,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public com.cozy.order.dto.response.MonthlyStatsDTO getMonthlyStats(Long userId) {
-        com.cozy.order.dto.response.MonthlyStatsDTO stats = new com.cozy.order.dto.response.MonthlyStatsDTO();
+    public MonthlyStatsDTO getMonthlyStats(Long userId) {
+        MonthlyStatsDTO stats = new MonthlyStatsDTO();
         if (userId == null)
             return stats;
 

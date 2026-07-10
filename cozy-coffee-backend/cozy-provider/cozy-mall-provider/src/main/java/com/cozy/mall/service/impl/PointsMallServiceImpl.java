@@ -17,11 +17,14 @@ import com.cozy.mall.entity.MonthlyRedemption;
 import com.cozy.member.api.AddressService;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.api.PointsMallService;
+import com.cozy.member.dto.request.ItemCheckDTO;
 import com.cozy.member.dto.request.RedeemRequest;
 import com.cozy.member.dto.response.AddressDTO;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.member.dto.response.PointsOrderDTO;
 import com.cozy.member.dto.response.PointsProductDTO;
+import com.cozy.order.api.OrderService;
+import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.user.api.UserService;
 import com.cozy.user.dto.response.UserDTO;
 import lombok.RequiredArgsConstructor;
@@ -92,7 +95,7 @@ public class PointsMallServiceImpl implements PointsMallService {
     
     // 跨服务调用：订单服务（查询咖啡商品信息）
     @DubboReference(check = false)
-    private com.cozy.order.api.OrderService orderService;
+    private OrderService orderService;
 
     // 跨服务调用：用户服务（获取用户信息）
     @DubboReference(check = false)
@@ -642,7 +645,7 @@ public class PointsMallServiceImpl implements PointsMallService {
 
     @Override
     public List<UserCouponDTO> getAvailableCoupons(Long userId, BigDecimal orderAmount,
-            List<com.cozy.member.dto.request.ItemCheckDTO> items) {
+            List<ItemCheckDTO> items) {
         log.info("获取可用券(含商品校验): userId={}, orderAmount={}, itemsCount={}",
                 userId, orderAmount, items != null ? items.size() : 0);
         if (userId == null) {
@@ -679,7 +682,7 @@ public class PointsMallServiceImpl implements PointsMallService {
             if (ruleJson != null && ruleJson.contains("\"scope\":\"DRINK_ONLY\"")) {
                 boolean hasDrink = false;
                 if (items != null) {
-                    for (com.cozy.member.dto.request.ItemCheckDTO item : items) {
+                    for (ItemCheckDTO item : items) {
                         if (isDrink(item.getCategory())) {
                             hasDrink = true;
                             break;
@@ -699,7 +702,7 @@ public class PointsMallServiceImpl implements PointsMallService {
             if (ruleJson != null && ruleJson.contains("\"scope\":\"CAKE_ONLY\"")) {
                 boolean hasBakery = false;
                 if (items != null) {
-                    for (com.cozy.member.dto.request.ItemCheckDTO item : items) {
+                    for (ItemCheckDTO item : items) {
                         if (isBakery(item.getCategory())) {
                             hasBakery = true;
                             break;
@@ -721,7 +724,7 @@ public class PointsMallServiceImpl implements PointsMallService {
                 if (linkedProductId > 0) {
                     boolean foundProduct = false;
                     if (items != null) {
-                        for (com.cozy.member.dto.request.ItemCheckDTO item : items) {
+                        for (ItemCheckDTO item : items) {
                             if (item.getProductId() != null && item.getProductId() == linkedProductId) {
                                 foundProduct = true;
                                 break;
@@ -750,14 +753,14 @@ public class PointsMallServiceImpl implements PointsMallService {
     public BigDecimal useCoupon(Long userId, String couponCode, BigDecimal orderAmount) {
         // 对于旧调用，不传商品ID列表
         CouponUsageResult result = useCouponWithResult(userId, couponCode, orderAmount,
-                (List<com.cozy.member.dto.request.ItemCheckDTO>) null);
+                (List<ItemCheckDTO>) null);
         return result.getDiscountAmount();
     }
 
     @Override
     @Transactional
     public CouponUsageResult useCouponWithResult(Long userId, String couponCode, BigDecimal orderAmount,
-            List<com.cozy.member.dto.request.ItemCheckDTO> items) {
+            List<ItemCheckDTO> items) {
         log.info("使用券: userId={}, couponCode={}, orderAmount={}", userId, couponCode, orderAmount);
 
         if (userId == null || couponCode == null || couponCode.isEmpty()) {
@@ -801,7 +804,7 @@ public class PointsMallServiceImpl implements PointsMallService {
     }
 
     private BigDecimal calculateCouponDiscount(UserCoupon coupon, BigDecimal orderAmount,
-            List<com.cozy.member.dto.request.ItemCheckDTO> items) {
+            List<ItemCheckDTO> items) {
         if (orderAmount == null)
             orderAmount = BigDecimal.ZERO;
 
@@ -854,7 +857,7 @@ public class PointsMallServiceImpl implements PointsMallService {
             if (linkedProductId > 0) {
                 // 指定商品兑换券：仅限标准杯
                 if (items != null) {
-                    for (com.cozy.member.dto.request.ItemCheckDTO item : items) {
+                    for (ItemCheckDTO item : items) {
                         if (item.getProductId() != null && item.getProductId() == linkedProductId) {
                             // v6.1: 指定商品兑换券仅限标准杯
                             String cupSize = item.getCupSize() != null ? item.getCupSize().toUpperCase() : "STANDARD";
@@ -864,7 +867,7 @@ public class PointsMallServiceImpl implements PointsMallService {
                             
                             // v6.1: 兑换券只抵扣标准杯基础价格，升杯和加料费用由用户额外支付
                             try {
-                                com.cozy.order.dto.response.CoffeeProductDTO product = orderService.getProduct(linkedProductId);
+                                CoffeeProductDTO product = orderService.getProduct(linkedProductId);
                                 if (product != null && product.getPrice() != null) {
                                     BigDecimal standardPrice = product.getPrice(); // 标准杯基础价格
                                     log.info("指定商品兑换券：productId={}, 标准杯价格={}, 实际商品价格={}", 
@@ -899,7 +902,7 @@ public class PointsMallServiceImpl implements PointsMallService {
                                        couponName.contains("甜品") ||
                                        couponName.contains("蛋糕");
                 
-                for (com.cozy.member.dto.request.ItemCheckDTO item : items) {
+                for (ItemCheckDTO item : items) {
                     if (isCakeCoupon) {
                         // 烘焙甜品免单券：仅匹配烘焙商品
                         if (!isBakery(item.getCategory())) {
@@ -1003,7 +1006,7 @@ public class PointsMallServiceImpl implements PointsMallService {
                 BigDecimal maxBakeryPrice = BigDecimal.ZERO;
 
                 if (items != null) {
-                    for (com.cozy.member.dto.request.ItemCheckDTO item : items) {
+                    for (ItemCheckDTO item : items) {
                         if (isBakery(item.getCategory())) {
                             if (item.getPrice().compareTo(maxBakeryPrice) > 0) {
                                 maxBakeryPrice = item.getPrice();
@@ -1025,7 +1028,7 @@ public class PointsMallServiceImpl implements PointsMallService {
                 BigDecimal drinkTotal = BigDecimal.ZERO;
 
                 if (items != null) {
-                    for (com.cozy.member.dto.request.ItemCheckDTO item : items) {
+                    for (ItemCheckDTO item : items) {
                         if (isDrink(item.getCategory())) {
                             int qty = item.getQuantity() != null ? item.getQuantity() : 1;
                             drinkTotal = drinkTotal.add(item.getPrice().multiply(BigDecimal.valueOf(qty)));
@@ -1081,7 +1084,7 @@ public class PointsMallServiceImpl implements PointsMallService {
             }
 
             List<BigDecimal> drinkPrices = new ArrayList<>();
-            for (com.cozy.member.dto.request.ItemCheckDTO item : items) {
+            for (ItemCheckDTO item : items) {
                 if (isDrink(item.getCategory())) {
                     int qty = item.getQuantity() != null ? item.getQuantity() : 1;
                     for (int i = 0; i < qty; i++) {
@@ -1109,7 +1112,7 @@ public class PointsMallServiceImpl implements PointsMallService {
             boolean hasExtraShot = false;
 
             if (items != null && !items.isEmpty()) {
-                for (com.cozy.member.dto.request.ItemCheckDTO item : items) {
+                for (ItemCheckDTO item : items) {
                     // 检查 modifiersJson 字段
                     String modifiers = item.getModifiersJson();
                     if (modifiers != null &&
@@ -1145,10 +1148,10 @@ public class PointsMallServiceImpl implements PointsMallService {
             }
             
             // 查找订单中价格最高的新品（智能选择最优惠方案）
-            com.cozy.member.dto.request.ItemCheckDTO highestNewProduct = null;
+            ItemCheckDTO highestNewProduct = null;
             BigDecimal highestPrice = BigDecimal.ZERO;
             
-            for (com.cozy.member.dto.request.ItemCheckDTO item : items) {
+            for (ItemCheckDTO item : items) {
                 if (Boolean.TRUE.equals(item.getIsNewProduct())) {
                     BigDecimal itemPrice = item.getPrice();
                     if (highestNewProduct == null || itemPrice.compareTo(highestPrice) > 0) {
@@ -1174,10 +1177,10 @@ public class PointsMallServiceImpl implements PointsMallService {
             }
             
             // 查找订单中价格最高的新品（智能选择最优惠方案）
-            com.cozy.member.dto.request.ItemCheckDTO highestNewProduct = null;
+            ItemCheckDTO highestNewProduct = null;
             BigDecimal highestPrice = BigDecimal.ZERO;
             
-            for (com.cozy.member.dto.request.ItemCheckDTO item : items) {
+            for (ItemCheckDTO item : items) {
                 if (Boolean.TRUE.equals(item.getIsNewProduct())) {
                     BigDecimal itemPrice = item.getPrice();
                     if (highestNewProduct == null || itemPrice.compareTo(highestPrice) > 0) {
@@ -1202,10 +1205,10 @@ public class PointsMallServiceImpl implements PointsMallService {
             }
             
             // 查找订单中价格最高的烘培甜品（智能选择最优惠方案）
-            com.cozy.member.dto.request.ItemCheckDTO highestBakeryProduct = null;
+            ItemCheckDTO highestBakeryProduct = null;
             BigDecimal highestPrice = BigDecimal.ZERO;
             
-            for (com.cozy.member.dto.request.ItemCheckDTO item : items) {
+            for (ItemCheckDTO item : items) {
                 if (isBakery(item.getCategory())) {
                     BigDecimal itemPrice = item.getPrice();
                     if (highestBakeryProduct == null || itemPrice.compareTo(highestPrice) > 0) {

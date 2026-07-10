@@ -1,5 +1,6 @@
 package com.cozy.member.api;
 
+import com.cozy.member.dto.request.ItemCheckDTO;
 import com.cozy.member.dto.request.RedeemRequest;
 import com.cozy.member.dto.response.CouponUsageResult;
 import com.cozy.member.dto.response.PointsOrderDTO;
@@ -58,7 +59,7 @@ public interface PointsMallService {
          * @return 可用券列表
          */
         List<UserCouponDTO> getAvailableCoupons(Long userId, BigDecimal orderAmount,
-                        List<com.cozy.member.dto.request.ItemCheckDTO> items);
+                        List<ItemCheckDTO> items);
 
         /**
          * 使用券（下单时核销）- 旧版兼容
@@ -81,7 +82,7 @@ public interface PointsMallService {
          * @return 券核销结果（包含折扣金额和券类型）
          */
         CouponUsageResult useCouponWithResult(Long userId, String couponCode, BigDecimal orderAmount,
-                        List<com.cozy.member.dto.request.ItemCheckDTO> items);
+                        List<ItemCheckDTO> items);
 
         // ==================== 管理端方法 ====================
 

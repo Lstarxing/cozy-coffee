@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.util.JwtUtil;
 import com.cozy.member.api.MemberService;
+import com.cozy.member.api.PointsMallService;
+import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.user.api.UserService;
 import com.cozy.user.dto.request.LoginRequest;
 import com.cozy.user.dto.request.RegisterRequest;
@@ -16,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
@@ -23,10 +26,13 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -48,7 +54,7 @@ public class UserServiceImpl implements UserService {
 
     // v5.0: 用于发放邀请奖励券
     @DubboReference(check = false, timeout = 60000)
-    private com.cozy.member.api.PointsMallService pointsMallService;
+    private PointsMallService pointsMallService;
 
     @Override
     @Transactional
@@ -118,7 +124,7 @@ public class UserServiceImpl implements UserService {
 
         try {
             userMapper.insert(user);
-        } catch (org.springframework.dao.DuplicateKeyException e) {
+        } catch (DuplicateKeyException e) {
             String msg = e.getMessage();
             if (msg.contains("uk_phone")) {
                 throw new RuntimeException("该手机号已被其他账号绑定");
@@ -136,7 +142,7 @@ public class UserServiceImpl implements UserService {
 
             // 更新当前用户的邀请人信息
             user.setInvitedBy(inviterId);
-            user.setInvitedAt(java.time.LocalDateTime.now());
+            user.setInvitedAt(LocalDateTime.now());
             user.setInviteRewardGranted(false); // 标记奖励待首单完成后发放
             userMapper.updateById(user);
 
@@ -399,7 +405,7 @@ public class UserServiceImpl implements UserService {
 
         // v4.2 生日设置逻辑
         if (request.getBirthday() != null) {
-            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now();
 
             // 检查是否允许修改
             if (user.getBirthdaySetAt() != null) {
@@ -414,7 +420,7 @@ public class UserServiceImpl implements UserService {
                 // 首次设置
             }
 
-            user.setBirthday(java.time.LocalDate.parse(request.getBirthday()));
+            user.setBirthday(LocalDate.parse(request.getBirthday()));
             user.setBirthdaySetAt(now);
             user.setNextBirthdayResetAt(now.plusYears(1));
             hasUpdate = true;
@@ -427,7 +433,7 @@ public class UserServiceImpl implements UserService {
         try {
             userMapper.updateById(user);
             stringRedisTemplate.delete(RedisKeyConstants.userProfileById(userId));
-        } catch (org.springframework.dao.DuplicateKeyException e) {
+        } catch (DuplicateKeyException e) {
             String msg = e.getMessage();
             if (msg.contains("uk_phone")) {
                 throw new RuntimeException("该手机号已被其他账号绑定");
@@ -513,7 +519,7 @@ public class UserServiceImpl implements UserService {
     private String generateInviteCode() {
         // 排除 0, O, 1, I, L 等容易混淆的字符
         String chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-        java.util.Random random = new java.util.Random();
+        Random random = new Random();
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 8; i++) {
             sb.append(chars.charAt(random.nextInt(chars.length())));
@@ -577,7 +583,7 @@ public class UserServiceImpl implements UserService {
 
         // 5. 更新当前用户的邀请人信息
         currentUser.setInvitedBy(inviter.getId());
-        currentUser.setInvitedAt(java.time.LocalDateTime.now());
+        currentUser.setInvitedAt(LocalDateTime.now());
         currentUser.setInviteRewardGranted(false); // v5.0: 标记奖励未发放，等待首单触发
         userMapper.updateById(currentUser);
 
@@ -599,15 +605,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public java.util.List<UserDTO> listAllUsers() {
+    public List<UserDTO> listAllUsers() {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.orderByDesc(User::getCreatedAt);
-        java.util.List<User> users = userMapper.selectList(wrapper);
+        List<User> users = userMapper.selectList(wrapper);
         return users.stream().map(user -> {
             UserDTO dto = toDTO(user);
             // 获取会员信息
             try {
-                com.cozy.member.dto.response.MemberDTO memberInfo = memberService.getMemberByUserId(user.getId());
+                MemberDTO memberInfo = memberService.getMemberByUserId(user.getId());
                 if (memberInfo != null) {
                     dto.setMemberLevel(memberInfo.getMemberLevel());
                     dto.setCurrentPoints(memberInfo.getCurrentPoints());
@@ -665,7 +671,7 @@ public class UserServiceImpl implements UserService {
 
         // 获取会员信息
         try {
-            com.cozy.member.dto.response.MemberDTO memberInfo = memberService.getMemberByUserId(userId);
+            MemberDTO memberInfo = memberService.getMemberByUserId(userId);
             if (memberInfo != null) {
                 dto.setMemberLevel(memberInfo.getMemberLevel());
                 dto.setCurrentPoints(memberInfo.getCurrentPoints());
@@ -693,7 +699,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public java.util.List<Long> findUsersByBirthday(int month, int day) {
+    public List<Long> findUsersByBirthday(int month, int day) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         // 使用MySQL函数提取月日
         wrapper.apply("MONTH(birthday) = {0} AND DAY(birthday) = {1}", month, day);

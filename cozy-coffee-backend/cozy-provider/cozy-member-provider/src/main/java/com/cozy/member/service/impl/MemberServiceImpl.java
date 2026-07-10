@@ -8,13 +8,16 @@ import java.math.BigDecimal;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.member.dto.response.PointsTransactionDTO;
 import com.cozy.member.entity.MemberInfo;
+import com.cozy.member.entity.MonthlyTask;
 import com.cozy.order.api.OrderService;
+import com.cozy.order.dto.response.MonthlyStatsDTO;
 import com.cozy.user.api.UserService;
 import com.cozy.user.dto.response.UserDTO;
 import com.cozy.member.entity.PointsLot;
 import com.cozy.member.entity.PointsLotConsumption;
 import com.cozy.member.entity.PointsTransaction;
 import com.cozy.member.mapper.MemberInfoMapper;
+import com.cozy.member.mapper.MonthlyTaskMapper;
 import com.cozy.member.mapper.PointsLotConsumptionMapper;
 import com.cozy.member.mapper.PointsLotMapper;
 import com.cozy.member.mapper.PointsTransactionMapper;
@@ -51,7 +54,7 @@ public class MemberServiceImpl implements MemberService {
     private final PointsTransactionMapper transactionMapper;
     private final PointsLotMapper pointsLotMapper;
     private final PointsLotConsumptionMapper consumptionMapper;
-    private final com.cozy.member.mapper.MonthlyTaskMapper monthlyTaskMapper;
+    private final MonthlyTaskMapper monthlyTaskMapper;
     private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
@@ -180,7 +183,7 @@ public class MemberServiceImpl implements MemberService {
         // v5.3: Populate Monthly Challenge Stats (兜底数据源)
         try {
             if (orderService != null) {
-                com.cozy.order.dto.response.MonthlyStatsDTO stats = orderService.getMonthlyStats(userId);
+                MonthlyStatsDTO stats = orderService.getMonthlyStats(userId);
                 if (stats != null) {
                     dto.setMonthlyOrderCount(stats.getOrderCount());
                     dto.setMorningOrderCount(stats.getMorningOrderCount());
@@ -196,10 +199,10 @@ public class MemberServiceImpl implements MemberService {
         try {
             if (monthlyTaskMapper != null) {
                 String month = java.time.YearMonth.now().toString();
-                LambdaQueryWrapper<com.cozy.member.entity.MonthlyTask> taskWrapper = new LambdaQueryWrapper<>();
-                taskWrapper.eq(com.cozy.member.entity.MonthlyTask::getUserId, userId)
-                        .eq(com.cozy.member.entity.MonthlyTask::getTaskMonth, month);
-                com.cozy.member.entity.MonthlyTask task = monthlyTaskMapper.selectOne(taskWrapper);
+                LambdaQueryWrapper<MonthlyTask> taskWrapper = new LambdaQueryWrapper<>();
+                taskWrapper.eq(MonthlyTask::getUserId, userId)
+                        .eq(MonthlyTask::getTaskMonth, month);
+                MonthlyTask task = monthlyTaskMapper.selectOne(taskWrapper);
 
                 if (task != null) {
                     // 仅填充任务完成状态，不进行补发逻辑

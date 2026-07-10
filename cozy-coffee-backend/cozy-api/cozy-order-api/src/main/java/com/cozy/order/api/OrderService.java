@@ -2,9 +2,11 @@ package com.cozy.order.api;
 
 import com.cozy.order.dto.request.CreateOrderRequest;
 import com.cozy.order.dto.response.CoffeeProductDTO;
+import com.cozy.order.dto.response.MonthlyStatsDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 咖啡订单服务接口 - 独立微服务
@@ -67,7 +69,7 @@ public interface OrderService {
      * 
      * @return status -> count
      */
-    java.util.Map<String, Long> getOrderStatusCounts();
+    Map<String, Long> getOrderStatusCounts();
 
     /**
      * 接单（生成取餐码，状态改为preparing）
@@ -126,5 +128,5 @@ public interface OrderService {
     /**
      * 获取用户月度订单统计数据（v5.0 任务用）
      */
-    com.cozy.order.dto.response.MonthlyStatsDTO getMonthlyStats(Long userId);
+    MonthlyStatsDTO getMonthlyStats(Long userId);
 }

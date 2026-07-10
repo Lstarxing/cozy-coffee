@@ -10,6 +10,7 @@ import com.cozy.member.entity.MonthlyTaskOrder;
 import com.cozy.member.mapper.MonthlyTaskMapper;
 import com.cozy.member.mapper.MonthlyTaskOrderMapper;
 import com.cozy.order.api.OrderService;
+import com.cozy.order.dto.response.MonthlyStatsDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -138,7 +139,7 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
         // v5.0: 获取月度订单统计
         try {
             if (orderService != null) {
-                com.cozy.order.dto.response.MonthlyStatsDTO stats = orderService.getMonthlyStats(userId);
+                MonthlyStatsDTO stats = orderService.getMonthlyStats(userId);
                 if (stats != null) {
                     dto.setMonthlyOrderCount(stats.getOrderCount());
                     dto.setMorningOrderCount(stats.getMorningOrderCount());
@@ -207,7 +208,7 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
      */
     private void checkAndGrantRewards(Long userId, MonthlyTask task, Long orderId,
             boolean isDelivery, boolean hasNewProduct) {
-        com.cozy.order.dto.response.MonthlyStatsDTO stats = null;
+        MonthlyStatsDTO stats = null;
         try {
             if (orderService != null) {
                 stats = orderService.getMonthlyStats(userId);
