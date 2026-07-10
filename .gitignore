@@ -91,3 +91,7 @@ coverage/
 *.zip
 *.rar
 *.7z
+
+# ===================== Claude Code worktree =====================
+# 本地 worktree 目录，不应提交
+.claude/worktrees/
