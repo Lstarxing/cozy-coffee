@@ -10,6 +10,7 @@ import com.cozy.member.dto.response.PointsTransactionDTO;
 import com.cozy.member.entity.MemberInfo;
 import com.cozy.order.api.OrderService;
 import com.cozy.user.api.UserService;
+import com.cozy.user.dto.response.UserDTO;
 import com.cozy.member.entity.PointsLot;
 import com.cozy.member.entity.PointsLotConsumption;
 import com.cozy.member.entity.PointsTransaction;
@@ -161,7 +162,7 @@ public class MemberServiceImpl implements MemberService {
         // Populate User Info (Nickname, Phone, Avatar) via UserService
         try {
             if (userService != null) {
-                com.cozy.user.dto.response.UserDTO user = userService.getUserById(userId);
+                UserDTO user = userService.getUserById(userId);
                 if (user != null) {
                     dto.setNickname(user.getNickname());
                     dto.setPhone(user.getPhone());
@@ -231,18 +232,16 @@ public class MemberServiceImpl implements MemberService {
         wrapper.in(MemberInfo::getUserId, userIds);
         List<MemberInfo> members = memberInfoMapper.selectList(wrapper);
 
-        // 2. 批量查询用户信息 (nickname, phone, avatar)
-        Map<Long, com.cozy.user.dto.response.UserDTO> userMap = new HashMap<>();
+        // 2. 批量查询用户信息 (nickname, phone, avatar) - 单次 Dubbo RPC
+        Map<Long, UserDTO> userMap = new HashMap<>();
         try {
             if (userService != null) {
-                for (Long userId : userIds) {
-                    try {
-                        com.cozy.user.dto.response.UserDTO user = userService.getUserById(userId);
-                        if (user != null) {
-                            userMap.put(userId, user);
+                List<UserDTO> users = userService.getUsersByIds(userIds);
+                if (users != null) {
+                    for (UserDTO user : users) {
+                        if (user != null && user.getId() != null) {
+                            userMap.put(user.getId(), user);
                         }
-                    } catch (Exception e) {
-                        log.warn("获取用户信息失败: userId={}", userId);
                     }
                 }
             }
@@ -261,7 +260,7 @@ public class MemberServiceImpl implements MemberService {
             dto.setMemberLevel(info.getMemberLevel());
 
             // 填充用户信息
-            com.cozy.user.dto.response.UserDTO user = userMap.get(info.getUserId());
+            UserDTO user = userMap.get(info.getUserId());
             if (user != null) {
                 dto.setNickname(user.getNickname());
                 dto.setPhone(user.getPhone());

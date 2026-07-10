@@ -5,6 +5,9 @@ import com.cozy.user.dto.request.RegisterRequest;
 import com.cozy.user.dto.request.UpdateProfileRequest;
 import com.cozy.user.dto.response.UserDTO;
 
+import java.util.List;
+import java.util.Set;
+
 /**
  * 用户服务 Dubbo 接口
  */
@@ -20,6 +23,14 @@ public interface UserService {
     void logout(String token);
 
     UserDTO getUserById(Long userId);
+
+    /**
+     * 批量获取用户信息
+     *
+     * @param userIds 用户ID集合
+     * @return 用户DTO列表
+     */
+    List<UserDTO> getUsersByIds(Set<Long> userIds);
 
     UserDTO getUserByUsername(String username);
 

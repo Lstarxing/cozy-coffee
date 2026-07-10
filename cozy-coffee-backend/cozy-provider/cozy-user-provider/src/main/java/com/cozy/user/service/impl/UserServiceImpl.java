@@ -23,9 +23,14 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @DubboService
@@ -296,6 +301,20 @@ public class UserServiceImpl implements UserService {
             log.warn("写入Redis用户资料缓存失败: userId={}", userId, e);
         }
         return dto;
+    }
+
+    @Override
+    public List<UserDTO> getUsersByIds(Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(User::getId, userIds);
+        List<User> users = userMapper.selectList(wrapper);
+        if (users == null || users.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return users.stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     @Override
