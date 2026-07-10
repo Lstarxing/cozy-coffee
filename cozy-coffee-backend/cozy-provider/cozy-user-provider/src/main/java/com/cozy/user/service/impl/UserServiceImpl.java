@@ -476,11 +476,16 @@ public class UserServiceImpl implements UserService {
     }
 
     private String generateMemberCode() {
-        java.util.Random random = new java.util.Random();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 8; i++)
-            sb.append(random.nextInt(10));
-        return sb.toString();
+        for (int attempt = 0; attempt < 5; attempt++) {
+            String code = String.format("%08d", java.util.concurrent.ThreadLocalRandom.current().nextInt(100000000));
+            LambdaQueryWrapper<User> check = new LambdaQueryWrapper<>();
+            check.eq(User::getMemberCode, code);
+            if (userMapper.selectCount(check) == 0) {
+                return code;
+            }
+            log.warn("Member code collision, retrying: attempt={}, code={}", attempt + 1, code);
+        }
+        throw new RuntimeException("生成会员码失败：多次碰撞，请重试");
     }
 
     /**
