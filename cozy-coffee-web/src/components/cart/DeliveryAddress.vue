@@ -8,12 +8,12 @@
     <select v-else v-model="localAddressId" class="address-select">
       <option value="">请选择配送地址</option>
       <option v-for="addr in userAddresses" :key="addr.id" :value="addr.id">
-        {{ addr.contactName }} {{ addr.phone }} - {{ addr.province }}{{ addr.city }}{{ addr.district }}{{ addr.detailAddress }}
+        {{ addr.receiverName }} {{ addr.receiverPhone }} - {{ addr.province }}{{ addr.city }}{{ addr.district }}{{ addr.detailAddress }}
       </option>
     </select>
     <div v-if="selectedAddress" class="selected-address-preview">
       <span v-if="selectedAddress.isDefault" class="address-tag">默认</span>
-      {{ selectedAddress.contactName }} {{ selectedAddress.phone }}
+      {{ selectedAddress.receiverName }} {{ selectedAddress.receiverPhone }}
     </div>
   </div>
 </template>
