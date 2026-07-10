@@ -42,14 +42,6 @@
             >
           </div>
 
-          <!-- 记住密码 -->
-          <div class="remember-forgot">
-            <label class="remember">
-              <input type="checkbox">
-              <span>记住密码</span>
-            </label>
-          </div>
-
           <!-- 登录按钮 -->
           <button type="submit" class="login-btn" :disabled="loading">
             {{ loading ? '登录中...' : '登录' }}

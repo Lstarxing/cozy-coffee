@@ -35,12 +35,8 @@
             >
           </div>
 
-          <!-- 记住密码和忘记密码 -->
+          <!-- 忘记密码 -->
           <div class="remember-forgot">
-            <label class="remember">
-              <input v-model="loginForm.remember" type="checkbox">
-              <span>记住密码</span>
-            </label>
             <div class="forgot-links">
               <a href="#" class="forgot-password">忘记密码？</a>
               <!-- 如果需要可以加隐私协议链接 -->
@@ -76,8 +72,7 @@ const userStore = useUserStore()
 const loading = ref(false)
 const loginForm = reactive({
   username: '',
-  password: '',
-  remember: false
+  password: ''
 })
 
 const handleLogin = async () => {
