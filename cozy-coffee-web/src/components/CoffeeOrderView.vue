@@ -71,11 +71,12 @@ v-if="showCustomizer" :product="selectedProduct" @close="showCustomizer = false"
       @add-to-cart="handleAddToCart" />
 
     <!-- 购物车 -->
-    <ShoppingCart 
-      :is-open="showCart" 
+    <ShoppingCart
+      ref="cartRef"
+      :is-open="showCart"
       :cart-items="cartItems"
       :points-multiplier="pointsMultiplier"
-      :upsell-products="upsellProducts" 
+      :upsell-products="upsellProducts"
       @close="showCart = false"
       @update-cart="updateCart"
       @checkout="handleCheckout"
@@ -111,6 +112,7 @@ const isLoading = ref(false)
 const showCustomizer = ref(false)
 const selectedProduct = ref(null)
 const showCart = ref(false)
+const cartRef = ref(null)
 
 const { cartItems, addToCart, clearCart } = useCart()
 
@@ -219,10 +221,12 @@ const handleCheckout = async (orderData) => {
       emit('refresh-user')
     } else {
       ElMessage.error(res.data.message || '订单创建失败')
+      cartRef.value?.resetSubmitting()
     }
   } catch (error) {
     console.error('创建订单失败', error)
     ElMessage.error(error.response?.data?.message || '订单创建失败')
+    cartRef.value?.resetSubmitting()
   }
 }
 

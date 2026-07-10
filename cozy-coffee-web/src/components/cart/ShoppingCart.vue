@@ -463,12 +463,11 @@ const removeItem = (index) => {
 }
 
 const handleCheckout = () => {
-  isSubmitting.value = true
   if (diningMethod.value === 'DELIVERY' && !selectedAddressId.value) {
-    isSubmitting.value = false
-    alert('请选择配送地址')
+    ElMessage.warning('请选择配送地址')
     return
   }
+  isSubmitting.value = true
   emit('checkout', {
     items: props.cartItems,
     couponCode: selectedCouponCode.value,
@@ -478,6 +477,12 @@ const handleCheckout = () => {
     remark: remark.value
   })
 }
+
+const resetSubmitting = () => {
+  isSubmitting.value = false
+}
+
+defineExpose({ resetSubmitting })
 
 // ───────────────────────────────
 //  Upsell
