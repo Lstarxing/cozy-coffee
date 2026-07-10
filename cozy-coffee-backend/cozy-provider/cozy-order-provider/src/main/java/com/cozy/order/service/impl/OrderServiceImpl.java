@@ -964,9 +964,8 @@ public class OrderServiceImpl implements OrderService {
         if (order == null) {
             throw new RuntimeException("订单不存在");
         }
-        if (!"pending".equals(order.getStatus())) {
-            throw new RuntimeException("只有待处理订单可以接单");
-        }
+        OrderStateMachine current = OrderStateMachine.from(order.getStatus());
+        current.assertCanTransition(OrderStateMachine.PREPARING);
 
         // 如果还没有取餐码，生成一个
         if (order.getPickupCode() == null || order.getPickupCode().isEmpty()) {
@@ -979,7 +978,7 @@ public class OrderServiceImpl implements OrderService {
             order.setStoreId(1L);
         }
 
-        order.setStatus("preparing");
+        order.setStatus(OrderStateMachine.PREPARING.value());
         orderMapper.updateById(order);
         syncPendingTimeoutIndex(order);
         log.info("订单接单: orderId={}, orderNo={}", orderId, order.getOrderNo());
@@ -999,14 +998,13 @@ public class OrderServiceImpl implements OrderService {
         if (order == null) {
             throw new RuntimeException("订单不存在");
         }
-        if (!"preparing".equals(order.getStatus())) {
-            throw new RuntimeException("只有制作中的订单可以完成");
-        }
+        OrderStateMachine current = OrderStateMachine.from(order.getStatus());
+        current.assertCanTransition(OrderStateMachine.COMPLETED);
 
         // 幂等检查
         if (Boolean.TRUE.equals(order.getRewardsGranted())) {
             log.info("订单奖励已发放，跳过: orderId={}", orderId);
-            order.setStatus("completed");
+            order.setStatus(OrderStateMachine.COMPLETED.value());
             orderMapper.updateById(order);
             syncPendingTimeoutIndex(order);
             return toOrderDTO(order, null);
@@ -1088,7 +1086,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     private ShopOrderDTO doCompleteInTx(ShopOrder order, int expEarned, int pointsEarned) {
         // 更新订单状态（积分/EXP/首单奖励/月度任务由 MQ 消费者异步处理）
-        order.setStatus("completed");
+        order.setStatus(OrderStateMachine.COMPLETED.value());
         order.setExpEarned(expEarned);
         order.setPointsEarned(pointsEarned);
         order.setRewardsGranted(true);
@@ -1108,10 +1106,9 @@ public class OrderServiceImpl implements OrderService {
         if (order == null) {
             throw new RuntimeException("订单不存在");
         }
-        if ("completed".equals(order.getStatus()) || "cancelled".equals(order.getStatus())) {
-            throw new RuntimeException("该订单无法取消");
-        }
-        order.setStatus("cancelled");
+        OrderStateMachine current = OrderStateMachine.from(order.getStatus());
+        current.assertCanTransition(OrderStateMachine.CANCELLED);
+        order.setStatus(OrderStateMachine.CANCELLED.value());
         orderMapper.updateById(order);
         syncPendingTimeoutIndex(order);
 
@@ -1138,10 +1135,9 @@ public class OrderServiceImpl implements OrderService {
         if (!order.getUserId().equals(userId)) {
             throw new RuntimeException("无权取消该订单");
         }
-        if (!"pending".equals(order.getStatus())) {
-            throw new RuntimeException("只有待处理的订单才能取消");
-        }
-        order.setStatus("cancelled");
+        OrderStateMachine current = OrderStateMachine.from(order.getStatus());
+        current.assertCanTransition(OrderStateMachine.CANCELLED);
+        order.setStatus(OrderStateMachine.CANCELLED.value());
         orderMapper.updateById(order);
         syncPendingTimeoutIndex(order);
 

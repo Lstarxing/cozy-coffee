@@ -33,12 +33,13 @@ public enum OrderStateMachine {
      * 校验状态流转是否合法。
      * pending -> preparing (acceptOrder)
      * preparing -> completed (completeOrder)
-     * pending -> cancelled (cancelOrder, userCancelOrder)
+     * pending -> cancelled (cancelUserOrder)
+     * pending/preparing -> cancelled (cancelOrder, admin can cancel preparing)
      */
     public void assertCanTransition(OrderStateMachine to) {
         boolean valid = switch (this) {
             case PENDING -> to == PREPARING || to == CANCELLED;
-            case PREPARING -> to == COMPLETED;
+            case PREPARING -> to == COMPLETED || to == CANCELLED;
             default -> false;
         };
         if (!valid) {
