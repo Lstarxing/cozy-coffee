@@ -12,7 +12,8 @@ services:
     container_name: cozy-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      # 生产环境必须通过 MYSQL_ROOT_PASSWORD 环境变量设置强密码，默认值仅用于本地开发
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-CHANGE_ME_IN_PRODUCTION}
       MYSQL_INIT_MODE: ${MYSQL_INIT_MODE:-full}
       TZ: ${TIMEZONE:-Asia/Shanghai}
     command:
@@ -35,7 +36,8 @@ services:
     image: redis:7-alpine
     container_name: cozy-redis
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    # 生产环境必须通过 REDIS_PASSWORD 环境变量设置密码，默认无密码仅用于本地开发
+    command: ["sh", "-c", "redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $$REDIS_PASSWORD}"]
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
