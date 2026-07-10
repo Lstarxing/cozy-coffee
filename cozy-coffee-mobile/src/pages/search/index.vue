@@ -101,7 +101,9 @@ const hotKeywords = ref(['拿铁', '美式咖啡', '生椰拿铁', '卡布奇诺
 // 所有商品数据
 const allProducts = ref([])
 
-// 初始化加载所有商品
+// TODO(backend): 当前搜索在前端全量数据中 filter，商品超过 100 个时会有性能问题
+// 且不支持拼音/模糊匹配。后端应提供 /order/products/search?q=xxx 接口，
+// 改为服务端搜索后再移除 loadProducts 的全量加载。
 const loadProducts = async () => {
   try {
     const res = await getCoffeeProducts()
