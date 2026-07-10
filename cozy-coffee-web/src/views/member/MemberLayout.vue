@@ -117,6 +117,8 @@ href="#" class="nav-link nav-parent"
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useRouter, useRoute } from 'vue-router'
+import { updateProfile } from '@/api/auth'
+import { ElMessage } from 'element-plus'
 import { LayoutDashboard, Coffee, ClipboardList, ChevronRight, ShoppingBag, User, Ticket, Crown, Home, LogOut } from 'lucide-vue-next'
 
 const userStore = useUserStore()
@@ -152,13 +154,19 @@ function handleAvatarChange(event) {
   }
 }
 
-function saveAvatar() {
-  if (avatarPreview.value) {
+async function saveAvatar() {
+  if (!avatarPreview.value) {
+    return
+  }
+  try {
+    await updateProfile({ avatar: avatarPreview.value })
     userStore.userInfo.avatar = avatarPreview.value
     localStorage.setItem('userInfo', JSON.stringify(userStore.userInfo))
     showAvatarModal.value = false
     avatarPreview.value = ''
-    window.alert('头像更新成功')
+    ElMessage.success('头像更新成功')
+  } catch (error) {
+    ElMessage.error('头像保存失败: ' + (error.message || '请稍后重试'))
   }
 }
 
@@ -168,7 +176,7 @@ async function handleLogout() {
     router.push('/')
     return
   }
-  window.alert('退出失败，请检查后端服务或网络后重试')
+  ElMessage.error('退出失败，请检查后端服务或网络后重试')
 }
 
 onMounted(async () => {
