@@ -1043,6 +1043,7 @@ public class MemberServiceImpl implements MemberService {
     /**
      * v5.0: 年度保级判定（每年1月1日凌晨执行）
      * 仅修改状态位而不改变等级字段，实现"休眠"而非"降级"
+     * 分页处理，避免一次性加载所有会员导致 OOM
      */
     @org.springframework.scheduling.annotation.Scheduled(cron = "0 0 0 1 1 ?")
     @Transactional
@@ -1052,70 +1053,86 @@ public class MemberServiceImpl implements MemberService {
 
         log.info("开始执行 {} 年度保级判定...", lastYear);
 
-        List<MemberInfo> allMembers = memberInfoMapper.selectList(null);
         int processedCount = 0;
         int dormantCount = 0;
+        int pageNum = 1;
+        final int pageSize = 500;
 
-        for (MemberInfo member : allMembers) {
-            try {
-                // 跳过已结算过的
-                if (member.getLastSettlementYear() != null && member.getLastSettlementYear() >= lastYear) {
-                    continue;
-                }
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<MemberInfo> page;
+        do {
+            page = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(pageNum, pageSize);
+            LambdaQueryWrapper<MemberInfo> wrapper = new LambdaQueryWrapper<>();
+            wrapper.orderByAsc(MemberInfo::getId);
+            memberInfoMapper.selectPage(page, wrapper);
 
-                int annualExp = member.getAnnualExp() != null ? member.getAnnualExp() : 0;
-                String level = member.getMemberLevel();
-                boolean needDormant = false;
-
-                switch (level) {
-                    case "black" -> {
-                        if (annualExp < BLACK_KEEP_THRESHOLD) {
-                            // 进入黑金休眠态，保持 4500 EXP
-                            member.setMemberStatus("DORMANT");
-                            member.setExpTotal(4500);
-                            needDormant = true;
-                            log.info("黑金休眠: userId={}, annualExp={}", member.getUserId(), annualExp);
-                        }
-                    }
-                    case "diamond" -> {
-                        if (annualExp < DIAMOND_KEEP_THRESHOLD) {
-                            // 降至黄金顶端 (1499 EXP)
-                            member.setMemberLevel("gold");
-                            member.setExpTotal(1499);
-                            log.info("钻石降级: userId={}, annualExp={}", member.getUserId(), annualExp);
-                        }
-                    }
-                    case "gold" -> {
-                        if (annualExp < GOLD_KEEP_THRESHOLD) {
-                            // 降至白银 (500 EXP)
-                            member.setMemberLevel("silver");
-                            member.setExpTotal(500);
-                            log.info("黄金降级: userId={}, annualExp={}", member.getUserId(), annualExp);
-                        }
-                    }
-                    case "silver" -> {
-                        if (annualExp < SILVER_KEEP_THRESHOLD) {
-                            // 降至基础 (0 EXP)
-                            member.setMemberLevel("basic");
-                            member.setExpTotal(0);
-                            log.info("白银降级: userId={}, annualExp={}", member.getUserId(), annualExp);
-                        }
-                    }
-                }
-
-                // 重置年度累计
-                member.setAnnualExp(0);
-                member.setLastSettlementYear(lastYear);
-                memberInfoMapper.updateById(member);
-
-                processedCount++;
-                if (needDormant)
-                    dormantCount++;
-
-            } catch (Exception e) {
-                log.error("保级判定失败: userId={}, error={}", member.getUserId(), e.getMessage());
+            List<MemberInfo> members = page.getRecords();
+            if (members == null || members.isEmpty()) {
+                break;
             }
-        }
+
+            for (MemberInfo member : members) {
+                try {
+                    // 跳过已结算过的
+                    if (member.getLastSettlementYear() != null && member.getLastSettlementYear() >= lastYear) {
+                        continue;
+                    }
+
+                    int annualExp = member.getAnnualExp() != null ? member.getAnnualExp() : 0;
+                    String level = member.getMemberLevel();
+                    boolean needDormant = false;
+
+                    switch (level) {
+                        case "black" -> {
+                            if (annualExp < BLACK_KEEP_THRESHOLD) {
+                                // 进入黑金休眠态，保持 4500 EXP
+                                member.setMemberStatus("DORMANT");
+                                member.setExpTotal(4500);
+                                needDormant = true;
+                                log.info("黑金休眠: userId={}, annualExp={}", member.getUserId(), annualExp);
+                            }
+                        }
+                        case "diamond" -> {
+                            if (annualExp < DIAMOND_KEEP_THRESHOLD) {
+                                // 降至黄金顶端 (1499 EXP)
+                                member.setMemberLevel("gold");
+                                member.setExpTotal(1499);
+                                log.info("钻石降级: userId={}, annualExp={}", member.getUserId(), annualExp);
+                            }
+                        }
+                        case "gold" -> {
+                            if (annualExp < GOLD_KEEP_THRESHOLD) {
+                                // 降至白银 (500 EXP)
+                                member.setMemberLevel("silver");
+                                member.setExpTotal(500);
+                                log.info("黄金降级: userId={}, annualExp={}", member.getUserId(), annualExp);
+                            }
+                        }
+                        case "silver" -> {
+                            if (annualExp < SILVER_KEEP_THRESHOLD) {
+                                // 降至基础 (0 EXP)
+                                member.setMemberLevel("basic");
+                                member.setExpTotal(0);
+                                log.info("白银降级: userId={}, annualExp={}", member.getUserId(), annualExp);
+                            }
+                        }
+                    }
+
+                    // 重置年度累计
+                    member.setAnnualExp(0);
+                    member.setLastSettlementYear(lastYear);
+                    memberInfoMapper.updateById(member);
+
+                    processedCount++;
+                    if (needDormant)
+                        dormantCount++;
+
+                } catch (Exception e) {
+                    log.error("保级判定失败: userId={}, error={}", member.getUserId(), e.getMessage());
+                }
+            }
+
+            pageNum++;
+        } while (page.getRecords() != null && !page.getRecords().isEmpty() && page.getCurrent() < page.getPages());
 
         log.info("年度保级判定完成: 处理{}人, 休眠{}人", processedCount, dormantCount);
     }
