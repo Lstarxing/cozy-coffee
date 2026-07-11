@@ -64,7 +64,7 @@ services:
       - nacos_logs:/home/nacos/logs
 
   rocketmq-namesrv:
-    image: apache/rocketmq:4.9.4
+    image: apache/rocketmq:5.3.0
     container_name: cozy-rocketmq-namesrv
     restart: unless-stopped
     command: sh mqnamesrv
@@ -75,7 +75,7 @@ services:
       - "${ROCKETMQ_NAMESRV_PORT:-9876}:9876"
 
   rocketmq-broker:
-    image: apache/rocketmq:4.9.4
+    image: apache/rocketmq:5.3.0
     container_name: cozy-rocketmq-broker
     restart: unless-stopped
     depends_on:
