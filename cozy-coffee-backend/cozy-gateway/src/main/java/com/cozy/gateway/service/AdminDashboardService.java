@@ -35,13 +35,13 @@ public class AdminDashboardService {
     private final ObjectMapper objectMapper;
 
     @DubboReference(check = false)
-    private final UserService userService;
+    private UserService userService;
 
     @DubboReference(check = false)
-    private final OrderService orderService;
+    private OrderService orderService;
 
     @DubboReference(check = false)
-    private final PointsMallService pointsMallService;
+    private PointsMallService pointsMallService;
 
     public Map<String, Object> getStats(String startDateName, String endDateName) {
         var start = startDateName != null ? java.time.LocalDate.parse(startDateName) : java.time.LocalDate.now();

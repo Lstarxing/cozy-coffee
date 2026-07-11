@@ -23,10 +23,10 @@ import java.time.LocalDateTime;
 public class OrderCoordinatorService {
 
     @DubboReference(check = false)
-    private final OrderService orderService;
+    private OrderService orderService;
 
     @DubboReference(check = false)
-    private final MemberService memberService;
+    private MemberService memberService;
 
     private final OrderEventProducer orderEventProducer;
 

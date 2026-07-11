@@ -23,7 +23,7 @@ import java.util.Map;
 public class AuthService {
 
     @DubboReference(check = false, timeout = 3000, retries = 0)
-    private final UserService userService;
+    private UserService userService;
 
     public Map<String, Object> login(LoginRequest request) {
         return Map.of("token", userService.login(request));

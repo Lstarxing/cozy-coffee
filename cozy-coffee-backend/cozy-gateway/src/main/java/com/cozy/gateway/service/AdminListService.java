@@ -32,13 +32,13 @@ public class AdminListService {
     private final ObjectMapper objectMapper;
 
     @DubboReference(check = false)
-    private final UserService userService;
+    private UserService userService;
 
     @DubboReference(check = false)
-    private final OrderService orderService;
+    private OrderService orderService;
 
     @DubboReference(check = false)
-    private final PointsMallService pointsMallService;
+    private PointsMallService pointsMallService;
 
     public List<UserDTO> listUsers(String keyword, String memberLevel, String startDate, String endDate) {
         List<UserDTO> users = userService.listAllUsers();

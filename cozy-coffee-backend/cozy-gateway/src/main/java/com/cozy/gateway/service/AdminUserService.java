@@ -14,10 +14,10 @@ import org.springframework.stereotype.Service;
 public class AdminUserService {
 
     @DubboReference(check = false)
-    private final MemberService memberService;
+    private MemberService memberService;
 
     @DubboReference(check = false)
-    private final UserService userService;
+    private UserService userService;
 
     public void adjustPoints(Long userId, int amount, String reason) {
         if (amount == 0) {

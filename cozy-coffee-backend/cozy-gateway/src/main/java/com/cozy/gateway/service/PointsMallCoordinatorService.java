@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 public class PointsMallCoordinatorService {
 
     @DubboReference(check = false)
-    private final PointsMallService pointsMallService;
+    private PointsMallService pointsMallService;
 
     private final SseEventPublisher sseEventPublisher;
 

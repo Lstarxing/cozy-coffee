@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 public class AdminUserEnrichService {
 
     @DubboReference(check = false)
-    private final UserService userService;
+    private UserService userService;
 
     public void enrichOrder(ShopOrderDTO order) {
         if (order.getUserId() == null) return;

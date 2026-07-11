@@ -26,10 +26,10 @@ import java.time.LocalDateTime;
 public class AdminOrderCommandService {
 
     @DubboReference(check = false)
-    private final OrderService orderService;
+    private OrderService orderService;
 
     @DubboReference(check = false)
-    private final PointsMallService pointsMallService;
+    private PointsMallService pointsMallService;
 
     private final OrderEventProducer orderEventProducer;
     private final AdminOrderCacheEvictor cacheEvictor;
