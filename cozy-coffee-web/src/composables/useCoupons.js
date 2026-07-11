@@ -4,18 +4,17 @@ import { getAvailableCoupons, getUserCoupons } from '@/api/mall'
 export function useCoupons() {
   const coupons = ref([])
   const loading = ref(false)
+  const error = ref(null)
 
   async function loadUserCoupons(status) {
     loading.value = true
+    error.value = null
     try {
       const res = await getUserCoupons(status)
-      if (res.data && res.data.success) {
-        coupons.value = res.data.data || []
-      } else if (res.data) {
-        coupons.value = res.data || []
-      }
-    } catch (error) {
-      console.error('加载用户优惠券失败:', error)
+      coupons.value = res.data || []
+    } catch (err) {
+      console.error('加载用户优惠券失败:', err)
+      error.value = err.message || '加载优惠券失败'
       coupons.value = []
     } finally {
       loading.value = false
@@ -24,17 +23,13 @@ export function useCoupons() {
 
   async function loadAvailableCoupons(data) {
     loading.value = true
+    error.value = null
     try {
       const res = await getAvailableCoupons(data)
-      if (res.data && res.data.success) {
-        coupons.value = (res.data.data || []).map(enrichCoupon)
-      } else if (res.data) {
-        coupons.value = (res.data || []).map(enrichCoupon)
-      } else {
-        coupons.value = []
-      }
-    } catch (error) {
-      console.error('加载优惠券失败', error)
+      coupons.value = (res.data || []).map(enrichCoupon)
+    } catch (err) {
+      console.error('加载优惠券失败', err)
+      error.value = err.message || '加载优惠券失败'
       coupons.value = []
     } finally {
       loading.value = false
@@ -48,6 +43,7 @@ export function useCoupons() {
   return {
     coupons,
     loading,
+    error,
     loadUserCoupons,
     loadAvailableCoupons,
     filterByStatus

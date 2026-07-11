@@ -61,7 +61,8 @@ export function useCart() {
         cartItem.cupSize === item.cupSize &&
         cartItem.sugarLevel === item.sugarLevel &&
         cartItem.temperature === item.temperature &&
-        cartItem.coffeeStrength === item.coffeeStrength
+        cartItem.coffeeStrength === item.coffeeStrength &&
+        (cartItem.milkType || 'WHOLE') === (item.milkType || 'WHOLE')
     )
 
     if (existingIndex > -1) {

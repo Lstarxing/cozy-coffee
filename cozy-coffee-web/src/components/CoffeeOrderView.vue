@@ -151,24 +151,15 @@ const filteredProducts = computed(() => {
 const loadProducts = async () => {
   isLoading.value = true
   try {
-    console.log('开始加载咖啡产品...')
     const res = await getCoffeeProducts()
-    console.log('API响应:', res)
-    
-    if (res.data && res.data.success) {
-      products.value = res.data.data || []
-      console.log('加载到的产品:', products.value)
-    } else if (res.success) {
-      // 兼容直接success字段的情况
+
+    if (res.success) {
       products.value = res.data || []
-      console.log('加载到的产品(兼容模式):', products.value)
     } else {
-      console.warn('API返回但success为false:', res)
       ElMessage.warning(res.data?.message || res.message || '暂无商品数据')
     }
   } catch (error) {
     console.error('加载商品失败', error)
-    console.error('错误详情:', error.response?.data)
     ElMessage.error(error.response?.data?.message || error.message || '加载商品失败，请稍后重试')
   } finally {
     isLoading.value = false

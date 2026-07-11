@@ -105,13 +105,23 @@ function onNavigate(path) {
 
 // SSE
 const sseEventSource = ref(null)
+const sseRetryCount = ref(0)
+const MAX_SSE_RETRY = 10
+
+function sseBackoff() {
+  const base = Math.min(sseRetryCount.value, MAX_SSE_RETRY)
+  const delay = Math.min(1000 * Math.pow(2, base), 30000)
+  return delay + Math.random() * 1000
+}
+
+let sseRetryTimer = null
 
 async function connectSSE() {
   try {
     if (!userStore.token) return
     const res = await getSseTicket()
     const ticket = res.data?.ticket || res.ticket
-    if (sseEventSource.value) sseEventSource.value.close()
+    if (sseEventSource.value) { sseEventSource.value.close(); sseEventSource.value = null }
     const sseBase = (import.meta.env.VITE_API_BASE_URL || '') + '/api'
     sseEventSource.value = new EventSource(`${sseBase}/member/sse/events?ticket=${ticket}`)
     sseEventSource.value.addEventListener('order_completed', (event) => {
@@ -120,9 +130,17 @@ async function connectSSE() {
         ElMessage.success({ message: payload.message || '订单已完成', duration: 5000, showClose: true })
         userStore.fetchMemberInfo()
         monthlyChallengePanelRef.value?.refreshTaskData()
+        sseRetryCount.value = 0
       } catch (e) { console.error('SSE消息解析失败', e) }
     })
-    sseEventSource.value.onerror = (err) => { console.error('SSE 连接错误', err); sseEventSource.value.close() }
+    sseEventSource.value.onerror = () => {
+      sseEventSource.value?.close()
+      sseEventSource.value = null
+      sseRetryCount.value++
+      const delay = sseBackoff()
+      console.warn(`SSE 连接断开，${Math.round(delay / 1000)}s 后重连 (第${sseRetryCount.value}次)`)
+      sseRetryTimer = setTimeout(() => { if (userStore.isLoggedIn) connectSSE() }, delay)
+    }
   } catch (e) { console.error('SSE 连接初始化失败', e) }
 }
 
@@ -135,6 +153,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (sseEventSource.value) { sseEventSource.value.close(); sseEventSource.value = null }
+  if (sseRetryTimer) { clearTimeout(sseRetryTimer); sseRetryTimer = null }
 })
 </script>
 
