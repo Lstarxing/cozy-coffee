@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { getAvailableCoupons, getUserCoupons } from '@/api/mall'
+import { getCouponTitle } from '@/composables/useCouponDisplay'
 
 export function useCoupons() {
   const coupons = ref([])
@@ -79,7 +80,7 @@ function enrichCoupon(c) {
     } else if (c.couponType === 'SHOT') {
       name = '+1 Shot'
     } else {
-      name = '优惠券'
+      name = getCouponTitle(c)
     }
   }
 
