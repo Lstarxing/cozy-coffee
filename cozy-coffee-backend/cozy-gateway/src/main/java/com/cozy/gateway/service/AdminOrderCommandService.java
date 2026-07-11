@@ -2,7 +2,7 @@ package com.cozy.gateway.service;
 
 import com.cozy.common.mq.OrderCompletedEvent;
 import com.cozy.gateway.cache.AdminOrderCacheEvictor;
-import com.cozy.gateway.exception.NotFoundException;
+import com.cozy.common.exception.NotFoundException;
 import com.cozy.gateway.mq.OrderEventProducer;
 import com.cozy.gateway.util.AdminCacheUtil;
 import com.cozy.member.api.PointsMallService;

@@ -23,6 +23,7 @@
 
     <properties>
         <java.version>17</java.version>
+        <maven.compiler.parameters>true</maven.compiler.parameters>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -167,6 +168,7 @@
                     <source>17</source>
                     <target>17</target>
                     <encoding>UTF-8</encoding>
+                    <parameters>true</parameters>
                 </configuration>
             </plugin>
             <!-- 锁定 surefire 3.2.5：Maven 3.8.8 默认带 2.12.4（2012 年），不支持 JUnit 5 -->
