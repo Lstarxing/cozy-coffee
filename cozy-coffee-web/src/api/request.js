@@ -4,7 +4,8 @@ const baseURL = (import.meta.env.VITE_API_BASE_URL || '') + '/api'
 
 const request = axios.create({
     baseURL,
-    timeout: 10000
+    timeout: 10000,
+    withCredentials: true
 })
 
 // 请求拦截器 — cookie 自动携带 token，无需手动注入
