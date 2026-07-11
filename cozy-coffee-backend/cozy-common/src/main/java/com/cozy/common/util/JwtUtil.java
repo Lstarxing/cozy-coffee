@@ -2,14 +2,13 @@ package com.cozy.common.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 /**
- * JWT工具类 (兼容JJWT 0.11.5)
+ * JWT工具类 (JJWT 0.12.x)
  */
 public class JwtUtil {
 
@@ -33,13 +32,13 @@ public class JwtUtil {
         Date expiration = new Date(now.getTime() + EXPIRATION_TIME);
 
         return Jwts.builder()
-                .setSubject(userId.toString())
+                .subject(userId.toString())
                 .claim("username", username)
                 .claim("role", role != null ? role : "user")
                 .claim("tokenVersion", tokenVersion != null ? tokenVersion : 0)
-                .setIssuedAt(now)
-                .setExpiration(expiration)
-                .signWith(KEY, SignatureAlgorithm.HS256)
+                .issuedAt(now)
+                .expiration(expiration)
+                .signWith(KEY)
                 .compact();
     }
 
@@ -61,11 +60,11 @@ public class JwtUtil {
      * 解析JWT Token
      */
     public static Claims parseToken(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(KEY)
+        return Jwts.parser()
+                .verifyWith(KEY)
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     /**

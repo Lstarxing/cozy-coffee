@@ -32,7 +32,7 @@
         <nacos.version>2.4.3</nacos.version>
         <mysql.version>8.0.32</mysql.version>
         <mybatis-plus.version>3.5.3.1</mybatis-plus.version>
-        <jjwt.version>0.11.5</jjwt.version>
+        <jjwt.version>0.12.6</jjwt.version>
         <lombok.version>1.18.30</lombok.version>
         <rocketmq-spring.version>2.2.3</rocketmq-spring.version>
     </properties>
