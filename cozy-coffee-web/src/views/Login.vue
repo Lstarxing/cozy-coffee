@@ -87,9 +87,6 @@ const handleLogin = async () => {
     const loginData = await authApi.login(loginForm.username, loginForm.password)
     const token = loginData.data?.token || loginData.token
 
-    // 先存 token 到 localStorage，供后续请求拦截器自动注入
-    localStorage.setItem('token', token)
-
     // 2. 获取用户个人信息
     const userData = await authApi.getUserInfo()
 

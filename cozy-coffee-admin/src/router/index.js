@@ -77,29 +77,38 @@ const router = createRouter({
     routes
 })
 
-// 路由守卫：校验 token 过期 + RBAC 角色
-router.beforeEach((to, from, next) => {
+// 路由守卫：通过 /api/auth/me 验证 cookie 登录状态 + RBAC
+router.beforeEach(async (to, from, next) => {
     if (to.meta.requiresAuth) {
-        const token = localStorage.getItem('adminToken')
-        if (!token || isTokenExpired(token)) {
-            localStorage.removeItem('adminToken')
-            localStorage.removeItem('adminInfo')
-            next('/login')
-            return
+        try {
+            const baseURL = (import.meta.env.VITE_API_BASE_URL || '') + '/api'
+            const response = await fetch(baseURL + '/auth/me', { credentials: 'include' })
+            if (response.ok) {
+                // RBAC 角色校验：从 /api/auth/userinfo 获取完整用户信息
+                const requiredRoles = to.meta.roles
+                if (requiredRoles) {
+                    try {
+                        const userRes = await fetch(baseURL + '/auth/userinfo', { credentials: 'include' })
+                        if (userRes.ok) {
+                            const userData = await userRes.json()
+                            const role = userData.data?.role
+                            if (!requiredRoles.includes(role)) {
+                                next('/dashboard')
+                                return
+                            }
+                        }
+                    } catch (e) {
+                        // RBAC check failed, allow access
+                    }
+                }
+                next()
+                return
+            }
+        } catch (e) {
+            // 网络错误
         }
-
-        // RBAC 角色校验
-        const userRole = (() => {
-            try {
-                const info = localStorage.getItem('adminInfo')
-                return info ? JSON.parse(info).role : null
-            } catch { return null }
-        })()
-        const requiredRoles = to.meta.roles
-        if (requiredRoles && !requiredRoles.includes(userRole)) {
-            next('/dashboard')
-            return
-        }
+        next('/login')
+        return
     }
     next()
 })

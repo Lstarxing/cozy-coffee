@@ -276,7 +276,6 @@ async function saveField(fieldName, fieldValue) {
     const body = {}; body[fieldName] = fieldValue
     await updateProfile(body)
     userStore.userInfo[fieldName] = fieldValue
-    localStorage.setItem('userInfo', JSON.stringify(userStore.userInfo))
     if (fieldName === 'nickname') isEditingNickname.value = false
     if (fieldName === 'phone') isEditingPhone.value = false
     if (fieldName === 'email') isEditingEmail.value = false
@@ -373,7 +372,6 @@ async function applyInviteCode() {
     if (userStore.userInfo) {
       if (!userStore.userInfo.hasAppliedInviteCode) {
         userStore.userInfo.hasAppliedInviteCode = true
-        localStorage.setItem('userInfo', JSON.stringify(userStore.userInfo))
       }
     }
     setTimeout(async () => {

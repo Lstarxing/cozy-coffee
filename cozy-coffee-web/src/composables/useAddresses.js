@@ -18,8 +18,6 @@ export function useAddresses() {
 
   async function loadAddresses() {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
       const data = await getAddresses()
       if (data && data.data) {
         addresses.value = data.data || []

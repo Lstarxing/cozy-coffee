@@ -97,7 +97,6 @@ function onSigninSuccess(result) {
   userStore.userInfo.consecutiveSignDays = result.consecutiveDays
   const d = new Date()
   userStore.userInfo.lastSigninDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  localStorage.setItem('userInfo', JSON.stringify(userStore.userInfo))
 }
 
 function onNavigate(path) {

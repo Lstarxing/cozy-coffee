@@ -14,8 +14,6 @@ function handleAuthFailure() {
         return
     }
     isHandlingAuthFailure = true
-    localStorage.removeItem('adminToken')
-    localStorage.removeItem('adminInfo')
 
     if (window.location.pathname !== '/login') {
         window.location.href = '/login'
@@ -26,15 +24,9 @@ function handleAuthFailure() {
     }, 1500)
 }
 
-// 请求拦截器
+// 请求拦截器 — cookie 自动携带 token，无需手动注入
 api.interceptors.request.use(
-    config => {
-        const token = localStorage.getItem('adminToken')
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`
-        }
-        return config
-    },
+    config => config,
     error => Promise.reject(error)
 )
 

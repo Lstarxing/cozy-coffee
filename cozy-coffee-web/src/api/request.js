@@ -7,15 +7,9 @@ const request = axios.create({
     timeout: 10000
 })
 
-// 请求拦截器 — 自动注入 token
+// 请求拦截器 — cookie 自动携带 token，无需手动注入
 request.interceptors.request.use(
-    config => {
-        const token = localStorage.getItem('token')
-        if (token) {
-            config.headers['Authorization'] = `Bearer ${token}`
-        }
-        return config
-    },
+    config => config,
     error => Promise.reject(error)
 )
 
@@ -24,8 +18,6 @@ let isHandlingAuthFailure = false
 function handleAuthFailure() {
     if (isHandlingAuthFailure) return
     isHandlingAuthFailure = true
-    localStorage.removeItem('token')
-    localStorage.removeItem('userInfo')
     if (window.location.pathname !== '/login') {
         window.location.href = '/login'
     }

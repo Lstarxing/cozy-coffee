@@ -161,7 +161,6 @@ async function saveAvatar() {
   try {
     await updateProfile({ avatar: avatarPreview.value })
     userStore.userInfo.avatar = avatarPreview.value
-    localStorage.setItem('userInfo', JSON.stringify(userStore.userInfo))
     showAvatarModal.value = false
     avatarPreview.value = ''
     ElMessage.success('头像更新成功')

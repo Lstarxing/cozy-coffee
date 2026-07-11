@@ -1,14 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-function isTokenExpired(token) {
-    try {
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        return payload.exp * 1000 < Date.now()
-    } catch {
-        return true
-    }
-}
-
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     scrollBehavior(to, from, savedPosition) {
@@ -60,16 +51,21 @@ const router = createRouter({
     ]
 })
 
-// 路由守卫：校验 token 有效性与过期
-router.beforeEach((to, from, next) => {
+// 路由守卫：通过 /api/auth/me 验证 cookie 登录状态
+router.beforeEach(async (to, from, next) => {
     if (to.meta.requiresAuth) {
-        const token = localStorage.getItem('token')
-        if (!token || isTokenExpired(token)) {
-            localStorage.removeItem('token')
-            localStorage.removeItem('userInfo')
-            next({ name: 'login', query: { redirect: to.fullPath } })
-            return
+        try {
+            const baseURL = (import.meta.env.VITE_API_BASE_URL || '') + '/api'
+            const response = await fetch(baseURL + '/auth/me', { credentials: 'include' })
+            if (response.ok) {
+                next()
+                return
+            }
+        } catch (e) {
+            // 网络错误，跳转登录
         }
+        next({ name: 'login', query: { redirect: to.fullPath } })
+        return
     }
     next()
 })

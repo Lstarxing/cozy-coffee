@@ -34,8 +34,6 @@ export const useAdminStore = defineStore('admin', () => {
                     role: payload.role
                 }
                 isLoggedIn.value = true
-                localStorage.setItem('adminToken', token)
-                localStorage.setItem('adminInfo', JSON.stringify(adminInfo.value))
                 return { success: true }
             }
             return { success: false, message: res.message || res.msg || '登录失败' }
@@ -67,36 +65,31 @@ export const useAdminStore = defineStore('admin', () => {
 
     const logout = async () => {
         try {
-            if (localStorage.getItem('adminToken')) {
-                await adminLogout()
-            }
+            await adminLogout()
         } catch (error) {
-            console.warn('Admin logout API failed, fallback to local cleanup:', error)
+            console.warn('Admin logout API failed:', error)
         } finally {
             adminInfo.value = null
             isLoggedIn.value = false
-            localStorage.removeItem('adminToken')
-            localStorage.removeItem('adminInfo')
         }
     }
 
-    const init = () => {
-        const token = localStorage.getItem('adminToken')
-        const info = localStorage.getItem('adminInfo')
-        if (token && info) {
-            // 验证token是否过期
-            try {
-                const payload = parseJwt(token)
-                if (payload.exp && payload.exp * 1000 < Date.now()) {
-                    // Token已过期，清除登录状态
-                    logout()
-                    return
+    const init = async () => {
+        try {
+            const baseURL = (import.meta.env.VITE_API_BASE_URL || '') + '/api'
+            const response = await fetch(baseURL + '/auth/me', { credentials: 'include' })
+            if (response.ok) {
+                const userRes = await fetch(baseURL + '/auth/userinfo', { credentials: 'include' })
+                if (userRes.ok) {
+                    const userData = await userRes.json()
+                    if (userData.data?.role === 'admin') {
+                        adminInfo.value = userData.data
+                        isLoggedIn.value = true
+                    }
                 }
-                adminInfo.value = JSON.parse(info)
-                isLoggedIn.value = true
-            } catch (e) {
-                logout()
             }
+        } catch (e) {
+            console.warn('Admin init check failed:', e)
         }
     }
 
