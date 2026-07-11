@@ -6,6 +6,8 @@ server:
 spring:
   application:
     name: cozy-member-provider-test
+  flyway:
+    enabled: false   # 测试用 @Transactional 回滚，不需要 Flyway 迁移
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     # 测试仍连真实 cozy_member 库（与 IDE 共享数据），用 @Transactional 回滚保证不污染
