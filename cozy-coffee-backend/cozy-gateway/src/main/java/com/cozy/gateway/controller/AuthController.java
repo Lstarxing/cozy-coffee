@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.util.Map;
@@ -31,13 +32,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public Result<Map<String, Object>> login(@Valid @RequestBody LoginRequest request,
-            HttpServletResponse response) {
-        Map<String, Object> loginResult = authService.login(request);
+    public Result<Map<String, Object>> login(@Valid @RequestBody LoginRequest loginRequest,
+            HttpServletRequest request, HttpServletResponse response) {
+        Map<String, Object> loginResult = authService.login(loginRequest);
         String token = (String) loginResult.get("token");
 
         Cookie cookie = new Cookie("cozy_token", token);
         cookie.setHttpOnly(true);
+        cookie.setSecure(request.isSecure());
         cookie.setPath("/");
         cookie.setMaxAge(7 * 24 * 60 * 60);
         cookie.setAttribute("SameSite", "Strict");
@@ -50,9 +52,10 @@ public class AuthController {
     public Result<Void> logout(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @CookieValue(value = "cozy_token", required = false) String cookieToken,
-            HttpServletResponse response) {
+            HttpServletRequest request, HttpServletResponse response) {
         Cookie cookie = new Cookie("cozy_token", "");
         cookie.setHttpOnly(true);
+        cookie.setSecure(request.isSecure());
         cookie.setPath("/");
         cookie.setMaxAge(0);
         cookie.setAttribute("SameSite", "Strict");
