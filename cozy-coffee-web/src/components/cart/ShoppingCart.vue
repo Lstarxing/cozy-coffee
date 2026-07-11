@@ -63,13 +63,13 @@
           <CouponSelector
             :filtered-main-coupons="filteredMainCoupons"
             :addon-coupons="addonCoupons"
-            :selected-coupon-code="selectedCouponCode"
+            :selected-coupon-code="couponCode"
             :selected-addon-coupons="selectedAddonCoupons"
             :remark="remark"
             :is-addon-coupon-disabled="couponIsAddonDisabled"
             :get-addon-coupon-desc="couponGetDesc"
             :get-addon-coupon-tip="couponGetTip"
-            @update:selected-coupon-code="selectedCouponCode = $event"
+            @update:selected-coupon-code="couponCode = $event"
             @update:selected-addon-coupons="selectedAddonCoupons = $event"
             @update:remark="remark = $event"
           />
@@ -111,6 +111,7 @@ import { getImageUrl, handleImageError } from '@/utils/image'
 import { MEMBER_LEVEL } from '@/constants/user'
 import { useAddresses } from '@/composables/useAddresses'
 import { useCoupons } from '@/composables/useCoupons'
+import { useCart } from '@/composables/useCart'
 
 import CartItemList from './CartItemList.vue'
 import DiningMethodSelector from './DiningMethodSelector.vue'
@@ -147,19 +148,16 @@ const props = defineProps({
 const emit = defineEmits(['close', 'update-cart', 'checkout'])
 
 // ───────────────────────────────
-//  Reactive state
+//  Reactive state (persisted via useCart singleton)
 // ───────────────────────────────
 
-const selectedCouponCode = ref('')
+const { couponCode, addonCouponCodes: selectedAddonCoupons, diningMethod } = useCart()
 const remark = ref('')
 const isSubmitting = ref(false)
 
-const diningMethod = ref('DINE_IN')
 const deliveryFee = ref(3)
 
 const showAddressDialog = ref(false)
-
-const selectedAddonCoupons = ref([])
 
 // ───────────────────────────────
 //  Composables
@@ -330,8 +328,8 @@ const memberDiscount = computed(() => {
 })
 
 const discount = computed(() => {
-  if (!selectedCouponCode.value) return 0
-  const coupon = availableCoupons.value.find(c => c.couponCode === selectedCouponCode.value)
+  if (!couponCode.value) return 0
+  const coupon = availableCoupons.value.find(c => c.couponCode === couponCode.value)
   if (!coupon) return 0
   return calculateCouponDiscount(coupon, props.cartItems, couponPricing.value)
 })
@@ -367,9 +365,9 @@ const addonDiscount = computed(() => deliveryFeeDiscount.value + shotDiscount.va
 
 const mainCouponAddonDiscountDetails = computed(() => {
   const result = { strength: 0, milk: 0, total: 0 }
-  if (!selectedCouponCode.value) return result
+  if (!couponCode.value) return result
 
-  const coupon = availableCoupons.value.find(c => c.couponCode === selectedCouponCode.value)
+  const coupon = availableCoupons.value.find(c => c.couponCode === couponCode.value)
   if (!coupon) return result
 
   const rule = coupon.parsedRule || {}
@@ -470,7 +468,7 @@ const handleCheckout = () => {
   isSubmitting.value = true
   emit('checkout', {
     items: props.cartItems,
-    couponCode: selectedCouponCode.value,
+    couponCode: couponCode.value,
     addonCouponCodes: selectedAddonCoupons.value,
     diningMethod: diningMethod.value,
     deliveryAddressId: diningMethod.value === 'DELIVERY' ? selectedAddressId.value : null,
@@ -564,9 +562,9 @@ const loadAndSelectCoupons = async () => {
 const autoSelectBestCoupon = () => {
   const bestCode = findBestCoupon(filteredMainCoupons.value)
   if (bestCode) {
-    selectedCouponCode.value = bestCode
+    couponCode.value = bestCode
   } else {
-    selectedCouponCode.value = ''
+    couponCode.value = ''
   }
 }
 
@@ -606,7 +604,7 @@ watch(() => subtotal.value, () => {
     loadAndSelectCoupons()
   } else {
     availableCoupons.value = []
-    selectedCouponCode.value = ''
+    couponCode.value = ''
   }
 })
 

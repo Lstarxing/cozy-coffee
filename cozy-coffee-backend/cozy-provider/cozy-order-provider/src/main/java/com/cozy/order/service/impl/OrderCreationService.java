@@ -552,7 +552,8 @@ public class OrderCreationService {
                         order.getOrderNo(), appliedCouponId, addonCouponIds);
                 orderInfraService.publishCouponRollbackEvent(order);
             }
-            throw new RuntimeException("订单创建失败", e);
+            log.error("订单落库失败: orderNo={}, error={}", order.getOrderNo(), e.getMessage(), e);
+            throw new BusinessException("订单创建失败: " + extractMessage(e));
         }
 
         log.info("订单创建成功: orderNo={}, userId={}, totalAmount={}, items={}",
@@ -607,5 +608,17 @@ public class OrderCreationService {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
         int random = ThreadLocalRandom.current().nextInt(1000, 10000);
         return "CF" + timestamp + random;
+    }
+
+    private String extractMessage(Throwable e) {
+        Throwable cause = e;
+        while (cause.getCause() != null && cause.getCause() != cause) {
+            cause = cause.getCause();
+        }
+        String msg = cause.getMessage();
+        if (msg == null || msg.isBlank()) {
+            msg = e.getMessage();
+        }
+        return msg != null ? msg : "未知错误";
     }
 }
