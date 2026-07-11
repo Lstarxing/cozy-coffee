@@ -27,11 +27,11 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
-        <spring-boot.version>3.0.2</spring-boot.version>
+        <spring-boot.version>3.4.3</spring-boot.version>
         <dubbo.version>3.2.7</dubbo.version>
         <nacos.version>2.4.3</nacos.version>
         <mysql.version>8.0.32</mysql.version>
-        <mybatis-plus.version>3.5.3.1</mybatis-plus.version>
+        <mybatis-plus.version>3.5.11</mybatis-plus.version>
         <jjwt.version>0.12.6</jjwt.version>
         <lombok.version>1.18.30</lombok.version>
         <rocketmq-spring.version>2.3.2</rocketmq-spring.version>
@@ -74,9 +74,10 @@
             <!-- MyBatis Plus -->
             <dependency>
                 <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
             </dependency>
+
 
             <!-- MySQL Connector -->
             <dependency>
