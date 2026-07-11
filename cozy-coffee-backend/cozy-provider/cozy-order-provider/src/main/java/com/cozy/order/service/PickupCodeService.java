@@ -2,6 +2,7 @@ package com.cozy.order.service;
 
 import com.cozy.order.entity.PickupCodeCounter;
 import com.cozy.order.mapper.PickupCodeCounterMapper;
+import com.cozy.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -42,7 +43,7 @@ public class PickupCodeService {
 
     /**
      * 生成取餐码（事务内）
-     * 
+     *
      * @return 3位取餐码字符串，如 "001", "037", "999"
      */
     @Transactional
@@ -88,7 +89,7 @@ public class PickupCodeService {
         // 3. 检查是否超过999
         if (nextSeq > 999) {
             log.error("取餐码耗尽! storeId={}, businessDate={}", storeId, businessDate);
-            throw new RuntimeException("PICKUP_CODE_EXHAUSTED: 当日取餐码已用尽，请联系管理员");
+            throw new BusinessException("PICKUP_CODE_EXHAUSTED: 当日取餐码已用尽，请联系管理员");
         }
 
         // 4. 更新计数器

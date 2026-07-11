@@ -2,6 +2,7 @@ package com.cozy.mall.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
+import com.cozy.common.exception.BusinessException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.cozy.mall.entity.PointsOrder;
@@ -257,11 +258,11 @@ public class PointsMallServiceImpl implements PointsMallService {
     @Override
     public PointsProductDTO getProduct(Long id) {
         if (id == null) {
-            throw new RuntimeException("商品ID不能为空");
+            throw new BusinessException("商品ID不能为空");
         }
         PointsProduct product = productMapper.selectById(id);
         if (product == null) {
-            throw new RuntimeException("商品不存在");
+            throw new BusinessException("商品不存在");
         }
         return toProductDTO(product);
     }
@@ -272,10 +273,10 @@ public class PointsMallServiceImpl implements PointsMallService {
         log.info("用户 {} 发起兑换请求: productId={}", userId, request.getProductId());
 
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BusinessException("用户未登录");
         }
         if (request == null || request.getProductId() == null) {
-            throw new RuntimeException("请选择商品");
+            throw new BusinessException("请选择商品");
         }
         int quantity = request.getQuantity() != null ? request.getQuantity() : 1;
 
@@ -283,7 +284,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         String lockToken = UUID.randomUUID().toString();
         Boolean lockOk = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, lockToken, 8, TimeUnit.SECONDS);
         if (!Boolean.TRUE.equals(lockOk)) {
-            throw new RuntimeException("当前兑换请求较多，请稍后重试");
+            throw new BusinessException("当前兑换请求较多，请稍后重试");
         }
 
         PointsProduct product;
@@ -291,13 +292,13 @@ public class PointsMallServiceImpl implements PointsMallService {
             // 查询商品
             product = productMapper.selectById(request.getProductId());
             if (product == null) {
-                throw new RuntimeException("商品不存在");
+                throw new BusinessException("商品不存在");
             }
             if (!"active".equals(product.getStatus())) {
-                throw new RuntimeException("商品已下架");
+                throw new BusinessException("商品已下架");
             }
             if (product.getStock() < quantity) {
-                throw new RuntimeException("库存不足");
+                throw new BusinessException("库存不足");
             }
 
             // 扣减库存
@@ -319,7 +320,7 @@ public class PointsMallServiceImpl implements PointsMallService {
 
             int usedCount = (mr != null) ? mr.getRedeemedCount() : 0;
             if (usedCount + quantity > product.getMonthlyLimit()) {
-                throw new RuntimeException("该商品每月限兑 " + product.getMonthlyLimit() + " 件，本月已兑换 " + usedCount + " 件");
+                throw new BusinessException("该商品每月限兑 " + product.getMonthlyLimit() + " 件，本月已兑换 " + usedCount + " 件");
             }
         }
 
@@ -346,25 +347,25 @@ public class PointsMallServiceImpl implements PointsMallService {
             if (request.getAddressId() != null) {
                 address = addressService.getById(request.getAddressId());
                 if (address == null || !address.getUserId().equals(userId)) {
-                    throw new RuntimeException("收货地址不存在");
+                    throw new BusinessException("收货地址不存在");
                 }
             } else if (request.getReceiverName() == null || request.getReceiverPhone() == null
                     || request.getReceiverAddress() == null) {
-                throw new RuntimeException("快递订单必须提供收货信息");
+                throw new BusinessException("快递订单必须提供收货信息");
             }
         }
 
         // 跨服务调用：获取会员信息
         MemberDTO memberDTO = memberService.getMemberByUserId(userId);
         if (memberDTO == null) {
-            throw new RuntimeException("会员信息不存在");
+            throw new BusinessException("会员信息不存在");
         }
 
         // 计算需要的积分
         int totalCost = calculateCost(product.getPointsPrice(), quantity, memberDTO.getMemberLevel());
 
         if (memberDTO.getCurrentPoints() < totalCost) {
-            throw new RuntimeException("积分不足，当前积分: " + memberDTO.getCurrentPoints() + "，需要: " + totalCost);
+            throw new BusinessException("积分不足，当前积分: " + memberDTO.getCurrentPoints() + "，需要: " + totalCost);
         }
 
         // 3. 创建主订单
@@ -463,7 +464,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         // 跨服务调用：FIFO 扣减积分
         boolean consumed = memberService.consumePointsFIFO(userId, totalCost, "redeem", order.getId());
         if (!consumed) {
-            throw new RuntimeException("积分扣减失败");
+            throw new BusinessException("积分扣减失败");
         }
 
         log.info("兑换成功: orderNo={}, cost={}, type={}", order.getOrderNo(), totalCost, fulfillmentType);
@@ -506,7 +507,7 @@ public class PointsMallServiceImpl implements PointsMallService {
             locked = tryAcquireRebuildLock(lockKey, lockToken, 10);
             if (!locked) {
                 log.warn("获取库存恢复锁失败: productId={}", productId);
-                throw new RuntimeException("系统繁忙，请稍后重试");
+                throw new BusinessException("系统繁忙，请稍后重试");
             }
             PointsProduct product = productMapper.selectById(productId);
             if (product != null) {
@@ -541,7 +542,7 @@ public class PointsMallServiceImpl implements PointsMallService {
     @Override
     public List<PointsOrderDTO> listUserOrders(Long userId) {
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BusinessException("用户未登录");
         }
         LambdaQueryWrapper<PointsOrder> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PointsOrder::getUserId, userId)
@@ -554,14 +555,14 @@ public class PointsMallServiceImpl implements PointsMallService {
     @Override
     public PointsOrderDTO getOrder(Long orderId, Long userId) {
         if (orderId == null) {
-            throw new RuntimeException("订单ID不能为空");
+            throw new BusinessException("订单ID不能为空");
         }
         PointsOrder order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException("订单不存在");
         }
         if (!order.getUserId().equals(userId)) {
-            throw new RuntimeException("无权查看此订单");
+            throw new BusinessException("无权查看此订单");
         }
         return toOrderDTO(order);
     }
@@ -572,17 +573,17 @@ public class PointsMallServiceImpl implements PointsMallService {
         log.info("用户 {} 取消订单: orderId={}", userId, orderId);
 
         if (orderId == null) {
-            throw new RuntimeException("订单ID不能为空");
+            throw new BusinessException("订单ID不能为空");
         }
         PointsOrder order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException("订单不存在");
         }
         if (!order.getUserId().equals(userId)) {
-            throw new RuntimeException("无权操作此订单");
+            throw new BusinessException("无权操作此订单");
         }
         if (!"pending".equals(order.getStatus()) && !"processing".equals(order.getStatus())) {
-            throw new RuntimeException("订单状态不允许取消");
+            throw new BusinessException("订单状态不允许取消");
         }
 
         // 更新订单状态
@@ -607,7 +608,7 @@ public class PointsMallServiceImpl implements PointsMallService {
     public List<UserCouponDTO> getUserCoupons(Long userId, String status) {
         log.info("获取用户券包: userId={}, status={}", userId, status);
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BusinessException("用户未登录");
         }
 
         LambdaQueryWrapper<UserCoupon> wrapper = new LambdaQueryWrapper<>();
@@ -764,7 +765,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         log.info("使用券: userId={}, couponCode={}, orderAmount={}", userId, couponCode, orderAmount);
 
         if (userId == null || couponCode == null || couponCode.isEmpty()) {
-            throw new RuntimeException("参数不能为空");
+            throw new BusinessException("参数不能为空");
         }
 
         // 查询券
@@ -775,10 +776,10 @@ public class PointsMallServiceImpl implements PointsMallService {
         UserCoupon coupon = userCouponMapper.selectOne(wrapper);
 
         if (coupon == null) {
-            throw new RuntimeException("券不存在或已使用");
+            throw new BusinessException("券不存在或已使用");
         }
         if (coupon.getExpiresAt() != null && coupon.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("券已过期");
+            throw new BusinessException("券已过期");
         }
 
         // 计算折扣金额
@@ -862,7 +863,7 @@ public class PointsMallServiceImpl implements PointsMallService {
                             // v6.1: 指定商品兑换券仅限标准杯
                             String cupSize = item.getCupSize() != null ? item.getCupSize().toUpperCase() : "STANDARD";
                             if (!cupSize.equals("STANDARD") && !cupSize.equals("MEDIUM")) {
-                                throw new RuntimeException("此兑换券仅限标准杯使用，请调整杯型后再试");
+                                throw new BusinessException("此兑换券仅限标准杯使用，请调整杯型后再试");
                             }
                             
                             // v6.1: 兑换券只抵扣标准杯基础价格，升杯和加料费用由用户额外支付
@@ -882,7 +883,7 @@ public class PointsMallServiceImpl implements PointsMallService {
                             return item.getPrice().min(maxDiscount);
                         }
                     }
-                    throw new RuntimeException("此兑换券仅限指定商品使用");
+                    throw new BusinessException("此兑换券仅限指定商品使用");
                 }
                 return BigDecimal.ZERO;
             } else {
@@ -952,16 +953,16 @@ public class PointsMallServiceImpl implements PointsMallService {
                 
                 if (maxPrice.equals(BigDecimal.ZERO)) {
                     if (standardOnly) {
-                        throw new RuntimeException("此免单券仅限标准杯饮品使用，请调整杯型后再试");
+                        throw new BusinessException("此免单券仅限标准杯饮品使用，请调整杯型后再试");
                     }
                     if (blockSoe) {
-                        throw new RuntimeException("此免单券不适用于SOE/手冲类产品");
+                        throw new BusinessException("此免单券不适用于SOE/手冲类产品");
                     }
                     // v5.3.6: 根据券类型显示正确的错误信息
                     if (isCakeCoupon) {
-                        throw new RuntimeException("此券仅限烘焙甜品使用");
+                        throw new BusinessException("此券仅限烘焙甜品使用");
                     }
-                    throw new RuntimeException("通兑券仅限饮品使用");
+                    throw new BusinessException("通兑券仅限饮品使用");
                 }
                 
                 log.info("免单券匹配最高价商品: {}, maxPrice={}, discount={}, isCakeCoupon={}", matchedProductInfo, maxPrice, maxPrice.min(maxDiscount), isCakeCoupon);
@@ -1016,7 +1017,7 @@ public class PointsMallServiceImpl implements PointsMallService {
                 }
 
                 if (maxBakeryPrice.equals(BigDecimal.ZERO)) {
-                    throw new RuntimeException("此券仅限烘培甜品使用，订单中无烘培商品");
+                    throw new BusinessException("此券仅限烘培甜品使用，订单中无烘培商品");
                 }
 
                 baseAmount = maxBakeryPrice;
@@ -1040,7 +1041,7 @@ public class PointsMallServiceImpl implements PointsMallService {
                 }
 
                 if (maxDrinkPrice.equals(BigDecimal.ZERO)) {
-                    throw new RuntimeException("此券仅限饮品使用，订单中无饮品");
+                    throw new BusinessException("此券仅限饮品使用，订单中无饮品");
                 }
 
                 if (isSingleItem) {
@@ -1073,14 +1074,14 @@ public class PointsMallServiceImpl implements PointsMallService {
         } else if ("FULL_REDUCE".equals(type)) {
             // 满减券
             if (minOrderAmount > 0 && orderAmount.compareTo(new BigDecimal(minOrderAmount)) < 0) {
-                throw new RuntimeException("订单金额未满 " + minOrderAmount + " 元");
+                throw new BusinessException("订单金额未满 " + minOrderAmount + " 元");
             }
             return new BigDecimal(value);
 
         } else if ("BOGO".equals(type)) {
             // 买一送一：低价免单
             if (items == null || items.isEmpty()) {
-                throw new RuntimeException("无法获取商品信息");
+                throw new BusinessException("无法获取商品信息");
             }
 
             List<BigDecimal> drinkPrices = new ArrayList<>();
@@ -1094,7 +1095,7 @@ public class PointsMallServiceImpl implements PointsMallService {
             }
 
             if (drinkPrices.size() < 2) {
-                throw new RuntimeException("买一送一券需要至少2杯饮品");
+                throw new BusinessException("买一送一券需要至少2杯饮品");
             }
 
             Collections.sort(drinkPrices); // 升序：p1 <= p2 <= p3 <= p4
@@ -1126,7 +1127,7 @@ public class PointsMallServiceImpl implements PointsMallService {
             }
 
             if (!hasExtraShot) {
-                throw new RuntimeException("此券仅在点单时选择了【加浓缩】选项后可用");
+                throw new BusinessException("此券仅在点单时选择了【加浓缩】选项后可用");
             }
 
             int shotValue = parseValue(ruleJson, "value");
@@ -1144,7 +1145,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         } else if ("NEW_PRODUCT_HALF".equals(type)) {
             // v5.3.4 新品半价券：自动选择价格最高的新品，最高封顶20元
             if (items == null || items.isEmpty()) {
-                throw new RuntimeException("此券仅适用于新品饮品，请先添加新品商品");
+                throw new BusinessException("此券仅适用于新品饮品，请先添加新品商品");
             }
             
             // 查找订单中价格最高的新品（智能选择最优惠方案）
@@ -1162,7 +1163,7 @@ public class PointsMallServiceImpl implements PointsMallService {
             }
             
             if (highestNewProduct == null) {
-                throw new RuntimeException("此券仅限新品饮品使用，当前订单中没有新品商品");
+                throw new BusinessException("此券仅限新品饮品使用，当前订单中没有新品商品");
             }
             
             // 计算半价优惠，封顶20元
@@ -1173,7 +1174,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         } else if ("NEW_PRODUCT_FREE".equals(type)) {
             // v5.3.4 新品免单券：自动选择价格最高的新品，最高封顶40元
             if (items == null || items.isEmpty()) {
-                throw new RuntimeException("此券仅适用于新品饮品，请先添加新品商品");
+                throw new BusinessException("此券仅适用于新品饮品，请先添加新品商品");
             }
             
             // 查找订单中价格最高的新品（智能选择最优惠方案）
@@ -1191,7 +1192,7 @@ public class PointsMallServiceImpl implements PointsMallService {
             }
             
             if (highestNewProduct == null) {
-                throw new RuntimeException("此券仅限新品饮品使用，当前订单中没有新品商品");
+                throw new BusinessException("此券仅限新品饮品使用，当前订单中没有新品商品");
             }
             
             // 计算免单优惠，封顶40元
@@ -1201,7 +1202,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         } else if ("CAKE_HALF".equals(type) || (ruleJson != null && ruleJson.contains("CAKE_ONLY"))) {
             // v5.3.4 蛋糕5折券：仅限烘培甜品，自动选择最高价商品，最高优惠¥50
             if (items == null || items.isEmpty()) {
-                throw new RuntimeException("此券仅适用于烘培甜品，请先添加烘培商品");
+                throw new BusinessException("此券仅适用于烘培甜品，请先添加烘培商品");
             }
             
             // 查找订单中价格最高的烘培甜品（智能选择最优惠方案）
@@ -1219,7 +1220,7 @@ public class PointsMallServiceImpl implements PointsMallService {
             }
             
             if (highestBakeryProduct == null) {
-                throw new RuntimeException("此券仅限烘培甜品使用，当前订单中没有烘培商品");
+                throw new BusinessException("此券仅限烘培甜品使用，当前订单中没有烘培商品");
             }
             
             // 计算5折优惠（50% off），封顶50元
@@ -1915,7 +1916,7 @@ public class PointsMallServiceImpl implements PointsMallService {
     public PointsOrderDTO getRedemptionDetail(Long orderId) {
         log.info("管理端获取兑换订单详情: orderId={}", orderId);
         if (orderId == null) {
-            throw new RuntimeException("订单ID不能为空");
+            throw new BusinessException("订单ID不能为空");
         }
         PointsOrder order = orderMapper.selectById(orderId);
         if (order == null) {
@@ -1958,11 +1959,11 @@ public class PointsMallServiceImpl implements PointsMallService {
     public PointsOrderDTO updateOrderStatus(Long orderId, String status) {
         log.info("管理端更新订单状态: orderId={}, status={}", orderId, status);
         if (orderId == null) {
-            throw new RuntimeException("订单ID不能为空");
+            throw new BusinessException("订单ID不能为空");
         }
         PointsOrder order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException("订单不存在");
         }
 
         // 更新状态与完成时间
@@ -1992,11 +1993,11 @@ public class PointsMallServiceImpl implements PointsMallService {
     public PointsOrderDTO updateShipping(Long orderId, String company, String trackingNo) {
         log.info("管理端更新物流信息: orderId={}, company={}, trackingNo={}", orderId, company, trackingNo);
         if (orderId == null) {
-            throw new RuntimeException("订单ID不能为空");
+            throw new BusinessException("订单ID不能为空");
         }
         PointsOrder order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException("订单不存在");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -2021,23 +2022,23 @@ public class PointsMallServiceImpl implements PointsMallService {
     public PointsOrderDTO confirmReceipt(Long orderId, Long userId) {
         log.info("用户确认收货: orderId={}, userId={}", orderId, userId);
         if (orderId == null || userId == null) {
-            throw new RuntimeException("参数不能为空");
+            throw new BusinessException("参数不能为空");
         }
 
         PointsOrder order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException("订单不存在");
         }
         if (!order.getUserId().equals(userId)) {
-            throw new RuntimeException("无权操作此订单");
+            throw new BusinessException("无权操作此订单");
         }
         if (!"shipped".equals(order.getStatus())) {
-            throw new RuntimeException("只有已发货的订单可以确认收货");
+            throw new BusinessException("只有已发货的订单可以确认收货");
         }
 
         PointsOrderFulfillment f = fulfillmentMapper.selectById(orderId);
         if (f == null || !"DELIVERY".equals(f.getType())) {
-            throw new RuntimeException("只有快递订单可以确认收货");
+            throw new BusinessException("只有快递订单可以确认收货");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -2067,10 +2068,10 @@ public class PointsMallServiceImpl implements PointsMallService {
     public PointsProductDTO addProduct(PointsProductDTO dto) {
         log.info("管理端添加积分商品: {}", dto.getName());
         if (dto.getName() == null || dto.getName().trim().isEmpty()) {
-            throw new RuntimeException("商品名称不能为空");
+            throw new BusinessException("商品名称不能为空");
         }
         if (dto.getPointsPrice() == null || dto.getPointsPrice() <= 0) {
-            throw new RuntimeException("积分价格必须大于0");
+            throw new BusinessException("积分价格必须大于0");
         }
 
         PointsProduct product = new PointsProduct();
@@ -2112,11 +2113,11 @@ public class PointsMallServiceImpl implements PointsMallService {
         log.info("管理端更新积分商品: id={}", productId);
         PointsProduct product = productMapper.selectById(productId);
         if (product == null) {
-            throw new RuntimeException("商品不存在");
+            throw new BusinessException("商品不存在");
         }
         if (dto.getName() != null) {
             if (dto.getName().trim().isEmpty()) {
-                throw new RuntimeException("商品名称不能为空");
+                throw new BusinessException("商品名称不能为空");
             }
             product.setName(dto.getName().trim());
         }
@@ -2126,7 +2127,7 @@ public class PointsMallServiceImpl implements PointsMallService {
             product.setImageUrl(dto.getImageUrl());
         if (dto.getPointsPrice() != null) {
             if (dto.getPointsPrice() <= 0) {
-                throw new RuntimeException("积分价格必须大于0");
+                throw new BusinessException("积分价格必须大于0");
             }
             product.setPointsPrice(dto.getPointsPrice());
         }
@@ -2171,7 +2172,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         log.info("管理端删除积分商品: id={}", productId);
         PointsProduct product = productMapper.selectById(productId);
         if (product == null) {
-            throw new RuntimeException("商品不存在");
+            throw new BusinessException("商品不存在");
         }
         productMapper.deleteById(productId);
         invalidateMallProductsCache();
@@ -2183,7 +2184,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         log.info("管理端切换积分商品状态: id={}", productId);
         PointsProduct product = productMapper.selectById(productId);
         if (product == null) {
-            throw new RuntimeException("商品不存在");
+            throw new BusinessException("商品不存在");
         }
         product.setStatus("active".equals(product.getStatus()) ? "inactive" : "active");
         productMapper.updateById(product);
@@ -2198,7 +2199,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         log.info("管理端删除兑换订单: id={}", orderId);
         PointsOrder order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException("订单不存在");
         }
         // 删除订单主表
         orderMapper.deleteById(orderId);

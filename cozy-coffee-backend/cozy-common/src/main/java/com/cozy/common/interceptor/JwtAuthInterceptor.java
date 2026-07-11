@@ -31,19 +31,36 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
-        // 获取 Authorization Header
+        String token = null;
+
+        // 1. 先从 Authorization Header 读取
         String authHeader = request.getHeader("Authorization");
         log.debug("JwtAuthInterceptor - Request URI: {}, Authorization header: {}",
                 request.getRequestURI(),
                 authHeader != null ? authHeader.substring(0, Math.min(20, authHeader.length())) + "..." : "null");
 
-        // 无 token：匿名访问放行，由 Service 层 getUserId() 决定是否需要登录
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            log.debug("JwtAuthInterceptor - No Bearer token, anonymous access");
-            return true;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
         }
 
-        String token = authHeader.substring(7);
+        // 2. 再从 Cookie 读取（httpOnly cookie fallback）
+        if (token == null) {
+            jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+            if (cookies != null) {
+                for (jakarta.servlet.http.Cookie c : cookies) {
+                    if ("cozy_token".equals(c.getName())) {
+                        token = c.getValue();
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 无 token：匿名访问放行
+        if (token == null) {
+            log.debug("JwtAuthInterceptor - No Bearer token or cookie, anonymous access");
+            return true;
+        }
         try {
             // 验证 token，无效直接拒绝（区别于匿名访问）
             if (!JwtUtil.validateToken(token)) {

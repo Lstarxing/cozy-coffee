@@ -1,5 +1,7 @@
 package com.cozy.order.service.impl;
 
+import com.cozy.common.exception.BusinessException;
+
 /**
  * 订单状态机（Phase 4.1）。
  * 从 OrderServiceImpl 多个方法中分散的 status.equals() 字符串比较
@@ -43,7 +45,7 @@ public enum OrderStateMachine {
             default -> false;
         };
         if (!valid) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "订单状态流转不合法: " + this.value + " -> " + to.value);
         }
     }

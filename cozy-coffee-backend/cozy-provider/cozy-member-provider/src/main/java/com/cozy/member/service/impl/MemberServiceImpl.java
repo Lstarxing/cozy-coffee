@@ -2,6 +2,7 @@ package com.cozy.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
+import com.cozy.common.exception.BusinessException;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.api.PointsMallService;
 import java.math.BigDecimal;
@@ -79,7 +80,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public MemberDTO getMemberByUserId(Long userId) {
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BusinessException("用户未登录");
         }
 
         String cacheKey = RedisKeyConstants.memberProfileByUserId(userId);
@@ -284,7 +285,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public void createMember(Long userId) {
         if (userId == null) {
-            throw new RuntimeException("用户ID不能为空");
+            throw new BusinessException("用户ID不能为空");
         }
 
         // 检查是否已存在
@@ -327,11 +328,11 @@ public class MemberServiceImpl implements MemberService {
         // 其他旧逻辑调用（如退款等非 lot 模式，理论上以后应全部改为 lot 模式）
         MemberInfo member = memberInfoMapper.selectByUserIdForUpdate(userId);
         if (member == null) {
-            throw new RuntimeException("会员信息不存在");
+            throw new BusinessException("会员信息不存在");
         }
 
         if (points < 0 && member.getCurrentPoints() < Math.abs(points)) {
-            throw new RuntimeException("积分不足");
+            throw new BusinessException("积分不足");
         }
 
         member.setCurrentPoints(member.getCurrentPoints() + points);
@@ -354,7 +355,7 @@ public class MemberServiceImpl implements MemberService {
         // 1. 悲观锁 MemberInfo
         MemberInfo member = memberInfoMapper.selectByUserIdForUpdate(userId);
         if (member == null) {
-            throw new RuntimeException("会员信息不存在");
+            throw new BusinessException("会员信息不存在");
         }
 
         if (delta > 0) {
@@ -364,7 +365,7 @@ public class MemberServiceImpl implements MemberService {
             // 扣分逻辑：FIFO 扣减现存批次
             int absDelta = Math.abs(delta);
             if (member.getCurrentPoints() < absDelta) {
-                throw new RuntimeException("积分不足，无法完成调整（当前余额: " + member.getCurrentPoints() + "）");
+                throw new BusinessException("积分不足，无法完成调整（当前余额: " + member.getCurrentPoints() + "）");
             }
 
             // 执行 FIFO 扣减
@@ -447,7 +448,7 @@ public class MemberServiceImpl implements MemberService {
 
         MemberInfo member = memberInfoMapper.selectByUserIdForUpdate(userId);
         if (member == null) {
-            throw new RuntimeException("会员信息不存在");
+            throw new BusinessException("会员信息不存在");
         }
 
         addPointsWithLotInternal(member, points, sourceType, sourceId, description);
@@ -568,11 +569,11 @@ public class MemberServiceImpl implements MemberService {
 
         MemberInfo member = memberInfoMapper.selectByUserIdForUpdate(userId);
         if (member == null) {
-            throw new RuntimeException("会员信息不存在");
+            throw new BusinessException("会员信息不存在");
         }
 
         if (member.getCurrentPoints() < points) {
-            throw new RuntimeException("积分不足，当前积分: " + member.getCurrentPoints());
+            throw new BusinessException("积分不足，当前积分: " + member.getCurrentPoints());
         }
 
         consumePointsFIFOInternal(member, points, consumeType, consumeId, "积分兑换扣减");
@@ -630,7 +631,7 @@ public class MemberServiceImpl implements MemberService {
 
         if (remainingToConsume > 0) {
             // 若所有批次都不够扣（极端情况），强制报错触发回滚
-            throw new RuntimeException(
+            throw new BusinessException(
                     "积分批次余额不足(已扣" + (points - remainingToConsume) + "，还需" + remainingToConsume + ")，请稍后重试");
         }
 
@@ -665,7 +666,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public List<PointsTransactionDTO> getPointsTransactions(Long userId, int limit) {
         if (userId == null) {
-            throw new RuntimeException("用户ID不能为空");
+            throw new BusinessException("用户ID不能为空");
         }
         int safeLimit = Math.min(Math.max(limit, 1), 100);
 
@@ -1219,10 +1220,10 @@ public class MemberServiceImpl implements MemberService {
 
         Map<String, Object> status = getMonthlyBenefitStatus(userId);
         if ((boolean) status.get("claimed")) {
-            throw new RuntimeException("本月权益已领取");
+            throw new BusinessException("本月权益已领取");
         }
         if (!(boolean) status.get("canClaim")) {
-            throw new RuntimeException("当前等级暂无可领取的月度权益");
+            throw new BusinessException("当前等级暂无可领取的月度权益");
         }
 
         String currentMonthKey = java.time.format.DateTimeFormatter.ofPattern("yyyyMM")
@@ -1290,7 +1291,7 @@ public class MemberServiceImpl implements MemberService {
             log.info("用户领取月度权益成功: userId={}, level={}, month={}", userId, level, currentMonthKey);
         } catch (Exception e) {
             log.error("月度权益发放失败", e);
-            throw new RuntimeException("权益发放失败，请稍后重试");
+            throw new BusinessException("权益发放失败，请稍后重试");
         }
     }
 }

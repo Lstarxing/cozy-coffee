@@ -5,6 +5,7 @@ import com.cozy.common.mq.MqTags;
 import com.cozy.common.mq.MqTopics;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.dto.response.MemberDTO;
+import com.cozy.common.exception.BusinessException;
 import com.cozy.order.dto.response.ShopOrderDTO;
 import com.cozy.order.dto.response.ShopOrderItemDTO;
 import com.cozy.order.entity.CoffeeProduct;
@@ -19,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -44,17 +46,18 @@ public class OrderCommandService {
     private final OrderRewardService rewardService;
     private final OrderDtoEnricher orderDtoEnricher;
     private final OrderInfraService orderInfraService;
+    private final TransactionTemplate transactionTemplate;
 
     @DubboReference(check = false)
     private MemberService memberService;
 
     public ShopOrderDTO updateOrderStatus(Long orderId, String status) {
         if (orderId == null) {
-            throw new RuntimeException("订单ID不能为空");
+            throw new BusinessException("订单ID不能为空");
         }
         ShopOrder order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException("订单不存在");
         }
         order.setStatus(status);
         orderMapper.updateById(order);
@@ -65,11 +68,11 @@ public class OrderCommandService {
     @Transactional
     public ShopOrderDTO acceptOrder(Long orderId) {
         if (orderId == null) {
-            throw new RuntimeException("订单ID不能为空");
+            throw new BusinessException("订单ID不能为空");
         }
         ShopOrder order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException("订单不存在");
         }
         OrderStateMachine current = OrderStateMachine.from(order.getStatus());
         current.assertCanTransition(OrderStateMachine.PREPARING);
@@ -98,11 +101,11 @@ public class OrderCommandService {
      */
     public ShopOrderDTO completeOrder(Long orderId) {
         if (orderId == null) {
-            throw new RuntimeException("订单ID不能为空");
+            throw new BusinessException("订单ID不能为空");
         }
         ShopOrder order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException("订单不存在");
         }
         OrderStateMachine current = OrderStateMachine.from(order.getStatus());
         current.assertCanTransition(OrderStateMachine.COMPLETED);
@@ -189,15 +192,16 @@ public class OrderCommandService {
         return false;
     }
 
-    @Transactional
     private ShopOrderDTO doCompleteInTx(ShopOrder order, int expEarned, int pointsEarned) {
-        // 更新订单状态（积分/EXP/首单奖励/月度任务由 MQ 消费者异步处理）
-        order.setStatus(OrderStateMachine.COMPLETED.value());
-        order.setExpEarned(expEarned);
-        order.setPointsEarned(pointsEarned);
-        order.setRewardsGranted(true);
-        orderMapper.updateById(order);
-        orderInfraService.syncPendingTimeoutIndex(order);
+        transactionTemplate.executeWithoutResult(status -> {
+            // 更新订单状态（积分/EXP/首单奖励/月度任务由 MQ 消费者异步处理）
+            order.setStatus(OrderStateMachine.COMPLETED.value());
+            order.setExpEarned(expEarned);
+            order.setPointsEarned(pointsEarned);
+            order.setRewardsGranted(true);
+            orderMapper.updateById(order);
+            orderInfraService.syncPendingTimeoutIndex(order);
+        });
 
         return orderDtoEnricher.toOrderDTO(order, null);
     }
@@ -205,11 +209,11 @@ public class OrderCommandService {
     @Transactional
     public ShopOrderDTO cancelOrder(Long orderId) {
         if (orderId == null) {
-            throw new RuntimeException("订单ID不能为空");
+            throw new BusinessException("订单ID不能为空");
         }
         ShopOrder order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException("订单不存在");
         }
         OrderStateMachine current = OrderStateMachine.from(order.getStatus());
         current.assertCanTransition(OrderStateMachine.CANCELLED);
@@ -227,17 +231,17 @@ public class OrderCommandService {
     @Transactional
     public ShopOrderDTO cancelUserOrder(Long orderId, Long userId) {
         if (orderId == null) {
-            throw new RuntimeException("订单ID不能为空");
+            throw new BusinessException("订单ID不能为空");
         }
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BusinessException("用户未登录");
         }
         ShopOrder order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException("订单不存在");
         }
         if (!order.getUserId().equals(userId)) {
-            throw new RuntimeException("无权取消该订单");
+            throw new BusinessException("无权取消该订单");
         }
         OrderStateMachine current = OrderStateMachine.from(order.getStatus());
         current.assertCanTransition(OrderStateMachine.CANCELLED);

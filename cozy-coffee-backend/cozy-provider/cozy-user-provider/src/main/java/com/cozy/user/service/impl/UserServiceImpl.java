@@ -2,6 +2,7 @@ package com.cozy.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
+import com.cozy.common.exception.BusinessException;
 import com.cozy.common.util.JwtUtil;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.api.PointsMallService;
@@ -61,26 +62,26 @@ public class UserServiceImpl implements UserService {
     public void register(RegisterRequest request) {
         // 参数验证
         if (request == null) {
-            throw new RuntimeException("注册信息不能为空");
+            throw new BusinessException("注册信息不能为空");
         }
         if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
-            throw new RuntimeException("账号不能为空");
+            throw new BusinessException("账号不能为空");
         }
         if (request.getPassword() == null || request.getPassword().length() < 6) {
-            throw new RuntimeException("密码长度不能少于6位");
+            throw new BusinessException("密码长度不能少于6位");
         }
 
         // v4.2: 校验username格式必须是手机号或邮箱
         String username = request.getUsername().trim();
         if (!isPhone(username) && !isEmail(username)) {
-            throw new RuntimeException("账号格式不正确,请使用手机号或邮箱注册");
+            throw new BusinessException("账号格式不正确,请使用手机号或邮箱注册");
         }
 
         // 检查用户名是否已存在
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getUsername, username);
         if (userMapper.selectCount(wrapper) > 0) {
-            throw new RuntimeException("该账号已被注册，请换一个账号");
+            throw new BusinessException("该账号已被注册，请换一个账号");
         }
 
         String memberCode = generateMemberCode();
@@ -109,7 +110,7 @@ public class UserServiceImpl implements UserService {
 
             // 验证格式
             if (code.length() != 8) {
-                throw new RuntimeException("邀请码格式错误（应为8位字符）");
+                throw new BusinessException("邀请码格式错误（应为8位字符）");
             }
 
             // 查询邀请人
@@ -118,7 +119,7 @@ public class UserServiceImpl implements UserService {
             inviter = userMapper.selectOne(queryInviter);
 
             if (inviter == null) {
-                throw new RuntimeException("邀请码不存在，请核对或清空后注册");
+                throw new BusinessException("邀请码不存在，请核对或清空后注册");
             }
         }
 
@@ -127,11 +128,11 @@ public class UserServiceImpl implements UserService {
         } catch (DuplicateKeyException e) {
             String msg = e.getMessage();
             if (msg.contains("uk_phone")) {
-                throw new RuntimeException("该手机号已被其他账号绑定");
+                throw new BusinessException("该手机号已被其他账号绑定");
             } else if (msg.contains("uk_email")) {
-                throw new RuntimeException("该邮箱已被其他账号绑定");
+                throw new BusinessException("该邮箱已被其他账号绑定");
             } else {
-                throw new RuntimeException("账号信息已存在");
+                throw new BusinessException("账号信息已存在");
             }
         }
 
@@ -171,7 +172,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public String login(LoginRequest request) {
         if (request == null || request.getUsername() == null || request.getPassword() == null) {
-            throw new RuntimeException("账号或密码不能为空");
+            throw new BusinessException("账号或密码不能为空");
         }
 
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
@@ -179,16 +180,16 @@ public class UserServiceImpl implements UserService {
         User user = userMapper.selectOne(wrapper);
 
         if (user == null) {
-            throw new RuntimeException("账号不存在");
+            throw new BusinessException("账号不存在");
         }
 
         // 检查用户状态
         if ("disabled".equals(user.getStatus())) {
-            throw new RuntimeException("账号已被禁用，请联系管理员");
+            throw new BusinessException("账号已被禁用，请联系管理员");
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("密码错误");
+            throw new BusinessException("密码错误");
         }
 
         String token = JwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole(), user.getTokenVersion());
@@ -274,7 +275,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDTO getUserById(Long userId) {
         if (userId == null) {
-            throw new RuntimeException("用户ID不能为空");
+            throw new BusinessException("用户ID不能为空");
         }
         String cacheKey = RedisKeyConstants.userProfileById(userId);
         try {
@@ -326,7 +327,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDTO getUserByUsername(String username) {
         if (username == null || username.trim().isEmpty()) {
-            throw new RuntimeException("用户名不能为空");
+            throw new BusinessException("用户名不能为空");
         }
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getUsername, username.trim());
@@ -337,15 +338,15 @@ public class UserServiceImpl implements UserService {
     @Override
     public void updateProfile(Long userId, UpdateProfileRequest request) {
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BusinessException("用户未登录");
         }
         if (request == null) {
-            throw new RuntimeException("更新信息不能为空");
+            throw new BusinessException("更新信息不能为空");
         }
 
         User user = userMapper.selectById(userId);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
 
         boolean hasUpdate = false;
@@ -360,7 +361,7 @@ public class UserServiceImpl implements UserService {
             String newPhone = request.getPhone().trim();
             if (!newPhone.isEmpty()) {
                 if (!isPhone(newPhone)) {
-                    throw new RuntimeException("手机号格式不正确");
+                    throw new BusinessException("手机号格式不正确");
                 }
                 // v4.2: 检查手机号唯一性（排除当前用户）
                 if (!newPhone.equals(user.getPhone())) {
@@ -368,7 +369,7 @@ public class UserServiceImpl implements UserService {
                     phoneWrapper.eq(User::getPhone, newPhone)
                             .ne(User::getId, userId);
                     if (userMapper.selectCount(phoneWrapper) > 0) {
-                        throw new RuntimeException("该手机号已被其他账号绑定");
+                        throw new BusinessException("该手机号已被其他账号绑定");
                     }
                 }
             }
@@ -383,7 +384,7 @@ public class UserServiceImpl implements UserService {
             String newEmail = request.getEmail().trim();
             if (!newEmail.isEmpty()) {
                 if (!isEmail(newEmail)) {
-                    throw new RuntimeException("邮箱格式不正确");
+                    throw new BusinessException("邮箱格式不正确");
                 }
                 // v4.2: 检查邮箱唯一性（排除当前用户）
                 if (!newEmail.equals(user.getEmail())) {
@@ -391,7 +392,7 @@ public class UserServiceImpl implements UserService {
                     emailWrapper.eq(User::getEmail, newEmail)
                             .ne(User::getId, userId);
                     if (userMapper.selectCount(emailWrapper) > 0) {
-                        throw new RuntimeException("该邮箱已被其他账号绑定");
+                        throw new BusinessException("该邮箱已被其他账号绑定");
                     }
                 }
             }
@@ -410,7 +411,7 @@ public class UserServiceImpl implements UserService {
             // 检查是否允许修改
             if (user.getBirthdaySetAt() != null) {
                 if (user.getNextBirthdayResetAt() != null && now.isBefore(user.getNextBirthdayResetAt())) {
-                    throw new RuntimeException("生日每年只能修改一次，下次可修改时间: " +
+                    throw new BusinessException("生日每年只能修改一次，下次可修改时间: " +
                             user.getNextBirthdayResetAt().toLocalDate());
                 }
             }
@@ -427,7 +428,7 @@ public class UserServiceImpl implements UserService {
         }
 
         if (!hasUpdate) {
-            throw new RuntimeException("没有需要更新的内容");
+            throw new BusinessException("没有需要更新的内容");
         }
 
         try {
@@ -436,11 +437,11 @@ public class UserServiceImpl implements UserService {
         } catch (DuplicateKeyException e) {
             String msg = e.getMessage();
             if (msg.contains("uk_phone")) {
-                throw new RuntimeException("该手机号已被其他账号绑定");
+                throw new BusinessException("该手机号已被其他账号绑定");
             } else if (msg.contains("uk_email")) {
-                throw new RuntimeException("该邮箱已被其他账号绑定");
+                throw new BusinessException("该邮箱已被其他账号绑定");
             } else {
-                throw new RuntimeException("更新失败，信息可能重复");
+                throw new BusinessException("更新失败，信息可能重复");
             }
         }
         log.info("用户资料更新成功: userId={}", userId);
@@ -543,10 +544,10 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void applyInviteCode(Long userId, String inviteCode) {
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BusinessException("用户未登录");
         }
         if (inviteCode == null || inviteCode.trim().isEmpty()) {
-            throw new RuntimeException("邀请码不能为空");
+            throw new BusinessException("邀请码不能为空");
         }
 
         processInviteReward(userId, inviteCode.trim().toUpperCase());
@@ -559,17 +560,17 @@ public class UserServiceImpl implements UserService {
         // 1. 查询当前用户
         User currentUser = userMapper.selectById(userId);
         if (currentUser == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
 
         // 2. 检查是否已填写过邀请码
         if (currentUser.getInvitedBy() != null) {
-            throw new RuntimeException("您已填写过邀请码，不可重复填写");
+            throw new BusinessException("您已填写过邀请码，不可重复填写");
         }
 
         // 3. 检查是否填写自己的邀请码
         if (inviteCode.equals(currentUser.getInviteCode())) {
-            throw new RuntimeException("不能填写自己的邀请码");
+            throw new BusinessException("不能填写自己的邀请码");
         }
 
         // 4. 查找邀请人
@@ -578,7 +579,7 @@ public class UserServiceImpl implements UserService {
         User inviter = userMapper.selectOne(wrapper);
 
         if (inviter == null) {
-            throw new RuntimeException("邀请码无效，请检查后重新输入");
+            throw new BusinessException("邀请码无效，请检查后重新输入");
         }
 
         // 5. 更新当前用户的邀请人信息
@@ -633,15 +634,15 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void updateUserStatus(Long userId, String status) {
         if (userId == null) {
-            throw new RuntimeException("用户ID不能为空");
+            throw new BusinessException("用户ID不能为空");
         }
         if (!"active".equals(status) && !"disabled".equals(status)) {
-            throw new RuntimeException("无效的用户状态");
+            throw new BusinessException("无效的用户状态");
         }
 
         User user = userMapper.selectById(userId);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
 
         String oldStatus = user.getStatus();
@@ -660,11 +661,11 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDTO getUserDetail(Long userId) {
         if (userId == null) {
-            throw new RuntimeException("用户ID不能为空");
+            throw new BusinessException("用户ID不能为空");
         }
         User user = userMapper.selectById(userId);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
 
         UserDTO dto = toDTO(user);

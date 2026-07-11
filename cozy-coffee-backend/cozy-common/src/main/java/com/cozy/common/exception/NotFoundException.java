@@ -1,4 +1,4 @@
-package com.cozy.gateway.exception;
+package com.cozy.common.exception;
 
 /**
  * 资源未找到异常 — 由 GlobalExceptionHandler 统一转为 404。

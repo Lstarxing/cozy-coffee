@@ -2,6 +2,7 @@ package com.cozy.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
+import com.cozy.common.exception.BusinessException;
 import com.cozy.member.api.PointsMallService;
 import com.cozy.member.api.SigninService;
 import com.cozy.member.dto.response.SigninResultDTO;
@@ -56,7 +57,7 @@ public class SigninServiceImpl implements SigninService {
     @Transactional
     public SigninResultDTO signIn(Long userId) {
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BusinessException("用户未登录");
         }
 
         LocalDate today = LocalDate.now();
@@ -66,12 +67,12 @@ public class SigninServiceImpl implements SigninService {
         MemberInfo member = memberInfoMapper.selectOne(wrapper);
 
         if (member == null) {
-            throw new RuntimeException("会员信息不存在，请联系客服");
+            throw new BusinessException("会员信息不存在，请联系客服");
         }
 
         // 检查是否已签到
         if (member.getLastSigninDate() != null && member.getLastSigninDate().equals(today)) {
-            throw new RuntimeException("今日已签到，明天再来吧");
+            throw new BusinessException("今日已签到，明天再来吧");
         }
 
         // 计算连续签到天数
@@ -153,7 +154,7 @@ public class SigninServiceImpl implements SigninService {
     @Override
     public Map<String, Object> getSigninCalendar(Long userId, String month) {
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BusinessException("用户未登录");
         }
 
         YearMonth targetMonth = parseMonth(month);
@@ -169,7 +170,7 @@ public class SigninServiceImpl implements SigninService {
     @Override
     public Map<String, Object> getSigninMonthStats(Long userId, String month) {
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BusinessException("用户未登录");
         }
 
         YearMonth targetMonth = parseMonth(month);
@@ -223,7 +224,7 @@ public class SigninServiceImpl implements SigninService {
         try {
             return YearMonth.parse(month, MONTH_FMT);
         } catch (Exception e) {
-            throw new RuntimeException("month 参数格式错误，应为 yyyyMM");
+            throw new BusinessException("month 参数格式错误，应为 yyyyMM");
         }
     }
 

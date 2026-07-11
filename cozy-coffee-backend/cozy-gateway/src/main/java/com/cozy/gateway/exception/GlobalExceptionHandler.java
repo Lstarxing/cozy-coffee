@@ -1,5 +1,8 @@
 package com.cozy.gateway.exception;
 
+import com.cozy.common.exception.BusinessException;
+import com.cozy.common.exception.NotFoundException;
+import com.cozy.common.exception.UnauthorizedException;
 import com.cozy.common.result.Result;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +57,13 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public Result<?> handleNotFound(NotFoundException e) {
         return Result.notFound(e.getMessage());
+    }
+
+    @ExceptionHandler(BusinessException.class)
+    @ResponseStatus(HttpStatus.OK)
+    public Result<?> handleBusinessException(BusinessException e) {
+        log.warn("业务异常: {}", e.getMessage());
+        return Result.fail(e.getMessage());
     }
 
     @ExceptionHandler(RuntimeException.class)

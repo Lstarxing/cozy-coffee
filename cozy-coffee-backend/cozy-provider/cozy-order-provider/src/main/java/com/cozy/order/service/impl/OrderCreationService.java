@@ -6,6 +6,7 @@ import com.cozy.member.api.PointsMallService;
 import com.cozy.member.dto.request.ItemCheckDTO;
 import com.cozy.member.dto.response.CouponUsageResult;
 import com.cozy.member.dto.response.MemberDTO;
+import com.cozy.common.exception.BusinessException;
 import com.cozy.order.dto.request.CreateOrderRequest;
 import com.cozy.order.dto.request.OrderItemRequest;
 import com.cozy.order.dto.response.ShopOrderDTO;
@@ -23,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -50,6 +51,7 @@ public class OrderCreationService {
     private final OrderRewardService rewardService;
     private final OrderDtoEnricher orderDtoEnricher;
     private final OrderInfraService orderInfraService;
+    private final TransactionTemplate transactionTemplate;
 
     @DubboReference(check = false)
     private MemberService memberService;
@@ -59,16 +61,16 @@ public class OrderCreationService {
 
     public ShopOrderDTO createOrder(Long userId, String memberLevel, CreateOrderRequest request) {
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BusinessException("用户未登录");
         }
         if (request == null) {
-            throw new RuntimeException("请求参数不能为空");
+            throw new BusinessException("请求参数不能为空");
         }
 
         // 构建订单项列表
         List<OrderItemRequest> itemRequests = request.getItems();
         if (itemRequests == null || itemRequests.isEmpty()) {
-            throw new RuntimeException("请选择商品");
+            throw new BusinessException("请选择商品");
         }
 
         // 验证商品并计算金额
@@ -83,19 +85,19 @@ public class OrderCreationService {
 
         for (OrderItemRequest itemReq : itemRequests) {
             if (itemReq.getProductId() == null) {
-                throw new RuntimeException("商品ID不能为空");
+                throw new BusinessException("商品ID不能为空");
             }
             int qty = itemReq.getQuantity() != null ? itemReq.getQuantity() : 1;
             if (qty < 1 || qty > 10) {
-                throw new RuntimeException("单商品购买数量需在1-10之间");
+                throw new BusinessException("单商品购买数量需在1-10之间");
             }
 
             CoffeeProduct product = productMapper.selectById(itemReq.getProductId());
             if (product == null) {
-                throw new RuntimeException("商品不存在: " + itemReq.getProductId());
+                throw new BusinessException("商品不存在: " + itemReq.getProductId());
             }
             if (!"active".equals(product.getStatus())) {
-                throw new RuntimeException("商品已下架: " + product.getName());
+                throw new BusinessException("商品已下架: " + product.getName());
             }
 
             // v5.3: SKU 配置验证 - 检查杯型/甜度/温度选择是否符合产品规则
@@ -105,7 +107,7 @@ public class OrderCreationService {
                     itemReq.getSugarLevel(),
                     itemReq.getTemperature());
             if (skuError != null) {
-                throw new RuntimeException(skuError);
+                throw new BusinessException(skuError);
             }
 
             // v5.3.2: 计算商品金额（基础价格 + 杯型加价），加料费用单独计算
@@ -294,7 +296,7 @@ public class OrderCreationService {
                         freeAddonCount);
             } catch (Exception e) {
                 log.warn("券核销失败: couponCode={}, error={}", couponCode, e.getMessage());
-                throw new RuntimeException("优惠券使用失败: " + e.getMessage());
+                throw new BusinessException("优惠券使用失败: " + e.getMessage());
             }
         }
 
@@ -328,7 +330,7 @@ public class OrderCreationService {
 
         // 互斥检查
         if (isExclusiveCoupon && addonCouponCodes != null && !addonCouponCodes.isEmpty()) {
-            throw new RuntimeException("当前优惠券不可与其他优惠（如免运费券）叠加使用");
+            throw new BusinessException("当前优惠券不可与其他优惠（如免运费券）叠加使用");
         }
 
         // v5.3: 校验配送费券数量（一单只能用一张）
@@ -337,7 +339,7 @@ public class OrderCreationService {
                     .filter(code -> code != null && code.contains("DELIVERY_FEE"))
                     .count();
             if (deliveryFeeCouponCount > 1) {
-                throw new RuntimeException("配送费券一单只能使用一张");
+                throw new BusinessException("配送费券一单只能使用一张");
             }
         }
 
@@ -361,7 +363,7 @@ public class OrderCreationService {
                         if ("DELIVERY_FEE".equals(couponType)) {
                             // 配送费券只在外卖订单时生效
                             if (!"DELIVERY".equals(request.getDiningMethod())) {
-                                throw new RuntimeException("配送费券仅限外卖订单使用");
+                                throw new BusinessException("配送费券仅限外卖订单使用");
                             }
                             // 累加配送费折扣
                             deliveryFeeDiscount = deliveryFeeDiscount.add(addonResult.getDiscountAmount());
@@ -386,7 +388,7 @@ public class OrderCreationService {
                     log.error("附加券核销失败: addonCode={}, userId={}, error={}",
                             addonCode, userId, e.getMessage(), e);
                     // v5.3: 附加券核销失败时必须抛出异常，避免用户以为用了券但实际没核销
-                    throw new RuntimeException("使用优惠券失败: " + e.getMessage());
+                    throw new BusinessException("使用优惠券失败: " + e.getMessage());
                 }
             }
         }
@@ -559,14 +561,15 @@ public class OrderCreationService {
         return orderDtoEnricher.toOrderDTO(order, orderItems);
     }
 
-    @Transactional
     private void doCreateOrderInTx(ShopOrder order, List<ShopOrderItem> orderItems) {
-        orderMapper.insert(order);
-        orderInfraService.syncPendingTimeoutIndex(order);
-        for (ShopOrderItem item : orderItems) {
-            item.setOrderId(order.getId());
-            orderItemMapper.insert(item);
-        }
+        transactionTemplate.executeWithoutResult(status -> {
+            orderMapper.insert(order);
+            orderInfraService.syncPendingTimeoutIndex(order);
+            for (ShopOrderItem item : orderItems) {
+                item.setOrderId(order.getId());
+                orderItemMapper.insert(item);
+            }
+        });
     }
 
     // ==================== 订单查询 ====================

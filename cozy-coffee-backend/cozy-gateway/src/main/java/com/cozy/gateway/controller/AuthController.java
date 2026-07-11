@@ -12,6 +12,8 @@ import com.cozy.user.dto.response.UserDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.util.Map;
 
@@ -29,14 +31,44 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public Result<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
-        return Result.success(authService.login(request), "登录成功");
+    public Result<Map<String, Object>> login(@Valid @RequestBody LoginRequest request,
+            HttpServletResponse response) {
+        Map<String, Object> loginResult = authService.login(request);
+        String token = (String) loginResult.get("token");
+
+        Cookie cookie = new Cookie("cozy_token", token);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(7 * 24 * 60 * 60);
+        cookie.setAttribute("SameSite", "Strict");
+        response.addCookie(cookie);
+
+        return Result.success(loginResult, "登录成功");
     }
 
     @PostMapping("/logout")
-    public Result<Void> logout(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        authService.logout(authorization);
+    public Result<Void> logout(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @CookieValue(value = "cozy_token", required = false) String cookieToken,
+            HttpServletResponse response) {
+        Cookie cookie = new Cookie("cozy_token", "");
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+        cookie.setAttribute("SameSite", "Strict");
+        response.addCookie(cookie);
+
+        String token = cookieToken;
+        if (token == null && authorization != null && authorization.startsWith("Bearer ")) {
+            token = authorization.substring(7).trim();
+        }
+        authService.logout(token);
         return Result.success(null, "退出成功");
+    }
+
+    @GetMapping("/me")
+    public Result<Map<String, Object>> me() {
+        return Result.success(Map.of("userId", AuthUtil.requireUserId()));
     }
 
     @GetMapping("/userinfo")

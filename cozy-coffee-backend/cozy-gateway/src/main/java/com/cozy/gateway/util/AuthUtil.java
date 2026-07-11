@@ -1,7 +1,7 @@
 package com.cozy.gateway.util;
 
 import com.cozy.common.context.UserContext;
-import com.cozy.gateway.exception.UnauthorizedException;
+import com.cozy.common.exception.UnauthorizedException;
 
 /**
  * 认证工具 — 统一从 UserContext 提取 userId，未登录时抛出 UnauthorizedException。

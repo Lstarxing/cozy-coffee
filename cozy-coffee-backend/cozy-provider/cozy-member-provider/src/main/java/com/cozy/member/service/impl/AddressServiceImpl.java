@@ -1,6 +1,7 @@
 package com.cozy.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.common.exception.BusinessException;
 import com.cozy.member.api.AddressService;
 import com.cozy.member.dto.request.AddressRequest;
 import com.cozy.member.dto.response.AddressDTO;
@@ -42,7 +43,7 @@ public class AddressServiceImpl implements AddressService {
     @Override
     public AddressDTO getById(Long id) {
         if (id == null) {
-            throw new RuntimeException("地址ID不能为空");
+            throw new BusinessException("地址ID不能为空");
         }
         UserAddress address = addressMapper.selectById(id);
         return address != null ? toDTO(address) : null;
@@ -59,7 +60,7 @@ public class AddressServiceImpl implements AddressService {
         countWrapper.eq(UserAddress::getUserId, userId);
         long count = addressMapper.selectCount(countWrapper);
         if (count >= MAX_ADDRESS_COUNT) {
-            throw new RuntimeException("地址数量已达上限（最多" + MAX_ADDRESS_COUNT + "个），请删除一些旧地址后再添加");
+            throw new BusinessException("地址数量已达上限（最多" + MAX_ADDRESS_COUNT + "个），请删除一些旧地址后再添加");
         }
 
         UserAddress address = new UserAddress();
@@ -84,16 +85,16 @@ public class AddressServiceImpl implements AddressService {
     public AddressDTO update(Long userId, Long addressId, AddressRequest request) {
         validateUserId(userId);
         if (addressId == null) {
-            throw new RuntimeException("地址ID不能为空");
+            throw new BusinessException("地址ID不能为空");
         }
         validateAddressRequest(request);
 
         UserAddress address = addressMapper.selectById(addressId);
         if (address == null) {
-            throw new RuntimeException("地址不存在");
+            throw new BusinessException("地址不存在");
         }
         if (!address.getUserId().equals(userId)) {
-            throw new RuntimeException("无权限修改此地址");
+            throw new BusinessException("无权限修改此地址");
         }
 
         address.setReceiverName(request.getReceiverName());
@@ -118,15 +119,15 @@ public class AddressServiceImpl implements AddressService {
     public boolean delete(Long id, Long userId) {
         validateUserId(userId);
         if (id == null) {
-            throw new RuntimeException("地址ID不能为空");
+            throw new BusinessException("地址ID不能为空");
         }
 
         UserAddress address = addressMapper.selectById(id);
         if (address == null) {
-            throw new RuntimeException("地址不存在");
+            throw new BusinessException("地址不存在");
         }
         if (!address.getUserId().equals(userId)) {
-            throw new RuntimeException("无权限删除此地址");
+            throw new BusinessException("无权限删除此地址");
         }
 
         return addressMapper.deleteById(id) > 0;
@@ -137,15 +138,15 @@ public class AddressServiceImpl implements AddressService {
     public boolean setDefault(Long id, Long userId) {
         validateUserId(userId);
         if (id == null) {
-            throw new RuntimeException("地址ID不能为空");
+            throw new BusinessException("地址ID不能为空");
         }
 
         UserAddress address = addressMapper.selectById(id);
         if (address == null) {
-            throw new RuntimeException("地址不存在");
+            throw new BusinessException("地址不存在");
         }
         if (!address.getUserId().equals(userId)) {
-            throw new RuntimeException("无权限操作此地址");
+            throw new BusinessException("无权限操作此地址");
         }
 
         clearDefaultAddress(userId);
@@ -156,28 +157,28 @@ public class AddressServiceImpl implements AddressService {
 
     private void validateUserId(Long userId) {
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BusinessException("用户未登录");
         }
     }
 
     private void validateAddressRequest(AddressRequest request) {
         if (request == null) {
-            throw new RuntimeException("地址信息不能为空");
+            throw new BusinessException("地址信息不能为空");
         }
         if (request.getReceiverName() == null || request.getReceiverName().trim().isEmpty()) {
-            throw new RuntimeException("收货人姓名不能为空");
+            throw new BusinessException("收货人姓名不能为空");
         }
         if (request.getReceiverPhone() == null || request.getReceiverPhone().trim().isEmpty()) {
-            throw new RuntimeException("收货人电话不能为空");
+            throw new BusinessException("收货人电话不能为空");
         }
         if (request.getProvince() == null || request.getProvince().trim().isEmpty()) {
-            throw new RuntimeException("省份不能为空");
+            throw new BusinessException("省份不能为空");
         }
         if (request.getCity() == null || request.getCity().trim().isEmpty()) {
-            throw new RuntimeException("城市不能为空");
+            throw new BusinessException("城市不能为空");
         }
         if (request.getDetailAddress() == null || request.getDetailAddress().trim().isEmpty()) {
-            throw new RuntimeException("详细地址不能为空");
+            throw new BusinessException("详细地址不能为空");
         }
     }
 

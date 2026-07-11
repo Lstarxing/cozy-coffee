@@ -3,6 +3,7 @@ package com.cozy.order.service.impl;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.entity.CoffeeProduct;
 import com.cozy.order.mapper.CoffeeProductMapper;
+import com.cozy.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,16 +30,16 @@ public class ProductAdminService {
     @Transactional
     public CoffeeProductDTO addProduct(CoffeeProductDTO dto) {
         if (dto == null) {
-            throw new RuntimeException("商品信息不能为空");
+            throw new BusinessException("商品信息不能为空");
         }
         if (dto.getName() == null || dto.getName().trim().isEmpty()) {
-            throw new RuntimeException("商品名称不能为空");
+            throw new BusinessException("商品名称不能为空");
         }
         if (dto.getPrice() == null || dto.getPrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new RuntimeException("商品价格不能为负数");
+            throw new BusinessException("商品价格不能为负数");
         }
         if (dto.getCategory() == null || dto.getCategory().trim().isEmpty()) {
-            throw new RuntimeException("商品分类不能为空");
+            throw new BusinessException("商品分类不能为空");
         }
 
         CoffeeProduct product = new CoffeeProduct();
@@ -71,15 +72,15 @@ public class ProductAdminService {
     @Transactional
     public CoffeeProductDTO updateProduct(Long productId, CoffeeProductDTO dto) {
         if (productId == null) {
-            throw new RuntimeException("商品ID不能为空");
+            throw new BusinessException("商品ID不能为空");
         }
         CoffeeProduct product = productMapper.selectById(productId);
         if (product == null) {
-            throw new RuntimeException("商品不存在");
+            throw new BusinessException("商品不存在");
         }
         if (dto.getName() != null) {
             if (dto.getName().trim().isEmpty()) {
-                throw new RuntimeException("商品名称不能为空");
+                throw new BusinessException("商品名称不能为空");
             }
             product.setName(dto.getName().trim());
         }
@@ -87,7 +88,7 @@ public class ProductAdminService {
             product.setDescription(dto.getDescription());
         if (dto.getPrice() != null) {
             if (dto.getPrice().compareTo(BigDecimal.ZERO) < 0) {
-                throw new RuntimeException("商品价格不能为负数");
+                throw new BusinessException("商品价格不能为负数");
             }
             product.setPrice(dto.getPrice());
         }
@@ -109,7 +110,7 @@ public class ProductAdminService {
             product.setImageUrl(dto.getImageUrl());
         if (dto.getCategory() != null) {
             if (dto.getCategory().trim().isEmpty()) {
-                throw new RuntimeException("商品分类不能为空");
+                throw new BusinessException("商品分类不能为空");
             }
             product.setCategory(dto.getCategory().trim());
         }
@@ -137,7 +138,7 @@ public class ProductAdminService {
     public CoffeeProductDTO toggleProductStatus(Long productId) {
         CoffeeProduct product = productMapper.selectById(productId);
         if (product == null) {
-            throw new RuntimeException("商品不存在");
+            throw new BusinessException("商品不存在");
         }
         product.setStatus("active".equals(product.getStatus()) ? "inactive" : "active");
         productMapper.updateById(product);

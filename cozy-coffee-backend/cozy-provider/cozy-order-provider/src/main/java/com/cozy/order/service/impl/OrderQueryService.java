@@ -3,6 +3,7 @@ package com.cozy.order.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.dto.response.MemberDTO;
+import com.cozy.common.exception.BusinessException;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.MonthlyStatsDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
@@ -48,11 +49,11 @@ public class OrderQueryService {
 
     public CoffeeProductDTO getProduct(Long productId) {
         if (productId == null) {
-            throw new RuntimeException("商品ID不能为空");
+            throw new BusinessException("商品ID不能为空");
         }
         CoffeeProduct product = productMapper.selectById(productId);
         if (product == null) {
-            throw new RuntimeException("商品不存在");
+            throw new BusinessException("商品不存在");
         }
         return dtoConverter.toProductDTO(product);
     }
@@ -66,7 +67,7 @@ public class OrderQueryService {
 
     public List<ShopOrderDTO> listUserOrders(Long userId) {
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BusinessException("用户未登录");
         }
         LambdaQueryWrapper<ShopOrder> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ShopOrder::getUserId, userId)
@@ -100,14 +101,14 @@ public class OrderQueryService {
 
     public ShopOrderDTO getOrder(Long orderId, Long userId) {
         if (orderId == null) {
-            throw new RuntimeException("订单ID不能为空");
+            throw new BusinessException("订单ID不能为空");
         }
         ShopOrder order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException("订单不存在");
         }
         if (!order.getUserId().equals(userId)) {
-            throw new RuntimeException("无权查看此订单");
+            throw new BusinessException("无权查看此订单");
         }
         List<ShopOrderItem> items = orderDtoEnricher.getOrderItemsByOrderId(orderId);
         return orderDtoEnricher.toOrderDTO(order, items);
@@ -115,7 +116,7 @@ public class OrderQueryService {
 
     public ShopOrderDTO getOrderDetail(Long orderId) {
         if (orderId == null) {
-            throw new RuntimeException("订单ID不能为空");
+            throw new BusinessException("订单ID不能为空");
         }
         ShopOrder order = orderMapper.selectById(orderId);
         if (order == null) {

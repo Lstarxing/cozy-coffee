@@ -1,4 +1,4 @@
-package com.cozy.gateway.exception;
+package com.cozy.common.exception;
 
 /**
  * 未登录异常 — 由 GlobalExceptionHandler 统一转为 401。

@@ -17,7 +17,7 @@ import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -41,6 +41,7 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
     private final MonthlyTaskMapper taskMapper;
     private final MonthlyTaskOrderMapper orderMapper;
     private final MemberService memberService;
+    private final TransactionTemplate transactionTemplate;
 
     @DubboReference(check = false)
     private OrderService orderService;
@@ -82,35 +83,36 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
         checkAndGrantRewards(userId, task, orderId, isDelivery, hasNewProduct);
     }
 
-    @Transactional
     private MonthlyTask doMonthlySpentInTx(Long userId, Long orderId, String month, BigDecimal amount) {
-        // 1. 防重复: 检查订单是否已计入
-        LambdaQueryWrapper<MonthlyTaskOrder> orderWrapper = new LambdaQueryWrapper<>();
-        orderWrapper.eq(MonthlyTaskOrder::getOrderId, orderId);
-        if (orderMapper.selectCount(orderWrapper) > 0) {
-            log.info("订单已计入月度任务,跳过: orderId={}", orderId);
-            return null;
-        }
+        return transactionTemplate.execute(status -> {
+            // 1. 防重复: 检查订单是否已计入
+            LambdaQueryWrapper<MonthlyTaskOrder> orderWrapper = new LambdaQueryWrapper<>();
+            orderWrapper.eq(MonthlyTaskOrder::getOrderId, orderId);
+            if (orderMapper.selectCount(orderWrapper) > 0) {
+                log.info("订单已计入月度任务,跳过: orderId={}", orderId);
+                return null;
+            }
 
-        // 2. 记录订单 (unique约束防并发)
-        try {
-            MonthlyTaskOrder taskOrder = new MonthlyTaskOrder();
-            taskOrder.setUserId(userId);
-            taskOrder.setTaskMonth(month);
-            taskOrder.setOrderId(orderId);
-            taskOrder.setAmount(amount);
-            taskOrder.setCreatedAt(LocalDateTime.now());
-            orderMapper.insert(taskOrder);
-        } catch (DuplicateKeyException e) {
-            log.info("订单重复插入被拦截: orderId={}", orderId);
-            return null;
-        }
+            // 2. 记录订单 (unique约束防并发)
+            try {
+                MonthlyTaskOrder taskOrder = new MonthlyTaskOrder();
+                taskOrder.setUserId(userId);
+                taskOrder.setTaskMonth(month);
+                taskOrder.setOrderId(orderId);
+                taskOrder.setAmount(amount);
+                taskOrder.setCreatedAt(LocalDateTime.now());
+                orderMapper.insert(taskOrder);
+            } catch (DuplicateKeyException e) {
+                log.info("订单重复插入被拦截: orderId={}", orderId);
+                return null;
+            }
 
-        // 3. 更新或创建月度任务
-        MonthlyTask task = getOrCreateTask(userId, month);
-        task.setCurrentSpent(task.getCurrentSpent().add(amount));
-        taskMapper.updateById(task);
-        return task;
+            // 3. 更新或创建月度任务
+            MonthlyTask task = getOrCreateTask(userId, month);
+            task.setCurrentSpent(task.getCurrentSpent().add(amount));
+            taskMapper.updateById(task);
+            return task;
+        });
     }
 
     @Override

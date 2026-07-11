@@ -1,7 +1,7 @@
 package com.cozy.gateway.service;
 
 import com.cozy.gateway.dto.InviteCodeValidationResult;
-import com.cozy.gateway.exception.NotFoundException;
+import com.cozy.common.exception.NotFoundException;
 import com.cozy.user.api.UserService;
 import com.cozy.user.dto.request.LoginRequest;
 import com.cozy.user.dto.request.RegisterRequest;
@@ -33,9 +33,9 @@ public class AuthService {
         userService.register(request);
     }
 
-    public void logout(String authorization) {
-        if (authorization != null && authorization.startsWith("Bearer ")) {
-            userService.logout(authorization.substring(7).trim());
+    public void logout(String token) {
+        if (token != null && !token.isBlank()) {
+            userService.logout(token.trim());
         }
     }
 

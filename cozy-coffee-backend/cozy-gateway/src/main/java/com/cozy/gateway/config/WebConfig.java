@@ -28,6 +28,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/user/login",
                         "/api/user/register",
                         "/api/auth/login",
+                        "/api/auth/me",
                         "/api/admin/sse/events");
 
         // 管理端拦截器 - 仅拦截管理端API（排除登录和SSE连接）
