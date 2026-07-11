@@ -1,6 +1,6 @@
 <!-- 积分明细弹窗 -->
 <template>
-  <div class="points-detail-modal" @click.self="$emit('update:visible', false)">
+  <div v-if="visible" class="points-detail-modal" @click.self="$emit('update:visible', false)">
     <div class="modal-content">
       <div class="modal-header">
         <h3><List :size="20" style="margin-right: 8px; vertical-align: text-bottom;" />积分明细</h3>
