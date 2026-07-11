@@ -93,6 +93,9 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
     }
 
     private boolean sendUnauthorized(HttpServletResponse response, String message) throws Exception {
+        if (response.isCommitted()) {
+            return false;
+        }
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json;charset=UTF-8");
         Map<String, Object> result = new HashMap<>();
