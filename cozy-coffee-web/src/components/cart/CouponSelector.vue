@@ -55,7 +55,7 @@
 
     <!-- Remark -->
     <div class="remark-section">
-      <input v-model="localRemark" type="text" placeholder="备注（选填）" class="remark-input">
+      <input v-model="localRemark" type="text" placeholder="备注（选填，最多200字）" maxlength="200" class="remark-input">
     </div>
   </div>
 </template>
