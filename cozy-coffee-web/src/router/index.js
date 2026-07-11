@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -54,15 +55,11 @@ const router = createRouter({
 // 路由守卫：通过 /api/auth/me 验证 cookie 登录状态
 router.beforeEach(async (to, from, next) => {
     if (to.meta.requiresAuth) {
-        try {
-            const baseURL = (import.meta.env.VITE_API_BASE_URL || '') + '/api'
-            const response = await fetch(baseURL + '/auth/me', { credentials: 'include' })
-            if (response.ok) {
-                next()
-                return
-            }
-        } catch (e) {
-            // 网络错误，跳转登录
+        const userStore = useUserStore()
+        await userStore.init()
+        if (userStore.isLoggedIn) {
+            next()
+            return
         }
         next({ name: 'login', query: { redirect: to.fullPath } })
         return

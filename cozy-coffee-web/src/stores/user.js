@@ -7,9 +7,27 @@ import { getMemberInfo as fetchMemberInfoApi } from '@/api/member'
 export const useUserStore = defineStore('user', () => {
     const token = ref(null)
     const userInfo = ref(null)
-
     const isLoggedIn = computed(() => !!token.value)
     const userLevel = computed(() => userInfo.value?.memberLevel || userInfo.value?.level || 'basic')
+
+    let initPromise = null
+
+    async function init() {
+        if (initPromise) return initPromise
+        initPromise = (async () => {
+            try {
+                const baseURL = (import.meta.env.VITE_API_BASE_URL || '') + '/api'
+                const response = await fetch(baseURL + '/auth/me', { credentials: 'include' })
+                if (!response.ok) return
+                token.value = 'cookie-based'
+                await fetchUserInfo()
+                await fetchMemberInfo()
+            } catch (e) {
+                console.warn('Store init failed:', e)
+            }
+        })()
+        return initPromise
+    }
 
     function login(user, existingToken) {
         userInfo.value = {
@@ -97,6 +115,7 @@ export const useUserStore = defineStore('user', () => {
         userInfo,
         isLoggedIn,
         userLevel,
+        init,
         login,
         logout,
         signIn,

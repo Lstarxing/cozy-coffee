@@ -9,10 +9,14 @@
 <script setup>
 import NavBar from '@/components/NavBar.vue'
 import Footer from '@/components/Footer.vue'
+import { useUserStore } from '@/stores/user'
 import { useRoute } from 'vue-router'
-import { watch } from 'vue'
+import { watch, onMounted } from 'vue'
 
 const route = useRoute()
+const userStore = useUserStore()
+
+onMounted(() => { userStore.init() })
 
 watch(
   () => route.meta?.hideNavBar,
