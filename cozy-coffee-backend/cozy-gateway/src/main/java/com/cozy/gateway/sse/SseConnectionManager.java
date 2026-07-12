@@ -91,7 +91,7 @@ public class SseConnectionManager {
                         .name(eventName)
                         .data(data));
                 log.debug("SSE 广播成功: event={}, targetUserId={}", eventName, userId);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 log.warn("SSE 广播失败: event={}, userId={}, error={}", eventName, userId, e.getMessage());
                 connections.remove(userId);
             }
@@ -109,7 +109,7 @@ public class SseConnectionManager {
                         .name(eventName)
                         .data(data));
                 log.info("SSE 发送给用户: userId={}, event={}", userId, eventName);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 log.warn("SSE 发送给用户失败: userId={}, error={}", userId, e.getMessage());
                 connections.remove(userId);
             }
@@ -132,9 +132,12 @@ public class SseConnectionManager {
                 emitter.send(SseEmitter.event()
                         .name("heartbeat")
                         .data("{\"time\":" + System.currentTimeMillis() + "}"));
-            } catch (IOException e) {
-                log.warn("SSE 心跳发送失败: userId={}", userId);
+            } catch (Exception e) {
+                log.warn("SSE 心跳发送失败: userId={}, error={}", userId, e.getMessage());
                 connections.remove(userId);
+                try {
+                    emitter.completeWithError(e);
+                } catch (Exception ignored) { /* emitter already completed */ }
             }
         });
     }
