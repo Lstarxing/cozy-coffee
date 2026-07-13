@@ -62,15 +62,35 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.OK)
     public Result<?> handleBusinessException(BusinessException e) {
-        log.warn("业务异常: {}", e.getMessage());
-        return Result.fail(e.getMessage());
+        String msg = cleanDubboMessage(e.getMessage());
+        log.warn("业务异常: {}", msg);
+        return Result.fail(msg);
     }
 
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.OK)
     public Result<?> handleRuntimeException(RuntimeException e) {
-        log.warn("业务异常: {}", e.getMessage());
-        return Result.fail(e.getMessage());
+        String msg = cleanDubboMessage(e.getMessage());
+        log.warn("业务异常: {}", msg);
+        return Result.fail(msg);
+    }
+
+    /**
+     * Dubbo ExceptionFilter 会将堆栈拼接到异常消息中，需要清洗。
+     */
+    private String cleanDubboMessage(String msg) {
+        if (msg == null) return null;
+        // 取第一行业务消息（Dubbo 会追加 \r\n + 完整类名和堆栈）
+        int end = msg.indexOf("\r\n");
+        if (end > 0) {
+            msg = msg.substring(0, end);
+        }
+        // 去类名前缀 "com.xxx.BusinessException: "
+        if (msg.contains("BusinessException: ")) {
+            int colonIdx = msg.lastIndexOf("BusinessException: ");
+            msg = msg.substring(colonIdx + "BusinessException: ".length());
+        }
+        return msg;
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
