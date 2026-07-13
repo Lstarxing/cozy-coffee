@@ -94,6 +94,9 @@ public class SseConnectionManager {
             } catch (Exception e) {
                 log.warn("SSE 广播失败: event={}, userId={}, error={}", eventName, userId, e.getMessage());
                 connections.remove(userId);
+                try {
+                    emitter.completeWithError(e);
+                } catch (Exception ignored) { /* emitter already completed */ }
             }
         });
     }
@@ -112,6 +115,9 @@ public class SseConnectionManager {
             } catch (Exception e) {
                 log.warn("SSE 发送给用户失败: userId={}, error={}", userId, e.getMessage());
                 connections.remove(userId);
+                try {
+                    emitter.completeWithError(e);
+                } catch (Exception ignored) { /* emitter already completed */ }
             }
         } else {
             log.debug("用户未连接 SSE: userId={}", userId);
