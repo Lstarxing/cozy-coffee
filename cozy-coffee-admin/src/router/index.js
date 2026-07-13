@@ -84,22 +84,12 @@ router.beforeEach(async (to, from, next) => {
             const baseURL = (import.meta.env.VITE_API_BASE_URL || '') + '/api'
             const response = await fetch(baseURL + '/auth/me', { credentials: 'include' })
             if (response.ok) {
-                // RBAC 角色校验：从 /api/auth/userinfo 获取完整用户信息
+                const data = await response.json()
+                const role = data.data?.role
                 const requiredRoles = to.meta.roles
-                if (requiredRoles) {
-                    try {
-                        const userRes = await fetch(baseURL + '/auth/userinfo', { credentials: 'include' })
-                        if (userRes.ok) {
-                            const userData = await userRes.json()
-                            const role = userData.data?.role
-                            if (!requiredRoles.includes(role)) {
-                                next('/dashboard')
-                                return
-                            }
-                        }
-                    } catch (e) {
-                        // RBAC check failed, allow access
-                    }
+                if (requiredRoles && !requiredRoles.includes(role)) {
+                    next('/login')
+                    return
                 }
                 next()
                 return

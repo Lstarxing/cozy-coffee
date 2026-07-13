@@ -79,13 +79,10 @@ export const useAdminStore = defineStore('admin', () => {
             const baseURL = (import.meta.env.VITE_API_BASE_URL || '') + '/api'
             const response = await fetch(baseURL + '/auth/me', { credentials: 'include' })
             if (response.ok) {
-                const userRes = await fetch(baseURL + '/auth/userinfo', { credentials: 'include' })
-                if (userRes.ok) {
-                    const userData = await userRes.json()
-                    if (userData.data?.role === 'admin') {
-                        adminInfo.value = userData.data
-                        isLoggedIn.value = true
-                    }
+                const userData = await response.json()
+                if (userData.data?.role === 'admin') {
+                    adminInfo.value = userData.data
+                    isLoggedIn.value = true
                 }
             }
         } catch (e) {
