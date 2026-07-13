@@ -5,7 +5,7 @@ import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.common.util.JwtUtil;
 import com.cozy.member.api.MemberService;
-import com.cozy.member.api.PointsMallService;
+import com.cozy.mall.api.PointsMallService;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.user.api.UserService;
 import com.cozy.user.dto.request.LoginRequest;

@@ -1,4 +1,4 @@
-package com.cozy.member.dto.response;
+package com.cozy.mall.dto.response;
 
 import lombok.Data;
 import java.io.Serializable;

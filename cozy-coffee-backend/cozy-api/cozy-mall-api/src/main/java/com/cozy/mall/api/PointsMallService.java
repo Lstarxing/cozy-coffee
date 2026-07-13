@@ -1,18 +1,18 @@
-package com.cozy.member.api;
+package com.cozy.mall.api;
 
-import com.cozy.member.dto.request.ItemCheckDTO;
-import com.cozy.member.dto.request.RedeemRequest;
-import com.cozy.member.dto.response.CouponUsageResult;
-import com.cozy.member.dto.response.PointsOrderDTO;
-import com.cozy.member.dto.response.PointsProductDTO;
-import com.cozy.member.dto.response.UserCouponDTO;
+import com.cozy.mall.dto.request.ItemCheckDTO;
+import com.cozy.mall.dto.request.RedeemRequest;
+import com.cozy.mall.dto.response.CouponUsageResult;
+import com.cozy.mall.dto.response.PointsOrderDTO;
+import com.cozy.mall.dto.response.PointsProductDTO;
+import com.cozy.mall.dto.response.UserCouponDTO;
 import java.math.BigDecimal;
 import java.util.List;
 
 public interface PointsMallService {
         /**
          * 获取上架商品列表
-         * 
+         *
          * @param userId 当前用户ID（可选，用于查询月度限购进度），未登录传 null
          */
         List<PointsProductDTO> listActiveProducts(Long userId);
@@ -27,7 +27,7 @@ public interface PointsMallService {
 
         /**
          * 取消订单（仅限发货前）
-         * 
+         *
          * @param orderId 订单ID
          * @param userId  用户ID
          * @return 取消后的订单信息
@@ -43,7 +43,7 @@ public interface PointsMallService {
 
         /**
          * 获取下单可用券
-         * 
+         *
          * @param userId      用户ID
          * @param orderAmount 订单金额
          * @return 可用券列表
@@ -52,7 +52,7 @@ public interface PointsMallService {
 
         /**
          * 获取下单可用券（支持商品明细检查）
-         * 
+         *
          * @param userId      用户ID
          * @param orderAmount 订单金额
          * @param items       商品列表
@@ -63,7 +63,7 @@ public interface PointsMallService {
 
         /**
          * 使用券（下单时核销）- 旧版兼容
-         * 
+         *
          * @param userId      用户ID
          * @param couponCode  券码
          * @param orderAmount 订单金额
@@ -74,7 +74,7 @@ public interface PointsMallService {
         /**
          * 使用券（下单时核销）- 新版，返回券类型
          * 用于判断是否应该发放积分（兑换券不发放积分）
-         * 
+         *
          * @param userId      用户ID
          * @param couponCode  券码
          * @param orderAmount 订单金额
@@ -145,7 +145,7 @@ public interface PointsMallService {
 
         /**
          * 回滚/归还优惠券（取消订单时调用）
-         * 
+         *
          * @param couponId 券ID
          * @param userId   用户ID
          */
@@ -153,7 +153,7 @@ public interface PointsMallService {
 
         /**
          * v5.0: 发放优惠券给用户（用于签到奖励等场景）
-         * 
+         *
          * @param userId         用户ID
          * @param couponType     券类型（如 SIGNIN_7DAY）
          * @param uniqueKey      唯一标识（用于幂等性检查）
@@ -163,10 +163,10 @@ public interface PointsMallService {
          */
         void issueCouponToUser(Long userId, String couponType, String uniqueKey, double minAmount,
                         double discountAmount, int validDays);
-        
+
         /**
          * v5.3: 发放带 SKU 限制的优惠券
-         * 
+         *
          * @param userId         用户ID
          * @param couponType     券类型
          * @param uniqueKey      唯一标识（用于幂等性检查）
@@ -181,7 +181,7 @@ public interface PointsMallService {
         /**
          * v5.2: 发放新用户首单五折券
          * 有效期 7 天，全场饮品可用，不叠加其他优惠
-         * 
+         *
          * @param userId 用户ID
          */
         void issueNewUserCoupon(Long userId);

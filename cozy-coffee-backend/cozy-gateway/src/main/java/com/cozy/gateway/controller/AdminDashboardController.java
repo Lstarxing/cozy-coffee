@@ -2,7 +2,7 @@ package com.cozy.gateway.controller;
 
 import com.cozy.common.result.Result;
 import com.cozy.gateway.service.AdminDashboardService;
-import com.cozy.member.dto.response.PointsOrderDTO;
+import com.cozy.mall.dto.response.PointsOrderDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

@@ -34,6 +34,12 @@
             <artifactId>cozy-user-api</artifactId>
         </dependency>
 
+        <!-- 积分商城服务API -->
+        <dependency>
+            <groupId>com.cozy</groupId>
+            <artifactId>cozy-mall-api</artifactId>
+        </dependency>
+
         <!-- 公共模块 -->
         <dependency>
             <groupId>com.cozy</groupId>

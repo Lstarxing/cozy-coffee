@@ -25,4 +25,11 @@ public class PointsProductDTO implements Serializable {
     private Integer minOrderAmount; // 满减券门槛金额(满多少)
     private Long linkedProductId; // 兑换券关联的咖啡商品ID
     private String linkedProductName; // 兑换券关联的咖啡商品名称(展示用)
+
+    // v4.2 新增字段
+    private Integer monthlyLimit; // 月兑换限制(0或null为不限)
+    private Integer validDays; // 自动发放券的有效期天数
+
+    // v5.0: 当前用户本月已兑换数量（仅在登录时返回）
+    private Integer currentUserMonthlyRedeemed;
 }

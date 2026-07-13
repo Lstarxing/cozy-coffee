@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.member.api.MemberService;
-import com.cozy.member.api.PointsMallService;
+import com.cozy.mall.api.PointsMallService;
 import java.math.BigDecimal;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.member.dto.response.PointsTransactionDTO;

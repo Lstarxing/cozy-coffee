@@ -1,4 +1,4 @@
-package com.cozy.member.dto.response;
+package com.cozy.mall.dto.response;
 
 import lombok.Data;
 import java.io.Serializable;
@@ -26,7 +26,7 @@ public class CouponUsageResult implements Serializable {
 
     /** 是否互斥（不可叠加其他优惠，如积分） */
     private boolean exclusive;
-    
+
     /** v5.7: 免费加料次数（尊享通兑券专属） */
     private int freeAddonCount;
 
@@ -47,7 +47,7 @@ public class CouponUsageResult implements Serializable {
         this.linkedProductId = linkedProductId;
         this.exclusive = exclusive;
     }
-    
+
     public CouponUsageResult(BigDecimal discountAmount, String couponType, Long couponId, Long linkedProductId,
             boolean exclusive, int freeAddonCount) {
         this.discountAmount = discountAmount;

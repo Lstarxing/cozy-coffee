@@ -1,7 +1,7 @@
 package com.cozy.gateway.service;
 
 import com.cozy.gateway.util.PhoneMaskUtil;
-import com.cozy.member.dto.response.PointsOrderDTO;
+import com.cozy.mall.dto.response.PointsOrderDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
 import com.cozy.user.api.UserService;
 import com.cozy.user.dto.response.UserDTO;

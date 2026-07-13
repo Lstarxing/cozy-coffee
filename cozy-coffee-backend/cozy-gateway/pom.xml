@@ -40,6 +40,12 @@
             <artifactId>cozy-order-api</artifactId>
         </dependency>
 
+        <!-- 积分商城服务API -->
+        <dependency>
+            <groupId>com.cozy</groupId>
+            <artifactId>cozy-mall-api</artifactId>
+        </dependency>
+
         <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

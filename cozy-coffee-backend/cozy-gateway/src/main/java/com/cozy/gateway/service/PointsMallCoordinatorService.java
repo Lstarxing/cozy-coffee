@@ -1,9 +1,9 @@
 package com.cozy.gateway.service;
 
 import com.cozy.gateway.sse.SseEventPublisher;
-import com.cozy.member.api.PointsMallService;
-import com.cozy.member.dto.request.RedeemRequest;
-import com.cozy.member.dto.response.PointsOrderDTO;
+import com.cozy.mall.api.PointsMallService;
+import com.cozy.mall.dto.request.RedeemRequest;
+import com.cozy.mall.dto.response.PointsOrderDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;

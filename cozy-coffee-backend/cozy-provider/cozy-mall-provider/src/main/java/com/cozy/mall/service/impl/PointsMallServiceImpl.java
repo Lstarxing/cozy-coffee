@@ -17,13 +17,13 @@ import com.cozy.mall.mapper.MonthlyRedemptionMapper;
 import com.cozy.mall.entity.MonthlyRedemption;
 import com.cozy.member.api.AddressService;
 import com.cozy.member.api.MemberService;
-import com.cozy.member.api.PointsMallService;
-import com.cozy.member.dto.request.ItemCheckDTO;
-import com.cozy.member.dto.request.RedeemRequest;
+import com.cozy.mall.api.PointsMallService;
+import com.cozy.mall.dto.request.ItemCheckDTO;
+import com.cozy.mall.dto.request.RedeemRequest;
 import com.cozy.member.dto.response.AddressDTO;
 import com.cozy.member.dto.response.MemberDTO;
-import com.cozy.member.dto.response.PointsOrderDTO;
-import com.cozy.member.dto.response.PointsProductDTO;
+import com.cozy.mall.dto.response.PointsOrderDTO;
+import com.cozy.mall.dto.response.PointsProductDTO;
 import com.cozy.order.api.OrderService;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.user.api.UserService;
@@ -56,8 +56,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
-import com.cozy.member.dto.response.UserCouponDTO;
-import com.cozy.member.dto.response.CouponUsageResult;
+import com.cozy.mall.dto.response.UserCouponDTO;
+import com.cozy.mall.dto.response.CouponUsageResult;
 
 /**
  * 积分商城服务实现 - 独立微服务 (mall-provider)

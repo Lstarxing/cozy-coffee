@@ -1,4 +1,4 @@
-package com.cozy.member.dto.request;
+package com.cozy.mall.dto.request;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

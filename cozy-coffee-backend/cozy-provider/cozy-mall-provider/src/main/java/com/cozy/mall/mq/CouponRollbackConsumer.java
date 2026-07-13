@@ -3,7 +3,7 @@ package com.cozy.mall.mq;
 import com.cozy.common.mq.MqTags;
 import com.cozy.common.mq.MqTopics;
 import com.cozy.common.mq.OrderCancelledEvent;
-import com.cozy.member.api.PointsMallService;
+import com.cozy.mall.api.PointsMallService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.ConsumeMode;

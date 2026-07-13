@@ -3,7 +3,7 @@ package com.cozy.member.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
-import com.cozy.member.api.PointsMallService;
+import com.cozy.mall.api.PointsMallService;
 import com.cozy.member.api.SigninService;
 import com.cozy.member.dto.response.SigninResultDTO;
 import com.cozy.member.entity.MemberInfo;
