@@ -552,3 +552,128 @@ export function isAddonCouponDisabled(coupon, cartItems, context) {
   }
   return false
 }
+
+// ──────────────────────────────────────────────
+//  Per-item discount allocation
+// ──────────────────────────────────────────────
+
+/**
+ * Allocate total coupon discount across individual cart items.
+ * Returns item list with discountedPrice and discountAmount fields.
+ *
+ * @param {Array}  cartItems
+ * @param {Object} coupon      - coupon object with parsedRule
+ * @param {number} discount    - total discount amount from calculateCouponDiscount
+ * @param {Object} pricing     - { baseSubtotal, cupExtraTotal, subtotal }
+ * @returns {Array} cartItems with discountedPrice & discountAmount added
+ */
+export function allocateItemDiscounts(cartItems, coupon, discount, pricing) {
+  const items = (cartItems || []).map(i => ({
+    ...i,
+    discountedPrice: i.unitPrice,
+    discountAmount: 0
+  }))
+
+  if (!coupon || discount <= 0) return items
+  const rule = coupon.parsedRule || {}
+  const type = coupon.couponType
+
+  // SHOT / DELIVERY_FEE don't discount items
+  if (type === 'SHOT' || type === 'DELIVERY_FEE') return items
+
+  // --- EXCHANGE (免单券) ---
+  if (type === 'EXCHANGE') {
+    const isCake = rule.scope === 'CAKE_ONLY'
+    const eligible = items.filter(i => isCake ? isBakeryCategory(i.category) : isDrinkCategory(i.category))
+
+    if (eligible.length > 0) {
+      // Pick the highest-price eligible item
+      const target = eligible.reduce((prev, curr) => {
+        const prevP = (prev.basePrice || prev.unitPrice) + (prev.cupSize === 'LARGE' ? 3 : 0)
+        const currP = (curr.basePrice || curr.unitPrice) + (curr.cupSize === 'LARGE' ? 3 : 0)
+        return currP > prevP ? curr : prev
+      })
+      target.discountAmount = Math.min(discount, (target.basePrice || target.unitPrice) + (target.cupSize === 'LARGE' ? 3 : 0))
+      target.discountedPrice = Math.max(0, target.unitPrice - target.discountAmount)
+    }
+    return items
+  }
+
+  // --- BOGO (买一送一) ---
+  if (type === 'BOGO') {
+    const drinkItems = items.filter(i => isDrinkCategory(i.category))
+    if (drinkItems.length > 0) {
+      // Pick cheapest drink
+      const target = drinkItems.reduce((prev, curr) => {
+        const prevP = (prev.basePrice || prev.unitPrice) + (prev.cupSize === 'LARGE' ? 3 : 0)
+        const currP = (curr.basePrice || curr.unitPrice) + (curr.cupSize === 'LARGE' ? 3 : 0)
+        return currP < prevP ? curr : prev
+      })
+      const targetPrice = (target.basePrice || target.unitPrice) + (target.cupSize === 'LARGE' ? 3 : 0)
+      target.discountAmount = Math.min(discount, targetPrice)
+      target.discountedPrice = Math.max(0, target.unitPrice - target.discountAmount)
+    }
+    return items
+  }
+
+  // --- SINGLE_ITEM discount (e.g. NEW_USER 5折) ---
+  const isSingleItem = rule.limit === 'SINGLE_ITEM'
+  if (isSingleItem && type === 'DISCOUNT') {
+    const drinkItems = items.filter(i => isDrinkCategory(i.category))
+    if (drinkItems.length > 0) {
+      const target = drinkItems.reduce((prev, curr) => {
+        const prevP = (prev.basePrice || prev.unitPrice) + (prev.cupSize === 'LARGE' ? 3 : 0)
+        const currP = (curr.basePrice || curr.unitPrice) + (curr.cupSize === 'LARGE' ? 3 : 0)
+        return currP > prevP ? curr : prev
+      })
+      target.discountAmount = Number(discount.toFixed(2))
+      target.discountedPrice = Math.max(0, Number((target.unitPrice - discount).toFixed(2)))
+    }
+    return items
+  }
+
+  // --- CAKE_ONLY discount ---
+  if (rule.scope === 'CAKE_ONLY') {
+    const bakeryItems = items.filter(i => isBakeryCategory(i.category))
+    const bakeryTotal = bakeryItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0)
+    if (bakeryTotal > 0) {
+      bakeryItems.forEach(i => {
+        i.discountAmount = Number((discount * (i.unitPrice * i.quantity / bakeryTotal) / i.quantity).toFixed(2))
+        i.discountedPrice = Math.max(0, Number((i.unitPrice - i.discountAmount).toFixed(2)))
+      })
+    }
+    return items
+  }
+
+  // --- DRINK_ONLY discount ---
+  if (rule.scope === 'DRINK_ONLY') {
+    const drinkItems = items.filter(i => isDrinkCategory(i.category))
+    const drinkTotal = drinkItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0)
+    if (drinkTotal > 0) {
+      drinkItems.forEach(i => {
+        i.discountAmount = Number((discount * (i.unitPrice * i.quantity / drinkTotal) / i.quantity).toFixed(2))
+        i.discountedPrice = Math.max(0, Number((i.unitPrice - i.discountAmount).toFixed(2)))
+      })
+    }
+    return items
+  }
+
+  // --- FULL_REDUCE / default DISCOUNT: proportional by unit price ---
+  const total = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0)
+  if (total === 0) return items
+  let remaining = discount
+  items.forEach((i, idx) => {
+    if (idx < items.length - 1) {
+      i.discountAmount = Number((discount * (i.unitPrice * i.quantity / total) / i.quantity).toFixed(2))
+      remaining -= i.discountAmount * i.quantity
+    }
+  })
+  // Put rounding remainder on last item
+  const last = items[items.length - 1]
+  last.discountAmount = Number((remaining / (last.quantity || 1)).toFixed(2))
+  items.forEach(i => {
+    i.discountAmount = Math.max(0, i.discountAmount)
+    i.discountedPrice = Math.max(0, Number((i.unitPrice - i.discountAmount).toFixed(2)))
+  })
+  return items
+}

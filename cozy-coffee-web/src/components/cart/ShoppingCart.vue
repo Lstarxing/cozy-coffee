@@ -17,7 +17,7 @@
       <template v-else>
         <!-- Cart item list -->
         <CartItemList
-          :cart-items="cartItems"
+          :cart-items="discountedItems"
           :get-image-url="getImageUrl"
           :handle-image-error="handleImageError"
           @update-quantity="updateQuantity"
@@ -129,7 +129,8 @@ import {
   getAddonCouponDesc as getAddonCouponDescUtil,
   getAddonCouponTip as getAddonCouponTipUtil,
   isAddonCouponDisabled as isAddonCouponDisabledUtil,
-  findBestCoupon
+  findBestCoupon,
+  allocateItemDiscounts
 } from '@/utils/couponRules'
 
 // ───────────────────────────────
@@ -287,6 +288,18 @@ const selectedShotCouponCount = computed(() => {
 
 const filteredMainCoupons = computed(() => {
   return filterMainCoupons(mainCoupons.value, props.cartItems, couponPricing.value, couponContext.value)
+})
+
+// ───────────────────────────────
+//  Per-item discounted prices
+// ───────────────────────────────
+
+const discountedItems = computed(() => {
+  if (!couponCode.value) return props.cartItems.map(i => ({ ...i, discountedPrice: i.unitPrice, discountAmount: 0 }))
+  const coupon = availableCoupons.value.find(c => c.couponCode === couponCode.value)
+  return allocateItemDiscounts(
+    props.cartItems, coupon, discount.value, couponPricing.value
+  )
 })
 
 // ───────────────────────────────

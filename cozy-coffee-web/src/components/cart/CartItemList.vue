@@ -11,7 +11,12 @@
           <span>{{ getStrengthLabel(item.coffeeStrength) }}</span>
           <span v-if="item.milkType && item.milkType !== 'WHOLE'">{{ getMilkLabel(item.milkType) }}</span>
         </div>
-        <div class="item-price">¥{{ item.unitPrice }}</div>
+        <div class="item-price">
+          <span v-if="item.discountAmount > 0" class="original-price">¥{{ item.unitPrice }}</span>
+          <span :class="{ 'discounted-price': item.discountAmount > 0, 'normal-price': item.discountAmount === 0 }">
+            ¥{{ (item.discountedPrice ?? item.unitPrice).toFixed(0) }}
+          </span>
+        </div>
       </div>
       <div class="item-actions">
         <div class="quantity-ctrl">
@@ -144,6 +149,27 @@ const getMilkLabel = (milk) => {
   font-size: 16px;
   font-weight: 600;
   color: #5D4037;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.original-price {
+  text-decoration: line-through;
+  color: #BDBDBD;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.discounted-price {
+  color: #E65100;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.normal-price {
+  color: #5D4037;
+  font-weight: 600;
 }
 
 .item-actions {
