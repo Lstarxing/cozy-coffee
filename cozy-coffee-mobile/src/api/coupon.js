@@ -18,8 +18,8 @@ export const getCouponList = (status) => {
 
 // 获取可用优惠券（用于订单结算页）
 // 正确路径: /api/member/mall/coupons/available
-export const getAvailableCoupons = (orderAmount) => {
-    return get('/member/mall/coupons/available', { orderAmount })
+export const getAvailableCoupons = (orderAmount, items) => {
+    return post('/member/mall/coupons/available', { orderAmount, items })
 }
 
 // 使用优惠券 - 在订单创建时通过 couponCode 参数传递

@@ -216,7 +216,7 @@ const handleCheckout = async (orderData) => {
     }
   } catch (error) {
     console.error('创建订单失败', error)
-    ElMessage.error(error.response?.data?.message || '订单创建失败')
+    ElMessage.error('下单失败，请稍后重试')
     cartRef.value?.resetSubmitting()
   }
 }

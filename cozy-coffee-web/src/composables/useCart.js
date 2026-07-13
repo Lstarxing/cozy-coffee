@@ -1,54 +1,43 @@
 import { ref, watch } from 'vue'
 
 const STORAGE_KEY = 'cozy_coffee_cart'
-const SESSION_KEY = 'cozy_coffee_cart_session'
 
 function loadFromStorage() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
-    return saved ? JSON.parse(saved) : []
+    if (!saved) return { items: [], selectedCouponCode: '', selectedAddonCoupons: [], diningMethod: 'DINE_IN' }
+    const data = JSON.parse(saved)
+    if (Array.isArray(data)) return { items: data, selectedCouponCode: '', selectedAddonCoupons: [], diningMethod: 'DINE_IN' }
+    return {
+      items: data.items || [],
+      selectedCouponCode: data.selectedCouponCode || '',
+      selectedAddonCoupons: data.selectedAddonCoupons || [],
+      diningMethod: data.diningMethod || 'DINE_IN'
+    }
   } catch (e) {
     console.error('Failed to parse cart from localStorage', e)
     localStorage.removeItem(STORAGE_KEY)
-    return []
+    return { items: [], selectedCouponCode: '', selectedAddonCoupons: [], diningMethod: 'DINE_IN' }
   }
 }
 
-function loadSession() {
-  try {
-    const saved = localStorage.getItem(SESSION_KEY)
-    return saved ? JSON.parse(saved) : {}
-  } catch {
-    localStorage.removeItem(SESSION_KEY)
-    return {}
-  }
-}
-
-function saveSession(state) {
-  try {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(state))
-  } catch { /* quota exceeded, ignore */ }
-}
-
-// Singleton state — shared across all useCart() calls
-const cartItems = ref(loadFromStorage())
-const initialSession = loadSession()
-const couponCode = ref(initialSession.couponCode || '')
-const addonCouponCodes = ref(initialSession.addonCouponCodes || [])
-const diningMethod = ref(initialSession.diningMethod || 'DINE_IN')
-
-// Auto-save session on change
-watch([couponCode, addonCouponCodes, diningMethod], ([code, addons, method]) => {
-  saveSession({ couponCode: code, addonCouponCodes: addons, diningMethod: method })
-}, { deep: true })
+const saved = loadFromStorage()
+const cartItems = ref(saved.items)
+const couponCode = ref(saved.selectedCouponCode)
+const addonCouponCodes = ref(saved.selectedAddonCoupons)
+const diningMethod = ref(saved.diningMethod)
 
 let saveTimer = null
 
-// Auto-save cart items to localStorage with 500ms debounce
-watch(cartItems, (newVal) => {
+watch([cartItems, couponCode, addonCouponCodes, diningMethod], () => {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newVal))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      items: cartItems.value,
+      selectedCouponCode: couponCode.value,
+      selectedAddonCoupons: addonCouponCodes.value,
+      diningMethod: diningMethod.value
+    }))
   }, 500)
 }, { deep: true })
 
@@ -89,7 +78,6 @@ export function useCart() {
     couponCode.value = ''
     addonCouponCodes.value = []
     diningMethod.value = 'DINE_IN'
-    saveSession({ couponCode: '', addonCouponCodes: [], diningMethod: 'DINE_IN' })
   }
 
   return {
