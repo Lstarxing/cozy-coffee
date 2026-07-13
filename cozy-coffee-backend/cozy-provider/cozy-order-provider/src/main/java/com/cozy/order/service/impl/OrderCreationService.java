@@ -2,9 +2,9 @@ package com.cozy.order.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.member.api.MemberService;
-import com.cozy.member.api.PointsMallService;
-import com.cozy.member.dto.request.ItemCheckDTO;
-import com.cozy.member.dto.response.CouponUsageResult;
+import com.cozy.mall.api.PointsMallService;
+import com.cozy.mall.dto.request.ItemCheckDTO;
+import com.cozy.mall.dto.response.CouponUsageResult;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.order.dto.request.CreateOrderRequest;
@@ -230,6 +230,7 @@ public class OrderCreationService {
         String couponCode = request.getCouponCode();
         boolean isExchangeCoupon = false; // 标记是否使用兑换券
         boolean isExclusiveCoupon = false; // v5.2: 标记是否为互斥券（不可叠加其他优惠）
+        String mainCouponType = null; // 主券类型，用于免运费等判断
 
         if (couponCode != null && !couponCode.trim().isEmpty()) {
             try {
@@ -251,6 +252,7 @@ public class OrderCreationService {
                 appliedCouponId = couponResult.getCouponId();
                 isExchangeCoupon = couponResult.isExchangeCoupon();
                 isExclusiveCoupon = couponResult.isExclusive();
+                mainCouponType = couponResult.getCouponType();
 
                 // v5.7: 尊享通兑券免费加料逻辑（免除金额最高的 N 个加料）
                 int freeAddonCount = couponResult.getFreeAddonCount();
@@ -320,6 +322,11 @@ public class OrderCreationService {
                 deliveryFeeWaivedReason = "BLACK_GOLD_UNLIMITED";
                 addonDiscount = deliveryFee; // 直接免除全部配送费
                 log.info("黑金会员无限免运费: userId={}, deliveryFee={}", userId, deliveryFee);
+            }
+            // v5.8: 主券为配送费券时标记免运费
+            if ("DELIVERY_FEE".equals(mainCouponType)) {
+                deliveryFeeWaived = true;
+                deliveryFeeWaivedReason = "COUPON";
             }
         }
 

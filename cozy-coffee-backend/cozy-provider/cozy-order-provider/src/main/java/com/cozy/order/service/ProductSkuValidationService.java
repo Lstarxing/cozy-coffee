@@ -58,9 +58,13 @@ public class ProductSkuValidationService {
      * v5.3: 允许 null 值（烘焙类商品不需要杯型）
      */
     private String validateSize(CoffeeProduct product, String sizeChoice) {
-        // v5.3: 如果未传递杯型（如烘焙类商品），跳过验证
         if (sizeChoice == null || sizeChoice.isEmpty()) {
-            return null;
+            // Only DEFAULT (standard cup) products can skip cup size
+            String sizeTypeStr = product.getSizeType();
+            if (sizeTypeStr == null || "DEFAULT".equals(sizeTypeStr)) {
+                return null;
+            }
+            return "请选择杯型";
         }
         
         String sizeTypeStr = product.getSizeType();
