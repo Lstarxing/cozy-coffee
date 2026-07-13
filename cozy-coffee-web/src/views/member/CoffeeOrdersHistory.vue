@@ -28,7 +28,7 @@
                 <img :src="getImageUrl(item.productImage, '/images/products/default.png')" class="line-item-img" />
                 <div class="line-item-info">
                   <span class="line-item-name">{{ item.productName }} <span class="qty">x{{ item.quantity }}</span></span>
-                  <span class="line-item-specs">{{ formatSpecs(item) }}</span>
+                  <span v-if="formatSpecs(item)" class="line-item-specs">{{ formatSpecs(item) }}</span>
                 </div>
                 <span class="line-item-price">¥{{ item.itemAmount }}</span>
               </div>

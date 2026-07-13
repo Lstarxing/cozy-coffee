@@ -1,5 +1,6 @@
 package com.cozy.gateway.controller;
 
+import com.cozy.common.context.UserContext;
 import com.cozy.common.result.Result;
 import com.cozy.gateway.dto.ApplyInviteCodeRequest;
 import com.cozy.gateway.dto.InviteCodeValidationResult;
@@ -17,6 +18,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -71,7 +73,10 @@ public class AuthController {
 
     @GetMapping("/me")
     public Result<Map<String, Object>> me() {
-        return Result.success(Map.of("userId", AuthUtil.requireUserId()));
+        return Result.success(Map.of(
+            "userId", AuthUtil.requireUserId(),
+            "role", Optional.ofNullable(UserContext.getRole()).orElse("user")
+        ));
     }
 
     @GetMapping("/userinfo")

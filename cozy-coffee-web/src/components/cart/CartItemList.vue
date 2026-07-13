@@ -4,11 +4,11 @@
       <img :src="getImageUrl(item.productImage)" :alt="item.productName" @error="handleImageError">
       <div class="item-details">
         <h4>{{ item.productName }}</h4>
-        <div v-if="item.category !== 'bakery'" class="item-specs">
-          <span>{{ getCupSizeLabel(item.cupSize) }}</span>
-          <span>{{ getSugarLabel(item.sugarLevel) }}</span>
-          <span>{{ getTempLabel(item.temperature) }}</span>
-          <span>{{ getStrengthLabel(item.coffeeStrength) }}</span>
+        <div v-if="item.category !== 'bakery' && (item.cupSize || item.sugarLevel || item.temperature || item.coffeeStrength || (item.milkType && item.milkType !== 'WHOLE'))" class="item-specs">
+          <span v-if="item.cupSize">{{ getCupSizeLabel(item.cupSize) }}</span>
+          <span v-if="item.sugarLevel">{{ getSugarLabel(item.sugarLevel) }}</span>
+          <span v-if="item.temperature">{{ getTempLabel(item.temperature) }}</span>
+          <span v-if="item.coffeeStrength">{{ getStrengthLabel(item.coffeeStrength) }}</span>
           <span v-if="item.milkType && item.milkType !== 'WHOLE'">{{ getMilkLabel(item.milkType) }}</span>
         </div>
         <div class="item-price">
