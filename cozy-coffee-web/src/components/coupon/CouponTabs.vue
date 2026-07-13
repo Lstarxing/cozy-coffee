@@ -109,9 +109,8 @@ const loadCoupons = async () => {
   loading.value = true
   try {
     const response = await getUserCoupons(activeTab.value)
-    const res = response.data || response
-    if (res.code === 200 || res.success) {
-      coupons.value = res.data || []
+    if (response.code === 200 || response.success) {
+      coupons.value = response.data || []
     } else {
       coupons.value = []
     }

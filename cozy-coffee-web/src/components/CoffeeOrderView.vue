@@ -202,16 +202,14 @@ const handleCheckout = async (orderData) => {
       })
     }
     const res = await createOrder(payload)
-    if (res.data.success) {
-      ElMessage.success('订单创建成功！')
-      // 清空购物车
+    if (res.success) {
+      ElMessage.success(res.message || '订单创建成功！')
       clearCart()
       showCart.value = false
-      // 通知父组件刷新用户信息和订单列表
-      emit('order-created', res.data.data)
+      emit('order-created', res.data)
       emit('refresh-user')
     } else {
-      ElMessage.error(res.data.message || '订单创建失败')
+      ElMessage.error(res.message || '订单创建失败')
       cartRef.value?.resetSubmitting()
     }
   } catch (error) {
