@@ -82,6 +82,8 @@ $text-main: $cozy-ink;
 $text-sub: $cozy-muted;
 $text-placeholder: $cozy-placeholder;
 $text-white: $cozy-on-dark;
+$text-primary: $cozy-ink;       // 别名 (旧页面使用)
+$text-secondary: $cozy-muted;   // 别名 (旧页面使用)
 
 $success-color: $cozy-success;
 $warning-color: $cozy-warning;
@@ -91,5 +93,10 @@ $info-color: $cozy-info;
 $border-color: $cozy-border;
 $card-radius: $cozy-radius-md;
 $card-radius-lg: $cozy-radius-lg;
+$border-radius-sm: $cozy-radius-sm;
+$border-radius-md: $cozy-radius-md;
+$border-radius-lg: $cozy-radius-lg;
 $box-shadow: none;             // ⚠️ 禁用大面积阴影
 $glass-blur: blur(0);         // ⚠️ 禁用毛玻璃
+
+$tabbar-height: 100rpx;       // tabbar 高度
