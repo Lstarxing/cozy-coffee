@@ -804,6 +804,34 @@ public class PointsMallServiceImpl implements PointsMallService {
                 exclusive, freeAddonCount);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public CouponUsageResult previewCouponWithResult(Long userId, String couponCode, BigDecimal orderAmount,
+            List<ItemCheckDTO> items) {
+        if (userId == null || couponCode == null || couponCode.isBlank()) {
+            throw new BusinessException("优惠券参数不能为空");
+        }
+
+        LambdaQueryWrapper<UserCoupon> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserCoupon::getUserId, userId)
+                .eq(UserCoupon::getCouponCode, couponCode.trim())
+                .eq(UserCoupon::getStatus, "ISSUED");
+        UserCoupon coupon = userCouponMapper.selectOne(wrapper);
+        if (coupon == null) {
+            throw new BusinessException("优惠券不存在或已使用");
+        }
+        if (coupon.getExpiresAt() != null && coupon.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BusinessException("优惠券已过期");
+        }
+
+        BigDecimal discountAmount = calculateCouponDiscount(coupon, orderAmount, items);
+        Long linkedProductId = parseLongValue(coupon.getRuleJson(), "linkedProductId");
+        boolean exclusive = coupon.getRuleJson() != null && coupon.getRuleJson().contains("\"exclusive\":true");
+        int freeAddonCount = parseValue(coupon.getRuleJson(), "freeAddon");
+        return new CouponUsageResult(discountAmount, coupon.getCouponType(), coupon.getId(), linkedProductId,
+                exclusive, freeAddonCount);
+    }
+
     private BigDecimal calculateCouponDiscount(UserCoupon coupon, BigDecimal orderAmount,
             List<ItemCheckDTO> items) {
         if (orderAmount == null)

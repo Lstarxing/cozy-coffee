@@ -1,162 +1,116 @@
-/**
- * 购物车状态管理 (Pinia Store)
- * 
- * 功能：
- * 1. 添加/移除商品
- * 2. 增减商品数量
- * 3. 计算总价和总数量
- * 4. 持久化到本地存储
- */
+import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { CART_KEY_VERSION, createCartLineKey } from '@/domain/cart/cartLineKey'
+import { migrateCartStorage, normalizeCartLine } from '@/domain/cart/cartMigrations'
+
+const STORAGE_KEY = 'cart'
 
 export const useCartStore = defineStore('cart', () => {
-    // ==================== State ====================
+  const items = ref([])
+  const discardedItems = ref([])
 
-    /**
-     * 购物车商品列表
-     * 结构: [{ id, name, price, image, quantity }, ...]
-     */
-    const items = ref([])
+  const totalCount = computed(() => items.value.reduce((sum, item) => sum + item.quantity, 0))
+  const subtotal = computed(() => Number(items.value.reduce(
+    (sum, item) => sum + Number(item.price || 0) * item.quantity,
+    0
+  ).toFixed(2)))
+  const totalPrice = computed(() => subtotal.value.toFixed(2))
 
-    // ==================== Getters (Computed) ====================
+  function saveToStorage() {
+    uni.setStorageSync(STORAGE_KEY, JSON.stringify({ version: CART_KEY_VERSION, items: items.value }))
+  }
 
-    /**
-     * 计算购物车商品总数量
-     */
-    const totalCount = computed(() => {
-        return items.value.reduce((sum, item) => sum + item.quantity, 0)
-    })
+  function restore() {
+    const migration = migrateCartStorage(uni.getStorageSync(STORAGE_KEY))
+    items.value = migration.items
+    discardedItems.value = migration.discardedItems
+    saveToStorage()
+    return migration
+  }
 
-    /**
-     * 计算购物车总价
-     * 返回格式化的字符串（保留两位小数）
-     */
-    const totalPrice = computed(() => {
-        const total = items.value.reduce((sum, item) => {
-            return sum + (parseFloat(item.price) * item.quantity)
-        }, 0)
-        return total.toFixed(2)
-    })
+  function resolveLineKey(value) {
+    if (typeof value === 'string' && value.startsWith(`${CART_KEY_VERSION}:`)) return value
+    return items.value.find(item => item.id === value || item.productId === String(value))?.lineKey || value
+  }
 
-    // ==================== Actions ====================
-
-    /**
-     * 添加商品到购物车
-     * @param {Object} product - 商品对象 { id, name, price, image }
-     * 
-     * 逻辑说明：
-     * - 如果购物车中已存在该商品，则数量 +1
-     * - 如果不存在，则新增一条记录，数量为 1
-     */
-    const addItem = (product) => {
-        const existingItem = items.value.find(item => item.id === product.id)
-
-        if (existingItem) {
-            // 已存在，数量 +1
-            existingItem.quantity++
-        } else {
-            // 不存在，新增记录
-            items.value.push({
-                ...product,
-                quantity: 1
-            })
-        }
-
-        // 持久化到本地
-        saveToStorage()
+  function addItem(product, quantity = product?.quantity || 1) {
+    const normalized = normalizeCartLine({ ...product, quantity })
+    const existing = items.value.find(item => item.lineKey === normalized.lineKey)
+    if (existing) {
+      existing.quantity = Math.min(10, existing.quantity + normalized.quantity)
+    } else {
+      items.value.push(normalized)
     }
+    saveToStorage()
+    return normalized.lineKey
+  }
 
-    /**
-     * 增加指定商品的数量
-     * @param {number|string} productId - 商品 ID
-     */
-    const increaseQty = (productId) => {
-        const item = items.value.find(item => item.id === productId)
-        if (item) {
-            item.quantity++
-            saveToStorage()
-        }
+  function setQuantity(lineKey, quantity) {
+    const resolved = resolveLineKey(lineKey)
+    const item = items.value.find(line => line.lineKey === resolved)
+    if (!item) return
+    const next = Math.max(0, Math.min(10, Number.parseInt(quantity, 10) || 0))
+    if (next === 0) items.value = items.value.filter(line => line.lineKey !== resolved)
+    else item.quantity = next
+    saveToStorage()
+  }
+
+  function increaseQty(lineKey) {
+    const resolved = resolveLineKey(lineKey)
+    const item = items.value.find(line => line.lineKey === resolved)
+    if (item) setQuantity(resolved, item.quantity + 1)
+  }
+
+  function decreaseQty(lineKey) {
+    const resolved = resolveLineKey(lineKey)
+    const item = items.value.find(line => line.lineKey === resolved)
+    if (item) setQuantity(resolved, item.quantity - 1)
+  }
+
+  function removeItem(lineKey) {
+    const resolved = resolveLineKey(lineKey)
+    items.value = items.value.filter(item => item.lineKey !== resolved)
+    saveToStorage()
+  }
+
+  function updateOptions(lineKey, options) {
+    const resolved = resolveLineKey(lineKey)
+    const index = items.value.findIndex(item => item.lineKey === resolved)
+    if (index < 0) return null
+
+    const updated = normalizeCartLine({ ...items.value[index], ...options })
+    const targetIndex = items.value.findIndex((item, itemIndex) => itemIndex !== index && item.lineKey === updated.lineKey)
+    if (targetIndex >= 0) {
+      items.value[targetIndex].quantity = Math.min(10, items.value[targetIndex].quantity + updated.quantity)
+      items.value.splice(index, 1)
+    } else {
+      items.value.splice(index, 1, updated)
     }
+    saveToStorage()
+    return updated.lineKey
+  }
 
-    /**
-     * 减少指定商品的数量
-     * @param {number|string} productId - 商品 ID
-     * 
-     * 逻辑说明：
-     * - 数量减到 0 时，自动从购物车移除该商品
-     */
-    const decreaseQty = (productId) => {
-        const index = items.value.findIndex(item => item.id === productId)
-        if (index !== -1) {
-            if (items.value[index].quantity > 1) {
-                items.value[index].quantity--
-            } else {
-                // 数量为 1，减少后移除
-                items.value.splice(index, 1)
-            }
-            saveToStorage()
-        }
-    }
+  function clearCart() {
+    items.value = []
+    saveToStorage()
+  }
 
-    /**
-     * 从购物车移除指定商品
-     * @param {number|string} productId - 商品 ID
-     */
-    const removeItem = (productId) => {
-        const index = items.value.findIndex(item => item.id === productId)
-        if (index !== -1) {
-            items.value.splice(index, 1)
-            saveToStorage()
-        }
-    }
+  restore()
 
-    /**
-     * 清空购物车
-     */
-    const clearCart = () => {
-        items.value = []
-        saveToStorage()
-    }
-
-    // ==================== 持久化 ====================
-
-    /**
-     * 保存购物车到本地存储
-     */
-    const saveToStorage = () => {
-        uni.setStorageSync('cart', JSON.stringify(items.value))
-    }
-
-    /**
-     * 从本地存储恢复购物车
-     */
-    const loadFromStorage = () => {
-        try {
-            const saved = uni.getStorageSync('cart')
-            if (saved) {
-                items.value = JSON.parse(saved)
-            }
-        } catch (e) {
-            console.error('恢复购物车失败:', e)
-        }
-    }
-
-    // 初始化时从本地恢复
-    loadFromStorage()
-
-    // ==================== 导出 ====================
-    return {
-        // State
-        items,
-        // Getters
-        totalCount,
-        totalPrice,
-        // Actions
-        addItem,
-        increaseQty,
-        decreaseQty,
-        removeItem,
-        clearCart
-    }
+  return {
+    items,
+    discardedItems,
+    totalCount,
+    subtotal,
+    totalPrice,
+    addItem,
+    setQuantity,
+    increaseQty,
+    decreaseQty,
+    removeItem,
+    updateOptions,
+    clearCart,
+    restore,
+    createCartLineKey
+  }
 })

@@ -76,7 +76,7 @@ public class OrderFlowBaselineTest {
         CreateOrderRequest request = buildBogoOrderRequest();
 
         // Act: create order -> status "pending"
-        ShopOrderDTO created = orderService.createOrder(userId, memberLevel, request);
+        ShopOrderDTO created = orderService.createOrder(userId, memberLevel, null, request);
         assertNotNull(created.getId(), "Order should have an ID after creation");
         assertEquals("pending", created.getStatus(), "New order should be pending");
 
@@ -104,7 +104,7 @@ public class OrderFlowBaselineTest {
         request.setItems(Collections.singletonList(item));
         request.setDiningMethod("TAKEOUT");
 
-        ShopOrderDTO created = orderService.createOrder(userId, memberLevel, request);
+        ShopOrderDTO created = orderService.createOrder(userId, memberLevel, null, request);
         assertNotNull(created.getId());
         assertEquals("pending", created.getStatus());
 
@@ -127,7 +127,7 @@ public class OrderFlowBaselineTest {
         request.setItems(Collections.singletonList(item));
         request.setDiningMethod("TAKEOUT");
 
-        ShopOrderDTO created = orderService.createOrder(userId, memberLevel, request);
+        ShopOrderDTO created = orderService.createOrder(userId, memberLevel, null, request);
         assertEquals("pending", created.getStatus());
 
         // Accept -> "preparing"

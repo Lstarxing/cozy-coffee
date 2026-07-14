@@ -7,9 +7,25 @@
 -->
 <script setup>
 import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
+import { useSessionStore } from '@/stores/session'
+import { useCheckoutStore } from '@/stores/checkout'
+import { SessionService } from '@/services/session/SessionService'
+import { NetworkService } from '@/services/network/NetworkService'
+import { Logger } from '@/services/logging/Logger'
+
+const sessionStore = useSessionStore()
+const checkoutStore = useCheckoutStore()
+const sessionService = new SessionService({ sessionStore })
+const networkService = new NetworkService(globalThis.uni)
+let hiddenAt = null
 
 // 应用启动时触发（全局只触发一次）
 onLaunch(() => {
+  sessionService.restore()
+  networkService.start()
+  sessionService.establishSilentSession().catch(error => {
+    Logger.warn('Silent Session Skipped', { code: error.code })
+  })
   console.log('🚀 Antigravity Coffee App 启动')
   
   // 检查登录状态
@@ -21,11 +37,17 @@ onLaunch(() => {
 
 // 应用显示时触发（从后台进入前台）
 onShow(() => {
+  if (hiddenAt && Date.now() - hiddenAt >= 5 * 60 * 1000) {
+    checkoutStore.invalidatePreview()
+  }
+  hiddenAt = null
+  networkService.refresh()
   console.log('📱 App 进入前台')
 })
 
 // 应用隐藏时触发（从前台进入后台）
 onHide(() => {
+  hiddenAt = Date.now()
   console.log('📱 App 进入后台')
 })
 </script>

@@ -19,6 +19,7 @@ public class ShopOrder {
 
     private String orderNo;
     private Long userId;
+    private String idempotencyKey;
     private BigDecimal totalAmount;
 
     // 新增字段（v4.0 迁移）

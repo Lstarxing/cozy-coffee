@@ -1,10 +1,13 @@
 package com.cozy.order.service.impl;
 
 import com.cozy.order.api.OrderService;
+import com.cozy.order.dto.request.CartCheckRequest;
 import com.cozy.order.dto.request.CreateOrderRequest;
+import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.MonthlyStatsDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
+import com.cozy.order.service.OrderPreviewService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
@@ -27,6 +30,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderCreationService creationService;
     private final OrderCommandService commandService;
     private final ProductAdminService productAdminService;
+    private final OrderPreviewService previewService;
 
     // ==================== 商品查询 ====================
 
@@ -80,8 +84,13 @@ public class OrderServiceImpl implements OrderService {
     // ==================== 订单创建 ====================
 
     @Override
-    public ShopOrderDTO createOrder(Long userId, String memberLevel, CreateOrderRequest request) {
-        return creationService.createOrder(userId, memberLevel, request);
+    public CartCheckResultDTO checkCart(Long userId, String memberLevel, CartCheckRequest request) {
+        return previewService.preview(userId, memberLevel, request);
+    }
+
+    @Override
+    public ShopOrderDTO createOrder(Long userId, String memberLevel, String idempotencyKey, CreateOrderRequest request) {
+        return creationService.createOrder(userId, memberLevel, idempotencyKey, request);
     }
 
     // ==================== 订单状态变更 ====================

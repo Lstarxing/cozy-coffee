@@ -29,6 +29,14 @@ public class CreateOrderRequest implements Serializable {
 
     private String remark;
 
+    /** Authoritative token returned by POST /api/order/cart/check. */
+    private String previewToken;
+
+    /** Fixed to store 1 in phase one; kept in the contract for future multi-store support. */
+    private Long storeId;
+
+    private String pickupTime;
+
     @Deprecated
     private Long productId;
     @Deprecated

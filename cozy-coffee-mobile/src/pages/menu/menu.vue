@@ -1,548 +1,240 @@
-<!--
-  菜单页 - 商业化重构版
-  特点：极简侧边栏、无边框商品卡片、流畅交互
--->
 <template>
   <view class="menu-page">
-    <!-- 顶部状态栏占位 -->
-    <view class="status-bar-placeholder"></view>
+    <view class="store-strip">
+      <view class="store-copy">
+        <view class="store-line">
+          <text class="store-name">CozyCoffee 中心店</text>
+          <text class="store-status">营业中</text>
+        </view>
+        <text class="store-meta">到店自提 · 预计 15 分钟</text>
+      </view>
+      <view class="search-entry" @click="goToSearch">搜索</view>
+    </view>
 
     <view class="menu-container">
-      <!-- 左侧分类导航 -->
-      <scroll-view 
-        class="category-sidebar" 
-        scroll-y 
-        :scroll-into-view="'cat-' + currentCategoryIndex"
-      >
-        <view 
-          v-for="(cat, index) in categories" 
-          :key="cat.id"
-          :id="'cat-' + index"
+      <scroll-view scroll-y class="category-sidebar" :scroll-into-view="`cat-${currentCategoryIndex}`">
+        <view
+          v-for="(category, index) in categories"
+          :id="`cat-${index}`"
+          :key="category.id"
           class="category-item"
           :class="{ active: currentCategoryIndex === index }"
-          @click="onCategoryClick(index)"
+          @click="selectCategory(index)"
         >
-          <!-- 激活指示条 -->
-          <view class="active-indicator" v-if="currentCategoryIndex === index"></view>
-          <text class="category-name">{{ cat.name }}</text>
-          <!-- 选购数量角标 (可选) -->
-          <text class="category-badge" v-if="getCategoryCount(cat.id) > 0">{{ getCategoryCount(cat.id) }}</text>
+          <text class="category-name">{{ category.name }}</text>
+          <text v-if="categoryCount(category.id)" class="category-count">{{ categoryCount(category.id) }}</text>
         </view>
-        <!-- 底部占位 -->
-        <view style="height: 100rpx"></view>
+        <view class="sidebar-spacer" />
       </scroll-view>
-      
-      <!-- 右侧商品列表 -->
-      <scroll-view 
-        class="product-list" 
-        scroll-y
-        :scroll-into-view="scrollToProductId"
-        scroll-with-animation
-        @scroll="onProductScroll"
-      >
-        <view class="product-wrapper">
-          <!-- 顶部广告位 -->
-          <view class="menu-banner">
-            <text class="banner-title">今日特调 ☕</text>
-            <text class="banner-subtitle">探索每一杯的惊喜</text>
+
+      <scroll-view scroll-y class="product-scroll" :scroll-into-view="scrollTarget" scroll-with-animation>
+        <LoadingState v-if="loading" text="正在准备菜单…" />
+        <OfflineState v-else-if="offline" @retry="loadMenu" />
+        <RetryState v-else-if="errorMessage" :description="errorMessage" @retry="loadMenu" />
+        <EmptyState v-else-if="!categories.length" title="今日菜单准备中" description="请稍后刷新看看" action-text="刷新菜单" @action="loadMenu" />
+
+        <view v-else class="product-content">
+          <view class="menu-notice">
+            <text class="notice-title">高效点单</text>
+            <text class="notice-copy">选择商品后直接配置规格，无需跳转详情页</text>
           </view>
 
-          <!-- 按分类分组 -->
-          <view 
-            v-for="(cat, catIndex) in categories" 
-            :key="cat.id"
-            :id="'product-cat-' + catIndex"
-            class="product-group"
-          >
-            <!-- 分类标题 -->
-            <view class="group-header">
-              <text class="group-title">{{ cat.name }}</text>
+          <view v-for="(category, index) in categories" :id="`products-${index}`" :key="category.id" class="product-group">
+            <view class="group-heading">
+              <text class="group-title">{{ category.name }}</text>
+              <text class="group-count">{{ category.products.length }} 款</text>
             </view>
-            
-            <!-- 商品卡片 -->
-            <view 
-              v-for="product in cat.products" 
+            <ProductListItem
+              v-for="product in category.products"
               :key="product.id"
-              class="product-card"
-              @click="goToDetail(product.id)"
-            >
-              <image :src="product.image" class="product-image" mode="aspectFill" />
-              
-              <view class="product-content">
-                <text class="product-name">{{ product.name }}</text>
-                <text class="product-desc ellipsis-2">{{ product.description }}</text>
-                
-                <view class="product-action">
-                  <text class="product-price">¥{{ product.price }}</text>
-                  <!-- 选规格/加购按钮 -->
-                  <view class="action-btn" @click.stop="addToCart(product)">
-                    <text class="btn-icon">+</text>
-                  </view>
-                </view>
-              </view>
-            </view>
+              :product="product"
+              :count="productCount(product.id)"
+              @select="openSpec"
+              @add="openSpec"
+            />
           </view>
+          <view class="product-spacer" />
         </view>
-        
-        <!-- 底部占位，防止被购物车栏遮挡 -->
-        <view class="bottom-placeholder"></view>
       </scroll-view>
     </view>
-    
-    <!-- 底部购物车栏 (悬浮) -->
-    <view class="cart-bar-wrapper" v-if="cartStore.totalCount > 0">
-      <view class="cart-bar">
-        <view class="cart-left" @click="showCartPopup = true">
-          <view class="cart-icon-box">
-            <text class="cart-icon">🛒</text>
-            <view class="cart-badge">{{ cartStore.totalCount }}</view>
-          </view>
-          <view class="cart-price">
-            <text class="total-price">¥{{ cartStore.totalPrice }}</text>
-            <text class="delivery-tip">免配送费</text>
-          </view>
-        </view>
-        <view class="cart-right" @click="goToCheckout">
-          <text class="checkout-text">去结算</text>
-        </view>
-      </view>
-    </view>
-    
-    <!-- 购物车弹窗 (简化版) -->
-    <view class="cart-popup-mask" v-if="showCartPopup" @click="showCartPopup = false">
-      <view class="cart-popup-content" @click.stop>
-        <view class="popup-header">
-          <text class="popup-title">已选商品</text>
-          <text class="clear-btn" @click="cartStore.clearCart">清空</text>
-        </view>
-        <scroll-view scroll-y class="cart-scroll">
-          <view class="cart-item" v-for="item in cartStore.items" :key="item.id">
-            <text class="item-name">{{ item.name }}</text>
-            <view class="item-actions">
-              <text class="item-price">¥{{ item.price }}</text>
-              <view class="qty-control">
-                <view class="qty-btn" @click="cartStore.decreaseQty(item.id)">-</view>
-                <text class="qty-num">{{ item.quantity }}</text>
-                <view class="qty-btn" @click="cartStore.increaseQty(item.id)">+</view>
-              </view>
-            </view>
-          </view>
-        </scroll-view>
-      </view>
-    </view>
+
+    <CartSheet
+      :visible="cartVisible"
+      :items="cartStore.items"
+      :total="cartStore.subtotal"
+      @close="cartVisible = false"
+      @clear="clearCart"
+      @edit="editCartLine"
+      @decrease="cartStore.decreaseQty"
+      @increase="cartStore.increaseQty"
+    />
+    <CartBar :count="cartStore.totalCount" :total="cartStore.subtotal" @open="cartVisible = true" @checkout="goToCheckout" />
+    <ProductSpecSheet :visible="specVisible" :product="activeProduct" :line="editingLine" @close="closeSpec" @confirm="saveSpec" />
   </view>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useCartStore } from '@/stores/cart'
+import { computed, nextTick, ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { getMenuData } from '@/api/product'
+import { useCartStore } from '@/stores/cart'
+import { NetworkError } from '@/services/errors/AppError'
+import ProductListItem from '@/components/order/ProductListItem.vue'
+import ProductSpecSheet from '@/components/order/ProductSpecSheet.vue'
+import CartBar from '@/components/order/CartBar.vue'
+import CartSheet from '@/components/order/CartSheet.vue'
+import LoadingState from '@/components/states/LoadingState.vue'
+import EmptyState from '@/components/states/EmptyState.vue'
+import RetryState from '@/components/states/RetryState.vue'
+import OfflineState from '@/components/states/OfflineState.vue'
 
 const cartStore = useCartStore()
 const categories = ref([])
 const currentCategoryIndex = ref(0)
-const scrollToProductId = ref('')
-const showCartPopup = ref(false)
+const scrollTarget = ref('')
+const loading = ref(true)
+const offline = ref(false)
+const errorMessage = ref('')
+const cartVisible = ref(false)
+const specVisible = ref(false)
+const activeProduct = ref({})
+const editingLine = ref(null)
 
-onMounted(async () => {
+const allProducts = computed(() => categories.value.flatMap(category => category.products))
+
+onLoad(loadMenu)
+
+async function loadMenu() {
+  loading.value = true
+  offline.value = false
+  errorMessage.value = ''
   try {
-    const res = await getMenuData()
-    if (res.code === 200 && res.data) {
-      // 后端返回平铺的商品列表，需要按 category 分组
-      const products = res.data
-      const categoryMap = {}
-      
-      products.forEach(product => {
-        const cat = product.category || 'other'
-        const catName = getCategoryDisplayName(cat)
-        if (!categoryMap[cat]) {
-          categoryMap[cat] = {
-            id: cat,
-            name: catName,
-            products: []
-          }
+    const response = await getMenuData()
+    const source = response?.data ?? response
+    const products = Array.isArray(source) ? source : []
+    const categoryMap = new Map()
+
+    products
+      .filter(product => !product.status || String(product.status).toLowerCase() === 'active')
+      .forEach(product => {
+        const categoryId = String(product.category || 'other').toLowerCase()
+        if (!categoryMap.has(categoryId)) {
+          categoryMap.set(categoryId, { id: categoryId, name: categoryName(categoryId), products: [] })
         }
-        // 适配字段名：后端用 imageUrl，前端用 image
-        categoryMap[cat].products.push({
+        categoryMap.get(categoryId).products.push({
           ...product,
-          image: product.imageUrl || product.image || '/static/images/default-product.png'
+          productId: String(product.id),
+          image: product.imageUrl || product.image || '/static/images/default-product.png',
+          price: Number(product.price || 0)
         })
       })
-      
-      categories.value = Object.values(categoryMap)
-    }
-  } catch (e) {
-    console.error('加载菜单失败', e)
-    // 降级到 Mock 数据
-    categories.value = [
-      {
-        id: 'latte',
-        name: '拿铁系列',
-        products: [
-          { id: 1, name: '经典拿铁', price: 32, image: 'https://picsum.photos/200/200?random=1', description: '浓缩咖啡与丝滑牛奶的经典搭配' }
-        ]
-      }
-    ]
-  }
-})
 
-const onCategoryClick = (index) => {
+    categories.value = Array.from(categoryMap.values())
+  } catch (error) {
+    offline.value = error instanceof NetworkError
+    errorMessage.value = error?.message || '菜单加载失败，请稍后重试'
+  } finally {
+    loading.value = false
+  }
+}
+
+function categoryName(code) {
+  return ({
+    espresso: '意式咖啡', coffee: '经典咖啡', latte: '拿铁系列', signature: '季节特调',
+    soe: '手冲精品', bakery: '烘焙甜点', dessert: '甜品', addon: '加料', other: '其他'
+  })[code] || code
+}
+
+function selectCategory(index) {
   currentCategoryIndex.value = index
-  scrollToProductId.value = 'product-cat-' + index
+  scrollTarget.value = ''
+  nextTick(() => { scrollTarget.value = `products-${index}` })
 }
 
-const onProductScroll = (e) => {
-  // 简化联动逻辑
+function productCount(productId) {
+  return cartStore.items
+    .filter(line => String(line.productId) === String(productId))
+    .reduce((sum, line) => sum + Number(line.quantity || 0), 0)
 }
 
-const getCategoryCount = (catId) => {
-  // 简单模拟分类下已选数量，实际需遍历购物车
-  return 0
+function categoryCount(categoryId) {
+  const ids = new Set(categories.value.find(category => category.id === categoryId)?.products.map(product => String(product.id)) || [])
+  return cartStore.items.filter(line => ids.has(String(line.productId))).reduce((sum, line) => sum + Number(line.quantity || 0), 0)
 }
 
-// v5.0 分类名称映射
-const getCategoryDisplayName = (code) => {
-  const categoryMap = {
-    'espresso': '☕ 意式咖啡',
-    'signature': '⭐ 季节限定',
-    'bakery': '🍰 烘焙甜品',
-    'addon': '➕ 加料/配料',
-    'coffee': '☕ 咖啡',
-    'dessert': '🍰 甜品',
-    'other': '📦 其他'
-  }
-  return categoryMap[code] || code
+function openSpec(product) {
+  activeProduct.value = product
+  editingLine.value = null
+  specVisible.value = true
 }
 
-const addToCart = (product) => {
-  cartStore.addItem({
-    id: product.id,
-    name: product.name,
-    price: product.price,
-    image: product.image
+function editCartLine(line) {
+  activeProduct.value = allProducts.value.find(product => String(product.id) === String(line.productId)) || line
+  editingLine.value = line
+  cartVisible.value = false
+  specVisible.value = true
+}
+
+function closeSpec() {
+  specVisible.value = false
+  editingLine.value = null
+}
+
+function saveSpec(line) {
+  const wasEditing = Boolean(editingLine.value?.lineKey)
+  if (wasEditing) cartStore.updateOptions(editingLine.value.lineKey, line)
+  else cartStore.addItem(line, line.quantity)
+  closeSpec()
+  try { uni.vibrateShort({ type: 'light' }) } catch (_) {}
+  uni.showToast({ title: wasEditing ? '已更新' : '已加入购物车', icon: 'none', duration: 900 })
+}
+
+function clearCart() {
+  uni.showModal({
+    title: '清空购物车',
+    content: '确认移除全部已选商品？',
+    success: result => {
+      if (result.confirm) {
+        cartStore.clearCart()
+        cartVisible.value = false
+      }
+    }
   })
-  uni.vibrateShort() // 震动反馈
 }
 
-const goToDetail = (id) => uni.navigateTo({ url: `/pages/menu/detail?id=${id}` })
-const goToCheckout = () => uni.navigateTo({ url: '/pages/order/confirm' })
+function goToCheckout() {
+  if (!cartStore.totalCount) return
+  uni.navigateTo({ url: '/pages/order/confirm' })
+}
+
+function goToSearch() { uni.navigateTo({ url: '/pages/search/index' }) }
 </script>
 
 <style lang="scss" scoped>
-.menu-page {
-  height: 100vh;
-  background: $bg-white;
-  display: flex;
-  flex-direction: column;
-}
-
-.status-bar-placeholder {
-  height: var(--status-bar-height);
-  background: $bg-white;
-}
-
-.menu-container {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-// 左侧分类
-.category-sidebar {
-  width: 180rpx;
-  background: #F9F9F9; // 极淡灰
-  height: 100%;
-  
-  .category-item {
-    height: 100rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    color: $text-sub;
-    font-size: $font-size-sm;
-    transition: all 0.2s;
-    
-    &.active {
-      background: $bg-white;
-      color: $text-main;
-      font-weight: 700;
-      font-size: $font-size-md;
-    }
-    
-    .active-indicator {
-      position: absolute;
-      left: 0;
-      top: 30rpx;
-      bottom: 30rpx;
-      width: 8rpx;
-      background: $primary-color;
-      border-radius: 0 4rpx 4rpx 0;
-    }
-    
-    .category-badge {
-      position: absolute;
-      top: 10rpx;
-      right: 10rpx;
-      background: $error-color;
-      color: white;
-      font-size: 18rpx;
-      padding: 0 8rpx;
-      border-radius: 10rpx;
-    }
-  }
-}
-
-// 右侧列表
-.product-list {
-  flex: 1;
-  height: 100%;
-  background: $bg-white;
-}
-
-.product-wrapper {
-  padding: 0 $spacing-md;
-}
-
-.menu-banner {
-  margin: $spacing-md 0;
-  padding: $spacing-lg;
-  background: $cozy-surface;
-  border-radius: $card-radius;
-  
-  .banner-title {
-    font-size: 32rpx;
-    font-weight: 700;
-    color: $primary-dark;
-    display: block;
-    margin-bottom: 4rpx;
-  }
-  
-  .banner-subtitle {
-    font-size: 24rpx;
-    color: $text-sub;
-  }
-}
-
-.group-header {
-  padding: $spacing-lg 0 $spacing-sm;
-  background: $bg-white;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  
-  .group-title {
-    font-size: $font-size-md;
-    font-weight: 700;
-    color: $text-main;
-  }
-}
-
-.product-card {
-  display: flex;
-  margin-bottom: $spacing-lg;
-  
-  .product-image {
-    width: 180rpx;
-    height: 180rpx;
-    border-radius: $card-radius;
-    background: $bg-gray;
-  }
-  
-  .product-content {
-    flex: 1;
-    margin-left: $spacing-md;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 4rpx 0;
-    
-    .product-name {
-      font-size: 30rpx;
-      color: $text-main;
-      font-weight: 600;
-    }
-    
-    .product-desc {
-      font-size: 22rpx;
-      color: $text-placeholder;
-      line-height: 1.4;
-    }
-    
-    .product-action {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      
-      .product-price {
-        font-size: 32rpx;
-        color: $secondary-color;
-        font-weight: 700;
-      }
-      
-      .action-btn {
-        width: 50rpx;
-        height: 50rpx;
-        background: $primary-color;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        &:active { transform: scale(0.9); }
-        
-        .btn-icon {
-          color: white;
-          font-size: 36rpx;
-          margin-top: -4rpx;
-        }
-      }
-    }
-  }
-}
-
-.bottom-placeholder {
-  height: 160rpx;
-}
-
-// 购物车栏
-.cart-bar-wrapper {
-  position: fixed;
-  bottom: 0; // 适配 tabbar 时需要调整，这里假设是 tabbar 页面
-  /* #ifdef H5 */
-  bottom: 50px; // H5 Tabbar 高度
-  /* #endif */
-  left: 0;
-  right: 0;
-  padding: 0 $spacing-md $spacing-md;
-  z-index: 99;
-}
-
-.cart-bar {
-  background: $secondary-color;
-  border-radius: 50rpx;
-  height: 100rpx;
-  display: flex;
-  align-items: center;
-  padding: 0 8rpx 0 32rpx;
-
-  .cart-left {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    
-    .cart-icon-box {
-      position: relative;
-      margin-right: $spacing-md;
-      
-      .cart-icon { font-size: 48rpx; }
-      
-      .cart-badge {
-        position: absolute;
-        top: -10rpx;
-        right: -10rpx;
-        background: $error-color;
-        color: white;
-        font-size: 20rpx;
-        min-width: 32rpx;
-        text-align: center;
-        border-radius: 16rpx;
-        border: 2rpx solid $secondary-color;
-      }
-    }
-    
-    .cart-price {
-      .total-price { display: block; color: white; font-size: 36rpx; font-weight: 700; }
-      .delivery-tip { display: block; color: rgba(255,255,255,0.6); font-size: 20rpx; }
-    }
-  }
-  
-  .cart-right {
-    background: $primary-color;
-    height: 84rpx;
-    padding: 0 48rpx;
-    border-radius: 42rpx;
-    display: flex;
-    align-items: center;
-    
-    .checkout-text {
-      color: white;
-      font-size: 30rpx;
-      font-weight: 600;
-    }
-  }
-}
-
-// 购物车弹窗
-.cart-popup-mask {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 90;
-}
-
-.cart-popup-content {
-  position: absolute;
-  bottom: 140rpx; // 避开购物车栏
-  /* #ifdef H5 */
-  bottom: 240rpx;
-  /* #endif */
-  left: $spacing-md;
-  right: $spacing-md;
-  background: white;
-  border-radius: $card-radius-lg;
-  padding: $spacing-md;
-  animation: slide-up 0.3s ease-out;
-  
-  .popup-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: $spacing-md;
-    
-    .popup-title { font-weight: 700; }
-    .clear-btn { color: $text-sub; font-size: 24rpx; }
-  }
-  
-  .cart-scroll {
-    max-height: 400rpx;
-  }
-  
-  .cart-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: $spacing-sm 0;
-    
-    .item-name { flex: 1; font-size: 28rpx; }
-    
-    .item-actions {
-      display: flex;
-      align-items: center;
-      gap: $spacing-md;
-      
-      .item-price { font-weight: 600; }
-      
-      .qty-control {
-        display: flex;
-        align-items: center;
-        gap: 16rpx;
-        
-        .qty-btn {
-          width: 40rpx;
-          height: 40rpx;
-          border-radius: 50%;
-          border: 1rpx solid #ddd;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-      }
-    }
-  }
-}
-
-@keyframes slide-up {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
+.menu-page { height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #fff; }
+.store-strip { min-height: 116rpx; padding: 20rpx 28rpx; display: flex; align-items: center; gap: 20rpx; border-bottom: 1rpx solid $cozy-border; background: #fff; box-sizing: border-box; }
+.store-copy { min-width: 0; flex: 1; }
+.store-line { display: flex; align-items: center; gap: 12rpx; }
+.store-name { overflow: hidden; color: $cozy-ink; font-size: 30rpx; font-weight: 750; white-space: nowrap; text-overflow: ellipsis; }
+.store-status { padding: 4rpx 10rpx; border-radius: 999rpx; background: $cozy-accent-soft; color: $cozy-accent; font-size: 19rpx; font-weight: 650; }
+.store-meta { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 22rpx; }
+.search-entry { min-width: 104rpx; height: 72rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; background: $cozy-surface; color: $cozy-ink; font-size: 24rpx; }
+.menu-container { min-height: 0; flex: 1; display: flex; overflow: hidden; }
+.category-sidebar { width: 172rpx; height: 100%; flex: none; background: $cozy-surface; }
+.category-item { position: relative; min-height: 104rpx; padding: 18rpx 18rpx 18rpx 24rpx; display: flex; align-items: center; justify-content: center; color: $cozy-muted; font-size: 24rpx; text-align: center; box-sizing: border-box; }
+.category-item.active { background: #fff; color: $cozy-ink; font-weight: 700; }
+.category-item.active::before { position: absolute; left: 0; top: 34rpx; bottom: 34rpx; width: 7rpx; border-radius: 0 999rpx 999rpx 0; background: $cozy-primary; content: ''; }
+.category-name { line-height: 1.35; }
+.category-count { position: absolute; top: 10rpx; right: 8rpx; min-width: 30rpx; height: 30rpx; padding: 0 5rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; background: $cozy-primary; color: #fff; font-size: 18rpx; box-sizing: border-box; }
+.sidebar-spacer { height: 220rpx; }
+.product-scroll { min-width: 0; flex: 1; height: 100%; background: #fff; }
+.product-content { padding: 0 26rpx; }
+.menu-notice { margin: 24rpx 0 8rpx; padding: 24rpx; border-radius: $cozy-radius-md; background: $cozy-surface-alt; }
+.notice-title { display: block; color: #fff; font-size: 28rpx; font-weight: 700; }
+.notice-copy { display: block; margin-top: 7rpx; color: $cozy-muted-on-dark; font-size: 21rpx; line-height: 1.45; }
+.product-group { scroll-margin-top: 0; }
+.group-heading { position: sticky; top: 0; z-index: 5; display: flex; align-items: baseline; justify-content: space-between; padding: 28rpx 0 12rpx; background: #fff; }
+.group-title { color: $cozy-ink; font-size: 30rpx; font-weight: 750; }
+.group-count { color: $cozy-muted; font-size: 21rpx; }
+.product-spacer { height: 220rpx; }
 </style>

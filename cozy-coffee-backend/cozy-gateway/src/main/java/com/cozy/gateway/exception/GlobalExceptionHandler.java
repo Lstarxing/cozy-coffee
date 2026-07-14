@@ -64,15 +64,30 @@ public class GlobalExceptionHandler {
     public Result<?> handleBusinessException(BusinessException e) {
         String msg = cleanDubboMessage(e.getMessage());
         log.warn("业务异常: {}", msg);
-        return Result.fail(msg);
+        return Result.businessFail(e.getCode().name(), msg, e.isRetryable());
     }
 
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.OK)
     public Result<?> handleRuntimeException(RuntimeException e) {
+        BusinessException business = findBusinessException(e);
+        if (business != null) {
+            return Result.businessFail(business.getCode().name(), cleanDubboMessage(business.getMessage()),
+                    business.isRetryable());
+        }
         String msg = cleanDubboMessage(e.getMessage());
         log.warn("业务异常: {}", msg);
         return Result.fail(msg);
+    }
+
+    private BusinessException findBusinessException(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof BusinessException business) return business;
+            if (current.getCause() == current) break;
+            current = current.getCause();
+        }
+        return null;
     }
 
     /**

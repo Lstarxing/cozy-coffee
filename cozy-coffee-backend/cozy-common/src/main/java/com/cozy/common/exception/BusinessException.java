@@ -5,7 +5,28 @@ package com.cozy.common.exception;
  */
 public class BusinessException extends RuntimeException {
 
+    private final BusinessErrorCode code;
+    private final boolean retryable;
+
     public BusinessException(String message) {
+        this(BusinessErrorCode.BUSINESS_ERROR, message);
+    }
+
+    public BusinessException(BusinessErrorCode code, String message) {
+        this(code, message, code != null && code.isRetryable());
+    }
+
+    public BusinessException(BusinessErrorCode code, String message, boolean retryable) {
         super(message);
+        this.code = code != null ? code : BusinessErrorCode.BUSINESS_ERROR;
+        this.retryable = retryable;
+    }
+
+    public BusinessErrorCode getCode() {
+        return code;
+    }
+
+    public boolean isRetryable() {
+        return retryable;
     }
 }

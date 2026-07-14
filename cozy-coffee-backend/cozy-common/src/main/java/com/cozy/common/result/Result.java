@@ -34,6 +34,12 @@ public class Result<T> implements Serializable {
      */
     private T data;
 
+    /** Stable machine-readable business code. Null for successful responses. */
+    private String errorCode;
+
+    /** Whether retrying the same user intent can succeed. */
+    private Boolean retryable;
+
     // 私有构造，使用静态方法创建
     private Result() {
     }
@@ -80,6 +86,13 @@ public class Result<T> implements Serializable {
         result.setCode(code);
         result.setMessage(message);
         result.setData(null);
+        return result;
+    }
+
+    public static <T> Result<T> businessFail(String errorCode, String message, boolean retryable) {
+        Result<T> result = fail(400, message);
+        result.setErrorCode(errorCode);
+        result.setRetryable(retryable);
         return result;
     }
 

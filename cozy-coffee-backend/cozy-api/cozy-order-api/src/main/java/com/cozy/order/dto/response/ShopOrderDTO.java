@@ -17,6 +17,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 public class ShopOrderDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    /** True when an earlier request with the same idempotency key created this order. */
+    private Boolean idempotentReplay;
+
     // 订单基础信息
     private Long id;
     private String orderNo;
