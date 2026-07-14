@@ -7,6 +7,7 @@ import com.cozy.mall.dto.request.ItemCheckDTO;
 import com.cozy.mall.dto.response.CouponUsageResult;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.common.exception.BusinessException;
+import com.cozy.common.exception.BusinessErrorCode;
 import com.cozy.order.dto.request.CreateOrderRequest;
 import com.cozy.order.dto.request.OrderItemRequest;
 import com.cozy.order.dto.response.ShopOrderDTO;
@@ -17,6 +18,7 @@ import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.mapper.ShopOrderMapper;
 import com.cozy.order.mapper.ShopOrderItemMapper;
 import com.cozy.order.service.PickupCodeService;
+import com.cozy.order.service.OrderPreviewService;
 import com.cozy.order.service.ProductSkuValidationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
@@ -34,6 +37,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -52,6 +57,9 @@ public class OrderCreationService {
     private final OrderDtoEnricher orderDtoEnricher;
     private final OrderInfraService orderInfraService;
     private final TransactionTemplate transactionTemplate;
+    private final OrderPreviewService orderPreviewService;
+
+    private final ConcurrentMap<String, Object> idempotencyLocks = new ConcurrentHashMap<>();
 
     @DubboReference(check = false)
     private MemberService memberService;
@@ -59,13 +67,50 @@ public class OrderCreationService {
     @DubboReference(check = false)
     private PointsMallService pointsMallService;
 
-    public ShopOrderDTO createOrder(Long userId, String memberLevel, CreateOrderRequest request) {
+    public ShopOrderDTO createOrder(Long userId, String memberLevel, String idempotencyKey,
+            CreateOrderRequest request) {
+        // Direct/Dubbo legacy callers may omit the key. The HTTP mobile contract enforces it in the gateway.
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            return createOrderInternal(userId, memberLevel, null, request);
+        }
+        if (idempotencyKey.length() > 64) {
+            throw new BusinessException(BusinessErrorCode.IDEMPOTENCY_KEY_INVALID,
+                    "Idempotency-Key 必须为 1-64 个字符");
+        }
+        String normalizedKey = idempotencyKey.trim();
+        String lockKey = userId + ":" + normalizedKey;
+        Object lock = idempotencyLocks.computeIfAbsent(lockKey, ignored -> new Object());
+        synchronized (lock) {
+            try {
+                return createOrderInternal(userId, memberLevel, normalizedKey, request);
+            } finally {
+                idempotencyLocks.remove(lockKey, lock);
+            }
+        }
+    }
+
+    private ShopOrderDTO createOrderInternal(Long userId, String memberLevel, String idempotencyKey,
+            CreateOrderRequest request) {
         if (userId == null) {
             throw new BusinessException("用户未登录");
         }
         if (request == null) {
             throw new BusinessException("请求参数不能为空");
         }
+
+        ShopOrder existing = idempotencyKey != null
+                ? orderMapper.selectByUserAndIdempotencyKey(userId, idempotencyKey)
+                : null;
+        if (existing != null) {
+            log.info("命中幂等订单: userId={}, idempotencyKey={}, orderId={}",
+                    userId, idempotencyKey, existing.getId());
+            ShopOrderDTO replay = orderDtoEnricher.toOrderDTO(existing,
+                    orderDtoEnricher.getOrderItemsByOrderId(existing.getId()));
+            replay.setIdempotentReplay(true);
+            return replay;
+        }
+
+        orderPreviewService.validateForCreate(userId, memberLevel, request);
 
         // 构建订单项列表
         List<OrderItemRequest> itemRequests = request.getItems();
@@ -516,6 +561,7 @@ public class OrderCreationService {
         ShopOrder order = new ShopOrder();
         order.setOrderNo(generateOrderNo());
         order.setUserId(userId);
+        order.setIdempotencyKey(idempotencyKey);
         order.setTotalAmount(totalAmount);
         order.setTotalQuantity(totalQuantity);
         // v5.8: discountAmount 包含会员折扣 + 优惠券折扣 + 附加券折扣
@@ -553,6 +599,18 @@ public class OrderCreationService {
         // 如果此处失败但券已核销，publishCouponRollbackEvent 通过 Outbox 异步回滚。
         try {
             doCreateOrderInTx(order, orderItems);
+        } catch (DuplicateKeyException e) {
+            ShopOrder duplicate = idempotencyKey != null
+                    ? orderMapper.selectByUserAndIdempotencyKey(userId, idempotencyKey)
+                    : null;
+            if (duplicate != null) {
+                log.info("幂等键并发冲突，返回已创建订单: userId={}, orderId={}", userId, duplicate.getId());
+                ShopOrderDTO replay = orderDtoEnricher.toOrderDTO(duplicate,
+                        orderDtoEnricher.getOrderItemsByOrderId(duplicate.getId()));
+                replay.setIdempotentReplay(true);
+                return replay;
+            }
+            throw new BusinessException(BusinessErrorCode.ORDER_CREATE_FAILED, "订单创建冲突，请稍后重试");
         } catch (Exception e) {
             if (appliedCouponId != null || !addonCouponIds.isEmpty()) {
                 log.error("订单落库失败，触发券回滚: orderNo={}, couponId={}, addonIds={}",
@@ -560,7 +618,8 @@ public class OrderCreationService {
                 orderInfraService.publishCouponRollbackEvent(order);
             }
             log.error("订单落库失败: orderNo={}, error={}", order.getOrderNo(), e.getMessage(), e);
-            throw new BusinessException("订单创建失败: " + extractMessage(e));
+            throw new BusinessException(BusinessErrorCode.ORDER_CREATE_FAILED,
+                    "订单创建失败: " + extractMessage(e));
         }
 
         log.info("订单创建成功: orderNo={}, userId={}, totalAmount={}, items={}",

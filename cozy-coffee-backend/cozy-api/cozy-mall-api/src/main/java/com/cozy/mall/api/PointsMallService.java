@@ -84,6 +84,12 @@ public interface PointsMallService {
         CouponUsageResult useCouponWithResult(Long userId, String couponCode, BigDecimal orderAmount,
                         List<ItemCheckDTO> items);
 
+        /**
+         * Calculate and validate a coupon without consuming it. Checkout preview must use this method.
+         */
+        CouponUsageResult previewCouponWithResult(Long userId, String couponCode, BigDecimal orderAmount,
+                        List<ItemCheckDTO> items);
+
         // ==================== 管理端方法 ====================
 
         /**

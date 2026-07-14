@@ -7,6 +7,7 @@ import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.MonthlyStatsDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
+import com.cozy.order.service.OrderPreviewService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
@@ -29,6 +30,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderCreationService creationService;
     private final OrderCommandService commandService;
     private final ProductAdminService productAdminService;
+    private final OrderPreviewService previewService;
 
     // ==================== 商品查询 ====================
 
@@ -83,12 +85,12 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public CartCheckResultDTO checkCart(Long userId, String memberLevel, CartCheckRequest request) {
-        throw new UnsupportedOperationException("Cart check is not implemented yet");
+        return previewService.preview(userId, memberLevel, request);
     }
 
     @Override
     public ShopOrderDTO createOrder(Long userId, String memberLevel, String idempotencyKey, CreateOrderRequest request) {
-        return creationService.createOrder(userId, memberLevel, request);
+        return creationService.createOrder(userId, memberLevel, idempotencyKey, request);
     }
 
     // ==================== 订单状态变更 ====================
