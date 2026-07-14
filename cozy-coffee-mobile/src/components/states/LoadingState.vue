@@ -1,0 +1,3 @@
+<template><view class="state"><view class="skeleton skeleton--title" /><view class="skeleton" /><view class="skeleton" /><text>{{ text }}</text></view></template>
+<script setup>defineProps({ text: { type: String, default: '正在加载…' } })</script>
+<style lang="scss" scoped>.state{padding:64rpx 36rpx;text-align:center;color:$cozy-muted;font-size:24rpx}.skeleton{height:120rpx;margin:16rpx 0;border-radius:$cozy-radius-md;background:#eeeae7;animation:pulse 1.2s ease-in-out infinite}.skeleton--title{width:45%;height:36rpx}.state text{display:block;margin-top:24rpx}@keyframes pulse{50%{opacity:.45}}@media(prefers-reduced-motion:reduce){.skeleton{animation:none}}</style>

@@ -1,220 +1,82 @@
-<!--
-  下单成功页 - 展示订单结果和积分获得
--->
 <template>
   <view class="result-page">
-    <!-- 成功图标 -->
-    <view class="success-icon">
-      <text class="icon">✓</text>
-    </view>
-    
-    <!-- 成功提示 -->
-    <text class="success-title">下单成功</text>
-    <text class="success-subtitle">您的订单已提交，请耐心等待</text>
-    
-    <!-- 订单信息卡片 -->
-    <view class="order-card">
-      <view class="info-item">
-        <text class="info-label">订单编号</text>
-        <text class="info-value">{{ orderNo }}</text>
+    <LoadingState v-if="loading" text="正在读取订单结果…" />
+    <RetryState v-else-if="errorMessage" title="订单已提交" :description="errorMessage" @retry="loadOrder" />
+    <view v-else-if="order" class="result-content">
+      <view class="success-mark">✓</view>
+      <text class="result-title">{{ statusTitle }}</text>
+      <text class="result-subtitle">模拟支付已完成，请留意门店制作进度</text>
+
+      <view class="pickup-card">
+        <text class="pickup-label">取餐码</text>
+        <text class="pickup-code">{{ order.pickupCode || '生成中' }}</text>
+        <text class="pickup-hint">请在门店出示取餐码</text>
       </view>
-      <view class="info-item highlight">
-        <text class="info-label">订单金额</text>
-        <text class="info-value price">¥{{ totalPrice }}</text>
+
+      <view class="order-info">
+        <view class="info-row"><text>订单号</text><text>{{ order.orderNo || '--' }}</text></view>
+        <view class="info-row"><text>订单状态</text><text>{{ statusText(order.status) }}</text></view>
+        <view class="info-row"><text>自提门店</text><text>CozyCoffee 中心店</text></view>
+        <view class="info-row total"><text>实付金额</text><text>¥{{ money(order.payAmount ?? order.totalAmount) }}</text></view>
       </view>
-      <view class="info-item" v-if="pickupCode">
-        <text class="info-label">取餐码</text>
-        <text class="info-value pickup-code">{{ pickupCode }}</text>
+
+      <view class="action-group">
+        <view class="secondary-button" @click="goToOrders">查看全部订单</view>
+        <view class="primary-button" @click="goToDetail">查看订单详情</view>
       </view>
-      <view class="info-item">
-        <text class="info-label">预计完成</text>
-        <text class="info-value">约 15 分钟</text>
-      </view>
-    </view>
-    
-    <!-- 积分预告卡片 -->
-    <view class="points-card">
-      <view class="points-header">
-        <text class="points-icon">🎁</text>
-        <text class="points-label">订单完成后可获得</text>
-      </view>
-      <text class="points-value">+{{ earnedPoints }} 积分</text>
-      <text class="points-hint">💡 积分将在订单制作完成后自动发放</text>
-    </view>
-    
-    <!-- 操作按钮 -->
-    <view class="action-buttons">
-      <view class="btn-outline" @click="goToOrders">查看订单</view>
-      <view class="btn-primary" @click="goToHome">返回首页</view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { getOrderDetail } from '@/api/order'
+import LoadingState from '@/components/states/LoadingState.vue'
+import RetryState from '@/components/states/RetryState.vue'
 
-const earnedPoints = ref(0)
-const totalPrice = ref('0.00')
-const orderNo = ref('')
-const pickupCode = ref('')
+const orderId = ref('')
+const order = ref(null)
+const loading = ref(true)
+const errorMessage = ref('')
+const statusTitle = computed(() => ['cancelled', 'canceled'].includes(String(order.value?.status).toLowerCase()) ? '订单已取消' : '下单成功')
 
-// 页面加载时获取参数
-onLoad((options) => {
-  console.log('订单结果页参数:', options)
-  if (options.points) {
-    earnedPoints.value = options.points
-  }
-  if (options.total) {
-    totalPrice.value = options.total
-  }
-  if (options.orderNo) {
-    orderNo.value = options.orderNo
-  }
-  if (options.pickupCode) {
-    pickupCode.value = options.pickupCode
-  }
-})
+onLoad(options => { orderId.value = options.orderId || options.id || ''; loadOrder() })
 
-const goToOrders = () => {
-  uni.switchTab({ url: '/pages/order/order' })
+async function loadOrder() {
+  if (!orderId.value) { loading.value = false; errorMessage.value = '缺少订单编号，请前往订单列表查看'; return }
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const response = await getOrderDetail(orderId.value)
+    order.value = response?.data ?? response
+  } catch (error) {
+    errorMessage.value = error?.message || '暂时无法读取订单详情，可前往订单列表查看'
+  } finally { loading.value = false }
 }
 
-const goToHome = () => {
-  uni.switchTab({ url: '/pages/index/index' })
-}
+function statusText(status) { return ({ pending: '待接单', pending_payment: '待处理', preparing: '制作中', processing: '制作中', completed: '已完成', cancelled: '已取消' })[String(status || '').toLowerCase()] || '已提交' }
+function money(value) { return Number(value || 0).toFixed(2) }
+function goToOrders() { uni.switchTab({ url: '/pages/order/order' }) }
+function goToDetail() { uni.navigateTo({ url: `/pages/order/detail?id=${encodeURIComponent(orderId.value)}` }) }
 </script>
 
 <style lang="scss" scoped>
-.result-page {
-  min-height: 100vh;
-  background: $bg-color;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 100rpx $spacing-lg;
-}
-
-// 成功图标
-.success-icon {
-  width: 160rpx;
-  height: 160rpx;
-  background: $cozy-success;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: $spacing-lg;
-  
-  .icon {
-    font-size: 80rpx;
-    color: white;
-    font-weight: bold;
-  }
-}
-
-.success-title {
-  font-size: $font-size-xxl;
-  font-weight: 600;
-  color: $text-primary;
-  margin-bottom: $spacing-sm;
-}
-
-.success-subtitle {
-  font-size: $font-size-md;
-  color: $text-secondary;
-  margin-bottom: $spacing-xl;
-}
-
-// 积分卡片
-.points-card {
-  background: $cozy-surface;
-  border-radius: $border-radius-lg;
-  padding: $spacing-lg;
-  width: 100%;
-  text-align: center;
-  margin-bottom: $spacing-lg;
-  
-  .points-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: $spacing-sm;
-    
-    .points-icon {
-      font-size: 40rpx;
-      margin-right: $spacing-sm;
-    }
-    
-    .points-label {
-      font-size: $font-size-md;
-      color: $text-secondary;
-    }
-  }
-  
-  .points-value {
-    font-size: 72rpx;
-    font-weight: 700;
-    color: $primary-color;
-    display: block;
-    margin-bottom: $spacing-sm;
-  }
-  
-  .points-hint {
-    font-size: $font-size-sm;
-    color: $text-placeholder;
-  }
-}
-
-// 订单信息
-.order-info {
-  background: $bg-white;
-  border-radius: $border-radius-md;
-  padding: $spacing-md;
-  width: 100%;
-  margin-bottom: $spacing-xl;
-  
-  .info-item {
-    display: flex;
-    justify-content: space-between;
-    padding: $spacing-sm 0;
-    
-    .info-label {
-      color: $text-secondary;
-    }
-    
-    .info-value {
-      color: $text-primary;
-      font-weight: 500;
-    }
-  }
-}
-
-// 操作按钮
-.action-buttons {
-  display: flex;
-  gap: $spacing-md;
-  width: 100%;
-  
-  .btn-outline {
-    flex: 1;
-    text-align: center;
-    padding: $spacing-md;
-    border: 2rpx solid $primary-color;
-    color: $primary-color;
-    border-radius: 40rpx;
-    font-size: $font-size-md;
-  }
-  
-  .btn-primary {
-    flex: 1;
-    text-align: center;
-    padding: $spacing-md;
-    background: $cozy-primary;
-    color: white;
-    border-radius: 40rpx;
-    font-size: $font-size-md;
-    font-weight: 600;
-  }
-}
+.result-page { min-height: 100vh; background: $cozy-surface; }
+.result-content { padding: 72rpx 28rpx 48rpx; text-align: center; }
+.success-mark { width: 116rpx; height: 116rpx; margin: 0 auto 28rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: $cozy-accent; color: #fff; font-size: 62rpx; font-weight: 750; }
+.result-title { display: block; color: $cozy-ink; font-size: 42rpx; font-weight: 750; }
+.result-subtitle { display: block; margin-top: 12rpx; color: $cozy-muted; font-size: 24rpx; }
+.pickup-card { margin-top: 42rpx; padding: 34rpx; border-radius: $cozy-radius-lg; background: $cozy-surface-alt; color: #fff; }
+.pickup-label, .pickup-hint { display: block; color: $cozy-muted-on-dark; font-size: 22rpx; }
+.pickup-code { display: block; margin: 12rpx 0; font-size: 72rpx; font-weight: 800; letter-spacing: .12em; }
+.order-info { margin-top: 20rpx; padding: 20rpx 28rpx; border-radius: $cozy-radius-lg; background: #fff; text-align: left; }
+.info-row { min-height: 72rpx; display: flex; align-items: center; justify-content: space-between; gap: 24rpx; color: $cozy-muted; font-size: 24rpx; }
+.info-row text:last-child { color: $cozy-ink; text-align: right; }
+.info-row.total { margin-top: 8rpx; border-top: 1rpx solid $cozy-border; color: $cozy-ink; font-weight: 700; }
+.info-row.total text:last-child { color: $cozy-primary; font-size: 32rpx; }
+.action-group { display: flex; gap: 18rpx; margin-top: 30rpx; }
+.secondary-button, .primary-button { flex: 1; height: 88rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 25rpx; font-weight: 650; }
+.secondary-button { border: 2rpx solid $cozy-primary; color: $cozy-primary; }
+.primary-button { background: $cozy-primary; color: #fff; }
 </style>

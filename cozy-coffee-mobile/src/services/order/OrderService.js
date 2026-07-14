@@ -4,8 +4,8 @@ export function toOrderItems(lines = []) {
   return lines.map(line => ({
     productId: /^\d+$/.test(String(line.productId)) ? Number(line.productId) : line.productId,
     quantity: Number(line.quantity || 1),
-    cupSize: line.cupSize || 'MEDIUM',
-    sugarLevel: line.sugarLevel || 'NORMAL',
+    cupSize: line.cupSize || 'STANDARD',
+    sugarLevel: line.sugarLevel || 'STANDARD',
     temperature: line.temperature || 'HOT',
     coffeeStrength: line.coffeeStrength || 'NORMAL',
     optionsJson: JSON.stringify({

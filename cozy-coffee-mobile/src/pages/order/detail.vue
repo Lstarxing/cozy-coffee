@@ -1,506 +1,92 @@
-<!--
-  订单详情页 - 展示订单完整信息
--->
 <template>
-  <view class="order-detail-page" v-if="order">
-    <!-- 订单状态 -->
-    <view class="status-section" :class="order.status">
-      <text class="status-icon">{{ getStatusIcon(order.status) }}</text>
-      <text class="status-text">{{ getStatusText(order.status) }}</text>
-      <text v-if="order.status === 'pending'" class="countdown-text" :class="{ urgent: isExpiringSoon }">
-        {{ countdownText }}
-      </text>
-      <text class="status-desc">{{ getStatusDesc(order.status) }}</text>
-    </view>
-    
-    <!-- 配送信息 -->
-    <view class="delivery-section">
-      <view class="delivery-header">
-        <text class="delivery-type">{{ order.deliveryType === 'delivery' ? '🛵 外卖配送' : '🏪 到店自提' }}</text>
+  <view class="detail-page">
+    <LoadingState v-if="loading" text="正在加载订单…" />
+    <RetryState v-else-if="errorMessage" :description="errorMessage" @retry="loadOrder" />
+    <view v-else-if="order" class="detail-content">
+      <view class="status-panel" :class="statusClass">
+        <text class="status-title">{{ statusText(order.status) }}</text>
+        <text class="status-description">{{ statusDescription(order.status) }}</text>
+        <view v-if="order.pickupCode" class="pickup-code-row"><text>取餐码</text><text>{{ order.pickupCode }}</text></view>
       </view>
-      <view class="delivery-content" v-if="order.deliveryType === 'delivery'">
-        <text class="receiver">{{ order.receiver }} {{ order.phone }}</text>
-        <text class="address">{{ order.address }}</text>
-      </view>
-      <view class="delivery-content" v-else>
-        <text class="store-name">{{ order.storeName }}</text>
-        <text class="store-address">{{ order.storeAddress }}</text>
-      </view>
-    </view>
-    
-    <!-- 商品列表 -->
-    <view class="products-section">
-      <view class="section-title">商品信息</view>
-      <view class="product-item" v-for="item in order.items" :key="item.id">
-        <image :src="item.image" class="product-image" mode="aspectFill" />
-        <view class="product-info">
-          <text class="product-name">{{ item.name }}</text>
-          <text class="product-spec">{{ item.spec }}</text>
-        </view>
-        <view class="product-right">
-          <text class="product-price">¥{{ item.price }}</text>
-          <text class="product-qty">x{{ item.quantity }}</text>
+
+      <StoreSummary />
+
+      <view class="detail-section">
+        <view class="section-heading"><text>商品明细</text><text>{{ order.totalQuantity || itemCount }} 件</text></view>
+        <view v-for="item in order.items || []" :key="item.id || item.productId" class="order-line">
+          <image class="line-image" :src="item.productImage || '/static/images/default-product.png'" mode="aspectFill" />
+          <view class="line-body"><text class="line-name">{{ item.productName }}</text><text class="line-spec">{{ itemSpec(item) }}</text><text class="line-qty">× {{ item.quantity }}</text></view>
+          <text class="line-price">¥{{ money(item.itemAmount ?? Number(item.unitPrice || 0) * Number(item.quantity || 1)) }}</text>
         </view>
       </view>
+
+      <view class="detail-section price-section">
+        <view class="price-row"><text>商品金额</text><text>¥{{ money(order.totalAmount) }}</text></view>
+        <view v-if="Number(order.discountAmount || 0)" class="price-row discount"><text>优惠</text><text>-¥{{ money(order.discountAmount) }}</text></view>
+        <view class="price-row total"><text>实付</text><text>¥{{ money(order.payAmount ?? order.totalAmount) }}</text></view>
+      </view>
+
+      <view class="detail-section info-section">
+        <view class="info-row"><text>订单号</text><text selectable>{{ order.orderNo }}</text></view>
+        <view class="info-row"><text>下单时间</text><text>{{ formatTime(order.createdAt) }}</text></view>
+        <view class="info-row"><text>取餐方式</text><text>到店自提</text></view>
+        <view v-if="order.remark" class="info-row"><text>备注</text><text>{{ order.remark }}</text></view>
+      </view>
+      <view class="detail-spacer" />
     </view>
-    
-    <!-- 价格明细 -->
-    <view class="price-section">
-      <view class="price-item">
-        <text class="price-label">商品金额</text>
-        <text class="price-value">¥{{ order.productTotal }}</text>
-      </view>
-      <view class="price-item" v-if="order.deliveryFee > 0">
-        <text class="price-label">配送费</text>
-        <text class="price-value">¥{{ order.deliveryFee }}</text>
-      </view>
-      <view class="price-item" v-if="order.discount > 0">
-        <text class="price-label">优惠</text>
-        <text class="price-value discount">-¥{{ order.discount }}</text>
-      </view>
-      <view class="price-item total">
-        <text class="price-label">实付金额</text>
-        <text class="price-value total-price">¥{{ order.totalPrice }}</text>
-      </view>
-      <view class="points-earned">
-        <text>本单获得 <text class="points-value">{{ order.pointsEarned }}</text> 积分</text>
-      </view>
-    </view>
-    
-    <!-- 订单信息 -->
-    <view class="info-section">
-      <view class="section-title">订单信息</view>
-      <view class="info-item">
-        <text class="info-label">订单编号</text>
-        <text class="info-value">{{ order.orderNo }}</text>
-      </view>
-      <view class="info-item">
-        <text class="info-label">下单时间</text>
-        <text class="info-value">{{ order.createTime }}</text>
-      </view>
-      <view class="info-item">
-        <text class="info-label">支付方式</text>
-        <text class="info-value">{{ order.payMethod }}</text>
-      </view>
-      <view class="info-item" v-if="order.remark">
-        <text class="info-label">备注</text>
-        <text class="info-value">{{ order.remark }}</text>
-      </view>
-    </view>
-    
-    <!-- 底部操作 -->
-    <view class="action-bar safe-area-bottom">
-      <view class="action-btn outline" @click="contactService">联系客服</view>
-      <view class="action-btn primary" v-if="order.status === 'completed'" @click="reOrder">再来一单</view>
-      <view class="action-btn primary" v-if="order.status === 'pending'" @click="cancelOrder">取消订单</view>
+
+    <view v-if="canCancel" class="detail-footer safe-area-bottom">
+      <view class="cancel-button" @click="confirmCancel">取消订单</view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { getOrderDetail, cancelOrder as cancelOrderApi } from '@/api/order'
+import { computed, ref } from 'vue'
+import { onLoad, onShow } from '@dcloudio/uni-app'
+import { cancelOrder, getOrderDetail } from '@/api/order'
+import StoreSummary from '@/components/order/StoreSummary.vue'
+import LoadingState from '@/components/states/LoadingState.vue'
+import RetryState from '@/components/states/RetryState.vue'
 
+const orderId = ref('')
 const order = ref(null)
-const orderId = ref(null)
-const nowTs = ref(Date.now())
+const loading = ref(true)
+const errorMessage = ref('')
+const itemCount = computed(() => (order.value?.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0))
+const normalizedStatus = computed(() => String(order.value?.status || '').toLowerCase())
+const canCancel = computed(() => ['pending', 'pending_payment'].includes(normalizedStatus.value))
+const statusClass = computed(() => ({ completed: 'success', cancelled: 'muted', canceled: 'muted' })[normalizedStatus.value] || 'active')
 
-let ticker = null
+onLoad(options => { orderId.value = options.id || options.orderId || '' })
+onShow(() => { if (orderId.value) loadOrder() })
 
-onLoad(async (options) => {
-  if (options.id) {
-    orderId.value = options.id
-    startTicker()
-    loadOrderDetail()
-  }
-})
-
-onShow(() => {
-  startTicker()
-})
-
-onHide(() => {
-  stopTicker()
-})
-
-onUnload(() => {
-  stopTicker()
-})
-
-const startTicker = () => {
-  stopTicker()
-  ticker = setInterval(() => {
-    nowTs.value = Date.now()
-  }, 1000)
+async function loadOrder() {
+  loading.value = true; errorMessage.value = ''
+  try { const response = await getOrderDetail(orderId.value); order.value = response?.data ?? response }
+  catch (error) { errorMessage.value = error?.message || '订单加载失败，请重试' }
+  finally { loading.value = false }
 }
 
-const stopTicker = () => {
-  if (ticker) {
-    clearInterval(ticker)
-    ticker = null
-  }
-}
-
-const remainingSeconds = computed(() => {
-  if (!order.value || order.value.status !== 'pending') return null
-
-  let expireMs = null
-  if (order.value.expireAt) {
-    const ts = new Date(order.value.expireAt).getTime()
-    if (!Number.isNaN(ts)) {
-      expireMs = ts
-    }
-  }
-
-  if (!expireMs && order.value.createdAt) {
-    const createdTs = new Date(order.value.createdAt).getTime()
-    if (!Number.isNaN(createdTs)) {
-      expireMs = createdTs + 60 * 1000
-    }
-  }
-
-  if (!expireMs) return null
-  const remain = Math.floor((expireMs - nowTs.value) / 1000)
-  return remain > 0 ? remain : 0
-})
-
-const countdownText = computed(() => {
-  if (remainingSeconds.value == null) return '即将超时'
-  if (remainingSeconds.value <= 0) return '即将自动取消'
-  const mm = String(Math.floor(remainingSeconds.value / 60)).padStart(2, '0')
-  const ss = String(remainingSeconds.value % 60).padStart(2, '0')
-  return `剩余 ${mm}:${ss}`
-})
-
-const isExpiringSoon = computed(() => {
-  return remainingSeconds.value != null && remainingSeconds.value <= 30
-})
-
-const loadOrderDetail = async () => {
-  try {
-    const res = await getOrderDetail(orderId.value)
-    if (res.code === 200 && res.data) {
-      // 适配后端字段
-      const data = res.data
-      order.value = {
-        ...data,
-        createTime: data.createdAt || data.createTime,
-        items: (data.items || []).map(item => ({
-          ...item,
-          image: item.productImage || item.image || '/static/images/default-product.png',
-          spec: item.specDescription || item.spec || ''
-        })),
-        totalPrice: data.paymentAmount || data.totalPrice,
-        productTotal: data.totalAmount || data.productTotal
-      }
-    }
-  } catch (e) {
-    console.error('获取订单详情失败', e)
-    uni.showToast({ title: '加载失败', icon: 'none' })
-  }
-}
-
-const getStatusIcon = (status) => {
-  const s = status?.toLowerCase()
-  const map = { pending_payment: '⏳', preparing: '👨‍🍳', delivering: '🛵', completed: '✅', cancelled: '❌', pending: '⏳' }
-  return map[s] || '📋'
-}
-
-const getStatusText = (status) => {
-  const s = status?.toLowerCase()
-  const map = { pending_payment: '待支付', preparing: '制作中', delivering: '配送中', completed: '已完成', cancelled: '已取消', pending: '待支付' }
-  return map[s] || '未知'
-}
-
-const getStatusDesc = (status) => {
-  const s = status?.toLowerCase()
-  const map = {
-    pending_payment: '请在15分钟内完成支付',
-    pending: '请在15分钟内完成支付',
-    preparing: '咖啡师正在为您精心制作',
-    delivering: '骑手正在快马加鞭赶来',
-    completed: '订单已完成，期待您的下次光临',
-    cancelled: '订单已取消'
-  }
-  return map[s] || ''
-}
-
-const contactService = () => {
-  uni.showToast({ title: '客服功能开发中', icon: 'none' })
-}
-
-const reOrder = () => {
-  uni.switchTab({ url: '/pages/menu/menu' })
-}
-
-const cancelOrder = () => {
-  uni.showModal({
-    title: '确认取消',
-    content: '确定要取消这个订单吗？',
-    success: async (res) => {
-      if (res.confirm) {
-        try {
-          const cancelRes = await cancelOrderApi(orderId.value)
-          if (cancelRes.code === 200) {
-            uni.showToast({ title: '订单已取消', icon: 'success' })
-            loadOrderDetail() // 重新加载
-          }
-        } catch (e) {
-          console.error('取消订单失败', e)
-          uni.showToast({ title: '取消失败', icon: 'none' })
-        }
-      }
-    }
-  })
-}
+function statusText(status) { return ({ pending: '等待门店接单', pending_payment: '订单待处理', preparing: '咖啡制作中', processing: '咖啡制作中', completed: '订单已完成', cancelled: '订单已取消' })[String(status || '').toLowerCase()] || '订单已提交' }
+function statusDescription(status) { return ['preparing', 'processing'].includes(String(status).toLowerCase()) ? '咖啡师正在为你制作，请稍候' : '请留意订单状态，及时到店取餐' }
+function money(value) { return Number(value || 0).toFixed(2) }
+function formatTime(value) { return value ? String(value).replace('T', ' ').slice(0, 16) : '--' }
+function itemSpec(item) { return [item.cupSize, item.temperature, item.sugarLevel, item.coffeeStrength].filter(Boolean).join(' · ') || '默认规格' }
+function confirmCancel() { uni.showModal({ title: '取消订单', content: '确认取消这张订单？', success: async result => { if (!result.confirm) return; try { await cancelOrder(orderId.value); uni.showToast({ title: '订单已取消', icon: 'success' }); loadOrder() } catch (error) { uni.showToast({ title: error?.message || '取消失败', icon: 'none' }) } } }) }
 </script>
 
 <style lang="scss" scoped>
-.order-detail-page {
-  min-height: 100vh;
-  background: $bg-color;
-  padding-bottom: 140rpx;
-}
-
-// 状态区域
-.status-section {
-  padding: $spacing-xl;
-  text-align: center;
-  color: white;
-  
-  &.pending { background: #F39C12; }
-  &.preparing { background: #3498DB; }
-  &.delivering { background: #1ABC9C; }
-  &.completed { background: $cozy-surface-alt; }
-  &.cancelled { background: #95A5A6; }
-  
-  .status-icon {
-    font-size: 80rpx;
-    display: block;
-    margin-bottom: $spacing-sm;
-  }
-  
-  .status-text {
-    font-size: $font-size-xl;
-    font-weight: 600;
-    display: block;
-    margin-bottom: $spacing-xs;
-  }
-  
-  .status-desc {
-    font-size: $font-size-sm;
-    opacity: 0.8;
-  }
-
-  .countdown-text {
-    margin-bottom: 8rpx;
-    font-size: $font-size-sm;
-    opacity: 0.9;
-
-    &.urgent {
-      font-weight: 600;
-      color: #FFE4E6;
-    }
-  }
-}
-
-// 配送信息
-.delivery-section {
-  background: $bg-white;
-  margin: $spacing-md;
-  padding: $spacing-md;
-  border-radius: $cozy-radius-md;
-  
-  .delivery-header {
-    margin-bottom: $spacing-sm;
-    
-    .delivery-type {
-      font-size: $font-size-md;
-      font-weight: 600;
-      color: $text-primary;
-    }
-  }
-  
-  .delivery-content {
-    .receiver, .store-name {
-      font-size: $font-size-md;
-      color: $text-primary;
-      display: block;
-      margin-bottom: $spacing-xs;
-    }
-    
-    .address, .store-address {
-      font-size: $font-size-sm;
-      color: $text-secondary;
-    }
-  }
-}
-
-// 商品列表
-.products-section {
-  background: $bg-white;
-  margin: 0 $spacing-md $spacing-md;
-  padding: $spacing-md;
-  border-radius: $cozy-radius-md;
-}
-
-.section-title {
-  font-size: $font-size-md;
-  font-weight: 600;
-  color: $text-primary;
-  margin-bottom: $spacing-md;
-}
-
-.product-item {
-  display: flex;
-  align-items: center;
-  padding: $spacing-sm 0;
-  border-bottom: 1rpx solid $border-color;
-  
-  &:last-child {
-    border-bottom: none;
-  }
-  
-  .product-image {
-    width: 100rpx;
-    height: 100rpx;
-    border-radius: $cozy-radius-sm;
-  }
-  
-  .product-info {
-    flex: 1;
-    margin-left: $spacing-sm;
-    
-    .product-name {
-      font-size: $font-size-md;
-      color: $text-primary;
-      display: block;
-    }
-    
-    .product-spec {
-      font-size: $font-size-sm;
-      color: $text-placeholder;
-    }
-  }
-  
-  .product-right {
-    text-align: right;
-    
-    .product-price {
-      font-size: $font-size-md;
-      display: block;
-    }
-    
-    .product-qty {
-      font-size: $font-size-sm;
-      color: $text-placeholder;
-    }
-  }
-}
-
-// 价格明细
-.price-section {
-  background: $bg-white;
-  margin: 0 $spacing-md $spacing-md;
-  padding: $spacing-md;
-  border-radius: $cozy-radius-md;
-  
-  .price-item {
-    display: flex;
-    justify-content: space-between;
-    padding: $spacing-xs 0;
-    
-    .price-label {
-      color: $text-secondary;
-    }
-    
-    .price-value {
-      color: $text-primary;
-      
-      &.discount {
-        color: $error-color;
-      }
-      
-      &.total-price {
-        font-size: $font-size-xl;
-        font-weight: 700;
-        color: $primary-color;
-      }
-    }
-    
-    &.total {
-      padding-top: $spacing-sm;
-      margin-top: $spacing-sm;
-      border-top: 1rpx solid $border-color;
-    }
-  }
-  
-  .points-earned {
-    text-align: right;
-    font-size: $font-size-sm;
-    color: $text-placeholder;
-    margin-top: $spacing-xs;
-    
-    .points-value {
-      color: $success-color;
-      font-weight: 600;
-    }
-  }
-}
-
-// 订单信息
-.info-section {
-  background: $bg-white;
-  margin: 0 $spacing-md;
-  padding: $spacing-md;
-  border-radius: $cozy-radius-md;
-  
-  .info-item {
-    display: flex;
-    justify-content: space-between;
-    padding: $spacing-xs 0;
-    
-    .info-label {
-      color: $text-secondary;
-      font-size: $font-size-sm;
-    }
-    
-    .info-value {
-      color: $text-primary;
-      font-size: $font-size-sm;
-    }
-  }
-}
-
-// 底部操作
-.action-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 100rpx;
-  background: $bg-white;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 $spacing-md;
-  gap: $spacing-md;
-
-  .action-btn {
-    padding: $spacing-sm $spacing-lg;
-    border-radius: 40rpx;
-    font-size: $font-size-md;
-    
-    &.outline {
-      border: 2rpx solid $border-color;
-      color: $text-secondary;
-    }
-    
-    &.primary {
-      background: $primary-color;
-      color: white;
-    }
-  }
-}
+.detail-page { min-height: 100vh; background: $cozy-surface; }
+.detail-content { padding: 24rpx; }
+.status-panel { margin-bottom: 20rpx; padding: 34rpx; border-radius: $cozy-radius-lg; color: #fff; text-align: center; }
+.status-panel.active { background: $cozy-primary; }.status-panel.success { background: $cozy-accent; }.status-panel.muted { background: #756a63; }
+.status-title { display: block; font-size: 36rpx; font-weight: 750; }.status-description { display: block; margin-top: 10rpx; color: rgba(255,255,255,.82); font-size: 22rpx; }
+.pickup-code-row { margin-top: 24rpx; padding-top: 20rpx; display: flex; align-items: baseline; justify-content: center; gap: 18rpx; border-top: 1rpx solid rgba(255,255,255,.2); font-size: 23rpx; }.pickup-code-row text:last-child { font-size: 48rpx; font-weight: 800; letter-spacing: .12em; }
+.detail-section { margin-top: 20rpx; padding: 28rpx; border-radius: $cozy-radius-lg; background: #fff; }
+.section-heading { display: flex; justify-content: space-between; margin-bottom: 16rpx; color: $cozy-ink; font-size: 28rpx; font-weight: 700; }.section-heading text:last-child { color: $cozy-muted; font-size: 22rpx; font-weight: 400; }
+.order-line { display: flex; gap: 16rpx; padding: 20rpx 0; border-bottom: 1rpx solid $cozy-border; }.order-line:last-child { border-bottom: 0; }
+.line-image { width: 96rpx; height: 96rpx; flex: none; border-radius: $cozy-radius-md; background: $cozy-surface; }.line-body { min-width: 0; flex: 1; }.line-name { display: block; color: $cozy-ink; font-size: 25rpx; font-weight: 650; }.line-spec,.line-qty { display: block; margin-top: 6rpx; color: $cozy-muted; font-size: 20rpx; }.line-price { color: $cozy-ink; font-size: 24rpx; font-weight: 700; }
+.price-row,.info-row { min-height: 62rpx; display: flex; align-items: center; justify-content: space-between; gap: 24rpx; color: $cozy-muted; font-size: 24rpx; }.price-row text:last-child,.info-row text:last-child { color: $cozy-ink; text-align: right; }.price-row.discount,.price-row.discount text:last-child { color: $cozy-primary; }.price-row.total { margin-top: 8rpx; padding-top: 12rpx; border-top: 1rpx solid $cozy-border; color: $cozy-ink; font-weight: 700; }.price-row.total text:last-child { color: $cozy-primary; font-size: 32rpx; }
+.detail-spacer { height: 150rpx; }.detail-footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 14rpx 28rpx max(14rpx, env(safe-area-inset-bottom)); border-top: 1rpx solid $cozy-border; background: #fff; }.cancel-button { height: 84rpx; display: flex; align-items: center; justify-content: center; border: 2rpx solid $cozy-primary; border-radius: 999rpx; color: $cozy-primary; font-size: 26rpx; font-weight: 650; }
 </style>

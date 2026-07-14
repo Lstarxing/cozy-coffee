@@ -83,7 +83,12 @@ export class CheckoutWorkflow {
     this.previewPromise = (async () => {
       await this.ensureOnline(traceId, startedAt)
       if (this.checkoutStore.status === 'success') this.checkoutStore.reset({ preserveIntent: true })
-      this.checkoutStore.transition('START_PREVIEW')
+      if (this.checkoutStore.status === 'awaiting_auth') {
+        await this.sessionService.ensureCheckoutIdentity()
+        this.checkoutStore.transition('AUTH_RESTORED')
+      } else {
+        this.checkoutStore.transition('START_PREVIEW')
+      }
       this.log('info', 'Checkout Start', startedAt, { traceId })
       try {
         const result = await this.previewService.preview(this.context(this.lastOverrides))
