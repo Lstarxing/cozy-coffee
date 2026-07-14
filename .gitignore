@@ -95,3 +95,6 @@ coverage/
 # ===================== Claude Code worktree =====================
 # 本地 worktree 目录，不应提交
 .claude/worktrees/
+
+# 本地设计脑暴可视化会话
+.superpowers/
