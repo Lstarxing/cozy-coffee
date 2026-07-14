@@ -46,7 +46,7 @@ public class OrderCoordinatorService {
             log.warn("获取会员等级失败，使用默认等级", e);
         }
 
-        ShopOrderDTO order = orderService.createOrder(userId, memberLevel, request);
+        ShopOrderDTO order = orderService.createOrder(userId, memberLevel, null, request);
 
         OrderCreatedEvent event = OrderCreatedEvent.builder()
                 .orderId(order.getId())

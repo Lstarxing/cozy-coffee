@@ -1,6 +1,8 @@
 package com.cozy.order.api;
 
+import com.cozy.order.dto.request.CartCheckRequest;
 import com.cozy.order.dto.request.CreateOrderRequest;
+import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.MonthlyStatsDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
@@ -28,10 +30,13 @@ public interface OrderService {
      * 
      * @param userId      用户ID
      * @param memberLevel 会员等级（用于计算积分倍率）
+     * @param idempotencyKey 幂等键
      * @param request     下单请求
      * @return 订单信息（包含应发放的积分）
      */
-    ShopOrderDTO createOrder(Long userId, String memberLevel, CreateOrderRequest request);
+    CartCheckResultDTO checkCart(Long userId, String memberLevel, CartCheckRequest request);
+
+    ShopOrderDTO createOrder(Long userId, String memberLevel, String idempotencyKey, CreateOrderRequest request);
 
     /**
      * 获取用户订单列表

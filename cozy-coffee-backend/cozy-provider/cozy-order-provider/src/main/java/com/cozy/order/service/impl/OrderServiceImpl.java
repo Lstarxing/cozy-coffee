@@ -1,7 +1,9 @@
 package com.cozy.order.service.impl;
 
 import com.cozy.order.api.OrderService;
+import com.cozy.order.dto.request.CartCheckRequest;
 import com.cozy.order.dto.request.CreateOrderRequest;
+import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.MonthlyStatsDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
@@ -80,7 +82,12 @@ public class OrderServiceImpl implements OrderService {
     // ==================== 订单创建 ====================
 
     @Override
-    public ShopOrderDTO createOrder(Long userId, String memberLevel, CreateOrderRequest request) {
+    public CartCheckResultDTO checkCart(Long userId, String memberLevel, CartCheckRequest request) {
+        throw new UnsupportedOperationException("Cart check is not implemented yet");
+    }
+
+    @Override
+    public ShopOrderDTO createOrder(Long userId, String memberLevel, String idempotencyKey, CreateOrderRequest request) {
         return creationService.createOrder(userId, memberLevel, request);
     }
 
