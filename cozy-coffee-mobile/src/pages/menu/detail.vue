@@ -73,28 +73,28 @@
       <view class="spec-group">
         <text class="spec-title">糖度</text>
         <view class="spec-options">
-          <view 
+          <view
             class="spec-option"
             :class="{ active: selectedSugar === 'normal' }"
             @click="selectedSugar = 'normal'"
           >
             <text class="option-name">正常糖</text>
           </view>
-          <view 
+          <view
             class="spec-option"
             :class="{ active: selectedSugar === 'half' }"
             @click="selectedSugar = 'half'"
           >
             <text class="option-name">半糖</text>
           </view>
-          <view 
+          <view
             class="spec-option"
             :class="{ active: selectedSugar === 'less' }"
             @click="selectedSugar = 'less'"
           >
             <text class="option-name">少糖</text>
           </view>
-          <view 
+          <view
             class="spec-option"
             :class="{ active: selectedSugar === 'none' }"
             @click="selectedSugar = 'none'"
@@ -103,7 +103,67 @@
           </view>
         </view>
       </view>
-      
+
+      <!-- 浓度 -->
+      <view class="spec-group">
+        <text class="spec-title">浓度</text>
+        <view class="spec-options">
+          <view
+            class="spec-option"
+            :class="{ active: selectedStrength === 'normal' }"
+            @click="selectedStrength = 'normal'"
+          >
+            <text class="option-name">标准浓度</text>
+          </view>
+          <view
+            class="spec-option"
+            :class="{ active: selectedStrength === 'strong' }"
+            @click="selectedStrength = 'strong'"
+          >
+            <text class="option-name">加浓</text>
+            <text class="option-price">+{{ strengthPrices.strong }}元</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 奶类 -->
+      <view class="spec-group">
+        <text class="spec-title">奶类</text>
+        <view class="spec-options">
+          <view
+            class="spec-option"
+            :class="{ active: selectedMilk === 'whole' }"
+            @click="selectedMilk = 'whole'"
+          >
+            <text class="option-name">全脂奶</text>
+          </view>
+          <view
+            class="spec-option"
+            :class="{ active: selectedMilk === 'oat' }"
+            @click="selectedMilk = 'oat'"
+          >
+            <text class="option-name">燕麦奶</text>
+            <text class="option-price">+{{ milkPrices.oat }}元</text>
+          </view>
+          <view
+            class="spec-option"
+            :class="{ active: selectedMilk === 'coconut' }"
+            @click="selectedMilk = 'coconut'"
+          >
+            <text class="option-name">椰奶</text>
+            <text class="option-price">+{{ milkPrices.coconut }}元</text>
+          </view>
+          <view
+            class="spec-option"
+            :class="{ active: selectedMilk === 'soy' }"
+            @click="selectedMilk = 'soy'"
+          >
+            <text class="option-name">豆奶</text>
+            <text class="option-price">+{{ milkPrices.soy }}元</text>
+          </view>
+        </view>
+      </view>
+
       <!-- 加料 -->
       <view class="spec-group">
         <text class="spec-title">加料（可多选）</text>
@@ -180,6 +240,8 @@ const productId = ref(null)
 const selectedSize = ref('medium')
 const selectedTemp = ref('hot')
 const selectedSugar = ref('normal')
+const selectedStrength = ref('normal')
+const selectedMilk = ref('whole')
 const selectedAddons = ref([])
 const quantity = ref(1)
 
@@ -195,6 +257,20 @@ const addonPrices = {
 const sizePrices = {
   medium: 0,
   large: 4
+}
+
+// 浓度加价
+const strengthPrices = {
+  normal: 0,
+  strong: 5
+}
+
+// 奶类替换加价
+const milkPrices = {
+  whole: 0,
+  oat: 6,
+  coconut: 5,
+  soy: 5
 }
 
 onLoad((options) => {
@@ -221,24 +297,33 @@ const loadProduct = async () => {
   }
 }
 
-// 是否有加料
+// 是否有加料/加价选项
 const hasAddons = computed(() => {
-  return selectedAddons.value.length > 0 || selectedSize.value === 'large'
+  return selectedAddons.value.length > 0 ||
+    selectedSize.value === 'large' ||
+    selectedStrength.value === 'strong' ||
+    selectedMilk.value !== 'whole'
 })
 
 // 单杯最终价格
 const finalPrice = computed(() => {
   if (!product.value) return 0
   let price = parseFloat(product.value.price)
-  
+
   // 杯型加价
   price += sizePrices[selectedSize.value]
-  
+
+  // 浓度加价
+  price += strengthPrices[selectedStrength.value]
+
+  // 奶类加价
+  price += milkPrices[selectedMilk.value]
+
   // 加料总价
   selectedAddons.value.forEach(addon => {
     price += addonPrices[addon] || 0
   })
-  
+
   return price.toFixed(0)
 })
 
@@ -269,10 +354,17 @@ const addToCart = () => {
   const sizeText = selectedSize.value === 'large' ? '大杯' : '中杯'
   const tempText = { hot: '热', ice: '冰', warm: '温' }[selectedTemp.value]
   const sugarText = { normal: '正常糖', half: '半糖', less: '少糖', none: '无糖' }[selectedSugar.value]
+  const strengthText = selectedStrength.value === 'strong' ? '加浓' : ''
+  const milkNames = { whole: '', oat: '燕麦奶', coconut: '椰奶', soy: '豆奶' }
+  const milkText = milkNames[selectedMilk.value] || ''
   const addonNames = { pearl: '珍珠', coconut: '椰果', pudding: '布丁', cream: '奶盖' }
   const addonsText = selectedAddons.value.map(a => addonNames[a]).join('+')
-  
-  const specText = `${sizeText}/${tempText}/${sugarText}${addonsText ? '/' + addonsText : ''}`
+
+  const specParts = [sizeText, tempText, sugarText]
+  if (strengthText) specParts.push(strengthText)
+  if (milkText) specParts.push(milkText)
+  if (addonsText) specParts.push(addonsText)
+  const specText = specParts.join('/')
   
   // 添加到购物车（这里简化处理，实际应该带规格信息）
   for (let i = 0; i < quantity.value; i++) {

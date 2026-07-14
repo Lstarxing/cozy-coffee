@@ -63,14 +63,19 @@
     <view class="products-section">
       <view class="section-title">商品清单</view>
       <view class="product-list">
-        <view class="product-item" v-for="item in cartStore.items" :key="item.id">
+        <view class="product-item" v-for="item in discountedItems" :key="item.id">
           <image :src="item.image" class="product-image" mode="aspectFill" />
           <view class="product-info">
             <text class="product-name">{{ item.name }}</text>
-            <text class="product-spec">标准/热</text>
+            <text class="product-spec" v-if="item.specText">{{ item.specText }}</text>
           </view>
           <view class="product-right">
-            <text class="product-price">¥{{ item.price }}</text>
+            <view class="product-price-row">
+              <text v-if="item.discountAmount > 0" class="product-price-original">¥{{ item.price }}</text>
+              <text :class="item.discountAmount > 0 ? 'product-price-discounted' : 'product-price'">
+                ¥{{ (item.discountedPrice ?? item.price).toFixed(0) }}
+              </text>
+            </view>
             <text class="product-qty">x{{ item.quantity }}</text>
           </view>
         </view>
@@ -324,12 +329,34 @@ onMounted(async () => {
           value: item.value || item.couponValue || 5,
           name: item.productName || getAddonCouponName(item.couponType)
         }))
+
+      // 自动选中优惠力度最大的可用券
+      autoSelectBestCoupon()
     }
   } catch (e) {
     console.error('获取优惠券失败', e)
     coupons.value = []
   }
 })
+
+/**
+ * 自动选中折扣最大的可用优惠券
+ */
+const autoSelectBestCoupon = () => {
+  if (selectedCoupon.value) return // 已有选中的券，不覆盖
+
+  const cartTotal = parseFloat(cartStore.totalPrice)
+  const usable = coupons.value.filter(c => {
+    const minAmount = c.minAmount || 0
+    return minAmount <= cartTotal
+  })
+
+  if (usable.length === 0) return
+
+  // 按优惠金额降序，选最大的
+  usable.sort((a, b) => (b.value || 0) - (a.value || 0))
+  selectedCoupon.value = usable[0]
+}
 
 // 辅助函数
 const getCouponName = (type) => {
@@ -475,6 +502,45 @@ const estimatedPoints = computed(() => {
   const rate = rateMap[level] || 1
   console.log(`[积分计算] 普通等级 ${level}: ${price} * ${rate}`)
   return Math.round(price * rate)
+})
+
+/**
+ * 每件商品的优惠后价格
+ * 将选中的优惠券折扣按价格比例分配到每个商品
+ */
+const discountedItems = computed(() => {
+  const items = cartStore.items.map(i => ({
+    ...i,
+    discountedPrice: parseFloat(i.price),
+    discountAmount: 0
+  }))
+
+  if (!selectedCoupon.value) return items
+
+  const coupon = selectedCoupon.value
+  const couponValue = parseFloat(coupon.value || coupon.couponValue || 0)
+  if (couponValue <= 0) return items
+
+  const totalAmount = items.reduce((s, i) => s + parseFloat(i.price) * i.quantity, 0)
+  if (totalAmount <= 0) return items
+
+  // 按价格比例分配折扣，余数给最后一个商品
+  let remaining = couponValue
+  items.forEach((item, idx) => {
+    if (idx < items.length - 1) {
+      item.discountAmount = parseFloat((couponValue * (parseFloat(item.price) * item.quantity / totalAmount) / item.quantity).toFixed(2))
+      remaining -= item.discountAmount * item.quantity
+    }
+  })
+  const last = items[items.length - 1]
+  last.discountAmount = parseFloat((remaining / last.quantity).toFixed(2))
+
+  items.forEach(item => {
+    item.discountAmount = Math.max(0, item.discountAmount)
+    item.discountedPrice = Math.max(0, parseFloat((parseFloat(item.price) - item.discountAmount).toFixed(2)))
+  })
+
+  return items
 })
 
 const submitOrder = async () => {
@@ -701,12 +767,30 @@ const submitOrder = async () => {
   
   .product-right {
     text-align: right;
-    
+
+    .product-price-row {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
     .product-price {
       font-size: $font-size-md;
       display: block;
     }
-    
+
+    .product-price-original {
+      font-size: $font-size-xs;
+      color: $text-placeholder;
+      text-decoration: line-through;
+    }
+
+    .product-price-discounted {
+      font-size: $font-size-md;
+      color: $primary-dark;
+      font-weight: 700;
+    }
+
     .product-qty {
       font-size: $font-size-sm;
       color: $text-placeholder;

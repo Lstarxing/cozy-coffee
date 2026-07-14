@@ -179,7 +179,7 @@ const handleWechatLogin = () => {
 }
 
 const goToRegister = () => {
-  uni.showToast({ title: '注册功能开发中', icon: 'none' })
+  uni.navigateTo({ url: '/pages/register/index' })
 }
 
 const goToForget = () => {

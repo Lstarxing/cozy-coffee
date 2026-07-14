@@ -50,6 +50,13 @@
             }
         },
         {
+            "path": "pages/register/index",
+            "style": {
+                "navigationBarTitleText": "注册",
+                "navigationStyle": "custom"
+            }
+        },
+        {
             "path": "pages/coupon/list",
             "style": {
                 "navigationBarTitleText": "优惠券"
