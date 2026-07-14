@@ -3,6 +3,7 @@
 日期：2026-07-14  
 目标项目：`cozy-coffee-mobile`  
 优先平台：微信小程序；同时保持 H5 与 App 可移植性
+状态：Frozen（技术评审通过，可进入实施计划）
 
 ## 1. 背景与目标
 
@@ -165,7 +166,7 @@
 购物车条目标识由统一标准化器生成：
 
 ```text
-cartLineKey = normalize({
+cartLineKey = "v1:" + normalize({
   productId,
   skuId,
   cupSize,
@@ -176,7 +177,9 @@ cartLineKey = normalize({
 })
 ```
 
-`skuId` 不存在时使用稳定空值。字段顺序、枚举大小写和空值必须标准化，禁止页面自行拼接 Key。未来新增会影响价格或出品的规格字段时，必须同时更新标准化器和测试。
+`skuId` 不存在时使用稳定空值。字段顺序、枚举大小写和空值必须标准化，禁止页面自行拼接 Key。
+
+Key 必须带版本前缀。当前版本为 `v1:`；未来新增冰量等会影响价格或出品的规格字段时，升级到新版本，并提供本地购物车迁移函数。无法安全迁移的旧条目应提示用户确认后移除，不得静默合并为错误规格。
 
 #### checkoutStore
 
@@ -193,6 +196,12 @@ idempotencyKey
 
 不得缓存 `totalPrice`、`discountPrice`、`payPrice` 等派生价格。
 
+### 5.4 Store 生命周期
+
+- `sessionStore`：App 生命周期。应用启动时恢复，主动退出或认证失效且无法恢复时清理。
+- `cartStore`：App 生命周期并持久化。订单最终成功或用户主动清空时清理；登录、支付取消、断网和进入后台不得清理。
+- `checkoutStore`：Checkout 生命周期。进入结算时创建；订单成功、用户主动放弃本次结算或购物车发生实质变化时重置。进入后台时保留，返回前台后重新校验 Preview。
+
 ## 6. 价格预览与商品校验
 
 ### 6.1 第一阶段
@@ -203,8 +212,11 @@ idempotencyKey
 - 创建订单时以后端返回金额为最终结果。
 - 提交前重新获取或校验商品状态、规格和价格。
 - 若后端最终金额与本地预览不同，停止模拟支付并要求用户确认新价格。
+- 每次 Preview 生成 `previewVersion`，提交时必须携带相同版本。
 
 价格函数必须是纯函数，不读取或写入 Store，不触发网络请求。
+
+第一阶段的 `previewVersion` 由规范化后的购物车、优惠、门店、自提时间、商品版本和计算规则版本生成稳定摘要。提交前如输入摘要变化，原 Preview 立即失效并重新计算。时间戳仅用于日志和过期判断，不能替代版本校验。
 
 ### 6.2 后端配套目标
 
@@ -230,6 +242,8 @@ POST /cart/check
 
 当该接口稳定后，前端 Preview 服务改用服务端结果，页面和 Store 接口保持不变。
 
+服务端 Preview 上线后应返回不可由客户端伪造的 `previewToken` 或版本号。创建订单必须携带该 Token；服务端负责校验商品、优惠和价格版本是否仍有效。失效时返回新的 Preview，而不是按旧金额继续创建订单。
+
 ## 7. 请求与错误体系
 
 请求层必须区分：
@@ -240,6 +254,21 @@ BusinessError
 AuthError
 ValidationError
 ```
+
+统一错误对象至少包含：
+
+```ts
+{
+  type,
+  code,
+  message,
+  retryable,
+  details,
+  cause
+}
+```
+
+业务错误码使用稳定枚举，例如 `COUPON_EXPIRED`、`STORE_CLOSED`、`ITEM_OFFLINE`。页面根据 `code` 决定交互，根据 `message` 展示文案，根据 `retryable` 决定是否提供重试，不解析自然语言字符串判断业务类型。
 
 - `NetworkError`：超时、断网、DNS 或连接失败，页面显示离线或重试状态。
 - `BusinessError`：后端明确拒绝业务操作，展示可读业务信息。
@@ -274,6 +303,27 @@ idle
 - `offline`
 - `cancelled`
 
+```mermaid
+stateDiagram-v2
+    [*] --> idle
+    idle --> previewing
+    previewing --> awaiting_auth: 身份不足
+    previewing --> ready: Preview 有效
+    awaiting_auth --> previewing: 登录成功
+    ready --> submitting
+    submitting --> paying
+    submitting --> failed
+    submitting --> offline
+    paying --> success
+    paying --> cancelled
+    paying --> failed
+    paying --> offline
+    failed --> previewing: 重试
+    cancelled --> ready
+    offline --> previewing: 网络恢复
+    success --> [*]
+```
+
 页面不得使用多个相互覆盖的 `isLoading`、`isSubmitting`、`isPaying` 布尔值表达流程。
 
 关键转换：
@@ -288,7 +338,30 @@ idle
 - 网络中断：进入 `offline`，恢复后重新 Preview。
 - 可恢复业务失败：进入 `failed` 并提供重试。
 
-## 9. 支付适配与订单编排
+## 9. Checkout Workflow、订单与支付服务
+
+### 9.1 职责边界
+
+`CheckoutWorkflow` 是轻量编排层，只负责推进状态机和协调服务，不实现订单、支付、认证或网络细节：
+
+```text
+CheckoutWorkflow
+├─ preview()
+├─ submit()
+└─ recover()
+```
+
+独立服务：
+
+- `CheckoutPreviewService`：生成或请求 Preview，管理 `previewVersion/previewToken`。
+- `OrderService`：`create()`、`query()`、`cancel()`，封装订单 API 和幂等协议。
+- `PaymentService`：选择 Payment Adapter，执行 `prepare()` 与 `pay()`。
+- `SessionService`：静默会话、正式登录和认证恢复。
+- `NetworkService`：网络状态和恢复通知。
+
+退款、补单和支付查询未来进入 `PaymentService` 或专用支付领域服务，不进入 `CheckoutWorkflow`。
+
+### 9.2 支付适配
 
 支付接口：
 
@@ -304,7 +377,7 @@ interface PaymentAdapter {
 - `MockPaymentAdapter`：第一阶段使用。
 - `WechatPaymentAdapter`：未来真实支付使用。
 
-页面调用 `CheckoutService.submit()`，不直接引用具体 Adapter。`CheckoutService` 负责编排：
+页面调用 `CheckoutWorkflow.submit()`，不直接引用具体 Adapter。Workflow 负责按顺序协调：
 
 1. 检查网络和状态机状态。
 2. 恢复或确认身份。
@@ -313,7 +386,7 @@ interface PaymentAdapter {
 5. 按当前支付适配器要求编排订单创建与支付。
 6. 处理成功、取消和失败。
 
-真实微信支付通常需要先创建待支付订单再获取预支付参数。该差异由 `CheckoutService` 和 Adapter 消化，页面流程保持稳定。
+真实微信支付通常需要先创建待支付订单再获取预支付参数。该差异由 `OrderService`、`PaymentService` 和 Adapter 消化，页面流程保持稳定。
 
 ## 10. 幂等与重复提交
 
@@ -339,10 +412,75 @@ Idempotency-Key: <UUID>
 - 使用 `uni.onNetworkStatusChange` 监听网络变化，并在应用卸载或不再需要时解除监听。
 - 离线时允许查看缓存菜单和编辑购物车，但禁止 Preview 刷新、登录和提交订单。
 - 网络恢复后自动刷新必要数据并重新 Preview，不直接重放创建订单。
-- API Base URL 使用环境配置，不在源代码中写死真机不可访问的 `localhost`。
+- API Base URL 使用 Vite/uni-app 环境文件，不在源代码中写死真机不可访问的 `localhost`：
+
+```text
+.env.development
+.env.test
+.env.production
+```
+
+- 统一读取 `VITE_API_BASE_URL`；代码中不得按页面或平台重复声明 Base URL。
 - 微信开发环境使用可访问开发机的局域网地址或合法测试域名；生产环境使用 HTTPS 合法域名。
 
-## 12. 页面状态与交互规范
+## 12. 推荐目录结构
+
+```text
+src/
+├─ api/
+│  ├─ auth.js
+│  ├─ order.js
+│  └─ product.js
+├─ components/
+│  ├─ cart/
+│  ├─ checkout/
+│  ├─ product/
+│  └─ states/
+├─ domain/
+│  ├─ cart/
+│  │  ├─ cartLineKey.js
+│  │  └─ cartMigrations.js
+│  └─ checkout/
+│     ├─ checkoutMachine.js
+│     └─ computeCheckoutPreview.js
+├─ services/
+│  ├─ checkout/CheckoutWorkflow.js
+│  ├─ checkout/CheckoutPreviewService.js
+│  ├─ order/OrderService.js
+│  ├─ payment/PaymentService.js
+│  ├─ payment/adapters/MockPaymentAdapter.js
+│  ├─ payment/adapters/WechatPaymentAdapter.js
+│  ├─ session/SessionService.js
+│  ├─ network/NetworkService.js
+│  └─ logging/Logger.js
+├─ stores/
+│  ├─ session.js
+│  ├─ cart.js
+│  └─ checkout.js
+└─ pages/
+```
+
+## 13. 日志规范
+
+核心 Checkout 事件使用统一 Logger，不在业务代码中散落 `console.log`：
+
+```text
+checkout_started
+preview_succeeded
+preview_failed
+auth_recovery_started
+order_create_started
+order_create_succeeded
+payment_started
+payment_succeeded
+payment_cancelled
+checkout_failed
+checkout_recovered
+```
+
+每条日志至少包含 `traceId`、`idempotencyKey`、`previewVersion`、阶段、耗时、平台和错误码。不得记录 Token、手机号、完整地址、支付凭证或其他敏感数据。开发环境输出到控制台，测试与生产环境通过 Logger Adapter 接入后续日志平台。
+
+## 14. 页面状态与交互规范
 
 核心页面均需具备：
 
@@ -360,9 +498,9 @@ Idempotency-Key: <UUID>
 - 支付失败、取消、401 和断网不清空购物车。
 - 只有订单最终成功后清空购物车并重置结算意图。
 
-## 13. 测试策略
+## 15. 测试策略
 
-### 13.1 单元测试
+### 15.1 单元测试
 
 - `cartLineKey` 标准化，包括 `milkType`、空值和枚举大小写。
 - 同一商品不同规格不合并，相同规格正确合并。
@@ -371,15 +509,17 @@ Idempotency-Key: <UUID>
 - 错误响应到错误类型的映射。
 - 幂等 Key 的生成、复用与失效规则。
 - Mock Payment 成功、取消和失败结果。
+- `v1:` 购物车 Key 的生成及未来迁移函数行为。
+- Preview 输入变化后旧 `previewVersion` 失效。
 
-### 13.2 组件测试
+### 15.2 组件测试
 
 - 规格面板默认值、不可选组合与提交结果。
 - 购物车条目修改规格和撤销删除。
 - 结算按钮在不同状态机状态下的文案和禁用状态。
 - 加载、空状态、失败、离线和正常内容切换。
 
-### 13.3 链路测试
+### 15.3 链路测试
 
 - 未完成正式登录时浏览、加购，结算时完成身份恢复。
 - 固定门店自提订单成功提交。
@@ -388,8 +528,9 @@ Idempotency-Key: <UUID>
 - 商品价格变化、下架或规格失效时阻止提交。
 - 离线时禁止提交，恢复网络后继续结算。
 - 连续快速点击提交 10 次，最终只生成 1 张订单。
+- App 进入后台 5 分钟后返回，购物车和结算意图仍在；恢复网络、会话和 Preview 校验后可以继续结算。
 
-### 13.4 构建与真机验证
+### 15.4 构建与真机验证
 
 - H5 构建成功。
 - 微信小程序构建成功。
@@ -397,7 +538,7 @@ Idempotency-Key: <UUID>
 - 至少一次微信真机局域网或测试环境验证。
 - 检查安全区、底部购物车、规格面板和系统返回行为。
 
-## 14. 性能目标
+## 16. 性能目标
 
 - 已有缓存时，菜单可交互时间小于 2 秒。
 - 加购后的视觉反馈小于 100ms。
@@ -406,7 +547,7 @@ Idempotency-Key: <UUID>
 - 图片使用合适尺寸、懒加载与失败占位。
 - 不把服务端订单完成时间小于 300ms 作为客户端硬指标；记录并观察接口实际延迟。
 
-## 15. 第一阶段验收标准
+## 17. 第一阶段验收标准
 
 1. 用户进入微信小程序后能够建立静默会话。
 2. 用户可以浏览菜单、选择完整规格并编辑购物车。
@@ -420,14 +561,15 @@ Idempotency-Key: <UUID>
 10. H5 与微信小程序均能构建，微信真机完成核心链路验证。
 11. 核心纯函数、状态机和错误映射具有自动化测试。
 12. 核心页面满足约定的加载、错误、空数据、离线与性能目标。
+13. App 进入后台 5 分钟后返回，能够安全恢复结算，不使用过期 Preview 直接提交。
 
-## 16. 实施顺序约束
+## 18. 实施顺序约束
 
 实现阶段必须先完成基础设施，再改页面：
 
-1. 环境配置、请求错误体系和会话接口。
-2. 规格标准化、购物车条目标识和单元测试。
-3. Checkout Preview、状态机、幂等协议和 Payment Adapter。
+1. 环境配置、统一 Logger、请求错误体系和会话接口。
+2. 规格标准化、版本化购物车条目标识、迁移函数和单元测试。
+3. Checkout Preview 版本、状态机、幂等协议、Workflow、OrderService 和 PaymentService。
 4. 菜单、规格面板和购物车。
 5. 确认订单、模拟支付、结果与详情。
 6. 链路测试、微信构建和真机验证。
