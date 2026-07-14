@@ -1,44 +1,51 @@
 /**
- * 全局 SCSS 变量定义 (Premium Design System)
- * 
- * 设计规范：
- * - 主色调: 拿铁金 #C69C6D
- * - 辅助色: 深咖 #2C1810
- * - 背景色: 暖白 #F8F5F2
+ * 全局 SCSS 变量定义 — 余白の温度 (Warm Reserve)
+ *
+ * 设计方向: 日式克制 + 咖啡的温度感
+ * 纯白底色、深烘咖啡棕主色、釉面绿语义色
+ * 禁用: 渐变文字、奶油底、Glassmorphism、卡片套卡片
  */
 
-// ==================== 品牌色彩 ====================
-$primary-color: #C69C6D; // 拿铁金 - 核心按钮、高亮
-$primary-light: #E8D4B8; // 浅拿铁 - 辅助背景
-$primary-dark: #A67C4E; // 深拿铁 - 点击态
-$secondary-color: #2C1810; // 深咖 - 重要标题
+// ==================== 品牌色 (oklch → hex) ====================
+$cozy-primary: #753A22;        // 深烘咖啡棕，替代旧 #C69C6D
+$cozy-primary-hover: #5E2E1B;
+$cozy-accent: #526C43;         // 釉面绿 — 仅用于: 积分到账数字、进度填充、已解锁状态
+$cozy-accent-soft: #E8EDE5;
 
 // ==================== 背景色 ====================
-$bg-color: #F8F5F2; // 全局暖白背景
-$bg-white: #FFFFFF; // 卡片纯白背景
-$bg-gray: #F5F5F5; // 浅灰辅助背景
-$bg-overlay: rgba(0, 0, 0, 0.4); // 遮罩层
+$cozy-bg: #FFFFFF;             // 纯白底 (旧 #F8F5F2 暖白已废弃)
+$cozy-surface: #F7F5F3;       // 极微暖灰卡片
+$cozy-surface-alt: #2C1E18;   // 深色叙事区 (会员区 / Footer)
+$cozy-overlay: rgba(0, 0, 0, 0.4);
 
 // ==================== 文字色 ====================
-$text-main: #2C1810; // 主文字 - 深咖
-$text-sub: #666666; // 次要文字 - 灰黑
-$text-placeholder: #999999; // 占位符
-$text-white: #FFFFFF; // 反白文字
+$cozy-ink: #2B1E16;           // 正文墨黑 (旧 #2C1810)
+$cozy-muted: #756A63;         // 辅助文字 (旧 #666)
+$cozy-placeholder: #9E948E;   // 占位符 (旧 #999)
+$cozy-on-dark: #FFFFFF;       // 深色底文字
+$cozy-muted-on-dark: #C7BEB7; // 深色底辅助
+
+// ==================== 边框与分割线 ====================
+$cozy-border: #E3DED8;        // (旧 #EEE)
+$cozy-border-on-dark: rgba(255, 255, 255, 0.16);
 
 // ==================== 功能色 ====================
-$success-color: #52C41A;
-$warning-color: #FAAD14;
-$error-color: #FF4D4F;
-$info-color: #1890FF;
+$cozy-success: #52C41A;
+$cozy-warning: #FAAD14;
+$cozy-error: #FF4D4F;
+$cozy-info: #1890FF;
 
-// ==================== 形状与质感 ====================
-$border-color: #EEEEEE;
-$card-radius: 24rpx; // 标准卡片圆角
-$card-radius-lg: 32rpx; // 大卡片圆角
-$box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.06); // 柔和微影
-$glass-blur: blur(20rpx); // 毛玻璃效果 (仅H5有效)
+// ==================== 深色区 CTA (反色按钮) ====================
+$cozy-cta-alt-bg: #F2EDE8;
+$cozy-cta-alt-text: #4D3028;
 
-// ==================== 间距 ====================
+// ==================== 圆角 ====================
+$cozy-radius-sm: 4rpx;
+$cozy-radius: 8rpx;           // 图片、标签
+$cozy-radius-md: 12rpx;       // 容器
+$cozy-radius-lg: 16rpx;       // 卡片上限
+
+// ==================== 间距 (4px 网格, 1px ≈ 2rpx) ====================
 $spacing-xs: 8rpx;
 $spacing-sm: 16rpx;
 $spacing-md: 24rpx;
@@ -53,9 +60,36 @@ $font-size-md: 28rpx;
 $font-size-lg: 32rpx;
 $font-size-xl: 36rpx;
 $font-size-xxl: 44rpx;
-$font-size-mega: 60rpx; // 特大数字
+$font-size-mega: 60rpx;
 
 // ==================== 布局安全区 ====================
-$nav-height: 88rpx; // 导航栏高度
-$status-bar-height: var(--status-bar-height); // 状态栏高度
-$safe-bottom: env(safe-area-inset-bottom); // 底部安全区
+$nav-height: 88rpx;
+$status-bar-height: var(--status-bar-height);
+$safe-bottom: env(safe-area-inset-bottom);
+
+// ==================== 旧变量别名 (向后兼容，逐步移除) ====================
+$primary-color: $cozy-primary;
+$primary-light: #E8D4B8;      // 保留：仍需用于浅底色场景
+$primary-dark: $cozy-primary-hover;
+$secondary-color: $cozy-ink;
+
+$bg-color: $cozy-bg;          // ⚠️ 旧暖白 #F8F5F2 → 纯白
+$bg-white: $cozy-bg;
+$bg-gray: $cozy-surface;
+$bg-overlay: $cozy-overlay;
+
+$text-main: $cozy-ink;
+$text-sub: $cozy-muted;
+$text-placeholder: $cozy-placeholder;
+$text-white: $cozy-on-dark;
+
+$success-color: $cozy-success;
+$warning-color: $cozy-warning;
+$error-color: $cozy-error;
+$info-color: $cozy-info;
+
+$border-color: $cozy-border;
+$card-radius: $cozy-radius-md;
+$card-radius-lg: $cozy-radius-lg;
+$box-shadow: none;             // ⚠️ 禁用大面积阴影
+$glass-blur: blur(0);         // ⚠️ 禁用毛玻璃

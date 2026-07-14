@@ -307,7 +307,7 @@ const goToCheckout = () => uni.navigateTo({ url: '/pages/order/confirm' })
 .menu-banner {
   margin: $spacing-md 0;
   padding: $spacing-lg;
-  background: linear-gradient(135deg, #FFF8F0, #FFF);
+  background: $cozy-surface;
   border-radius: $card-radius;
   
   .banner-title {
@@ -388,9 +388,7 @@ const goToCheckout = () => uni.navigateTo({ url: '/pages/order/confirm' })
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4rpx 12rpx rgba(198, 156, 109, 0.4);
-        transition: transform 0.1s;
-        
+
         &:active { transform: scale(0.9); }
         
         .btn-icon {
@@ -427,8 +425,7 @@ const goToCheckout = () => uni.navigateTo({ url: '/pages/order/confirm' })
   display: flex;
   align-items: center;
   padding: 0 8rpx 0 32rpx;
-  box-shadow: 0 8rpx 32rpx rgba(44, 24, 16, 0.3);
-  
+
   .cart-left {
     flex: 1;
     display: flex;

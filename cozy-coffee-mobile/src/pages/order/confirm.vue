@@ -637,7 +637,7 @@ const submitOrder = async () => {
     align-items: center;
     padding: $spacing-lg $spacing-md;
     border: 2rpx solid $border-color;
-    border-radius: $border-radius-md;
+    border-radius: $cozy-radius-md;
     transition: all 0.3s;
     
     &.active {
@@ -709,7 +709,7 @@ const submitOrder = async () => {
   text-align: center;
   color: $primary-color;
   border: 2rpx dashed $primary-color;
-  border-radius: $border-radius-md;
+  border-radius: $cozy-radius-md;
 }
 
 .store-card {
@@ -747,7 +747,7 @@ const submitOrder = async () => {
   .product-image {
     width: 100rpx;
     height: 100rpx;
-    border-radius: $border-radius-sm;
+    border-radius: $cozy-radius-sm;
   }
   
   .product-info {
@@ -817,7 +817,7 @@ const submitOrder = async () => {
     justify-content: space-between;
     padding: $spacing-sm $spacing-md;
     border: 2rpx solid $border-color;
-    border-radius: $border-radius-md;
+    border-radius: $cozy-radius-md;
     min-width: 200rpx;
     transition: all 0.2s;
     
@@ -872,7 +872,7 @@ const submitOrder = async () => {
     align-items: center;
     padding: $spacing-sm $spacing-md;
     border: 2rpx solid $border-color;
-    border-radius: $border-radius-md;
+    border-radius: $cozy-radius-md;
     background: #f9fafb;
     
     &.selected {
@@ -1000,8 +1000,7 @@ const submitOrder = async () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 $spacing-md;
-  box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.05);
-  
+
   .submit-left {
     .submit-total {
       font-size: $font-size-xl;
@@ -1017,7 +1016,7 @@ const submitOrder = async () => {
   }
   
   .submit-btn {
-    background: linear-gradient(135deg, $primary-color, $primary-dark);
+    background: $cozy-surface-alt;
     color: white;
     padding: $spacing-sm $spacing-xl;
     border-radius: 40rpx;

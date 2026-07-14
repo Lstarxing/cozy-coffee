@@ -337,7 +337,7 @@ const selectAddress = (item) => {
   background: $bg-white;
   
   .add-btn {
-    background: linear-gradient(135deg, $primary-color, $primary-dark);
+    background: $cozy-primary;
     color: white;
     text-align: center;
     padding: $spacing-md;
@@ -438,7 +438,7 @@ const selectAddress = (item) => {
     padding: $spacing-md;
     
     .modal-btn {
-      background: linear-gradient(135deg, $primary-color, $primary-dark);
+      background: $cozy-primary;
       color: white;
       text-align: center;
       padding: $spacing-md;

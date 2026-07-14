@@ -99,7 +99,7 @@ const goToHome = () => {
 .success-icon {
   width: 160rpx;
   height: 160rpx;
-  background: linear-gradient(135deg, $success-color, #73D13D);
+  background: $cozy-success;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -128,7 +128,7 @@ const goToHome = () => {
 
 // 积分卡片
 .points-card {
-  background: linear-gradient(135deg, #FFF9F0, #FFF5E6);
+  background: $cozy-surface;
   border-radius: $border-radius-lg;
   padding: $spacing-lg;
   width: 100%;
@@ -210,7 +210,7 @@ const goToHome = () => {
     flex: 1;
     text-align: center;
     padding: $spacing-md;
-    background: linear-gradient(135deg, $primary-color, $primary-dark);
+    background: $cozy-primary;
     color: white;
     border-radius: 40rpx;
     font-size: $font-size-md;

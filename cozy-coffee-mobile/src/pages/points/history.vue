@@ -137,7 +137,7 @@ const filteredHistory = computed(() => {
 // 积分概览
 .points-overview {
   display: flex;
-  background: linear-gradient(135deg, $primary-color, $primary-dark);
+  background: $cozy-surface-alt;
   padding: $spacing-xl $spacing-lg;
   color: white;
   
@@ -194,7 +194,7 @@ const filteredHistory = computed(() => {
   justify-content: space-between;
   background: $bg-white;
   padding: $spacing-md;
-  border-radius: $border-radius-md;
+  border-radius: $cozy-radius-md;
   margin-bottom: $spacing-sm;
   
   .item-left {
@@ -257,7 +257,7 @@ const filteredHistory = computed(() => {
   margin: $spacing-md;
   padding: $spacing-md;
   background: $bg-white;
-  border-radius: $border-radius-md;
+  border-radius: $cozy-radius-md;
   
   .tips-title {
     font-size: $font-size-md;

@@ -221,11 +221,11 @@ const compareData = [
   padding: $spacing-xl $spacing-lg;
   color: white;
   
-  &.basic { background: linear-gradient(135deg, #804A00, #B87333); }
-  &.silver { background: linear-gradient(135deg, #7F8C8D, #BDC3C7); }
-  &.gold { background: linear-gradient(135deg, #D4AF37, #F1C40F); color: #4A3000; }
-  &.diamond { background: linear-gradient(135deg, #3498DB, #85C1E9); }
-  &.black { background: linear-gradient(135deg, #1A1A1A, #434343); }
+  &.basic { background: #804A00; }
+  &.silver { background: #7F8C8D; }
+  &.gold { background: #D4AF37; color: #4A3000; }
+  &.diamond { background: #3498DB; }
+  &.black { background: #1A1A1A; }
   
   .level-info {
     margin-bottom: $spacing-md;

@@ -247,7 +247,7 @@ const reOrder = (order) => {
 .order-card {
   background: $bg-white;
   margin: $spacing-sm;
-  border-radius: $border-radius-md;
+  border-radius: $cozy-radius-md;
   padding: $spacing-md;
   
   .order-header {
@@ -303,7 +303,7 @@ const reOrder = (order) => {
     .item-image {
       width: 100rpx;
       height: 100rpx;
-      border-radius: $border-radius-sm;
+      border-radius: $cozy-radius-sm;
     }
     
     .item-info {

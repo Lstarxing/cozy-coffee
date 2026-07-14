@@ -241,7 +241,6 @@ const handleMemberClick = () => uni.navigateTo({ url: '/pages/benefits/index' })
   right: 0;
   height: calc(var(--status-bar-height) + 88rpx);
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20rpx);
   z-index: 99;
   pointer-events: none;
 }
@@ -341,61 +340,50 @@ const handleMemberClick = () => uni.navigateTo({ url: '/pages/benefits/index' })
 
 .member-card {
   height: 180rpx;
-  background: white;
-  border-radius: $card-radius-lg;
-  box-shadow: $box-shadow;
+  background: $cozy-surface-alt;
+  border-radius: $cozy-radius-md;
   display: flex;
   justify-content: space-between;
   padding: $spacing-lg;
   position: relative;
   overflow: hidden;
-  color: #333; // 默认深色字
-  
-  // 等级皮肤
-  &.basic { 
-    background: linear-gradient(135deg, #FFFFFF, #F5F5F7); 
-    color: #555; 
+  color: $cozy-on-dark;
+
+  // 等级 accent 色条
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 24rpx;
+    bottom: 24rpx;
+    width: 4rpx;
+    border-radius: 2rpx;
   }
-  &.silver { 
-    background: linear-gradient(135deg, #E6E9F0, #c1c8d3); 
-    color: #2C3E50; 
-    .progress-bar { background: rgba(44, 62, 80, 0.2); }
-  }
-  &.gold { 
-    background: linear-gradient(135deg, #FFE5B4, #D4AF37); 
-    color: #5A3A00; 
-    .progress-bar { background: rgba(90, 58, 0, 0.2); }
-  }
-  &.diamond { 
-    background: linear-gradient(135deg, #E0F7FA, #4DD0E1); 
-    color: #006064; 
-    .progress-bar { background: rgba(0, 96, 100, 0.2); }
-  }
-  &.black { 
-    background: linear-gradient(135deg, #333333, #000000); 
-    color: #D4AF37; 
-    .progress-bar { background: rgba(212, 175, 55, 0.3); }
-    .signin-btn { color: #333; }
-  }
+
+  &.basic::before  { background: $cozy-muted; }
+  &.silver::before { background: #C0C0C0; }
+  &.gold::before   { background: #D4AF37; }
+  &.diamond::before { background: #4DD0E1; }
+  &.black::before  { background: $cozy-accent; }
 
   .card-left {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     z-index: 2;
-    
+
     .level-badge {
       display: flex;
       align-items: center;
-      
+
       .level-icon { margin-right: $spacing-xs; font-size: 32rpx; }
       .level-name { font-weight: 700; font-size: $font-size-lg; }
     }
-    
+
     .points-text {
       font-size: $font-size-sm;
       opacity: 0.8;
-      
+
       .points-num {
         font-size: $font-size-xl;
         font-weight: 700;
@@ -403,53 +391,51 @@ const handleMemberClick = () => uni.navigateTo({ url: '/pages/benefits/index' })
       }
     }
   }
-  
+
   .card-right {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     justify-content: space-between;
     z-index: 2;
-    
+
     .signin-btn {
-      background: rgba(255,255,255,0.9);
+      background: $cozy-cta-alt-bg;
+      color: $cozy-cta-alt-text;
       padding: 8rpx 20rpx;
-      border-radius: 30rpx;
+      border-radius: $cozy-radius * 4;
       font-size: $font-size-sm;
-      color: $text-main;
-      box-shadow: 0 4rpx 10rpx rgba(0,0,0,0.1);
     }
-    
+
     .benefits-link {
       font-size: $font-size-xs;
       opacity: 0.7;
     }
   }
-  
+
   .level-progress {
     margin-top: $spacing-xs;
-    
+
     .progress-bar {
       width: 240rpx;
       height: 6rpx;
-      background: rgba(0,0,0,0.1);
+      background: rgba(255,255,255,0.15);
       border-radius: 3rpx;
       overflow: hidden;
       margin-bottom: 4rpx;
-      
+
       .progress-fill {
         height: 100%;
-        background: currentColor; // 使用当前文字颜色
-        opacity: 0.8;
+        background: $cozy-accent;
       }
     }
-    
+
     .progress-hint {
       font-size: 18rpx;
       opacity: 0.6;
     }
   }
-  
+
   // 纹理装饰
   .card-texture {
     position: absolute;
@@ -458,7 +444,7 @@ const handleMemberClick = () => uni.navigateTo({ url: '/pages/benefits/index' })
     width: 200rpx;
     height: 200rpx;
     border-radius: 50%;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05);
     pointer-events: none;
   }
 }
@@ -477,22 +463,20 @@ const handleMemberClick = () => uni.navigateTo({ url: '/pages/benefits/index' })
     .icon-box {
       width: 96rpx;
       height: 96rpx;
-      background: $bg-white;
-      border-radius: 32rpx;
+      background: $cozy-surface;
+      border-radius: $cozy-radius-md;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 48rpx;
-      box-shadow: $box-shadow;
       margin-bottom: $spacing-sm;
       transition: transform 0.1s;
-      
+
       &:active { transform: scale(0.95); }
-      
+
       &.primary {
-        background: $primary-color;
+        background: $cozy-primary;
         color: white;
-        box-shadow: 0 8rpx 20rpx rgba(198, 156, 109, 0.4);
       }
     }
     
@@ -544,8 +528,7 @@ const handleMemberClick = () => uni.navigateTo({ url: '/pages/benefits/index' })
   background: $bg-white;
   border-radius: $card-radius;
   overflow: hidden;
-  box-shadow: $box-shadow;
-  
+
   .card-image {
     width: 260rpx;
     height: 260rpx;
@@ -595,10 +578,9 @@ const handleMemberClick = () => uni.navigateTo({ url: '/pages/benefits/index' })
 .promo-banner {
   margin: $spacing-md;
   height: 240rpx;
-  border-radius: $card-radius-lg;
+  border-radius: $cozy-radius-md;
   overflow: hidden;
   position: relative;
-  box-shadow: $box-shadow;
   
   .promo-image {
     width: 100%;

@@ -200,12 +200,12 @@ const navigateTo = (url) => {
   overflow: hidden;
   
   // 主题色背景
-  background: linear-gradient(135deg, $primary-color, $primary-dark);
-  
+  background: $cozy-surface-alt;
+
   // 等级皮肤
-  &.black { background: linear-gradient(135deg, #333, #000); }
-  &.silver { background: linear-gradient(135deg, #7F8C8D, #BDC3C7); }
-  
+  &.black { background: #1A1A1A; }
+  &.silver { background: #7F8C8D; }
+
   .user-info {
     display: flex;
     align-items: center;
@@ -270,7 +270,7 @@ const navigateTo = (url) => {
   justify-content: space-around;
   position: relative;
   z-index: 10;
-  box-shadow: $box-shadow;
+  box-shadow: none;
   
   .asset-item {
     text-align: center;

@@ -164,7 +164,7 @@ const goToLogin = () => {
 <style lang="scss" scoped>
 .register-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #FFF9F0 0%, $bg-color 100%);
+  background: $cozy-surface;
   padding: $spacing-xl $spacing-lg;
   display: flex;
   flex-direction: column;
@@ -197,7 +197,7 @@ const goToLogin = () => {
   background: $bg-white;
   border-radius: 24rpx;
   padding: $spacing-lg;
-  box-shadow: $box-shadow;
+  box-shadow: none;
 }
 
 .form-item {
@@ -236,7 +236,7 @@ const goToLogin = () => {
 }
 
 .register-btn {
-  background: linear-gradient(135deg, $primary-color, $primary-dark);
+  background: $cozy-surface-alt;
   color: white;
   text-align: center;
   padding: $spacing-md;

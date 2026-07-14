@@ -297,14 +297,14 @@ const goToDetail = (productId) => {
 .product-card {
   display: flex;
   background: $bg-white;
-  border-radius: $border-radius-md;
+  border-radius: $cozy-radius-md;
   padding: $spacing-sm;
   margin-bottom: $spacing-sm;
   
   .product-image {
     width: 160rpx;
     height: 160rpx;
-    border-radius: $border-radius-sm;
+    border-radius: $cozy-radius-sm;
   }
   
   .product-info {

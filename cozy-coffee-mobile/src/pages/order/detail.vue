@@ -269,11 +269,11 @@ const cancelOrder = () => {
   text-align: center;
   color: white;
   
-  &.pending { background: linear-gradient(135deg, #F39C12, #E74C3C); }
-  &.preparing { background: linear-gradient(135deg, #3498DB, #2980B9); }
-  &.delivering { background: linear-gradient(135deg, #1ABC9C, #16A085); }
-  &.completed { background: linear-gradient(135deg, $primary-color, $primary-dark); }
-  &.cancelled { background: linear-gradient(135deg, #95A5A6, #7F8C8D); }
+  &.pending { background: #F39C12; }
+  &.preparing { background: #3498DB; }
+  &.delivering { background: #1ABC9C; }
+  &.completed { background: $cozy-surface-alt; }
+  &.cancelled { background: #95A5A6; }
   
   .status-icon {
     font-size: 80rpx;
@@ -310,7 +310,7 @@ const cancelOrder = () => {
   background: $bg-white;
   margin: $spacing-md;
   padding: $spacing-md;
-  border-radius: $border-radius-md;
+  border-radius: $cozy-radius-md;
   
   .delivery-header {
     margin-bottom: $spacing-sm;
@@ -342,7 +342,7 @@ const cancelOrder = () => {
   background: $bg-white;
   margin: 0 $spacing-md $spacing-md;
   padding: $spacing-md;
-  border-radius: $border-radius-md;
+  border-radius: $cozy-radius-md;
 }
 
 .section-title {
@@ -365,7 +365,7 @@ const cancelOrder = () => {
   .product-image {
     width: 100rpx;
     height: 100rpx;
-    border-radius: $border-radius-sm;
+    border-radius: $cozy-radius-sm;
   }
   
   .product-info {
@@ -404,7 +404,7 @@ const cancelOrder = () => {
   background: $bg-white;
   margin: 0 $spacing-md $spacing-md;
   padding: $spacing-md;
-  border-radius: $border-radius-md;
+  border-radius: $cozy-radius-md;
   
   .price-item {
     display: flex;
@@ -454,7 +454,7 @@ const cancelOrder = () => {
   background: $bg-white;
   margin: 0 $spacing-md;
   padding: $spacing-md;
-  border-radius: $border-radius-md;
+  border-radius: $cozy-radius-md;
   
   .info-item {
     display: flex;
@@ -486,8 +486,7 @@ const cancelOrder = () => {
   justify-content: flex-end;
   padding: 0 $spacing-md;
   gap: $spacing-md;
-  box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.05);
-  
+
   .action-btn {
     padding: $spacing-sm $spacing-lg;
     border-radius: 40rpx;

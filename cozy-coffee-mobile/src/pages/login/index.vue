@@ -190,7 +190,7 @@ const goToForget = () => {
 <style lang="scss" scoped>
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #FFF9F0 0%, $bg-color 100%);
+  background: $cozy-surface;
   padding: $spacing-xl $spacing-lg;
   display: flex;
   flex-direction: column;
@@ -223,9 +223,9 @@ const goToForget = () => {
 // 表单区域
 .form-section {
   background: $bg-white;
-  border-radius: $border-radius-lg;
+  border-radius: $cozy-radius-lg;
   padding: $spacing-lg;
-  box-shadow: $box-shadow;
+  box-shadow: none;
 }
 
 .form-item {
@@ -255,7 +255,7 @@ const goToForget = () => {
 }
 
 .login-btn {
-  background: linear-gradient(135deg, $primary-color, $primary-dark);
+  background: $cozy-surface-alt;
   color: white;
   text-align: center;
   padding: $spacing-md;

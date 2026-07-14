@@ -169,9 +169,9 @@ const goToHistory = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, $primary-color, $primary-dark);
+  background: $cozy-surface-alt;
   padding: $spacing-lg;
-  border-radius: $border-radius-lg;
+  border-radius: $cozy-radius-lg;
   color: white;
   margin-bottom: $spacing-md;
   
@@ -203,9 +203,9 @@ const goToHistory = () => {
 
 .product-card {
   background: $bg-white;
-  border-radius: $border-radius-md;
+  border-radius: $cozy-radius-md;
   overflow: hidden;
-  box-shadow: $box-shadow;
+  box-shadow: none;
   
   .product-image {
     width: 100%;
@@ -280,7 +280,7 @@ const goToHistory = () => {
 .modal-content {
   width: 80%;
   background: $bg-white;
-  border-radius: $border-radius-lg;
+  border-radius: $cozy-radius-lg;
   overflow: hidden;
   
   .modal-header {
@@ -308,7 +308,7 @@ const goToHistory = () => {
     .modal-image {
       width: 200rpx;
       height: 200rpx;
-      border-radius: $border-radius-md;
+      border-radius: $cozy-radius-md;
       margin-bottom: $spacing-md;
     }
     

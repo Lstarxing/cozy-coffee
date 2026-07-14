@@ -180,7 +180,7 @@ const handleSignin = async () => {
 
 // 积分卡片
 .points-card {
-  background: linear-gradient(135deg, $primary-color, $primary-dark);
+  background: $cozy-surface-alt;
   padding: $spacing-xl $spacing-lg;
   
   .points-bg {
@@ -305,7 +305,7 @@ const handleSignin = async () => {
   text-align: center;
   
   .signin-btn {
-    background: linear-gradient(135deg, $primary-color, $primary-dark);
+    background: $cozy-surface-alt;
     color: white;
     padding: $spacing-md $spacing-xl;
     border-radius: 44rpx;

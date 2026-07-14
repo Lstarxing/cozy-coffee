@@ -564,7 +564,7 @@ const addToCart = () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 $spacing-lg;
-  box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.05);
+  box-shadow: none;
   
   .action-left {
     .total-label {
@@ -581,7 +581,7 @@ const addToCart = () => {
   }
   
   .action-btn {
-    background: linear-gradient(135deg, $primary-color, $primary-dark);
+    background: $cozy-primary;
     color: white;
     padding: $spacing-sm $spacing-xl;
     border-radius: 40rpx;

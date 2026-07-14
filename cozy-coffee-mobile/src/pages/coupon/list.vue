@@ -217,7 +217,7 @@ const goToMall = () => {
 .coupon-card {
   display: flex;
   background: $bg-white;
-  border-radius: $border-radius-md;
+  border-radius: $cozy-radius-md;
   margin-bottom: $spacing-md;
   overflow: hidden;
   position: relative;
@@ -233,7 +233,7 @@ const goToMall = () => {
   
   .coupon-left {
     width: 200rpx;
-    background: linear-gradient(135deg, $primary-color, $primary-dark);
+    background: $cozy-surface-alt;
     color: white;
     display: flex;
     flex-direction: column;

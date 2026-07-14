@@ -181,7 +181,7 @@ const selectStore = (store) => {
   border-radius: $border-radius-md;
   padding: $spacing-md;
   margin-bottom: $spacing-md;
-  box-shadow: $box-shadow;
+  box-shadow: none;
   
   .store-image {
     width: 160rpx;
