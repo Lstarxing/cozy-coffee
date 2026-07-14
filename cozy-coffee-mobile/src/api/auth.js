@@ -9,6 +9,18 @@ export const login = (data) => {
     return post('/auth/login', data)
 }
 
+export const exchangeWechatSession = (code) => {
+    return post('/auth/wechat/session', { code })
+}
+
+export const getCurrentSession = () => {
+    return get('/auth/me')
+}
+
+export const logout = () => {
+    return post('/auth/logout', {})
+}
+
 // 注册
 export const register = (data) => {
     return post('/auth/register', data)

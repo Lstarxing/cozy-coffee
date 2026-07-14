@@ -7,8 +7,12 @@ import { get, post } from '@/api/request'
 // ==================== 订单管理 ====================
 
 // 创建订单
-export const createOrder = (data) => {
-    return post('/order/create', data)
+export const createOrder = (data, options = {}) => {
+    return post('/order/create', data, options)
+}
+
+export const checkCart = (data) => {
+    return post('/order/cart/check', data)
 }
 
 // 获取用户订单列表
