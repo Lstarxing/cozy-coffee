@@ -44,8 +44,9 @@ defineProps({
 </script>
 
 <style scoped>
-.origin-chapter { min-height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding: 40px 0 80px; scroll-snap-align: start; scroll-snap-stop: always; border-top: 1px solid var(--cozy-border); opacity: .38; transition: opacity .3s ease; }
-.origin-chapter.is-active, .origin-chapter.is-static { opacity: 1; }
+.origin-chapter { min-height: calc(100svh - var(--nav-height) - 24px); display: flex; flex-direction: column; justify-content: flex-start; padding: 40px 0 80px; scroll-margin-top: calc(var(--nav-height) + 12px); border-top: 1px solid var(--cozy-border); opacity: .38; transition: opacity .42s ease, border-color .42s ease; }
+.origin-chapter.is-active { border-top: 2px solid var(--cozy-primary); opacity: 1; }
+.origin-chapter.is-static { opacity: 1; }
 .origin-counter { margin: 0 0 24px; color: var(--cozy-muted); font-size: 12px; letter-spacing: .08em; }
 .origin-chapter h3 { margin: 0; font-size: clamp(2.3rem, 3.8vw, 3.4rem); line-height: 1.08; font-weight: 650; text-wrap: balance; }
 .origin-region { margin: 10px 0 0; color: var(--cozy-primary); font-size: 15px; font-weight: 650; }

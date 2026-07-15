@@ -16,7 +16,7 @@
 
       <g class="map-layer map-layer--coffee-belt">
         <ellipse cx="500" cy="264" rx="510" ry="61" class="coffee-belt-glow" />
-        <text x="44" y="220" class="coffee-belt-label">COFFEE BELT</text>
+        <text x="108" y="226" class="coffee-belt-label">COFFEE BELT</text>
       </g>
 
       <g class="map-layer map-layer--countries">
@@ -57,8 +57,8 @@
       <g class="map-layer map-layer--labels">
         <text
           v-if="activeOrigin"
-          :x="pointFor(activeOrigin).x + 12"
-          :y="pointFor(activeOrigin).y - 10"
+          :x="pointFor(activeOrigin).x + 16"
+          :y="pointFor(activeOrigin).y - 16"
           class="origin-label"
         >{{ activeOrigin.englishName }}</text>
       </g>
@@ -103,6 +103,7 @@ const routeStyle = id => ({ '--route-index': props.origins.findIndex(origin => o
   position: relative;
   width: 100%;
   overflow: hidden;
+  box-sizing: border-box;
   background: var(--cozy-bg) url('../../assets/images/noise.png') repeat;
   background-blend-mode: multiply;
 }
@@ -111,13 +112,13 @@ svg { display: block; width: 100%; height: auto; }
 .map-background { fill: var(--cozy-bg); fill-opacity: .93; }
 .coffee-belt-glow { fill: url('#coffee-belt-gradient'); opacity: .12; filter: blur(17px); }
 .coffee-belt-label { fill: var(--cozy-primary); opacity: .72; font: 650 11px var(--font-sans); letter-spacing: .14em; }
-.map-country { fill: color-mix(in oklch, var(--cozy-primary) 4%, var(--cozy-surface)); stroke: color-mix(in oklch, var(--cozy-ink) 18%, var(--cozy-border)); stroke-width: .85; transition: fill .35s ease, opacity .35s ease; }
+.map-country { fill: color-mix(in oklch, var(--cozy-primary) 4%, var(--cozy-surface)); stroke: color-mix(in oklch, var(--cozy-ink) 18%, var(--cozy-border)); stroke-width: .85; transition: fill .45s ease, opacity .45s ease; }
 .map-country.is-active { fill: color-mix(in oklch, var(--cozy-primary) 48%, var(--cozy-surface)); }
-.origin-route { fill: none; stroke: var(--cozy-primary); stroke-width: 1; opacity: 0; stroke-dasharray: 1; stroke-dashoffset: 1; transition: opacity .28s ease, stroke-dashoffset .72s cubic-bezier(.22, 1, .36, 1); }
+.origin-route { fill: none; stroke: var(--cozy-primary); stroke-width: 1; opacity: 0; stroke-dasharray: 1; stroke-dashoffset: 1; will-change: opacity, stroke-dashoffset; transition: opacity .42s ease, stroke-dashoffset .9s cubic-bezier(.22, 1, .36, 1); }
 .origin-route.is-visited { opacity: .16; stroke-width: 1; stroke-dashoffset: 0; }
 .origin-route.is-active { opacity: 1; stroke-width: 2.25; stroke-dashoffset: 0; }
 .origin-route.is-summary { opacity: .56; stroke-width: 1.45; stroke-dashoffset: 0; transition-delay: calc(var(--route-index) * 65ms); }
-.origin-point { fill: var(--cozy-border); stroke: var(--cozy-bg); stroke-width: 2; transform-box: fill-box; transform-origin: center; transition: fill .3s ease, transform .3s ease; }
+.origin-point { fill: var(--cozy-border); stroke: var(--cozy-bg); stroke-width: 2; transform-box: fill-box; transform-origin: center; transition: fill .45s ease, transform .45s ease; }
 .origin-point.is-visited { fill: color-mix(in oklch, var(--cozy-primary) 38%, var(--cozy-border)); }
 .origin-point.is-active { fill: var(--cozy-primary); transform: scale(1.22); animation: origin-pulse 2s ease-in-out infinite; }
 .origin-label, .hangzhou-label, .hangzhou-roastery { font-family: var(--font-sans); }
