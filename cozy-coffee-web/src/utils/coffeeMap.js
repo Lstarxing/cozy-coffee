@@ -12,7 +12,7 @@ export const buildQuadraticRoute = (origin, destination, bend = -0.16) => {
   const end = normalizedToViewBox(destination)
   const dx = end.x - start.x
   const dy = end.y - start.y
-  const distance = Math.hypot(dx, dy)
+  const distance = Math.hypot(dx, dy) || 1
   const midpoint = {
     x: (start.x + end.x) / 2,
     y: (start.y + end.y) / 2,

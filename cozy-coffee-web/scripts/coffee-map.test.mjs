@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 
 import {
   buildQuadraticRoute,
@@ -11,6 +12,7 @@ import {
   COFFEE_JOURNEY,
   HANGZHOU_POINT,
 } from '../src/data/coffeeOrigins.js'
+import { WORLD_COUNTRY_PATHS } from '../src/data/worldCountryPaths.js'
 
 test('defines eight unique origins that all finish their journey in Hangzhou', () => {
   assert.equal(COFFEE_ORIGINS.length, 8)
@@ -49,7 +51,7 @@ test('builds the first origin route from its exact map point to Hangzhou', () =>
   const route = buildQuadraticRoute(
     firstOrigin.origin,
     HANGZHOU_POINT,
-    firstOrigin.bend,
+    firstOrigin.routeBend,
   )
 
   assert.match(
@@ -58,6 +60,33 @@ test('builds the first origin route from its exact map point to Hangzhou', () =>
   )
   assert.ok(route.startsWith(`M ${start.x} ${start.y} Q `))
   assert.ok(route.endsWith(` ${end.x} ${end.y}`))
+})
+
+test('generated world map contains the eight highlighted ISO country codes', () => {
+  assert.ok(WORLD_COUNTRY_PATHS.length > 150)
+  const codes = new Set(WORLD_COUNTRY_PATHS.map(({ code }) => code))
+  for (const code of ['ET', 'KE', 'BR', 'CO', 'GT', 'PA', 'ID', 'CN']) {
+    assert.ok(codes.has(code), `missing ${code}`)
+  }
+  assert.ok(WORLD_COUNTRY_PATHS.every(({ d }) => d.startsWith('M')))
+})
+
+test('Home uses OriginsJourney and contains no legacy three-origin collage', async () => {
+  const home = await readFile(new URL('../src/views/Home.vue', import.meta.url), 'utf8')
+  assert.match(home, /<OriginsJourney\s*\/>/)
+  assert.doesNotMatch(home, /origins-composition|origin-story--lead|三处产地/)
+  assert.match(home, /全球八处产区/)
+})
+
+test('Origins journey keeps natural page scrolling with a sticky map column', async () => {
+  const journey = await readFile(
+    new URL('../src/components/home/OriginsJourney.vue', import.meta.url),
+    'utf8',
+  )
+
+  assert.doesNotMatch(journey, /@wheel|scroll-snap-type|overflow-y:\s*auto/)
+  assert.match(journey, /\.origins-left-column\s*\{[^}]*position:\s*sticky/)
+  assert.match(journey, /rootMargin:\s*'-22% 0px -76% 0px'/)
 })
 
 test('provides complete display and flavor data for every origin', () => {
