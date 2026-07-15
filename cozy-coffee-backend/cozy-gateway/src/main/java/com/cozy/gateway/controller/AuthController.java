@@ -3,7 +3,9 @@ package com.cozy.gateway.controller;
 import com.cozy.common.context.UserContext;
 import com.cozy.common.result.Result;
 import com.cozy.gateway.dto.ApplyInviteCodeRequest;
+import com.cozy.gateway.dto.DevPasswordResetRequest;
 import com.cozy.gateway.dto.InviteCodeValidationResult;
+import com.cozy.gateway.dto.WechatDevSessionRequest;
 import com.cozy.gateway.service.AuthService;
 import com.cozy.gateway.util.AuthUtil;
 import com.cozy.user.dto.request.LoginRequest;
@@ -12,6 +14,7 @@ import com.cozy.user.dto.request.UpdateProfileRequest;
 import com.cozy.user.dto.response.UserDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +29,9 @@ import java.util.Optional;
 public class AuthController {
 
     private final AuthService authService;
+
+    @Value("${cozy.auth.dev-login-enabled:true}")
+    private boolean devLoginEnabled;
 
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterRequest request) {
@@ -48,6 +54,23 @@ public class AuthController {
         response.addCookie(cookie);
 
         return Result.success(loginResult, "登录成功");
+    }
+
+    @PostMapping("/wechat/session")
+    public Result<Map<String, Object>> wechatDevSession(@Valid @RequestBody WechatDevSessionRequest request) {
+        if (!devLoginEnabled) {
+            return Result.forbidden();
+        }
+        return Result.success(authService.loginWechatDev(request.getDeviceId()), "微信开发登录成功");
+    }
+
+    @PostMapping("/password/reset-dev")
+    public Result<Void> resetPasswordDev(@Valid @RequestBody DevPasswordResetRequest request) {
+        if (!devLoginEnabled) {
+            return Result.forbidden();
+        }
+        authService.resetPasswordDev(request.getUsername(), request.getNewPassword());
+        return Result.success(null, "开发环境密码已重置");
     }
 
     @PostMapping("/logout")

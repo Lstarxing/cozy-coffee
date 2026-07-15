@@ -17,6 +17,10 @@ public interface UserService {
 
     String login(LoginRequest request);
 
+    String loginWechatDev(String deviceId);
+
+    void resetPasswordDev(String username, String newPassword);
+
     /**
      * 登出并使当前 token 会话失效。
      */

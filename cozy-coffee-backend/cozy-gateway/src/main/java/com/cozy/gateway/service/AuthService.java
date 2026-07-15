@@ -29,6 +29,15 @@ public class AuthService {
         return Map.of("token", userService.login(request));
     }
 
+    public Map<String, Object> loginWechatDev(String deviceId) {
+        String token = userService.loginWechatDev(deviceId);
+        return Map.of("token", token);
+    }
+
+    public void resetPasswordDev(String username, String newPassword) {
+        userService.resetPasswordDev(username, newPassword);
+    }
+
     public void register(RegisterRequest request) {
         userService.register(request);
     }

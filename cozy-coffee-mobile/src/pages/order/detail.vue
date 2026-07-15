@@ -43,7 +43,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { onHide, onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { cancelOrder, getOrderDetail } from '@/api/order'
 import StoreSummary from '@/components/order/StoreSummary.vue'
 import LoadingState from '@/components/states/LoadingState.vue'
@@ -57,16 +57,29 @@ const itemCount = computed(() => (order.value?.items || []).reduce((sum, item) =
 const normalizedStatus = computed(() => String(order.value?.status || '').toLowerCase())
 const canCancel = computed(() => ['pending', 'pending_payment'].includes(normalizedStatus.value))
 const statusClass = computed(() => ({ completed: 'success', cancelled: 'muted', canceled: 'muted' })[normalizedStatus.value] || 'active')
+let pollTimer = null
 
 onLoad(options => { orderId.value = options.id || options.orderId || '' })
-onShow(() => { if (orderId.value) loadOrder() })
+onShow(() => { if (orderId.value) { loadOrder(); startPolling() } })
+onHide(stopPolling)
+onUnload(stopPolling)
 
-async function loadOrder() {
-  loading.value = true; errorMessage.value = ''
+async function loadOrder(silent = false) {
+  if (!silent) loading.value = true
+  errorMessage.value = ''
   try { const response = await getOrderDetail(orderId.value); order.value = response?.data ?? response }
   catch (error) { errorMessage.value = error?.message || '订单加载失败，请重试' }
-  finally { loading.value = false }
+  finally { if (!silent) loading.value = false }
 }
+
+function startPolling() {
+  stopPolling()
+  pollTimer = setInterval(() => {
+    if (!['completed', 'cancelled', 'canceled'].includes(normalizedStatus.value)) loadOrder(true)
+    else stopPolling()
+  }, 5000)
+}
+function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
 
 function statusText(status) { return ({ pending: '等待门店接单', pending_payment: '订单待处理', preparing: '咖啡制作中', processing: '咖啡制作中', completed: '订单已完成', cancelled: '订单已取消' })[String(status || '').toLowerCase()] || '订单已提交' }
 function statusDescription(status) { return ['preparing', 'processing'].includes(String(status).toLowerCase()) ? '咖啡师正在为你制作，请稍候' : '请留意订单状态，及时到店取餐' }

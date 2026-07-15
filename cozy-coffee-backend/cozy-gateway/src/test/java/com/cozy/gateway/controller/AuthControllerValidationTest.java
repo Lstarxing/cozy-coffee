@@ -13,6 +13,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * JSR-303 校验试点：验证 LoginRequest 的 @NotBlank / @Size 注解
@@ -63,5 +65,27 @@ class AuthControllerValidationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.token").value("test-token"));
+    }
+
+    @Test
+    void wechatDevSession_validInput_returnsToken() throws Exception {
+        when(authService.loginWechatDev("device_12345678"))
+                .thenReturn(java.util.Map.of("token", "wechat-dev-token"));
+
+        mockMvc.perform(post("/api/auth/wechat/session")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"wx-code\",\"deviceId\":\"device_12345678\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.token").value("wechat-dev-token"));
+    }
+
+    @Test
+    void resetPasswordDev_validInput_callsService() throws Exception {
+        mockMvc.perform(post("/api/auth/password/reset-dev")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"13800138000\",\"newPassword\":\"newpass123\"}"))
+                .andExpect(status().isOk());
+
+        verify(authService).resetPasswordDev("13800138000", "newpass123");
     }
 }

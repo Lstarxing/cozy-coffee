@@ -15,7 +15,13 @@
     </view>
     
     <!-- 商品列表 -->
-    <view class="products-grid">
+    <view class="page-state" v-if="loading && products.length === 0">正在加载积分商品…</view>
+    <view class="page-state error" v-else-if="errorMessage">
+      <text>{{ errorMessage }}</text>
+      <button class="retry-button" @click="loadMallData">重新加载</button>
+    </view>
+    <view class="page-state" v-else-if="products.length === 0">暂无可兑换商品</view>
+    <view class="products-grid" v-else>
       <view 
         class="product-card" 
         v-for="item in products" 
@@ -72,8 +78,11 @@ const products = ref([])
 const showRedeemModal = ref(false)
 const selectedProduct = ref(null)
 const loading = ref(false)
+const errorMessage = ref('')
 
-onMounted(async () => {
+const loadMallData = async () => {
+  loading.value = true
+  errorMessage.value = ''
   // 刷新会员积分
   try {
     const memberRes = await getMemberInfo()
@@ -81,7 +90,7 @@ onMounted(async () => {
       userStore.setMemberInfo(memberRes.data)
     }
   } catch (e) {
-    console.error('获取会员信息失败', e)
+    errorMessage.value = e?.message || '会员积分加载失败'
   }
   
   // 加载积分商品
@@ -96,14 +105,14 @@ onMounted(async () => {
       }))
     }
   } catch (e) {
-    console.error('加载积分商品失败', e)
-    // 降级 Mock 数据
-    products.value = [
-      { id: 1, name: '咖啡兑换券', desc: '兑换任意中杯咖啡', pointsPrice: 500, stock: 99, image: 'https://picsum.photos/200/200?random=10' },
-      { id: 2, name: '8.5折券', desc: '全场通用', pointsPrice: 300, stock: 50, image: 'https://picsum.photos/200/200?random=11' }
-    ]
+    products.value = []
+    errorMessage.value = e?.message || '积分商品加载失败'
+  } finally {
+    loading.value = false
   }
-})
+}
+
+onMounted(loadMallData)
 
 const canRedeem = (item) => {
   return (userStore.memberInfo?.currentPoints || 0) >= item.pointsPrice
@@ -146,7 +155,7 @@ const confirmRedeem = async () => {
   } catch (e) {
     uni.hideLoading()
     console.error('兑换失败', e)
-    uni.showToast({ title: '兑换失败', icon: 'none' })
+    uni.showToast({ title: e?.message || '兑换失败', icon: 'none' })
   } finally {
     loading.value = false
   }
@@ -200,6 +209,10 @@ const goToHistory = () => {
   grid-template-columns: repeat(2, 1fr);
   gap: $spacing-md;
 }
+
+.page-state { padding: 100rpx 24rpx; color: $cozy-muted; text-align: center; }
+.page-state text { display: block; }
+.retry-button { width: 220rpx; margin-top: 24rpx; border-radius: 40rpx; background: $cozy-primary; color: #fff; font-size: 24rpx; }
 
 .product-card {
   background: $bg-white;

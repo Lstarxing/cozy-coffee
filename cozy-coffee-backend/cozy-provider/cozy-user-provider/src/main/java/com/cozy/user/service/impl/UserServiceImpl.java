@@ -192,6 +192,58 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException("密码错误");
         }
 
+        return issueToken(user);
+    }
+
+    @Override
+    @Transactional
+    public String loginWechatDev(String deviceId) {
+        if (deviceId == null || !deviceId.matches("[A-Za-z0-9_-]{8,64}")) {
+            throw new BusinessException("开发设备标识无效");
+        }
+        String username = "wxdev_" + deviceId;
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getUsername, username);
+        User user = userMapper.selectOne(wrapper);
+        if (user == null) {
+            user = new User();
+            user.setUsername(username);
+            user.setPassword(passwordEncoder.encode(deviceId + "-cozy-dev"));
+            user.setMemberCode(generateMemberCode());
+            user.setInviteCode(generateInviteCode());
+            user.setNickname("微信开发用户");
+            user.setAvatar("/images/default-avatar.png");
+            userMapper.insert(user);
+            try {
+                memberService.createMember(user.getId());
+            } catch (Exception e) {
+                log.warn("创建微信开发用户会员信息失败: userId={}", user.getId(), e);
+            }
+        }
+        if ("disabled".equals(user.getStatus())) {
+            throw new BusinessException("账号已被禁用");
+        }
+        return issueToken(user);
+    }
+
+    @Override
+    public void resetPasswordDev(String username, String newPassword) {
+        if (username == null || username.isBlank() || newPassword == null || newPassword.length() < 6) {
+            throw new BusinessException("账号或新密码格式不正确");
+        }
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getUsername, username.trim());
+        User user = userMapper.selectOne(wrapper);
+        if (user == null) {
+            throw new BusinessException("账号不存在");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setTokenVersion((user.getTokenVersion() == null ? 0 : user.getTokenVersion()) + 1);
+        userMapper.updateById(user);
+        clearUserSessions(user.getId());
+    }
+
+    private String issueToken(User user) {
         String token = JwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole(), user.getTokenVersion());
         try {
             // 强制单会话：先按 userId 清理历史会话键（兼容旧版本遗留键）

@@ -30,7 +30,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onHide, onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { getOrderDetail } from '@/api/order'
 import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
@@ -40,20 +40,35 @@ const order = ref(null)
 const loading = ref(true)
 const errorMessage = ref('')
 const statusTitle = computed(() => ['cancelled', 'canceled'].includes(String(order.value?.status).toLowerCase()) ? '订单已取消' : '下单成功')
+const normalizedStatus = computed(() => String(order.value?.status || '').toLowerCase())
+let pollTimer = null
 
 onLoad(options => { orderId.value = options.orderId || options.id || ''; loadOrder() })
+onShow(startPolling)
+onHide(stopPolling)
+onUnload(stopPolling)
 
-async function loadOrder() {
+async function loadOrder(silent = false) {
   if (!orderId.value) { loading.value = false; errorMessage.value = '缺少订单编号，请前往订单列表查看'; return }
-  loading.value = true
+  if (!silent) loading.value = true
   errorMessage.value = ''
   try {
     const response = await getOrderDetail(orderId.value)
     order.value = response?.data ?? response
   } catch (error) {
     errorMessage.value = error?.message || '暂时无法读取订单详情，可前往订单列表查看'
-  } finally { loading.value = false }
+  } finally { if (!silent) loading.value = false }
 }
+
+function startPolling() {
+  stopPolling()
+  if (!orderId.value) return
+  pollTimer = setInterval(() => {
+    if (!['completed', 'cancelled', 'canceled'].includes(normalizedStatus.value)) loadOrder(true)
+    else stopPolling()
+  }, 3000)
+}
+function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
 
 function statusText(status) { return ({ pending: '待接单', pending_payment: '待处理', preparing: '制作中', processing: '制作中', completed: '已完成', cancelled: '已取消' })[String(status || '').toLowerCase()] || '已提交' }
 function money(value) { return Number(value || 0).toFixed(2) }

@@ -15,6 +15,8 @@ import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/order")
@@ -29,6 +31,34 @@ public class OrderController {
     @GetMapping("/products")
     public Result<List<CoffeeProductDTO>> listProducts() {
         return Result.success(orderService.listCoffeeProducts());
+    }
+
+    @GetMapping("/products/search")
+    public Result<List<CoffeeProductDTO>> searchProducts(@RequestParam String q) {
+        String keyword = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
+        if (keyword.isEmpty()) {
+            return Result.success(List.of());
+        }
+        List<CoffeeProductDTO> matches = orderService.listCoffeeProducts().stream()
+                .filter(product -> containsIgnoreCase(product.getName(), keyword)
+                        || containsIgnoreCase(product.getDescription(), keyword)
+                        || containsIgnoreCase(product.getCategory(), keyword))
+                .limit(50)
+                .toList();
+        return Result.success(matches);
+    }
+
+    @GetMapping("/banners")
+    public Result<List<Map<String, Object>>> listBanners() {
+        return Result.success(List.of(
+                Map.of("id", 1, "image", "/static/images/banner1.png", "title", "今日咖啡推荐", "target", "/pages/menu/menu"),
+                Map.of("id", 2, "image", "/static/images/banner2.png", "title", "会员积分好礼", "target", "/pages/mall/index"),
+                Map.of("id", 3, "image", "/static/images/banner3.png", "title", "每日签到", "target", "/pages/signin/index")
+        ));
+    }
+
+    private boolean containsIgnoreCase(String source, String keyword) {
+        return source != null && source.toLowerCase(Locale.ROOT).contains(keyword);
     }
 
     @GetMapping("/products/{id}")

@@ -9,8 +9,12 @@ export const login = (data) => {
     return post('/auth/login', data)
 }
 
-export const exchangeWechatSession = (code) => {
-    return post('/auth/wechat/session', { code })
+export const exchangeWechatSession = (code, deviceId) => {
+    return post('/auth/wechat/session', { code, deviceId })
+}
+
+export const resetPasswordDev = (username, newPassword) => {
+    return post('/auth/password/reset-dev', { username, newPassword })
 }
 
 export const getCurrentSession = () => {

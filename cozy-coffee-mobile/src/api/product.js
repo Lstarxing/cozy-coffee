@@ -12,6 +12,10 @@ export const getCoffeeProducts = () => {
     return get('/order/products')
 }
 
+export const searchCoffeeProducts = (keyword) => {
+    return get('/order/products/search', { q: keyword })
+}
+
 // 获取菜单数据 (分类+商品) - 同上
 export const getMenuData = () => {
     return get('/order/products')
@@ -34,7 +38,7 @@ export const getRecommendProducts = () => {
 // 前端 index.vue 会 fallback 到 defaultBanners，不会影响用户体验。
 // 后端补充接口后，将 Promise.resolve 改为 return get('/order/banners')。
 export const getBanners = () => {
-    return Promise.resolve({ code: 200, data: [] })
+    return get('/order/banners')
 }
 
 // ==================== 积分商城商品 ====================

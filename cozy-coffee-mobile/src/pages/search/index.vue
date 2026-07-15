@@ -90,7 +90,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { getCoffeeProducts } from '@/api/product'
+import { searchCoffeeProducts } from '@/api/product'
 
 const keyword = ref('')
 const hasSearched = ref(false)
@@ -98,39 +98,20 @@ const searchResults = ref([])
 const searchHistory = ref(['拿铁', '美式', '生椰'])
 const hotKeywords = ref(['拿铁', '美式咖啡', '生椰拿铁', '卡布奇诺', '摩卡', '茉莉奶绿'])
 
-// 所有商品数据
-const allProducts = ref([])
-
-// TODO(backend): 当前搜索在前端全量数据中 filter，商品超过 100 个时会有性能问题
-// 且不支持拼音/模糊匹配。后端应提供 /order/products/search?q=xxx 接口，
-// 改为服务端搜索后再移除 loadProducts 的全量加载。
-const loadProducts = async () => {
-  try {
-    const res = await getCoffeeProducts()
-    if (res.code === 200 && res.data) {
-      allProducts.value = res.data.map(p => ({
-        ...p,
-        image: p.imageUrl || p.image || '/static/images/default-product.png'
-      }))
-    }
-  } catch (e) {
-    console.error('加载搜索商品失败', e)
-  }
-}
-loadProducts()
-
 // 执行搜索
-const doSearch = () => {
+const doSearch = async () => {
   if (!keyword.value.trim()) return
-  
   hasSearched.value = true
-  
-  // 匹配商品名称或描述
-  const kw = keyword.value.toLowerCase()
-  searchResults.value = allProducts.value.filter(p => 
-    p.name.toLowerCase().includes(kw) || 
-    (p.description && p.description.toLowerCase().includes(kw))
-  )
+  try {
+    const res = await searchCoffeeProducts(keyword.value.trim())
+    searchResults.value = (res.data || []).map(p => ({
+      ...p,
+      image: p.imageUrl || p.image || '/static/images/default-product.png'
+    }))
+  } catch (error) {
+    searchResults.value = []
+    uni.showToast({ title: error?.message || '搜索失败，请重试', icon: 'none' })
+  }
   
   // 添加到历史记录
   if (!searchHistory.value.includes(keyword.value)) {

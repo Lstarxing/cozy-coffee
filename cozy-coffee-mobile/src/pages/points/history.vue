@@ -43,6 +43,11 @@
     
     <!-- 流水列表 -->
     <view class="history-list">
+      <view class="load-state" v-if="loading">正在加载积分记录…</view>
+      <view class="load-state error" v-else-if="errorMessage">
+        <text>{{ errorMessage }}</text>
+        <button class="retry-button" @click="loadHistory">重新加载</button>
+      </view>
       <view class="history-item" v-for="item in filteredHistory" :key="item.id">
         <view class="item-left">
           <text class="item-desc">{{ item.description }}</text>
@@ -57,7 +62,7 @@
       </view>
       
       <!-- 空状态 -->
-      <view class="empty-state" v-if="filteredHistory.length === 0">
+      <view class="empty-state" v-if="!loading && !errorMessage && filteredHistory.length === 0">
         <text class="empty-icon">📊</text>
         <text class="empty-text">暂无积分记录</text>
       </view>
@@ -84,8 +89,12 @@ const memberInfo = computed(() => userStore.memberInfo)
 
 const filterType = ref('all')
 const historyList = ref([])
+const loading = ref(false)
+const errorMessage = ref('')
 
-onMounted(async () => {
+const loadHistory = async () => {
+  loading.value = true
+  errorMessage.value = ''
   // 刷新会员信息
   try {
     const memberRes = await getMemberInfo()
@@ -93,7 +102,7 @@ onMounted(async () => {
       userStore.setMemberInfo(memberRes.data)
     }
   } catch (e) {
-    console.error('获取会员信息失败', e)
+    errorMessage.value = e?.message || '会员积分加载失败'
   }
   
   // 获取积分流水
@@ -111,14 +120,14 @@ onMounted(async () => {
       }))
     }
   } catch (e) {
-    console.error('获取积分流水失败', e)
-    // 降级 Mock 数据
-    historyList.value = [
-      { id: 1, description: '每日签到', createTime: '2026-01-02 10:00', amount: 10, balance: 1590, type: 'earn' },
-      { id: 2, description: '消费获积分', createTime: '2026-01-01 14:30', amount: 32, balance: 1580, type: 'earn' }
-    ]
+    historyList.value = []
+    errorMessage.value = e?.message || '积分记录加载失败'
+  } finally {
+    loading.value = false
   }
-})
+}
+
+onMounted(loadHistory)
 
 const filteredHistory = computed(() => {
   if (filterType.value === 'all') {
@@ -188,6 +197,10 @@ const filteredHistory = computed(() => {
 .history-list {
   padding: $spacing-md;
 }
+
+.load-state { padding: 80rpx 20rpx; color: $cozy-muted; text-align: center; }
+.load-state text { display: block; }
+.retry-button { width: 220rpx; margin-top: 24rpx; border-radius: 40rpx; background: $cozy-primary; color: #fff; font-size: 24rpx; }
 
 .history-item {
   display: flex;

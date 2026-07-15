@@ -79,8 +79,12 @@
 import { ref, computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { login, getUserInfo } from '@/api/auth'
+import { useSessionStore } from '@/stores/session'
+import { SessionService } from '@/services/session/SessionService'
 
 const userStore = useUserStore()
+const sessionStore = useSessionStore()
+const sessionService = new SessionService({ sessionStore })
 
 const phone = ref('')
 const password = ref('')
@@ -153,24 +157,25 @@ const handleLogin = async () => {
 }
 
 // 微信登录
-const handleWechatLogin = () => {
+const handleWechatLogin = async () => {
   if (!agreeTerms.value) {
     uni.showToast({ title: '请先阅读并同意协议', icon: 'none' })
     return
   }
   
   // #ifdef MP-WEIXIN
-  uni.getUserProfile({
-    desc: '用于完善用户资料',
-    success: (res) => {
-      console.log('微信用户信息', res)
-      // 这里应该调用后端接口进行微信登录
-      uni.showToast({ title: '微信登录成功', icon: 'success' })
-    },
-    fail: (err) => {
-      console.log('获取用户信息失败', err)
-    }
-  })
+  try {
+    isLoading.value = true
+    await sessionService.establishSilentSession()
+    const userRes = await getUserInfo()
+    sessionStore.setLoginInfo(sessionStore.token, userRes.data || {})
+    uni.showToast({ title: '微信开发登录成功', icon: 'success' })
+    setTimeout(() => uni.switchTab({ url: '/pages/index/index' }), 500)
+  } catch (error) {
+    uni.showToast({ title: error?.message || '微信登录失败', icon: 'none' })
+  } finally {
+    isLoading.value = false
+  }
   // #endif
   
   // #ifdef H5
@@ -183,7 +188,7 @@ const goToRegister = () => {
 }
 
 const goToForget = () => {
-  uni.showToast({ title: '找回密码功能开发中', icon: 'none' })
+  uni.navigateTo({ url: '/pages/login/reset' })
 }
 </script>
 

@@ -12,6 +12,15 @@ function requestWechatCode() {
   })
 }
 
+function getDevDeviceId() {
+  let deviceId = uni.getStorageSync('cozy_wechat_dev_device_id')
+  if (!deviceId) {
+    deviceId = `device_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+    uni.setStorageSync('cozy_wechat_dev_device_id', deviceId)
+  }
+  return deviceId
+}
+
 export class SessionService {
   constructor({ sessionStore, authApi = { exchangeWechatSession, getCurrentSession }, logger = Logger } = {}) {
     this.sessionStore = sessionStore
@@ -43,7 +52,7 @@ export class SessionService {
     // #endif
 
     if (!code) return false
-    const response = await this.authApi.exchangeWechatSession(code)
+    const response = await this.authApi.exchangeWechatSession(code, getDevDeviceId())
     const data = response?.data || response
     if (!data?.token) throw new AuthError('后端未返回登录凭证', { code: 'SESSION_TOKEN_MISSING' })
     this.sessionStore.setLoginInfo(data.token, data.user || data.userInfo || {})

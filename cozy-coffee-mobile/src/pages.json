@@ -57,6 +57,12 @@
             }
         },
         {
+            "path": "pages/login/reset",
+            "style": {
+                "navigationBarTitleText": "重置密码"
+            }
+        },
+        {
             "path": "pages/coupon/list",
             "style": {
                 "navigationBarTitleText": "优惠券"
