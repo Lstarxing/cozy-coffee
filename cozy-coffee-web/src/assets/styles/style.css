@@ -1,5 +1,28 @@
 /* 1. 全局变量和基础设置 */
 :root {
+    /* Warm Reserve：仅供首页与重构后的共享组件使用 */
+    --cozy-bg: oklch(1 0 0);
+    --cozy-surface: oklch(0.97 0.003 42);
+    --cozy-primary: oklch(0.42 0.09 42);
+    --cozy-primary-hover: oklch(0.35 0.08 42);
+    --cozy-on-primary: oklch(0.98 0 0);
+    --cozy-accent: oklch(0.50 0.07 135);
+    --cozy-accent-soft: oklch(0.92 0.03 135);
+    --cozy-on-accent: oklch(0.98 0 0);
+    --cozy-ink: oklch(0.17 0.008 42);
+    --cozy-muted: oklch(0.46 0.008 42);
+    --cozy-surface-alt: oklch(0.25 0.025 42);
+    --cozy-border: oklch(0.89 0.004 42);
+    --cozy-on-surface-alt: oklch(0.98 0 0);
+    --cozy-muted-on-alt: oklch(0.78 0.01 42);
+    --cozy-border-on-alt: oklch(0.98 0 0 / 0.16);
+    --cozy-accent-on-alt: oklch(0.53 0.07 135);
+    --cozy-cta-alt-bg: oklch(0.95 0.002 42);
+    --cozy-cta-alt-text: oklch(0.30 0.05 42);
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+    --nav-height: 70px;
+
+    /* 旧页面仍依赖以下变量，禁止改值 */
     --primary-color: #7C5CFC;
     --text-color: #000000;
     --border-color: #E5E5E5;
@@ -11,7 +34,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-sans);
     scroll-behavior: smooth;
 }
 
@@ -1480,9 +1503,7 @@ h1 {
 
 .level-card.black .level-header h3,
 .level-card.black .level-header .sub-name {
-    background: linear-gradient(to right, #FFF59D, #FBC02D, #F57F17);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #FFD54F;
     text-shadow: 0 2px 10px rgba(253, 216, 53, 0.2);
 }
 
@@ -1724,21 +1745,6 @@ h1 {
 }
 
 
-
-.bean-source {
-    background-image: linear-gradient(rgb(255, 255, 255), rgb(138 138 138)),
-        url('../images/backgrounds/coffee-beans.jpg');
-}
-
-.craftsmanship {
-    background-image: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)),
-        url('../images/backgrounds/coffee-making.jpg');
-}
-
-.quality {
-    background-image: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)),
-        url('../images/backgrounds/quality-control.jpg');
-}
 
 /* 获奖海报部分样式 */
 .prize-section {
