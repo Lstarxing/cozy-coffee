@@ -2,68 +2,56 @@
   <main class="warm-home">
     <section id="home" class="warm-hero" aria-labelledby="hero-title">
       <picture class="warm-hero__media">
-        <source
-          type="image/avif"
-          srcset="/images/hero/hero-720.avif 720w, /images/hero/hero-1080.avif 1080w, /images/hero/hero-1440.avif 1440w, /images/hero/hero-1920.avif 1920w"
-          sizes="100vw"
-        >
-        <source
-          type="image/webp"
-          srcset="/images/hero/hero-720.webp 720w, /images/hero/hero-1080.webp 1080w, /images/hero/hero-1440.webp 1440w, /images/hero/hero-1920.webp 1920w"
-          sizes="100vw"
-        >
         <img
-          src="/images/hero/hero-1440.jpg"
-          srcset="/images/hero/hero-720.jpg 720w, /images/hero/hero-1080.jpg 1080w, /images/hero/hero-1440.jpg 1440w, /images/hero/hero-1920.jpg 1920w"
-          sizes="100vw"
-          alt="咖啡师将细腻奶泡注入新鲜萃取的咖啡"
+          src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/hero-geography-journal-20260716.png"
+          alt="阳光下的 Cozy Coffee 拿铁与杭州烘焙名片"
           fetchpriority="high"
-          width="1440"
-          height="900"
+          width="2880"
+          height="1093"
           @error="handleImageError"
         >
       </picture>
       <div class="warm-hero__scrim" aria-hidden="true"></div>
       <div class="warm-shell warm-hero__content">
-        <h1 id="hero-title">把产地的风味，<br>留在这一杯里</h1>
-        <p>全球八处产区 ｜ 小批次新鲜烘焙</p>
+        <h1 id="hero-title">循着风味<br>翻开地理日志</h1>
+        <p>从世界八大产区，到杭州匠心烘焙<br>每一杯，都是一次穿越土地的风味重述。</p>
         <div class="warm-hero__actions">
-          <a class="warm-button warm-button--primary" href="#menu">查看菜单</a>
-          <a class="warm-text-link warm-text-link--light" href="#membership">会员如何回馈每一杯 →</a>
+          <a class="warm-button warm-button--primary" href="#origins">探索产地风味之旅 <span aria-hidden="true">⟶</span></a>
         </div>
       </div>
     </section>
 
     <OriginsJourney />
 
-    <section id="menu" class="warm-section warm-menu" aria-labelledby="menu-title">
-      <div class="warm-shell">
-        <header class="warm-section__header warm-section__header--split">
-          <div>
-            <h2 id="menu-title">今天，想喝哪一杯</h2>
-            <p>六种熟悉的表达，各自保留豆子的清晰个性。</p>
-          </div>
-          <router-link class="warm-text-link" to="/member/order">浏览完整菜单 →</router-link>
-        </header>
+    <EditorialMenu :products="menuItems" :flavor-routes="flavorRoutes" @image-error="handleImageError" />
 
-        <div class="menu-grid" role="list">
-          <article v-for="item in menuItems" :key="item.name" class="menu-product" role="listitem">
-            <div class="menu-product__image image-frame">
-              <img :src="item.image" :alt="item.alt" loading="lazy" width="720" height="600" @error="handleImageError">
-            </div>
-            <div class="menu-product__heading">
-              <h3>{{ item.name }}</h3>
-              <strong>{{ item.price }}</strong>
-            </div>
-            <p class="menu-product__flavor">{{ item.flavor }}</p>
-            <router-link class="menu-product__action" to="/member/order" :aria-label="`点单：${item.name}`">去点单 →</router-link>
-          </article>
-        </div>
-
-        <aside class="award-proof" aria-label="品牌获奖信息">
-          <p><strong>连续 5 年 IIAC 金奖</strong><span>从选豆、烘焙到出品，以稳定兑现每一杯的品质。</span></p>
-        </aside>
-        <p class="warm-transition">选好这一杯，也开始记录下一杯。</p>
+    <section class="honor-banner" aria-labelledby="honor-banner-title">
+      <picture class="honor-banner__media" aria-hidden="true">
+        <source
+          type="image/avif"
+          srcset="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-768.avif 768w, https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1440.avif 1440w, https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1920.avif 1920w"
+          sizes="(min-width: 1716px) 1716px, 100vw"
+        >
+        <source
+          type="image/webp"
+          srcset="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-768.webp 768w, https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1440.webp 1440w, https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1920.webp 1920w"
+          sizes="(min-width: 1716px) 1716px, 100vw"
+        >
+        <img
+          src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1440.jpg"
+          srcset="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-768.jpg 768w, https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1440.jpg 1440w, https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1920.jpg 1920w"
+          sizes="(min-width: 1716px) 1716px, 100vw"
+          alt="Cozy Coffee 连续五年获得 IIAC 金奖"
+          loading="lazy"
+          width="4096"
+          height="928"
+        >
+      </picture>
+      <div class="honor-banner__scrim" aria-hidden="true"></div>
+      <div class="warm-shell honor-banner__content">
+        <h2 id="honor-banner-title">荣誉与坚持</h2>
+        <p>连续 5 年 IIAC 金奖认可，源自对品质的执着。</p>
+        <router-link class="honor-banner__link" to="/about">了解我们的坚持 <span aria-hidden="true">→</span></router-link>
       </div>
     </section>
 
@@ -170,7 +158,9 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getMemberInfo, getMonthlyTask } from '@/api/member'
 import OriginsJourney from '@/components/home/OriginsJourney.vue'
+import EditorialMenu from '@/components/home/EditorialMenu.vue'
 import { useUserStore } from '@/stores/user'
+import { HOME_FLAVOR_ROUTES, HOME_MENU_PRODUCTS } from '@/data/homeMenu'
 import {
   calculateEarnedPoints,
   calculateProgress,
@@ -186,14 +176,8 @@ const isMobile = ref(false)
 let mediaQuery = null
 let disposed = false
 
-const menuItems = [
-  { name: '美式咖啡', price: '¥18', flavor: '黑巧克力、烤坚果，收口干净。', image: '/images/cafe1.png', alt: '盛在玻璃杯中的冰美式咖啡' },
-  { name: '原味拿铁', price: '¥25', flavor: '焦糖甜感与柔和奶香，圆润平衡。', image: '/images/cafe2.jpg', alt: '带细腻奶泡的原味拿铁' },
-  { name: '卡布奇诺', price: '¥30', flavor: '浓缩、热奶与奶泡比例清晰。', image: '/images/cafe3.jpg', alt: '撒有可可粉的卡布奇诺' },
-  { name: '摩卡咖啡', price: '¥30', flavor: '可可香气托住深烘咖啡的厚度。', image: '/images/cafe4.jpg', alt: '巧克力风味的摩卡咖啡' },
-  { name: '抹茶拿铁', price: '¥30', flavor: '茶感鲜明，奶香克制，微苦回甘。', image: '/images/cafe5.jpg', alt: '绿色抹茶与牛奶调制的抹茶拿铁' },
-  { name: '生椰拿铁', price: '¥28', flavor: '清爽椰香与浓缩咖啡自然衔接。', image: '/images/cafe6.jpg', alt: '分层呈现的生椰拿铁' }
-]
+const menuItems = HOME_MENU_PRODUCTS
+const flavorRoutes = HOME_FLAVOR_ROUTES
 
 const levels = [
   { key: 'basic', name: '基础 Classic', threshold: '0 EXP', rate: '1.0×', discount: '—', benefit: '周五额外 +0.5× 积分' },
@@ -300,7 +284,7 @@ onUnmounted(() => {
 }
 
 .warm-shell {
-  width: min(1180px, calc(100% - 48px));
+  width: min(var(--content-max), calc(100% - var(--content-gutter) - var(--content-gutter)));
   margin-inline: auto;
 }
 
@@ -315,13 +299,14 @@ onUnmounted(() => {
 
 .warm-hero {
   position: relative;
-  height: 70svh;
-  min-height: min(560px, calc(100svh - var(--nav-height)));
-  max-height: 760px;
+  height: clamp(560px, 37vw, 640px);
+  min-height: 540px;
+  max-height: calc(100svh - var(--nav-height));
   display: grid;
-  align-items: end;
+  align-items: center;
   isolation: isolate;
   overflow: hidden;
+  background: #eee1d2;
 }
 
 .warm-hero__media,
@@ -335,19 +320,23 @@ onUnmounted(() => {
 
 .warm-hero__media img {
   object-fit: cover;
-  object-position: center 56%;
+  object-position: center;
 }
 
 .warm-hero__scrim {
   z-index: 1;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.64));
+  background: transparent;
 }
 
 .warm-hero__content {
   position: relative;
   z-index: 2;
-  color: white;
-  padding-block: 64px;
+  align-self: center;
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: clamp(72px, 6.25vw, 120px);
+  color: #402417;
+  transform: translateY(20px);
   animation: warm-fade 700ms ease-out both;
 }
 
@@ -360,16 +349,26 @@ onUnmounted(() => {
 }
 
 .warm-hero h1 {
-  max-width: 9.5em;
-  font-size: clamp(2.75rem, 6vw, 5rem);
-  line-height: 1.08;
-  color: var(--cozy-on-surface-alt);
+  max-width: 480px;
+  color: #3a2415;
+  font-family: var(--font-display);
+  font-size: clamp(3.25rem, 3.2vw, 4rem);
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: 0.01em;
+  text-align: left;
+  text-wrap: balance;
 }
 
 .warm-hero__content > p {
+  max-width: 23em;
   margin: 24px 0 0;
-  font-size: clamp(1rem, 1.5vw, 1.125rem);
-  line-height: 1.7;
+  color: #684331;
+  font-family: var(--font-sans);
+  font-size: clamp(0.98rem, 1.08vw, 1.0625rem);
+  font-weight: 400;
+  line-height: 1.72;
+  letter-spacing: 0.025em;
 }
 
 .warm-hero__actions,
@@ -382,8 +381,7 @@ onUnmounted(() => {
 }
 
 .warm-button,
-.warm-text-link,
-.menu-product__action {
+.warm-text-link {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -407,6 +405,36 @@ onUnmounted(() => {
 
 .warm-button--primary:hover { background: var(--cozy-primary-hover); }
 
+.warm-hero__actions {
+  margin-top: 36px;
+}
+
+.warm-hero__actions .warm-button--primary {
+  min-height: 52px;
+  gap: 18px;
+  padding: 13px 26px;
+  border-radius: 5px;
+  background: #8B5334;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.035em;
+  transition: background .25s ease, transform .25s ease, box-shadow .25s ease;
+}
+
+.warm-hero__actions .warm-button--primary:hover {
+  background: #74452B;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(58, 36, 21, .12);
+}
+
+.warm-hero__actions .warm-button--primary span {
+  font-size: 19px;
+  font-weight: 300;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
 .warm-button--inverse {
   color: var(--cozy-cta-alt-text);
   background: var(--cozy-cta-alt-bg);
@@ -422,38 +450,45 @@ onUnmounted(() => {
 .warm-text-link--light:hover { text-decoration: underline; text-underline-offset: 5px; }
 .warm-text-link--light { color: var(--cozy-on-surface-alt); }
 
-.warm-section { padding-block: 128px; }
-.warm-section__header { max-width: 720px; margin-bottom: 64px; }
-.warm-section__header--split { max-width: none; display: flex; align-items: end; justify-content: space-between; gap: 32px; }
-.warm-section h2,
 .warm-membership h2 { font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1.15; }
-.warm-section__header p,
 .membership-header p { max-width: 34em; margin: 20px 0 0; color: var(--cozy-muted); font-size: 17px; line-height: 1.75; }
 
 .image-frame { background: var(--cozy-surface); overflow: hidden; }
 .image-frame img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .image-frame img.image-fallback { filter: saturate(0.55); }
 
-.warm-transition { margin: 96px 0 0; font-size: clamp(1.45rem, 2.7vw, 2.25rem); line-height: 1.5; text-align: center; }
-
-.warm-menu { background: var(--cozy-surface); }
-.menu-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 56px 24px; }
-.menu-product { min-width: 0; }
-.menu-product__image { aspect-ratio: 6 / 5; border-radius: 8px; }
-.menu-product__image img { transition: transform 300ms ease; }
-.menu-product:hover .menu-product__image img,
-.menu-product:focus-within .menu-product__image img { transform: scale(1.025); }
-.menu-product__heading { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-top: 20px; }
-.menu-product__heading h3 { margin: 0; font-size: 1.2rem; font-weight: 600; }
-.menu-product__heading strong { white-space: nowrap; font-size: 1.05rem; }
-.menu-product__flavor { min-height: 3.4em; margin: 10px 0 0; color: var(--cozy-muted); line-height: 1.7; opacity: 0.74; transition: opacity 200ms ease; }
-.menu-product:hover .menu-product__flavor,
-.menu-product:focus-within .menu-product__flavor { opacity: 1; }
-.menu-product__action { justify-content: flex-start; margin-top: 8px; color: var(--cozy-primary); }
-.menu-product__action:hover { text-decoration: underline; text-underline-offset: 5px; }
-.award-proof { margin-top: 96px; padding-block: 24px; border-block: 1px solid var(--cozy-border); }
-.award-proof p { display: flex; align-items: baseline; justify-content: center; gap: 20px 32px; margin: 0; color: var(--cozy-muted); line-height: 1.7; }
-.award-proof strong { color: var(--cozy-ink); font-size: 1.15rem; }
+.honor-banner {
+  position: relative;
+  width: 100%;
+  min-height: 333px;
+  margin-inline: 0;
+  display: grid;
+  align-items: start;
+  isolation: isolate;
+  overflow: hidden;
+  color: #f1d3a3;
+  background: #1d1009;
+}
+.honor-banner__media,
+.honor-banner__media img,
+.honor-banner__scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.honor-banner__media,
+.honor-banner__scrim {
+  width: min(100%, 1716px);
+  margin-inline: auto;
+}
+.honor-banner__media img { display: block; object-fit: cover; object-position: center; }
+.honor-banner__scrim { z-index: 1; background: linear-gradient(90deg, rgba(19, 10, 6, .26), rgba(19, 10, 6, .08) 42%, transparent 60%); }
+.honor-banner__content { position: relative; z-index: 2; align-self: center; width: min(100%, 1716px); margin-inline: auto; padding: 0 clamp(32px, 6.5vw, 112px); }
+.honor-banner h2 { margin: 0; color: #e8c99a; font-family: var(--font-display); font-size: clamp(2.25rem, 3.1vw, 3.125rem); line-height: 1.2; font-weight: 500; letter-spacing: 0.05em; text-align: left; text-wrap: balance; }
+.honor-banner__content p { max-width: 28em; margin: 23px 0 0; color: #f4e7d3; font-size: clamp(1rem, 1.15vw, 1.22rem); line-height: 1.6; letter-spacing: 0.05em; }
+.honor-banner__link { min-height: 56px; display: inline-flex; align-items: center; gap: 12px; margin-top: 28px; padding: 13px 46px; border: 1px solid rgba(232, 201, 154, .72); border-radius: 999px; color: #f3d7aa; font-size: 17px; font-weight: 400; text-decoration: none; transition: color .22s ease, background .22s ease, border-color .22s ease; }
+.honor-banner__link:hover { color: #24140b; border-color: #f0cf9d; background: #f0cf9d; }
 
 .warm-membership { min-height: 620px; padding-block: 128px; color: var(--cozy-on-surface-alt); background: var(--cozy-surface-alt); }
 .membership-shell { min-height: 360px; }
@@ -518,44 +553,40 @@ onUnmounted(() => {
 
 @keyframes warm-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes warm-pulse { from { opacity: .45; } to { opacity: 1; } }
-
 @media (max-width: 960px) {
-  .warm-section,
   .warm-membership { padding-block: 96px; }
-  .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .membership-story { grid-template-columns: 1fr 1fr; }
   .member-return { grid-column: 1 / -1; }
 }
 
 @media (max-width: 760px) {
   .warm-shell { width: min(100% - 32px, 620px); }
-  .warm-hero { min-height: min(520px, calc(100svh - var(--nav-height))); }
-  .warm-hero__content { padding-block: 48px; }
-  .warm-section__header--split,
+  .warm-hero { height: min(620px, calc(100svh - var(--nav-height))); min-height: 520px; align-items: start; }
+  .warm-hero__media img { object-position: 66% center; }
+  .warm-hero__scrim { background: linear-gradient(90deg, rgba(249, 241, 231, .92) 0%, rgba(249, 241, 231, .66) 48%, rgba(249, 241, 231, .08) 82%); }
+  .warm-shell.warm-hero__content,
+  .warm-shell.honor-banner__content { width: 100%; margin-inline: 0; padding-inline: 16px; }
+  .warm-hero__content { align-self: start; padding-block: 48px; transform: none; }
+  .warm-hero h1 { max-width: 10em; font-size: clamp(2.5rem, 11vw, 3rem); line-height: 1.2; }
+  .warm-hero__content > p { max-width: 21em; color: #684331; }
   .membership-header { align-items: flex-start; flex-direction: column; }
   .membership-header .membership-kicker { text-align: left; }
-  .warm-transition { margin-top: 72px; text-align: left; }
-  .award-proof p { align-items: flex-start; flex-direction: column; }
+  .honor-banner { min-height: 430px; align-items: start; }
+  .honor-banner__media img { object-position: 66% center; }
+  .honor-banner__scrim { background: linear-gradient(90deg, rgba(20, 10, 6, .94) 0%, rgba(20, 10, 6, .72) 55%, rgba(20, 10, 6, .12) 100%); }
+  .honor-banner__content { align-self: start; padding-block: 48px; }
   .membership-story { grid-template-columns: 1fr; gap: 40px; }
   .member-return { grid-column: auto; }
 }
 
 @media (max-width: 560px) {
-  .warm-section,
   .warm-membership { padding-block: 64px; }
-  .warm-section__header { margin-bottom: 48px; }
-  .menu-grid { grid-template-columns: 1fr; gap: 48px; }
-  .menu-product__flavor { min-height: 0; opacity: 1; }
   .warm-hero__actions,
   .membership-actions { align-items: stretch; flex-direction: column; }
-  .warm-hero__actions .warm-button,
+  .warm-hero__actions { align-items: flex-start; }
+  .warm-hero__actions .warm-button { width: auto; }
   .membership-actions .warm-button { width: 100%; }
   .warm-text-link { justify-content: flex-start; }
-}
-
-@media (hover: none), (pointer: coarse) {
-  .menu-product__flavor { opacity: 1; }
-  .menu-product__action { min-height: 48px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
