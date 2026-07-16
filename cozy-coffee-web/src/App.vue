@@ -24,7 +24,7 @@ watch(
     if (hideNavBar) {
       document.body.style.paddingTop = '0'
     } else {
-      document.body.style.paddingTop = '70px'
+      document.body.style.paddingTop = 'var(--nav-height)'
     }
   },
   { immediate: true }

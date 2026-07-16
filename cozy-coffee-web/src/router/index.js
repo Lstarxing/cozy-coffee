@@ -4,11 +4,29 @@ import { useUserStore } from '@/stores/user'
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     scrollBehavior(to, from, savedPosition) {
+        // 同页 hash 跳转：NavBar 已用原生 scrollIntoView 处理（与 Hero CTA 一致），
+        // router 不参与滚动，否则会回顶覆盖已发生的平滑滚动
+        if (to.hash && to.path === from.path) {
+            return false
+        }
+        // 跨页 hash 跳转（如 /about → /#origins）：等首页组件挂载后再滚
+        if (to.hash && to.path !== from.path) {
+            return new Promise(resolve => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const el = document.querySelector(to.hash)
+                        if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }
+                        resolve(false)
+                    })
+                })
+            })
+        }
         if (savedPosition) {
             return savedPosition
-        } else {
-            return { top: 0 }
         }
+        return { top: 0 }
     },
     routes: [
         {

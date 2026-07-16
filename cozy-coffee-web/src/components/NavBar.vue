@@ -6,11 +6,15 @@
       </router-link>
 
       <div class="site-navbar__links">
-        <router-link to="/">首页</router-link>
-        <a href="/#origins">豆源</a>
-        <a href="/#menu">菜单</a>
-        <a href="/#membership">会员</a>
-        <router-link to="/about">关于我们</router-link>
+        <router-link to="/" :class="{ 'is-active': activeRouteKey === '/' }">首页</router-link>
+        <a
+          v-for="link in sectionLinks"
+          :key="link.to"
+          :href="link.to"
+          :class="{ 'is-active': activeRouteKey === link.to }"
+          @click="handleSectionClick(link.to, $event)"
+        >{{ link.label }}</a>
+        <router-link to="/about" :class="{ 'is-active': activeRouteKey === '/about' }">关于我们</router-link>
       </div>
 
       <div class="site-navbar__actions">
@@ -30,7 +34,7 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
@@ -41,6 +45,45 @@ const isOnDarkSection = ref(false)
 let membershipObserver = null
 let bindTimer = null
 let bindAttempts = 0
+
+// 锚点导航激活判断：按 path + hash 精确匹配，避免 hash URL 被视作同名路由导致多链接同时亮
+// 首页（path='/' 且无 hash）→ '/'；带 hash 的首页 → '/#origins' 等；关于我们 → '/about'
+const activeRouteKey = computed(() => {
+  if (route.path === '/about') return '/about'
+  return `${route.path}${route.hash}`
+})
+
+// 三个 section 锚点（path 均为 '/'，仅 hash 不同）
+const sectionLinks = Object.freeze([
+  { to: '/#origins', label: '豆源' },
+  { to: '/#menu', label: '菜单' },
+  { to: '/#membership', label: '会员' }
+])
+
+// 同页 hash 跳转：与 Hero CTA「<a href="#origins">」行为完全一致 ——
+// 用原生 scrollIntoView 让 scroll-margin-top 生效，绕开 Vue Router 的 el 滚动
+// （后者在某些布局下与 sentinel observer / sticky 容器配合不一致，会落到第一章节而非标题区）。
+// 跨页（如 /about → /#origins）：router.push 到首页，落地后下一帧再 scrollIntoView
+async function handleSectionClick(to, event) {
+  event.preventDefault()
+  const hash = to.slice(to.indexOf('#'))
+  const targetPath = to.slice(0, to.indexOf('#')) || '/'
+
+  if (route.path !== targetPath) {
+    // 跨页：先 push 到首页路由，hash 由 router scrollBehavior 接管
+    await router.push(to)
+    return
+  }
+
+  // 同页：更新 hash（激活态 + 分享链接），再用原生滚动定位
+  if (route.hash !== hash) {
+    router.replace(to)
+  }
+  const el = document.querySelector(hash)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
 
 function disconnectMembershipObserver() {
   membershipObserver?.disconnect()
@@ -113,13 +156,13 @@ onUnmounted(disconnectMembershipObserver)
 }
 
 .site-navbar__inner {
-  width: min(1280px, calc(100% - 48px));
+  width: 100%;
   height: 100%;
-  margin-inline: auto;
+  padding-inline: clamp(24px, 3.9vw, 60px);
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 32px;
+  gap: 40px;
 }
 
 .site-navbar__logo,
@@ -137,29 +180,52 @@ onUnmounted(disconnectMembershipObserver)
 }
 
 .site-navbar__logo img {
-  width: 154px;
-  height: 52px;
+  width: 176px;
+  height: 60px;
   object-fit: contain;
 }
+
+.site-navbar__logo { justify-self: start; }
 
 .site-navbar__links {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-self: center;
+  gap: 28px;
 }
 
 .site-navbar__links a {
-  padding-inline: 12px;
-  font-size: 14px;
-  font-weight: 500;
+  position: relative;
+  padding-inline: 10px;
+  font-size: 16px;
+  font-weight: 550;
+  transition: color 180ms ease;
+}
+
+.site-navbar__links a::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  bottom: 3px;
+  left: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--cozy-primary);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 180ms ease;
 }
 
 .site-navbar__links a:hover,
-.site-navbar__text-action:hover { text-decoration: underline; text-underline-offset: 5px; }
+.site-navbar__links a.is-active,
+.site-navbar__text-action:hover { color: var(--cozy-primary); }
 
-.site-navbar__actions { display: flex; align-items: center; gap: 8px; }
-.site-navbar__text-action { padding-inline: 12px; border: 0; background: transparent; cursor: pointer; font-size: 14px; }
-.site-navbar__button { min-width: 76px; padding: 8px 16px; border-radius: 9px; color: var(--cozy-on-primary); background: var(--cozy-primary); font-size: 14px; }
+.site-navbar__links a:hover::after,
+.site-navbar__links a.is-active::after { transform: scaleX(1); }
+
+.site-navbar__actions { display: flex; align-items: center; justify-self: end; gap: 8px; }
+.site-navbar__text-action { padding-inline: 12px; border: 0; background: transparent; cursor: pointer; font-size: 15px; }
+.site-navbar__button { min-width: 80px; padding: 9px 18px; border-radius: 10px; color: var(--cozy-on-primary); background: var(--cozy-primary); font-size: 15px; }
 .site-navbar__button:hover { background: var(--cozy-primary-hover); }
 .user-greeting { max-width: 112px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -169,7 +235,7 @@ onUnmounted(disconnectMembershipObserver)
 }
 
 @media (max-width: 820px) {
-  .site-navbar__inner { width: min(100% - 32px, 760px); gap: 16px; }
+  .site-navbar__inner { padding-inline: 16px; gap: 16px; }
   .site-navbar__links { display: none; }
   .site-navbar__inner { grid-template-columns: 1fr auto; }
 }
@@ -181,6 +247,8 @@ onUnmounted(disconnectMembershipObserver)
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .site-navbar { transition: none; }
+  .site-navbar,
+  .site-navbar__links a,
+  .site-navbar__links a::after { transition: none; }
 }
 </style>
