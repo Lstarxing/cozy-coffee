@@ -1,7 +1,7 @@
 <template>
   <section class="origins-journey" aria-labelledby="origins-title">
     <div ref="journeyRoot" id="origins" class="origins-layout origins-shell">
-      <div class="origins-left-column">
+      <div ref="leftColumn" class="origins-left-column">
         <div class="origins-heading">
           <h2 id="origins-title">风味从土地开始</h2>
           <p class="origins-slogan">Eight Origins. One Cup.</p>
@@ -21,7 +21,7 @@
               <strong>{{ activeChapter?.type === 'summary' ? 'HANGZHOU' : activeOrigin?.englishName }}</strong>
               <span v-if="activeChapter?.type !== 'summary'">→ 杭州烘焙中心</span>
             </div>
-            <div class="journey-progress__track" aria-hidden="true">
+            <div ref="progressTrack" class="journey-progress__track" aria-hidden="true">
               <span :style="{ '--journey-scale': journeyProgress / 100 }"></span>
             </div>
           </div>
@@ -55,9 +55,15 @@ import { COFFEE_JOURNEY, COFFEE_ORIGINS } from '@/data/coffeeOrigins'
 const activeChapterId = ref(COFFEE_JOURNEY[0].id)
 const visitedOrigins = ref(new Set())
 const journeyRoot = ref(null)
+const leftColumn = ref(null)
+const progressTrack = ref(null)
 const observerSupported = ref(true)
-let chapterObserver = null
-let lastObservedScrollY = 0
+let topSentinelObserver = null
+let bottomSentinelObserver = null
+let layoutResizeObserver = null
+let observerRebuildFrame = null
+let lastScrollY = 0
+let scrollDirection = 'down'
 
 const activeChapter = computed(() =>
   COFFEE_JOURNEY.find(chapter => chapter.id === activeChapterId.value) || COFFEE_JOURNEY[0]
@@ -86,10 +92,78 @@ function resetJourneyForNavigation() {
   activateChapter(COFFEE_JOURNEY[0].id)
 }
 
+function updateScrollDirection() {
+  const delta = window.scrollY - lastScrollY
+  if (Math.abs(delta) >= 2) scrollDirection = delta > 0 ? 'down' : 'up'
+  lastScrollY = window.scrollY
+}
+
+function createSentinelObserver({ lineY, direction }) {
+  const viewportHeight = window.innerHeight
+  const safeLineY = Math.max(1, Math.min(viewportHeight - 2, lineY))
+  const rootMargin = direction === 'down'
+    ? `0px 0px -${viewportHeight - safeLineY}px 0px`
+    : `-${safeLineY}px 0px 0px 0px`
+
+  return new IntersectionObserver(
+    entries => {
+      if (scrollDirection !== direction) return
+
+      const entering = entries.filter(entry => entry.isIntersecting)
+      if (!entering.length) return
+
+      entering.sort((a, b) =>
+        Math.abs(a.boundingClientRect.top - safeLineY) -
+        Math.abs(b.boundingClientRect.top - safeLineY)
+      )
+      activateChapter(entering[0].target.dataset.originId)
+    },
+    {
+      rootMargin,
+      threshold: 0
+    }
+  )
+}
+
+function getProgressTrackLine() {
+  if (!leftColumn.value || !progressTrack.value) return window.innerHeight * 0.82
+
+  const leftRect = leftColumn.value.getBoundingClientRect()
+  const trackRect = progressTrack.value.getBoundingClientRect()
+  const stickyTop = Number.parseFloat(getComputedStyle(leftColumn.value).top) || 0
+
+  return stickyTop + (trackRect.top - leftRect.top)
+}
+
+function rebuildSentinelObservers() {
+  topSentinelObserver?.disconnect()
+  bottomSentinelObserver?.disconnect()
+
+  const topSentinels = journeyRoot.value?.querySelectorAll('[data-origin-sentinel="top"]') || []
+  const bottomSentinels = journeyRoot.value?.querySelectorAll('[data-origin-sentinel="bottom"]') || []
+
+  topSentinelObserver = createSentinelObserver({
+    lineY: window.innerHeight * 0.23,
+    direction: 'down'
+  })
+  bottomSentinelObserver = createSentinelObserver({
+    lineY: getProgressTrackLine(),
+    direction: 'up'
+  })
+
+  topSentinels.forEach(sentinel => topSentinelObserver.observe(sentinel))
+  bottomSentinels.forEach(sentinel => bottomSentinelObserver.observe(sentinel))
+}
+
+function scheduleObserverRebuild() {
+  cancelAnimationFrame(observerRebuildFrame)
+  observerRebuildFrame = requestAnimationFrame(rebuildSentinelObservers)
+}
+
 onMounted(() => {
-  const chapters = journeyRoot.value?.querySelectorAll('[data-origin-id]') || []
-  lastObservedScrollY = window.scrollY
+  lastScrollY = window.scrollY
   window.addEventListener('hashchange', resetJourneyForNavigation)
+  window.addEventListener('scroll', updateScrollDirection, { passive: true })
   if (window.location.hash === '#origins') requestAnimationFrame(resetJourneyForNavigation)
 
   if (!('IntersectionObserver' in window)) {
@@ -97,39 +171,43 @@ onMounted(() => {
     return
   }
 
-  chapterObserver = new IntersectionObserver(
-    entries => {
-      const scrollingDown = window.scrollY >= lastObservedScrollY
-      lastObservedScrollY = window.scrollY
-      const entering = entries.filter(entry => entry.isIntersecting)
-      if (!entering.length) return
+  scheduleObserverRebuild()
+  window.addEventListener('resize', scheduleObserverRebuild)
 
-      entering.sort((a, b) => scrollingDown
-        ? b.boundingClientRect.top - a.boundingClientRect.top
-        : a.boundingClientRect.top - b.boundingClientRect.top
-      )
-      activateChapter(entering[0].target.dataset.originId)
-    },
-    { rootMargin: '-22% 0px -76% 0px', threshold: 0 }
-  )
-  chapters.forEach(chapter => chapterObserver.observe(chapter))
+  if ('ResizeObserver' in window) {
+    layoutResizeObserver = new ResizeObserver(scheduleObserverRebuild)
+    if (leftColumn.value) layoutResizeObserver.observe(leftColumn.value)
+    if (progressTrack.value) layoutResizeObserver.observe(progressTrack.value)
+  }
 })
 
 onUnmounted(() => {
-  chapterObserver?.disconnect()
+  topSentinelObserver?.disconnect()
+  bottomSentinelObserver?.disconnect()
+  layoutResizeObserver?.disconnect()
+  cancelAnimationFrame(observerRebuildFrame)
   window.removeEventListener('hashchange', resetJourneyForNavigation)
+  window.removeEventListener('scroll', updateScrollDirection)
+  window.removeEventListener('resize', scheduleObserverRebuild)
 })
 </script>
 
 <style scoped>
-.origins-journey { padding-block: clamp(80px, 9vw, 128px) 0; background: var(--cozy-bg); color: var(--cozy-ink); }
-.origins-shell { width: min(1320px, calc(100% - 48px)); margin-inline: auto; }
-.origins-left-column { position: sticky; top: calc(var(--nav-height) + 12px); min-width: 0; height: calc(100svh - var(--nav-height) - 24px); align-self: start; display: flex; flex-direction: column; }
+/*
+ * Origins top safe zone:
+ * keep the anchor landing offset and the sticky left-column offset identical.
+ * This preserves the breathing room above "风味从土地开始" while the right
+ * origin chapters continue scrolling independently.
+ */
+.origins-journey { --origins-sticky-gap: clamp(70px, 7vh, 88px); padding-block: clamp(80px, 9vw, 128px) 0; background: var(--cozy-bg); color: var(--cozy-ink); }
+.origins-shell { width: min(var(--content-max), calc(100% - var(--content-gutter) - var(--content-gutter))); margin-inline: auto; }
+.origins-left-column { position: sticky; top: calc(var(--nav-height) + var(--origins-sticky-gap)); min-width: 0; height: calc(100svh - var(--nav-height) - var(--origins-sticky-gap) - 16px); align-self: start; display: flex; flex-direction: column; }
 .origins-heading { max-width: 720px; padding-bottom: 12px; }
-.origins-heading h2 { margin: 0; font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1.15; font-weight: 600; text-wrap: balance; }
+.origins-heading h2 { margin: 0; color: #3a2415; font-size: clamp(2rem, 3vw, 2.5rem); line-height: 1.15; font-weight: 500; text-wrap: balance; }
 .origins-slogan { margin: 8px 0 0; color: var(--cozy-primary); font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
 .origins-heading > p:last-child { max-width: 34em; margin: 8px 0 0; color: var(--cozy-muted); font-size: 17px; line-height: 1.6; text-wrap: pretty; }
-.origins-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(340px, .82fr); gap: 48px; align-items: start; scroll-margin-top: calc(var(--nav-height) + 12px); }
+.origins-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(340px, .82fr); gap: 48px; align-items: start; }
+#origins.origins-layout { scroll-margin-top: calc(var(--nav-height) + var(--origins-sticky-gap)); }
 .origins-map-sticky { min-width: 0; min-height: 0; flex: 0 0 auto; display: flex; flex-direction: column; padding-top: 10px; }
 .origins-map-sticky :deep(.coffee-map) { width: 110%; max-width: none; margin-left: -5%; }
 .journey-progress { margin: 16px 0 0; padding-block: 12px 0; border-top: 1px solid var(--cozy-border); color: var(--cozy-muted); font-size: 12px; }
@@ -142,7 +220,7 @@ onUnmounted(() => {
 .origins-to-menu p { max-width: 21em; margin: 0 auto; color: var(--cozy-primary); font-size: clamp(1.3rem, 2.4vw, 2rem); line-height: 1.45; text-wrap: balance; }
 
 @media (max-width: 820px) {
-  .origins-journey { padding-top: 96px; }
+  .origins-journey { --origins-sticky-gap: 12px; padding-top: 96px; }
   .origins-layout { display: block; width: 100%; }
   .origins-left-column { position: static; height: auto; display: block; }
   .origins-heading { width: min(100% - 32px, 620px); margin-inline: auto; }

@@ -5,6 +5,13 @@
     :data-origin-id="chapter.id"
     :aria-current="active ? 'step' : undefined"
   >
+    <span
+      class="origin-chapter__sentinel origin-chapter__sentinel--top"
+      data-origin-sentinel="top"
+      :data-origin-id="chapter.id"
+      aria-hidden="true"
+    ></span>
+
     <template v-if="chapter.type === 'origin'">
       <p class="origin-counter">{{ number }} / 08 · {{ chapter.englishName }}</p>
       <h3>{{ chapter.name }}</h3>
@@ -31,6 +38,13 @@
         <li v-for="step in chapter.process" :key="step">{{ step }}</li>
       </ol>
     </template>
+
+    <span
+      class="origin-chapter__sentinel origin-chapter__sentinel--bottom"
+      data-origin-sentinel="bottom"
+      :data-origin-id="chapter.id"
+      aria-hidden="true"
+    ></span>
   </article>
 </template>
 
@@ -44,7 +58,10 @@ defineProps({
 </script>
 
 <style scoped>
-.origin-chapter { min-height: calc(100svh - var(--nav-height) - 24px); display: flex; flex-direction: column; justify-content: flex-start; padding: 40px 0 80px; scroll-margin-top: calc(var(--nav-height) + 12px); border-top: 1px solid var(--cozy-border); opacity: .38; transition: opacity .42s ease, border-color .42s ease; }
+.origin-chapter { position: relative; min-height: calc(100svh - var(--nav-height) - 24px); display: flex; flex-direction: column; justify-content: flex-start; padding: 40px 0 80px; scroll-margin-top: calc(var(--nav-height) + 12px); border-top: 1px solid var(--cozy-border); opacity: .38; transition: opacity .42s ease, border-color .42s ease; }
+.origin-chapter__sentinel { position: absolute; left: 0; width: 100%; height: 1px; pointer-events: none; }
+.origin-chapter__sentinel--top { top: 0; }
+.origin-chapter__sentinel--bottom { bottom: 0; }
 .origin-chapter.is-active { border-top: 2px solid var(--cozy-primary); opacity: 1; }
 .origin-chapter.is-static { opacity: 1; }
 .origin-counter { margin: 0 0 24px; color: var(--cozy-muted); font-size: 12px; letter-spacing: .08em; }
