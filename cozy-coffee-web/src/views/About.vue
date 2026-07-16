@@ -1,127 +1,263 @@
 <template>
-  <div class="about-page">
-    <!-- 头部横幅 -->
-    <section class="about-banner">
-        <div class="banner-inner">
-            <img src="/images/banner_about.png" alt="banner">
-        </div>
+  <main class="about-page">
+    <!-- Hero -->
+    <section class="about-hero" aria-labelledby="about-hero-title">
+      <picture class="about-hero__media">
+        <img
+          src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/about/hero-about-20260716.png"
+          alt="Cozy Coffee — 从一颗咖啡豆到一杯被认真对待的咖啡"
+          fetchpriority="high"
+          width="4096"
+          height="1056"
+          @error="handleImageError"
+        >
+      </picture>
+      <div class="about-hero__scrim" aria-hidden="true"></div>
+      <div class="warm-shell about-hero__content">
+        <p class="about-hero__kicker">ABOUT OUR JOURNEY</p>
+        <h1 id="about-hero-title">
+          关于<br>Cozy Coffee
+        </h1>
+        <p class="about-hero__lead">
+          从一颗咖啡豆<br>
+          到一杯被认真对待的咖啡
+        </p>
+        <p class="about-hero__sub">
+          我们记录产地 理解风味<br>
+          也分享每一次人与咖啡相遇
+        </p>
+      </div>
     </section>
 
-    <!-- 品牌使命 -->
-    <section class="brand-mission">
-        <div class="mission-content">
-            <h2>品牌使命</h2>
-            <p>咖熙咖啡总部位于杭州，是中国口碑最好的连锁咖啡品牌。咖熙咖啡以"创造温馨时刻，激发美好生活热望"为使命，充分利用移动互联网和大数据技术的新零售模式，与各领域优质供应商深度合作，打造高品质的消费体验。</p>
-            <p>为顾客创造温馨运时刻，以"创造世界级咖啡品牌，让咖熙成为人们日常生活的一部分"为愿景，围绕"以善为先，求真务实，品质至上，持续创新，非我莫属，互信共赢"核心价值观，咖熙咖啡正在通过产品和服务，努力渗透日常生活每一处，传递美好生活的理念，激发对美好生活的热切期盼。</p>
+    <!-- 我们的故事 —— 为什么开始 -->
+    <section class="about-story" aria-labelledby="story-title">
+      <div class="warm-shell about-story__grid">
+        <div class="about-story__text">
+          <p class="about-eyebrow">OUR BEGINNING</p>
+          <h2 id="story-title">我们为什么开始</h2>
+          <p class="about-story__lead">
+            咖啡不只是提神的饮品。
+          </p>
+          <p>
+            它来自遥远的土地，<br>
+            经过种植、处理、烘焙，<br>
+            最终成为人与人之间的一段时间。
+          </p>
+          <p>
+            Cozy Coffee 希望记录这些<br>
+            关于产地、风味和人的故事。
+          </p>
         </div>
+        <figure class="about-story__media image-frame">
+          <img
+            src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/about/editorial-store.png"
+            alt="Cozy Coffee 门店环境"
+            loading="lazy"
+            width="896"
+            height="1200"
+            @error="handleImageError"
+          >
+        </figure>
+      </div>
     </section>
 
-    <!-- 品牌发展 -->
-    <section class="brand-development">
-        <div class="development-content">
-            <h2>品牌发展</h2>
-            <p>咖熙咖啡自成立以来，始终致力于成为中国领先的咖啡品牌。2024年，我们在全国范围内开设了超过1000家门店，为顾客提供高品质、高性价比的咖啡产品和服务。2024年，我们计划在上海开设首个旗舰店，进一步提升品牌影响力。</p>
-            <p>咖熙咖啡在国际咖啡品鉴大赛中屡获殊荣，其中"SOE耶加雪菲"多次荣获金奖，彰显了我们在咖啡品质上的卓越追求。2022年，我们在云南建立了首个咖啡豆烘焙工厂，采用国际先进技术，年烘焙产能达到1万吨，成为国内领先的智能化烘焙基地。</p>
-        </div>
+    <!-- 从土地，到杯中 -->
+    <section class="about-journey" aria-labelledby="journey-title" ref="journeySection">
+      <div class="warm-shell about-journey__inner">
+        <header class="about-section-head">
+          <p class="about-eyebrow">FROM ORIGIN TO CUP</p>
+          <h2 id="journey-title">从土地，到杯中</h2>
+          <p class="about-section-head__lead">
+            一颗咖啡豆，要走过很远的路，<br>
+            才能成为你面前这一杯。
+          </p>
+        </header>
+        <ol class="about-journey__rail">
+          <li class="about-journey__step">
+            <span class="about-journey__num">01</span>
+            <h3>产地探索</h3>
+            <p class="about-journey__en">Origin</p>
+            <p>走遍世界八大产区，<br>理解每一片土地的风味语言。</p>
+          </li>
+          <li class="about-journey__step">
+            <span class="about-journey__num">02</span>
+            <h3>精选咖啡豆</h3>
+            <p class="about-journey__en">Selection</p>
+            <p>从处理法到批次，<br>只留下值得被记录的那一颗。</p>
+          </li>
+          <li class="about-journey__step">
+            <span class="about-journey__num">03</span>
+            <h3>杭州烘焙</h3>
+            <p class="about-journey__en">Roasting</p>
+            <p>小批量、慢火候，<br>寻找每一支豆子最合适的表达。</p>
+          </li>
+          <li class="about-journey__step">
+            <span class="about-journey__num">04</span>
+            <h3>门店萃取</h3>
+            <p class="about-journey__en">Extraction</p>
+            <p>从研磨到注水，<br>把风味完整地交到你的杯里。</p>
+          </li>
+          <li class="about-journey__step about-journey__step--last">
+            <span class="about-journey__num">05</span>
+            <h3>你的这一杯</h3>
+            <p class="about-journey__en">Your Cup</p>
+            <p>一杯咖啡，<br>连接土地与你的距离。</p>
+          </li>
+        </ol>
+      </div>
     </section>
 
-    <!-- 品牌愿景 -->
-    <section ref="visionSection" class="brand-vision">
-        <div class="vision-content">
-            <h2>品牌愿景</h2>
-            <div class="vision-text-container">
-                <p>2025年，我们将在云南开设首个咖啡鲜果处理厂，采用国际先进的鲜果处理技术，年处理量可达3000吨，进一步优化我们的高品质供应链。我们将继续依托云南的天然优势，打造年产能2万吨的自加工烘焙供应网络，以更快速、精准地响应消费者需求，为全国门店提供更高品质的咖啡豆。</p>
-                <p>咖熙咖啡始终致力于深度整合咖啡垂直供应链，以创新的生产力推动行业品质升级，引领行业高质量可持续发展的新趋势。我们的愿景是成为全球咖啡行业的标杆，为消费者带来无与伦比的咖啡体验。</p>
-            </div>
-            <div class="vision-cards">
-                <div class="vision-item">
-                    <h3>2024年已有</h3>
-                    <div class="counter-wrapper">
-                        <span class="counter" data-val="1000">0</span>
-                        <span>+</span>
-                    </div>
-                    <p>家连锁门店</p>
-                </div>
-                <div class="vision-item">
-                    <h3>2025年目标</h3>
-                    <div class="counter-wrapper">
-                        <span class="counter" data-val="2500">0</span>
-                        <span>+</span>
-                    </div>
-                    <p>全国门店数量</p>
-                </div>
-                <div class="vision-item">
-                    <h3>品质服务</h3>
-                    <div class="counter-wrapper">
-                        <span class="counter" data-val="95">0</span>
-                        <span>%</span>
-                    </div>
-                    <p>顾客好评率</p>
-                </div>
-            </div>
-        </div>
+    <!-- 我们坚持的三件事 -->
+    <section class="about-values" aria-labelledby="values-title">
+      <div class="warm-shell about-values__inner">
+        <header class="about-section-head about-section-head--center">
+          <p class="about-eyebrow">WHAT WE BELIEVE</p>
+          <h2 id="values-title">我们坚持的事情</h2>
+          <p class="about-section-head__lead">
+            不强调规模，只回应每一杯。
+          </p>
+        </header>
+        <ol class="about-values__list">
+          <li class="about-value">
+            <span class="about-value__num">01</span>
+            <h3>Origin</h3>
+            <p class="about-value__zh">尊重每一片土地</p>
+            <p class="about-value__desc">
+              从云南到埃塞俄比亚，记录产地、海拔与处理法，
+              让风味被看清，而不是被盖住。
+            </p>
+          </li>
+          <li class="about-value">
+            <span class="about-value__num">02</span>
+            <h3>Roasting</h3>
+            <p class="about-value__zh">寻找最适合的表达</p>
+            <p class="about-value__desc">
+              不是越深越好。每一次烘焙，
+              都是对风味轮廓的一次重新理解。
+            </p>
+          </li>
+          <li class="about-value">
+            <span class="about-value__num">03</span>
+            <h3>Experience</h3>
+            <p class="about-value__zh">让咖啡成为日常的一部分</p>
+            <p class="about-value__desc">
+              门店不只是取餐点。我们希望它是一个
+              你愿意慢下来、坐一会儿的地方。
+            </p>
+          </li>
+        </ol>
+      </div>
     </section>
-  </div>
+
+    <!-- Behind The Coffee -->
+    <section class="about-behind" aria-labelledby="behind-title">
+      <div class="warm-shell about-behind__inner">
+        <header class="about-section-head">
+          <p class="about-eyebrow">BEHIND THE COFFEE</p>
+          <h2 id="behind-title">咖啡师与烘焙幕后</h2>
+          <p class="about-section-head__lead">
+            每一次烘焙，都是对风味的一次重新理解。
+          </p>
+        </header>
+        <div class="about-behind__grid">
+          <figure class="about-behind__cell image-frame">
+            <img
+              src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/about/editorial-beans-comparison.png"
+              alt="生豆与熟豆对比"
+              loading="lazy"
+              width="896"
+              height="1200"
+              @error="handleImageError"
+            >
+            <figcaption>豆子 · 从生到熟的两次旅途</figcaption>
+          </figure>
+          <figure class="about-behind__cell image-frame">
+            <img
+              src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/about/editorial-cupping.png"
+              alt="杯测桌上的一排咖啡样品"
+              loading="lazy"
+              width="896"
+              height="1200"
+              @error="handleImageError"
+            >
+            <figcaption>杯测 · 听风味的语言</figcaption>
+          </figure>
+          <figure class="about-behind__cell image-frame">
+            <img
+              src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/about/editorial-roastery.png"
+              alt="烘焙师观察烘焙机中的咖啡豆"
+              loading="lazy"
+              width="896"
+              height="1200"
+              @error="handleImageError"
+            >
+            <figcaption>烘焙 · 看见风味在变化</figcaption>
+          </figure>
+          <figure class="about-behind__cell image-frame">
+            <img
+              src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/about/editorial-pour-over.png"
+              alt="咖啡师手冲过程"
+              loading="lazy"
+              width="896"
+              height="1200"
+              @error="handleImageError"
+            >
+            <figcaption>手冲 · 把水流写进风味</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 品牌宣言 -->
+    <section class="about-manifesto" aria-labelledby="manifesto-title">
+      <div class="warm-shell about-manifesto__inner">
+        <p class="about-eyebrow about-eyebrow--center">A QUIET PROMISE</p>
+        <h2 id="manifesto-title">
+          一杯咖啡<br>
+          始于土地<br>
+          终于与你相遇
+        </h2>
+        <p class="about-manifesto__sign">Cozy Coffee</p>
+      </div>
+    </section>
+  </main>
 </template>
 
 <script setup>
 import { onMounted, ref, onUnmounted } from 'vue'
 
-const visionSection = ref(null)
-let observer = null
-let animationStarted = false
+const journeySection = ref(null)
 
-// 数字增长动画逻辑
-const startCounting = () => {
-  if (animationStarted) return
-  animationStarted = true
-
-  const counters = document.querySelectorAll('.counter')
-  counters.forEach(counter => {
-    let startVal = 0
-    let endVal = parseInt(counter.getAttribute('data-val'))
-    let duration = 2000 // 2秒
-    let increment = endVal / (duration / 16) // 60fps
-
-    let timer = setInterval(() => {
-      startVal += increment
-      if (startVal >= endVal) {
-        counter.textContent = endVal
-        clearInterval(timer)
-      } else {
-        counter.textContent = Math.floor(startVal)
-      }
-    }, 16)
-  })
+const handleImageError = (e) => {
+  const img = e.currentTarget
+  if (img) img.classList.add('image-fallback')
 }
 
-// 使用 IntersectionObserver 监听滚动
+// 滚动进入流程节点时添加进入动画（轻量，不影响内容）
+let observer = null
+
 onMounted(() => {
   observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
-        startCounting()
-        observer.disconnect() // 只触发一次
+        entry.target.classList.add('is-visible')
       }
     })
-  }, { threshold: 0.3 })
+  }, { threshold: 0.2 })
 
-  if (visionSection.value) {
-    observer.observe(visionSection.value)
-  }
+  document.querySelectorAll('.about-journey__step, .about-value, .about-behind__cell').forEach(el => {
+    observer.observe(el)
+  })
 })
 
 onUnmounted(() => {
-  if (observer) {
-    observer.disconnect()
-  }
+  if (observer) observer.disconnect()
 })
 </script>
 
 <style scoped>
 @import '@/assets/styles/about_us_style.css';
 
-/* 修复一些未生效的全局重置 */
 .about-page {
   width: 100%;
 }
