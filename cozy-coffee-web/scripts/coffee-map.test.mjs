@@ -8,11 +8,28 @@ import {
   MAP_VIEWBOX,
 } from '../src/utils/coffeeMap.js'
 import {
+  createMapCamera,
+  projectMapPoint,
+  projectPoint,
+  isPointInsideSafeArea,
+  DESKTOP_MAP_SAFE_AREA,
+  MOBILE_MAP_SAFE_AREA,
+  MAP_CAMERA_BREAKPOINT,
+  MAP_CAMERA_MEDIA_QUERY,
+  MAP_CAMERA_PRESETS,
+} from '../src/utils/coffeeMapCamera.js'
+import { cameraToSvgMatrix } from '../src/utils/coffeeMapSvgRenderer.js'
+import {
   COFFEE_ORIGINS,
   COFFEE_JOURNEY,
   HANGZHOU_POINT,
 } from '../src/data/coffeeOrigins.js'
 import { WORLD_COUNTRY_PATHS } from '../src/data/worldCountryPaths.js'
+
+const HANGZHOU_LABEL_WIDTH_RATIO = Object.freeze({
+  desktop: 0.18,
+  mobile: 0.25,
+})
 
 test('defines eight unique origins that all finish their journey in Hangzhou', () => {
   assert.equal(COFFEE_ORIGINS.length, 8)
@@ -62,6 +79,119 @@ test('builds the first origin route from its exact map point to Hangzhou', () =>
   assert.ok(route.endsWith(` ${end.x} ${end.y}`))
 })
 
+test('derives an immutable camera from focus, anchor and zoom', () => {
+  const camera = createMapCamera({
+    focus: HANGZHOU_POINT,
+    ...MAP_CAMERA_PRESETS.desktop,
+  })
+  const hangzhou = projectPoint(HANGZHOU_POINT, camera)
+
+  assert.ok(Object.isFrozen(camera))
+  assert.ok(Object.isFrozen(camera.anchor))
+  assert.equal(camera.zoom, 1)
+  assert.ok(hangzhou.xRatio >= 0.72 && hangzhou.xRatio <= 0.75)
+  assert.ok(hangzhou.yRatio >= 0.31 && hangzhou.yRatio <= 0.37)
+})
+
+test('keeps breakpoint and media query in one camera constant', () => {
+  assert.equal(MAP_CAMERA_BREAKPOINT, 820)
+  assert.equal(MAP_CAMERA_MEDIA_QUERY, '(max-width: 820px)')
+})
+
+test('uses separate desktop and mobile cameras around Hangzhou', () => {
+  const desktopCamera = createMapCamera({
+    focus: HANGZHOU_POINT,
+    ...MAP_CAMERA_PRESETS.desktop,
+  })
+  const mobileCamera = createMapCamera({
+    focus: HANGZHOU_POINT,
+    ...MAP_CAMERA_PRESETS.mobile,
+  })
+  const desktopHangzhou = projectPoint(HANGZHOU_POINT, desktopCamera)
+  const mobileHangzhou = projectPoint(HANGZHOU_POINT, mobileCamera)
+
+  assert.ok(desktopHangzhou.xRatio >= 0.72)
+  assert.ok(desktopHangzhou.xRatio <= 0.75)
+  assert.ok(mobileHangzhou.xRatio >= 0.64)
+  assert.ok(mobileHangzhou.xRatio <= 0.68)
+  assert.notEqual(desktopCamera.translateX, mobileCamera.translateX)
+})
+
+test('keeps all origins inside each named safe area', () => {
+  const cases = [
+    [MAP_CAMERA_PRESETS.desktop, DESKTOP_MAP_SAFE_AREA],
+    [MAP_CAMERA_PRESETS.mobile, MOBILE_MAP_SAFE_AREA],
+  ]
+
+  for (const [preset, safeArea] of cases) {
+    const camera = createMapCamera({ focus: HANGZHOU_POINT, ...preset })
+
+    for (const { englishName, origin } of COFFEE_ORIGINS) {
+      assert.ok(
+        isPointInsideSafeArea(projectPoint(origin, camera), safeArea),
+        `${englishName} is outside the camera safe area`,
+      )
+    }
+  }
+})
+
+test('reserves enough right-side space for the Hangzhou label', () => {
+  const desktopCamera = createMapCamera({
+    focus: HANGZHOU_POINT,
+    ...MAP_CAMERA_PRESETS.desktop,
+  })
+  const mobileCamera = createMapCamera({
+    focus: HANGZHOU_POINT,
+    ...MAP_CAMERA_PRESETS.mobile,
+  })
+  const desktopHangzhou = projectPoint(HANGZHOU_POINT, desktopCamera)
+  const mobileHangzhou = projectPoint(HANGZHOU_POINT, mobileCamera)
+
+  assert.ok(
+    desktopHangzhou.xRatio + HANGZHOU_LABEL_WIDTH_RATIO.desktop <=
+      DESKTOP_MAP_SAFE_AREA.right,
+  )
+  assert.ok(
+    mobileHangzhou.xRatio + HANGZHOU_LABEL_WIDTH_RATIO.mobile <=
+      MOBILE_MAP_SAFE_AREA.right,
+  )
+})
+
+test('keeps SVG rendering outside the camera module', async () => {
+  const cameraSource = await readFile(
+    new URL('../src/utils/coffeeMapCamera.js', import.meta.url),
+    'utf8',
+  )
+  const camera = createMapCamera({
+    focus: HANGZHOU_POINT,
+    ...MAP_CAMERA_PRESETS.desktop,
+  })
+
+  assert.doesNotMatch(cameraSource, /SVG|matrix\(/i)
+  assert.match(cameraToSvgMatrix(camera), /^matrix\(/)
+})
+
+test('camera transform never changes route geometry', () => {
+  const origin = COFFEE_ORIGINS[0]
+  const camera = createMapCamera({
+    focus: HANGZHOU_POINT,
+    ...MAP_CAMERA_PRESETS.desktop,
+  })
+  const route = buildQuadraticRoute(
+    origin.origin,
+    HANGZHOU_POINT,
+    origin.routeBend,
+  )
+  const numbers = route.match(/-?\d+(?:\.\d+)?/g).map(Number)
+  const routeStart = projectMapPoint({ x: numbers[0], y: numbers[1] }, camera)
+  const routeEnd = projectMapPoint({ x: numbers[4], y: numbers[5] }, camera)
+  const expectedStart = projectPoint(origin.origin, camera)
+  const expectedEnd = projectPoint(HANGZHOU_POINT, camera)
+
+  assert.deepEqual(routeStart, expectedStart)
+  assert.deepEqual(routeEnd, expectedEnd)
+})
+
 test('generated world map contains the eight highlighted ISO country codes', () => {
   assert.ok(WORLD_COUNTRY_PATHS.length > 150)
   const codes = new Set(WORLD_COUNTRY_PATHS.map(({ code }) => code))
@@ -83,10 +213,43 @@ test('Origins journey keeps natural page scrolling with a sticky map column', as
     new URL('../src/components/home/OriginsJourney.vue', import.meta.url),
     'utf8',
   )
+  const chapter = await readFile(
+    new URL('../src/components/home/OriginChapter.vue', import.meta.url),
+    'utf8',
+  )
 
   assert.doesNotMatch(journey, /@wheel|scroll-snap-type|overflow-y:\s*auto/)
   assert.match(journey, /\.origins-left-column\s*\{[^}]*position:\s*sticky/)
-  assert.match(journey, /rootMargin:\s*'-22% 0px -76% 0px'/)
+  assert.match(journey, /data-origin-sentinel="top"/)
+  assert.match(journey, /data-origin-sentinel="bottom"/)
+  assert.match(journey, /getProgressTrackLine/)
+  assert.match(journey, /scrollDirection !== direction/)
+  assert.match(journey, /direction === 'down'/)
+  assert.match(journey, /`0px 0px -\$\{viewportHeight - safeLineY\}px 0px`/)
+  assert.match(journey, /`-\$\{safeLineY\}px 0px 0px 0px`/)
+  assert.match(chapter, /data-origin-sentinel="top"/)
+  assert.match(chapter, /data-origin-sentinel="bottom"/)
+  assert.doesNotMatch(journey, /lastObservedScrollY|scrollingDown/)
+})
+
+test('CoffeeBeltMap separates decoration, camera and label layers', async () => {
+  const map = await readFile(
+    new URL('../src/components/home/CoffeeBeltMap.vue', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(map, /class="map-decoration-layer"/)
+  assert.match(map, /class="map-camera-layer"/)
+  assert.match(map, /:transform="cameraMatrix"/)
+  assert.match(map, /class="map-label-layer"/)
+  assert.match(map, /activeOriginLabelPoint/)
+  assert.match(map, /hangzhouLabelPoint/)
+  assert.match(map, /yunnan:\s*Object\.freeze\(\{ dx: 0, dy: 28, anchor: 'middle' \}\)/)
+  assert.match(map, /class="map-ending-label"/)
+  assert.match(map, /Eight Origins\. One Cup\./)
+  assert.match(map, /\.coffee-map\.is-summary \.map-country/)
+  assert.match(map, /hangzhou-summary-breathe/)
+  assert.doesNotMatch(map, /viewBox="100 0 1000 500"/)
 })
 
 test('provides complete display and flavor data for every origin', () => {
