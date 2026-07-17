@@ -41,10 +41,10 @@
                     :src="activeRoute.coverImage.fallback"
                     :srcset="activeRoute.coverImage.jpg"
                     sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 820px) 44vw, 42vw"
-                    :alt="activeRoute.imageAlt"
-                    loading="lazy"
-                    width="1200"
-                    height="896"
+:alt="activeRoute.imageAlt"
+                  loading="lazy"
+                  width="1200"
+                  height="900"
                     @error="$emit('image-error', $event)"
                   >
                 </picture>
@@ -55,7 +55,7 @@
                 <p class="featured-coffee__roast">{{ roastLabel(featuredCoffee.roastLevel) }}</p>
                 <p class="featured-coffee__flavors">{{ featuredCoffee.flavorNotes.join(' · ') }}</p>
                 <p class="featured-coffee__story">{{ activeRoute.featured.story }}</p>
-                <strong class="featured-coffee__price">{{ featuredCoffee.price }}</strong>
+                <strong class="featured-coffee__price">¥{{ featuredCoffee.price }}</strong>
               </div>
             </router-link>
           </Transition>
@@ -78,7 +78,7 @@
               >
                 <span class="coffee-row__name">{{ coffee.name }}</span>
                 <span class="coffee-row__flavors">{{ coffee.flavorNotes.slice(0, 2).join(' · ') }}</span>
-                <strong>{{ coffee.price }}</strong>
+                <strong>¥{{ coffee.price }}</strong>
               </router-link>
             </div>
           </section>
@@ -138,10 +138,10 @@ function roastLabel(level) {
 .flavor-directory button.is-active::after { transform: scaleX(1); }
 .flavor-direction__description { width: min(31em, 100%); min-height: 3.6em; margin: 16px 0 0; color: var(--cozy-muted); font-family: var(--font-display); font-size: clamp(1.05rem, 1.45vw, 1.3rem); line-height: 1.6; }
 
-.editorial-menu__body { min-height: 560px; display: grid; grid-template-columns: minmax(460px, .95fr) minmax(0, 1.05fr); gap: clamp(44px, 5vw, 68px); padding-top: 28px; }
+.editorial-menu__body { min-height: 560px; display: grid; grid-template-columns: minmax(420px, .9fr) minmax(0, 1.1fr); gap: clamp(44px, 5vw, 68px); padding-top: 28px; }
 .editorial-menu__column--left { display: flex; flex-direction: column; min-width: 0; }
 .featured-coffee { min-width: 0; flex: 1; color: inherit; text-decoration: none; }
-.featured-coffee__image { width: 100%; max-width: 520px; height: clamp(200px, 18vw, 220px); overflow: hidden; background: var(--cozy-bg); }
+.featured-coffee__image { width: 100%; max-width: 520px; aspect-ratio: 4 / 3; overflow: hidden; background: var(--cozy-bg); }
 .featured-coffee__image picture,
 .featured-coffee__image img { width: 100%; height: 100%; display: block; }
 .featured-coffee__image img { object-fit: cover; transition: transform .28s cubic-bezier(.22, 1, .36, 1); }
@@ -177,7 +177,7 @@ function roastLabel(level) {
 .menu-fade-enter-from,
 .menu-fade-leave-to { opacity: 0; }
 
-@media (max-width: 880px) {
+@media (max-width: 900px) {
   .editorial-menu__body { min-height: 0; grid-template-columns: 1fr; gap: 40px; }
   .editorial-menu__column--left { max-width: none; }
   .featured-coffee { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(0, 1fr); gap: 28px; align-items: center; }
@@ -194,7 +194,7 @@ function roastLabel(level) {
   .flavor-direction__description { min-height: 4.8em; }
   .editorial-menu__all { margin-top: 36px; }
   .featured-coffee { display: block; }
-  .featured-coffee__image { height: clamp(200px, 56vw, 220px); max-width: none; }
+  .featured-coffee__image { max-width: none; }
   .featured-coffee__content { min-height: 260px; padding-top: 20px; }
   .coffee-group__header { padding-bottom: 14px; }
   .coffee-row { min-height: 72px; grid-template-columns: 1fr auto; gap: 7px 16px; padding-block: 12px; }
