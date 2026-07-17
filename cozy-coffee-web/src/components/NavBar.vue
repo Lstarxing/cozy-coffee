@@ -1,5 +1,5 @@
 <template>
-  <nav class="site-navbar" :class="{ 'site-navbar--on-dark': isOnDarkSection }" aria-label="主导航">
+  <nav class="site-navbar" :class="{ 'site-navbar--on-dark': isOnDarkSection, 'site-navbar--transparent': isTransparentTop, 'site-navbar--scrolled': isScrolled }" aria-label="主导航">
     <div class="site-navbar__inner">
       <router-link class="site-navbar__logo" to="/" aria-label="CozyCoffee 首页">
         <img src="/images/cozycafe_logo.png" alt="CozyCoffee" width="180" height="60">
@@ -42,9 +42,13 @@ const userStore = useUserStore()
 const route = useRoute()
 const router = useRouter()
 const isOnDarkSection = ref(false)
+const isScrolled = ref(false)
 let membershipObserver = null
 let bindTimer = null
 let bindAttempts = 0
+let scrollHandler = null
+
+const isHomePage = computed(() => route.path === '/')
 
 // 锚点导航激活判断：按 path + hash 精确匹配，避免 hash URL 被视作同名路由导致多链接同时亮
 // 首页（path='/' 且无 hash）→ '/'；带 hash 的首页 → '/#origins' 等；关于我们 → '/about'
@@ -59,6 +63,9 @@ const sectionLinks = Object.freeze([
   { to: '/#menu', label: '菜单' },
   { to: '/#membership', label: '会员' }
 ])
+
+// 首页第一屏：导航透明浮在 Hero 上，深咖文字；滚出 Hero 区后切白底 + 发丝边 + 微阴影。
+const isTransparentTop = computed(() => isHomePage.value && !isScrolled.value)
 
 // 同页 hash 跳转：与 Hero CTA「<a href="#origins">」行为完全一致 ——
 // 用原生 scrollIntoView 让 scroll-margin-top 生效，绕开 Vue Router 的 el 滚动
@@ -131,9 +138,55 @@ const handleLogout = async () => {
   window.alert('退出失败，请检查后端服务或网络后重试')
 }
 
-watch(() => route.path, bindMembershipObserver)
-onMounted(bindMembershipObserver)
-onUnmounted(disconnectMembershipObserver)
+// 滚动监听：首页 Hero 内透明，滚出 Hero 区后切白。
+// 阈值 = Hero 元素相对视口顶部下沿越过导航底边 -> 即 scrollY > heroBottom - navHeight。
+function updateScrolledState() {
+  if (!isHomePage.value) {
+    isScrolled.value = false
+    return
+  }
+  const hero = document.querySelector('.warm-hero')
+  if (!hero) {
+    isScrolled.value = window.scrollY > 8
+    return
+  }
+  const navHeight = Number(getComputedStyle(document.documentElement).getPropertyValue('--nav-height').replace('px', '')) || 76
+  const heroBottom = hero.getBoundingClientRect().bottom + window.scrollY
+  isScrolled.value = window.scrollY + navHeight >= heroBottom - 1
+}
+
+function bindScroll() {
+  unbindScroll()
+  scrollHandler = () => updateScrolledState()
+  window.addEventListener('scroll', scrollHandler, { passive: true })
+  window.addEventListener('resize', scrollHandler)
+  updateScrolledState()
+}
+
+function unbindScroll() {
+  if (!scrollHandler) return
+  window.removeEventListener('scroll', scrollHandler)
+  window.removeEventListener('resize', scrollHandler)
+  scrollHandler = null
+}
+
+watch(() => route.path, () => {
+  bindMembershipObserver()
+  if (isHomePage.value) {
+    nextTick(bindScroll)
+  } else {
+    unbindScroll()
+    isScrolled.value = false
+  }
+})
+onMounted(() => {
+  bindMembershipObserver()
+  if (isHomePage.value) nextTick(bindScroll)
+})
+onUnmounted(() => {
+  disconnectMembershipObserver()
+  unbindScroll()
+})
 </script>
 
 <style scoped>
@@ -146,13 +199,32 @@ onUnmounted(disconnectMembershipObserver)
   background: rgba(255, 255, 255, 0.95);
   border-bottom: 1px solid transparent;
   backdrop-filter: blur(10px);
-  transition: background-color 180ms ease, border-color 180ms ease;
+  transition: background-color 300ms ease, border-color 300ms ease,
+              box-shadow 300ms ease, color 300ms ease;
+}
+
+/* 首页第一屏：半透明微毛玻璃浮在 Hero 上，深咖文字 */
+.site-navbar--transparent {
+  background: rgba(255, 255, 255, 0.25);
+  border-bottom-color: transparent;
+  color: #3B2418;
+  backdrop-filter: blur(2px);
+  box-shadow: none;
+}
+
+/* 滚出 Hero / 非首页：白底 + 发丝边 + 微阴影 */
+.site-navbar--scrolled,
+.site-navbar--on-dark {
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .site-navbar--on-dark {
   background: var(--cozy-bg);
   border-bottom-color: var(--cozy-border);
-  backdrop-filter: none;
+  box-shadow: none;
 }
 
 .site-navbar__inner {
