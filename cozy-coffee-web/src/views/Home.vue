@@ -3,22 +3,28 @@
     <section id="home" class="warm-hero" aria-labelledby="hero-title">
       <picture class="warm-hero__media">
         <img
-          src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/hero-geography-journal-20260716.png"
+          src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/hero-prototype-20260717-v3.jpg"
           alt="阳光下的 Cozy Coffee 拿铁与杭州烘焙名片"
           fetchpriority="high"
-          width="2880"
-          height="1093"
+          width="3600"
+          height="1600"
           @error="handleImageError"
         >
       </picture>
-      <div class="warm-hero__scrim" aria-hidden="true"></div>
-      <div class="warm-shell warm-hero__content">
-        <h1 id="hero-title">循着风味<br>翻开地理日志</h1>
-        <p>从世界八大产区，到杭州匠心烘焙<br>每一杯，都是一次穿越土地的风味重述。</p>
-        <div class="warm-hero__actions">
-          <a class="warm-button warm-button--primary" href="#origins">探索产地风味之旅 <span aria-hidden="true">⟶</span></a>
-        </div>
+      <div class="warm-hero__content">
+        <h1 id="hero-title">
+          <span class="hero-title-line">循着风味</span>
+          <span class="hero-title-line">走进一段地理日志</span>
+        </h1>
+        <p class="hero-description">
+          <span class="hero-description-line">从世界八大产区，到杭州匠心烘焙</span>
+          <span class="hero-description-line">每一杯，都是土地与时间留下的答案</span>
+        </p>
       </div>
+      <a class="hero-cta" href="#origins">
+        <img class="hero-cta__arrow" src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/hero/hero-arrow.svg" alt="" aria-hidden="true">
+        <span class="hero-cta__text">探索产地风味之旅</span>
+      </a>
     </section>
 
     <OriginsJourney />
@@ -274,6 +280,31 @@ onUnmounted(() => {
   mediaQuery?.removeEventListener('change', updateMobileState)
 })
 </script>
+<style>
+.warm-hero h1, .warm-hero h1 span,
+.warm-hero .hero-cta__text {
+  font-family: "Source Han Serif SC", "思源宋体", "Noto Serif SC", "Songti SC", "SimSun", serif;
+}
+
+/* Hero 图片底部淡出：图片底边自然消融到 #eee1d2，消除与下一段的硬切 */
+.warm-hero__media img {
+  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+}
+
+/* Hero 底部渐变：从透明过渡到下一段背景色，消除硬切留白 */
+.warm-hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20%;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent 0%, var(--cozy-bg) 100%);
+}
+</style>
 
 <style scoped>
 .warm-home {
@@ -299,19 +330,18 @@ onUnmounted(() => {
 
 .warm-hero {
   position: relative;
-  height: clamp(560px, 37vw, 640px);
-  min-height: 540px;
-  max-height: calc(100svh - var(--nav-height));
-  display: grid;
-  align-items: center;
+  aspect-ratio: 3600 / 1730;
+  width: 100%;
+  min-height: 520px;
+  container-type: size;
   isolation: isolate;
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   background: #eee1d2;
 }
 
 .warm-hero__media,
-.warm-hero__media img,
-.warm-hero__scrim {
+.warm-hero__media img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -323,61 +353,117 @@ onUnmounted(() => {
   object-position: center;
 }
 
-.warm-hero__scrim {
-  z-index: 1;
-  background: transparent;
-}
-
+/* 文字组：原型画布 3600×1600 内 left:569，top 下移让出顶部留白 */
 .warm-hero__content {
-  position: relative;
+  position: absolute;
   z-index: 2;
-  align-self: center;
-  width: 100%;
-  margin-inline: auto;
-  padding-inline: clamp(72px, 6.25vw, 120px);
-  color: #402417;
-  transform: translateY(20px);
+  left: 15.805556cqw;
+  top: 32cqh;
+  width: 35.083333cqw;
+  margin: 0;
+  padding: 0;
+  color: #2d170a;
   animation: warm-fade 700ms ease-out both;
 }
 
-.warm-hero h1,
-.warm-section h2,
-.warm-membership h2 {
-  margin: 0;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
+/* H1 主标题：思源宋体（--font-display），macOS→Noto Serif SC，Windows→SimSun 兜底 */
 .warm-hero h1 {
-  max-width: 480px;
-  color: #3a2415;
+  margin: 0;
+  max-width: none;
   font-family: var(--font-display);
-  font-size: clamp(3.25rem, 3.2vw, 4rem);
-  font-weight: 500;
-  line-height: 1.18;
-  letter-spacing: 0.01em;
-  text-align: left;
-  text-wrap: balance;
-}
-
-.warm-hero__content > p {
-  max-width: 23em;
-  margin: 24px 0 0;
-  color: #684331;
-  font-family: var(--font-sans);
-  font-size: clamp(0.98rem, 1.08vw, 1.0625rem);
   font-weight: 400;
-  line-height: 1.72;
-  letter-spacing: 0.025em;
+  line-height: 1.355556;
+  letter-spacing: 0;
+  text-align: left;
+  text-wrap: wrap;
+  color: #2d170a;
 }
 
-.warm-hero__actions,
-.membership-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 16px 24px;
-  margin-top: 32px;
+.warm-hero h1 .hero-title-line {
+  display: block;
+}
+
+.warm-hero h1 .hero-title-line:nth-child(1) {
+  font-size: 3.35cqw;
+}
+
+.warm-hero h1 .hero-title-line:nth-child(2) {
+  font-size: 3.45cqw;
+}
+
+/* 副文案两行：字号 48、行高 68、行1字距 2px 行2字距 7px、色 #3a1f12、微软雅黑 Regular */
+.warm-hero__content .hero-description {
+  margin: 4.05cqh 0 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: 1.333333cqw;
+  font-weight: 400;
+  line-height: 1.416667;
+  text-align: left;
+  text-wrap: wrap;
+  color: #3a1f12;
+}
+
+.warm-hero__content .hero-description .hero-description-line {
+  display: block;
+}
+
+.warm-hero__content .hero-description .hero-description-line:nth-child(1) {
+  letter-spacing: 0.0416667em;
+}
+
+.warm-hero__content .hero-description .hero-description-line:nth-child(2) {
+  letter-spacing: 0.145833em;
+}
+
+/* CTA：左右居中、贴 Hero 底部。直接挂在 .warm-hero 下（与 __content 同级），
+   绝对定位参考 .warm-hero 容器；cq 单位按容器宽高缩放。
+   呼吸动画驱动 scale，keyframes 内同时保留 translateX(-50%) 以维持居中。 */
+.warm-hero .hero-cta {
+  position: absolute;
+  z-index: 2;
+  bottom: 2cqh;
+  left: 50%;
+  width: 15.361111cqw;
+  height: 14.4375cqh;
+  display: block;
+  transform: translateX(-50%) scale(1);
+  transform-origin: center bottom;
+  animation: hero-cta-breathe 2.6s ease-in-out infinite;
+  text-decoration: none;
+  color: #3b3028;
+  cursor: pointer;
+}
+
+/* 箭头：CTA 区内居中、向下指。垂直定位用百分比（相对 CTA 盒子），字号 cq 按 .warm-hero 缩放。 */
+.warm-hero .hero-cta__arrow {
+  position: absolute;
+  left: 50%;
+  top: 38.528139%; /* 89px / 231px */
+  width: auto;
+  height: 26.190476%; /* 60.5px / 231px */
+  transform: translateX(-50%);
+}
+
+/* CTA 文字：思源宋体 Medium、底部居中。bottom 用百分比相对 CTA，字号 cq 按 .warm-hero 缩放。 */
+.warm-hero .hero-cta__text {
+  position: absolute;
+  left: 50%;
+  bottom: 6.060606%; /* 14px / 231px */
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 1cqw;
+  font-weight: 500;
+  text-align: center;
+  letter-spacing: 0.138889em;
+  line-height: 1.888889;
+  white-space: nowrap;
+  color: #3b3028;
+}
+
+@keyframes hero-cta-breathe {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50%      { transform: translateX(-50%) scale(1.06); }
 }
 
 .warm-button,
@@ -404,36 +490,6 @@ onUnmounted(() => {
 }
 
 .warm-button--primary:hover { background: var(--cozy-primary-hover); }
-
-.warm-hero__actions {
-  margin-top: 36px;
-}
-
-.warm-hero__actions .warm-button--primary {
-  min-height: 52px;
-  gap: 18px;
-  padding: 13px 26px;
-  border-radius: 5px;
-  background: #8B5334;
-  font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: 0.035em;
-  transition: background .25s ease, transform .25s ease, box-shadow .25s ease;
-}
-
-.warm-hero__actions .warm-button--primary:hover {
-  background: #74452B;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(58, 36, 21, .12);
-}
-
-.warm-hero__actions .warm-button--primary span {
-  font-size: 19px;
-  font-weight: 300;
-  line-height: 1;
-  transform: translateY(-1px);
-}
 
 .warm-button--inverse {
   color: var(--cozy-cta-alt-text);
@@ -561,14 +617,11 @@ onUnmounted(() => {
 
 @media (max-width: 760px) {
   .warm-shell { width: min(100% - 32px, 620px); }
-  .warm-hero { height: min(620px, calc(100svh - var(--nav-height))); min-height: 520px; align-items: start; }
-  .warm-hero__media img { object-position: 66% center; }
-  .warm-hero__scrim { background: linear-gradient(90deg, rgba(249, 241, 231, .92) 0%, rgba(249, 241, 231, .66) 48%, rgba(249, 241, 231, .08) 82%); }
-  .warm-shell.warm-hero__content,
-  .warm-shell.honor-banner__content { width: 100%; margin-inline: 0; padding-inline: 16px; }
-  .warm-hero__content { align-self: start; padding-block: 48px; transform: none; }
-  .warm-hero h1 { max-width: 10em; font-size: clamp(2.5rem, 11vw, 3rem); line-height: 1.2; }
-  .warm-hero__content > p { max-width: 21em; color: #684331; }
+  /* 窄屏画面宽远小于 3600×1600 的设计画布，aspect-ratio 会让 Hero 过矮。
+     放开比例约束、给一个保底高度；图切换到 cover 满铺（裁切优于上下留白）。
+     cqw/cqh 自动按容器宽等比缩放所有字号与位置，无需在此重写字号。 */
+  .warm-hero { aspect-ratio: auto; height: min(90svh, 640px); min-height: 520px; }
+  .warm-hero__media img { object-fit: cover; object-position: 70% center; }
   .membership-header { align-items: flex-start; flex-direction: column; }
   .membership-header .membership-kicker { text-align: left; }
   .honor-banner { min-height: 430px; align-items: start; }
@@ -581,10 +634,7 @@ onUnmounted(() => {
 
 @media (max-width: 560px) {
   .warm-membership { padding-block: 64px; }
-  .warm-hero__actions,
   .membership-actions { align-items: stretch; flex-direction: column; }
-  .warm-hero__actions { align-items: flex-start; }
-  .warm-hero__actions .warm-button { width: auto; }
   .membership-actions .warm-button { width: 100%; }
   .warm-text-link { justify-content: flex-start; }
 }
