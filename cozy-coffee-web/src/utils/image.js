@@ -1,6 +1,6 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
 
-const DEFAULT_FALLBACK = 'https://placehold.co/400x400/F5F5F0/8D6E63?text=Coffee'
+const DEFAULT_FALLBACK = '/images/menu/floral.svg'
 
 export function getImageUrl(url, fallback = DEFAULT_FALLBACK) {
   if (!url) return fallback
@@ -9,5 +9,8 @@ export function getImageUrl(url, fallback = DEFAULT_FALLBACK) {
 }
 
 export function handleImageError(e, fallback = DEFAULT_FALLBACK) {
+  if (e.target.dataset.fallbackApplied) return
+  e.target.dataset.fallbackApplied = 'true'
+  e.target.srcset = ''
   e.target.src = fallback
 }

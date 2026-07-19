@@ -97,5 +97,5 @@ coverage/
 .claude/worktrees/
 .worktrees/
 
-# 本地设计脑暴可视化会话
-.superpowers/
+# 本地上传文件（OSS 未配置时的本地存储）
+uploads/

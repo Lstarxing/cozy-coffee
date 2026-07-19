@@ -1,11 +1,12 @@
-const MENU_IMAGE_BASE = 'https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/menu'
+const MENU_IMAGE_BASE = import.meta.env.VITE_MENU_IMAGE_BASE || '/images/home/menu'
 
 function flavorImage(flavor) {
+  const base = MENU_IMAGE_BASE
   return Object.freeze({
-    avif: [640, 960, 1200].map(width => `${MENU_IMAGE_BASE}/${flavor}-${width}.avif ${width}w`).join(', '),
-    webp: [640, 960, 1200].map(width => `${MENU_IMAGE_BASE}/${flavor}-${width}.webp ${width}w`).join(', '),
-    jpg: [640, 960, 1200].map(width => `${MENU_IMAGE_BASE}/${flavor}-${width}.jpg ${width}w`).join(', '),
-    fallback: `${MENU_IMAGE_BASE}/${flavor}-960.jpg`
+    avif: [640, 960, 1200].map(width => `${base}/${flavor}-${width}.avif ${width}w`).join(', '),
+    webp: [640, 960, 1200].map(width => `${base}/${flavor}-${width}.webp ${width}w`).join(', '),
+    jpg: [640, 960, 1200].map(width => `${base}/${flavor}-${width}.jpg ${width}w`).join(', '),
+    fallback: `${base}/${flavor}-960.jpg`
   })
 }
 

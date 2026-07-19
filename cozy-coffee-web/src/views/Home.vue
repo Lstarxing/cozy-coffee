@@ -3,7 +3,7 @@
     <section id="home" class="warm-hero" aria-labelledby="hero-title">
       <picture class="warm-hero__media">
         <img
-          src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/hero-prototype-20260717-v3.jpg"
+          :src="heroImage"
           alt="阳光下的 Cozy Coffee 拿铁与杭州烘焙名片"
           fetchpriority="high"
           width="3600"
@@ -22,7 +22,7 @@
         </p>
       </div>
       <a class="hero-cta" href="#origins">
-        <img class="hero-cta__arrow" src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/hero/hero-arrow.svg" alt="" aria-hidden="true">
+        <img class="hero-cta__arrow" :src="heroArrow" alt="" aria-hidden="true">
         <span class="hero-cta__text">探索产地风味之旅</span>
       </a>
     </section>
@@ -35,17 +35,17 @@
       <picture class="honor-banner__media" aria-hidden="true">
         <source
           type="image/avif"
-          srcset="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-768.avif 768w, https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1440.avif 1440w, https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1920.avif 1920w"
+          :srcset="honorSrcsetAvif"
           sizes="(min-width: 1716px) 1716px, 100vw"
         >
         <source
           type="image/webp"
-          srcset="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-768.webp 768w, https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1440.webp 1440w, https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1920.webp 1920w"
+          :srcset="honorSrcsetWebp"
           sizes="(min-width: 1716px) 1716px, 100vw"
         >
         <img
-          src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1440.jpg"
-          srcset="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-768.jpg 768w, https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1440.jpg 1440w, https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/home/honor-banner-1920.jpg 1920w"
+          :src="honorFallback"
+          :srcset="honorSrcsetJpg"
           sizes="(min-width: 1716px) 1716px, 100vw"
           alt="Cozy Coffee 连续五年获得 IIAC 金奖"
           loading="lazy"
@@ -173,6 +173,24 @@ import {
   calculateRedemptionCost,
   POINTS_RATES_BY_LEVEL
 } from '@/utils/homepageMembership'
+
+// 静态资源：有 OSS 时走 OSS，否则用本地占位图
+const OSS_BASE = import.meta.env.VITE_ASSET_BASE_URL || ''
+const asset = (ossPath, localPath) => OSS_BASE ? `${OSS_BASE}${ossPath}` : localPath
+
+const heroImage = asset(
+  '/images/home/hero-prototype-20260717-v3.jpg',
+  '/images/home/hero-prototype-20260717-v3.jpg'
+)
+const heroArrow = asset('/images/hero/hero-arrow.svg', '/images/hero/hero-arrow.svg')
+
+const honorBannerBase = OSS_BASE
+  ? `${OSS_BASE}/images/home/honor-banner`
+  : '/images/home/honor-banner'
+const honorSrcsetAvif = [768, 1440, 1920].map(w => `${honorBannerBase}-${w}.avif ${w}w`).join(', ')
+const honorSrcsetWebp = [768, 1440, 1920].map(w => `${honorBannerBase}-${w}.webp ${w}w`).join(', ')
+const honorSrcsetJpg = [768, 1440, 1920].map(w => `${honorBannerBase}-${w}.jpg ${w}w`).join(', ')
+const honorFallback = `${honorBannerBase}-1440.jpg`
 
 const userStore = useUserStore()
 const membershipState = ref('auth-resolving')

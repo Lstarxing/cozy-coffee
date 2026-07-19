@@ -27,4 +27,7 @@ public class StorageProperties {
 
     /** 公网访问域名，不填则自动拼接 https://{bucket}.{endpoint} */
     private String publicBaseUrl;
+
+    /** 本地存储目录（仅 storage.type=local 或无 OSS 时生效），默认 ./uploads */
+    private String localUploadDir = "./uploads";
 }

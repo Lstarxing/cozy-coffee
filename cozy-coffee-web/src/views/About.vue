@@ -4,7 +4,7 @@
     <section class="about-hero" aria-labelledby="about-hero-title">
       <picture class="about-hero__media">
         <img
-          src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/about/hero-about-20260716.png"
+          :src="aboutHero"
           alt="Cozy Coffee — 从一颗咖啡豆到一杯被认真对待的咖啡"
           fetchpriority="high"
           width="4096"
@@ -50,7 +50,7 @@
         </div>
         <figure class="about-story__media image-frame">
           <img
-            src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/about/editorial-store.png"
+            :src="editorialStore"
             alt="Cozy Coffee 门店环境"
             loading="lazy"
             width="896"
@@ -162,7 +162,7 @@
         <div class="about-behind__grid">
           <figure class="about-behind__cell image-frame">
             <img
-              src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/about/editorial-beans-comparison.png"
+              :src="editorialBeans"
               alt="生豆与熟豆对比"
               loading="lazy"
               width="896"
@@ -173,7 +173,7 @@
           </figure>
           <figure class="about-behind__cell image-frame">
             <img
-              src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/about/editorial-cupping.png"
+              :src="editorialCupping"
               alt="杯测桌上的一排咖啡样品"
               loading="lazy"
               width="896"
@@ -184,7 +184,7 @@
           </figure>
           <figure class="about-behind__cell image-frame">
             <img
-              src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/about/editorial-roastery.png"
+              :src="editorialRoastery"
               alt="烘焙师观察烘焙机中的咖啡豆"
               loading="lazy"
               width="896"
@@ -195,7 +195,7 @@
           </figure>
           <figure class="about-behind__cell image-frame">
             <img
-              src="https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com/images/about/editorial-pour-over.png"
+              :src="editorialPourOver"
               alt="咖啡师手冲过程"
               loading="lazy"
               width="896"
@@ -225,6 +225,17 @@
 
 <script setup>
 import { onMounted, ref, onUnmounted } from 'vue'
+
+const OSS_BASE = import.meta.env.VITE_ASSET_BASE_URL || ''
+const asset = (ossPath, localPath) => OSS_BASE ? `${OSS_BASE}${ossPath}` : localPath
+
+// About 页静态图片映射（ossPath == localPath，OSS 同步后本地即原图）
+const aboutHero = asset('/images/about/hero-about-20260716.png', '/images/about/hero-about-20260716.png')
+const editorialStore = asset('/images/about/editorial-store.png', '/images/about/editorial-store.png')
+const editorialBeans = asset('/images/about/editorial-beans-comparison.png', '/images/about/editorial-beans-comparison.png')
+const editorialCupping = asset('/images/about/editorial-cupping.png', '/images/about/editorial-cupping.png')
+const editorialRoastery = asset('/images/about/editorial-roastery.png', '/images/about/editorial-roastery.png')
+const editorialPourOver = asset('/images/about/editorial-pour-over.png', '/images/about/editorial-pour-over.png')
 
 const journeySection = ref(null)
 
