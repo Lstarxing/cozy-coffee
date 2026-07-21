@@ -524,14 +524,21 @@ onMounted(() => {
   font-size: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
+  background: linear-gradient(135deg, #A1887F, #8D6E63);
   color: white;
-  box-shadow: 0 4px 15px rgba(198, 156, 109, 0.3);
+  box-shadow: 0 4px 15px rgba(141, 110, 99, 0.3);
 }
 
-.receive-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(198, 156, 109, 0.4); }
+.receive-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(141, 110, 99, 0.4); }
 .receive-btn:disabled { background: #E0E0E0; color: #9E9E9E; cursor: not-allowed; box-shadow: none; transform: none; }
-.receive-btn.silver { background: linear-gradient(135deg, #ECEFF1, #CFD8DC); color: #546E7A; }
-.receive-btn.diamond { background: linear-gradient(135deg, #64B5F6, #1976D2); color: white; }
+.receive-btn.silver { background: linear-gradient(135deg, #CFD8DC, #90A4AE); color: white; box-shadow: 0 4px 15px rgba(144, 164, 174, 0.3); }
+.receive-btn.silver:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(144, 164, 174, 0.4); }
+.receive-btn.gold { background: linear-gradient(135deg, #FFD54F, #FF8F00); color: white; box-shadow: 0 4px 15px rgba(255, 143, 0, 0.3); }
+.receive-btn.gold:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(255, 143, 0, 0.4); }
+.receive-btn.diamond { background: linear-gradient(135deg, #64B5F6, #1565C0); color: white; box-shadow: 0 4px 15px rgba(21, 101, 192, 0.3); }
+.receive-btn.diamond:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(21, 101, 192, 0.4); }
+.receive-btn.black { background: linear-gradient(135deg, #424242, #212121); color: #FFD700; box-shadow: 0 4px 15px rgba(33, 33, 33, 0.4); }
+.receive-btn.black:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(33, 33, 33, 0.5); }
 
 .member-progress-footer {
   width: 100%;

@@ -803,7 +803,7 @@ onUnmounted(() => {
 .honor-banner__link { min-height: 56px; display: inline-flex; align-items: center; gap: 12px; margin-top: 28px; padding: 13px 46px; border: 1px solid rgba(232, 201, 154, .72); border-radius: 999px; color: #f3d7aa; font-size: 17px; font-weight: 400; text-decoration: none; transition: color .22s ease, background .22s ease, border-color .22s ease; }
 .honor-banner__link:hover { color: #24140b; border-color: #f0cf9d; background: #f0cf9d; }
 
-.warm-membership { min-height: 620px; padding-block: 128px; color: var(--cozy-on-surface-alt); background: var(--cozy-surface-alt); }
+.warm-membership { min-height: 620px; padding-block: 128px; color: var(--cozy-on-surface-alt); background: oklch(0.22 0.025 42); }
 .membership-shell { min-height: 360px; }
 
 .warm-membership :where(a, button, summary):focus-visible { outline-color: var(--cozy-on-surface-alt); }
