@@ -26,7 +26,10 @@
       </header>
 
       <nav class="flavor-nav" aria-label="选择今天的风味">
-        <button
+        <p class="flavor-nav__kicker">FLAVOR MAP</p>
+        <p class="flavor-nav__lead">从产地，到风味。探索咖啡世界中的六种风味表达。</p>
+        <div class="flavor-nav__items">
+          <button
           v-for="route in routes"
           :key="route.id"
           type="button"
@@ -38,6 +41,7 @@
           <span class="flavor-nav__label">{{ route.label }}</span>
           <span class="flavor-nav__hint">{{ route.originHint }}</span>
         </button>
+        </div>
       </nav>
 
       <div class="todays-cup" aria-live="polite">
@@ -89,6 +93,7 @@
             <div class="todays-cup__copy">
               <p class="todays-cup__kicker">今日推荐</p>
               <h3 class="todays-cup__name">{{ featuredCoffee.name }}</h3>
+              <span v-if="featuredCoffee.originName" class="todays-cup__origin">{{ featuredCoffee.originName }}</span>
               <p class="todays-cup__notes">{{ formatNotes(featuredCoffee) }}</p>
               <p class="todays-cup__story">{{ featuredStory }}</p>
               <p class="todays-cup__price">¥{{ featuredCoffee.price }}</p>
@@ -123,7 +128,10 @@
                   :aria-label="`${coffee.name}，¥${coffee.price}`"
                 >
                   <span class="coffee-row__top">
-                    <span class="coffee-row__name">{{ coffee.name }}</span>
+                    <span>
+                      <span class="coffee-row__name">{{ coffee.name }}</span>
+                      <span v-if="coffee.originName" class="coffee-row__origin">{{ coffee.originName }}</span>
+                    </span>
                     <span class="coffee-row__price">¥{{ coffee.price }}</span>
                   </span>
                   <span class="coffee-row__notes">{{ formatNotes(coffee) }}</span>
@@ -139,6 +147,7 @@
 
       <section class="menu-series" aria-labelledby="menu-series-title">
         <header class="menu-series__header">
+          <p class="menu-series__kicker">COLLECTION</p>
           <h3 id="menu-series-title">探索更多系列</h3>
           <p class="menu-series__lead">也可以，从另一种方式开始。</p>
         </header>
@@ -162,6 +171,7 @@
                 @error="onImageError"
               >
             </div>
+            <span v-if="item.englishName" class="series-card__en">{{ item.englishName }}</span>
             <span class="series-card__name">{{ item.name }}</span>
             <span class="series-card__explore" aria-hidden="true">了解更多 →</span>
           </router-link>
@@ -312,7 +322,7 @@ watch(
 
 <style scoped>
 .editorial-menu {
-  padding-block: clamp(72px, 8vw, 100px);
+  padding-block: clamp(72px, 8vw, 100px) clamp(32px, 3vw, 48px);
   color: var(--cozy-ink);
   background: var(--cozy-surface);
 }
@@ -356,23 +366,44 @@ watch(
   line-height: 1.7;
 }
 .menu-hero__media {
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   border-radius: 2px;
   background: oklch(0.95 0.01 55);
+  margin-top: clamp(24px, 3vw, 40px);
 }
 .menu-hero__media img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: 50% 35%;
   display: block;
 }
 .flavor-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 36px;
   margin-top: clamp(80px, 9vw, 96px);
   padding-bottom: 4px;
+}
+.flavor-nav__lead {
+  margin: 0 0 20px;
+  max-width: 32em;
+  color: var(--cozy-muted);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  line-height: 1.6;
+}
+.flavor-nav__kicker {
+  margin: 0 0 6px;
+  color: var(--cozy-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.flavor-nav__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(32px, 4vw, 64px);
 }
 .flavor-nav__item {
   position: relative;
@@ -427,7 +458,7 @@ watch(
   opacity: 0.85;
 }
 .todays-cup {
-  margin-top: clamp(96px, 11vw, 120px);
+  margin-top: clamp(48px, 6vw, 72px);
   min-height: 320px;
 }
 .todays-cup__body {
@@ -470,6 +501,14 @@ watch(
   font-weight: 500;
   line-height: 1.18;
 }
+.todays-cup__origin {
+  display: block;
+  margin-top: 6px;
+  color: var(--cozy-muted);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
 .todays-cup__notes {
   margin: 14px 0 0;
   color: var(--cozy-muted);
@@ -492,10 +531,11 @@ watch(
 }
 .todays-cup__price {
   margin: 20px 0 0;
-  font-family: var(--font-display);
-  font-size: clamp(1.35rem, 2vw, 1.65rem);
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--cozy-muted);
+  letter-spacing: 0.02em;
 }
 .todays-cup__cta {
   display: inline-flex;
@@ -542,7 +582,7 @@ watch(
   100% { background-position: -100% 0; }
 }
 .more-flavor {
-  margin-top: clamp(96px, 11vw, 120px);
+  margin-top: clamp(48px, 6vw, 72px);
 }
 .more-flavor__header h3 {
   margin: 0 0 28px;
@@ -598,9 +638,18 @@ watch(
 .coffee-row:hover .coffee-row__name {
   color: var(--menu-accent, var(--cozy-primary));
 }
+.coffee-row__origin {
+  display: block;
+  margin-top: 2px;
+  color: var(--cozy-muted);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
 .coffee-row__price {
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--cozy-muted);
   white-space: nowrap;
 }
 .coffee-row__notes {
@@ -624,6 +673,14 @@ watch(
 .menu-series__header {
   margin-bottom: 36px;
 }
+.menu-series__kicker {
+  margin: 0 0 12px;
+  color: var(--cozy-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
 .menu-series__header h3 {
   margin: 0;
   font-family: var(--font-display);
@@ -645,9 +702,11 @@ watch(
 .series-card {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 14px;
   color: inherit;
   text-decoration: none;
+  text-align: center;
 }
 .series-card__media {
   aspect-ratio: 1 / 1;
@@ -666,9 +725,18 @@ watch(
 .series-card:focus-visible .series-card__media img {
   transform: scale(1.03);
 }
-.series-card__name {
-  font-size: 15px;
+.series-card__en {
+  font-size: 12px;
   font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cozy-ink);
+}
+.series-card__name {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--cozy-muted);
   letter-spacing: 0.02em;
 }
 .series-card__explore {
@@ -715,19 +783,20 @@ watch(
 @media (max-width: 600px) {
   .editorial-menu { padding-block: 64px; }
   .editorial-menu__shell { width: min(100% - 32px, 520px); }
-  .flavor-nav {
+  .flavor-nav__lead { font-size: 13px; }
+  .flavor-nav__items {
     flex-wrap: nowrap;
-    gap: 8px 28px;
+    gap: 0 28px;
     margin-right: -16px;
     padding-right: 16px;
     overflow-x: auto;
     scrollbar-width: none;
   }
-  .flavor-nav::-webkit-scrollbar { display: none; }
+  .flavor-nav__items::-webkit-scrollbar { display: none; }
   .flavor-nav__item { flex: 0 0 auto; }
   .todays-cup,
   .more-flavor,
-  .menu-series { margin-top: 80px; }
+  .menu-series { margin-top: 56px; }
   .menu-series__grid {
     grid-auto-flow: column;
     grid-auto-columns: minmax(132px, 42vw);
