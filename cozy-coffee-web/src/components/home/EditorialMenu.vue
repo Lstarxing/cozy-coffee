@@ -1,214 +1,760 @@
 <template>
-  <section id="menu" class="editorial-menu" aria-labelledby="editorial-menu-title">
+  <section
+    id="menu"
+    class="editorial-menu"
+    aria-labelledby="editorial-menu-title"
+    :style="accentStyle"
+  >
     <div class="editorial-menu__shell">
-      <header class="editorial-menu__header">
-        <h2 id="editorial-menu-title">今天，想喝哪一杯</h2>
+      <header class="menu-hero">
+        <div class="menu-hero__copy">
+          <p class="menu-hero__chapter">MENU</p>
+          <h2 id="editorial-menu-title">今天，想喝哪一种风味？</h2>
+          <p class="menu-hero__lead">每一种风味，都来自不同土地的表达。</p>
+        </div>
+        <div class="menu-hero__media">
+          <img
+            :src="heroImage.fallback"
+            :alt="heroImage.alt"
+            width="960"
+            height="600"
+            fetchpriority="high"
+            decoding="async"
+            @error="onImageError"
+          >
+        </div>
       </header>
 
-      <div class="flavor-direction">
-        <p class="flavor-direction__label">风味</p>
-        <nav class="flavor-directory" aria-label="选择今天的风味">
-          <button
-            v-for="route in flavorRoutes"
-            :key="route.id"
-            type="button"
-            :class="{ 'is-active': activeRouteId === route.id }"
-            :aria-pressed="activeRouteId === route.id"
-            @click="activeRouteId = route.id"
-          >
-            {{ route.label }}
-          </button>
-        </nav>
-        <Transition name="menu-fade" mode="out-in">
-          <p :key="activeRoute.id" class="flavor-direction__description">{{ activeRoute.description }}</p>
-        </Transition>
-      </div>
+      <nav class="flavor-nav" aria-label="选择今天的风味">
+        <button
+          v-for="route in routes"
+          :key="route.id"
+          type="button"
+          class="flavor-nav__item"
+          :class="{ 'is-active': activeRouteId === route.id }"
+          :aria-pressed="activeRouteId === route.id"
+          @click="selectRoute(route.id)"
+        >
+          <span class="flavor-nav__label">{{ route.label }}</span>
+          <span class="flavor-nav__hint">{{ route.originHint }}</span>
+        </button>
+      </nav>
 
-      <div class="editorial-menu__body">
-        <div class="editorial-menu__column editorial-menu__column--left">
-          <Transition name="menu-fade" mode="out-in">
-            <router-link
-              :key="activeRoute.id"
-              class="featured-coffee"
-              to="/member/order"
-              :aria-label="`查看今日推荐：${featuredCoffee.name}`"
-            >
-              <div class="featured-coffee__image">
-                <picture>
-                  <source type="image/avif" :srcset="activeRoute.coverImage.avif" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 820px) 44vw, 42vw">
-                  <source type="image/webp" :srcset="activeRoute.coverImage.webp" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 820px) 44vw, 42vw">
-                  <img
-                    :src="activeRoute.coverImage.fallback"
-                    :srcset="activeRoute.coverImage.jpg"
-                    sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 820px) 44vw, 42vw"
-:alt="activeRoute.imageAlt"
-                  loading="lazy"
-                  width="1200"
-                  height="900"
-                    @error="$emit('image-error', $event)"
-                  >
-                </picture>
-              </div>
-              <div class="featured-coffee__content">
-                <p class="featured-coffee__kicker">今日推荐</p>
-                <h3>{{ featuredCoffee.name }}</h3>
-                <p class="featured-coffee__roast">{{ roastLabel(featuredCoffee.roastLevel) }}</p>
-                <p class="featured-coffee__flavors">{{ featuredCoffee.flavorNotes.join(' · ') }}</p>
-                <p class="featured-coffee__story">{{ activeRoute.featured.story }}</p>
-                <strong class="featured-coffee__price">¥{{ featuredCoffee.price }}</strong>
-              </div>
-            </router-link>
-          </Transition>
-
-          <router-link class="editorial-menu__all" to="/member/order">查看完整菜单 <span aria-hidden="true">→</span></router-link>
+      <div class="todays-cup" aria-live="polite">
+        <div v-if="loading" class="todays-cup__skeleton" aria-hidden="true">
+          <div class="skel skel--media"></div>
+          <div class="skel-stack">
+            <div class="skel skel--line skel--sm"></div>
+            <div class="skel skel--line skel--lg"></div>
+            <div class="skel skel--line"></div>
+            <div class="skel skel--line skel--md"></div>
+            <div class="skel skel--line skel--sm"></div>
+          </div>
         </div>
 
-        <Transition name="menu-fade" mode="out-in">
-          <section :key="activeRoute.id" class="coffee-group" aria-labelledby="active-coffee-menu-title">
-            <header class="coffee-group__header">
-              <h3 id="active-coffee-menu-title">{{ activeRoute.menu.title }}</h3>
-            </header>
+        <Transition v-else name="menu-fade" mode="out-in">
+          <article
+            v-if="featuredCoffee"
+            :key="activeRoute.id + '-' + featuredCoffee.id"
+            class="todays-cup__body"
+          >
+            <div class="todays-cup__media">
+              <picture>
+                <source
+                  v-if="featuredCover.avif"
+                  type="image/avif"
+                  :srcset="featuredCover.avif"
+                  sizes="(max-width: 900px) calc(100vw - 32px), 42vw"
+                >
+                <source
+                  v-if="featuredCover.webp"
+                  type="image/webp"
+                  :srcset="featuredCover.webp"
+                  sizes="(max-width: 900px) calc(100vw - 32px), 42vw"
+                >
+                <img
+                  :src="featuredCover.fallback"
+                  :srcset="featuredCover.jpg || undefined"
+                  sizes="(max-width: 900px) calc(100vw - 32px), 42vw"
+                  :alt="featuredCover.alt || activeRoute.imageAlt || featuredCoffee.name"
+                  width="1200"
+                  height="900"
+                  loading="eager"
+                  decoding="async"
+                  @error="onImageError"
+                >
+              </picture>
+            </div>
 
-            <div class="coffee-group__list">
-              <router-link
-                v-for="coffee in recommendedProducts"
-                :key="coffee.id"
-                class="coffee-row"
-                to="/member/order"
-              >
-                <span class="coffee-row__name">{{ coffee.name }}</span>
-                <span class="coffee-row__flavors">{{ coffee.flavorNotes.slice(0, 2).join(' · ') }}</span>
-                <strong>¥{{ coffee.price }}</strong>
+            <div class="todays-cup__copy">
+              <p class="todays-cup__kicker">今日推荐</p>
+              <h3 class="todays-cup__name">{{ featuredCoffee.name }}</h3>
+              <p class="todays-cup__notes">{{ formatNotes(featuredCoffee) }}</p>
+              <p class="todays-cup__story">{{ featuredStory }}</p>
+              <p class="todays-cup__price">¥{{ featuredCoffee.price }}</p>
+              <router-link class="todays-cup__cta" to="/member/order">
+                了解更多
+                <span class="todays-cup__cta-arrow" aria-hidden="true">→</span>
               </router-link>
             </div>
-          </section>
+          </article>
+
+          <div v-else class="todays-cup__empty" role="status">
+            <p>今日推荐准备中，请稍后再看。</p>
+          </div>
         </Transition>
       </div>
+
+      <section class="more-flavor" :aria-labelledby="moreFlavorTitleId">
+        <header class="more-flavor__header">
+          <h3 :id="moreFlavorTitleId">{{ moreFlavorTitle }}</h3>
+        </header>
+
+        <div class="more-flavor__list" :style="listMinHeightStyle">
+          <Transition name="menu-fade" mode="out-in">
+            <div :key="activeRoute.id" class="more-flavor__items">
+              <template v-if="recommendedProducts.length">
+                <router-link
+                  v-for="coffee in recommendedProducts"
+                  :key="coffee.id"
+                  class="coffee-row"
+                  :class="{ 'is-featured': coffee.id === featuredCoffee?.id }"
+                  to="/member/order"
+                  :aria-label="`${coffee.name}，¥${coffee.price}`"
+                >
+                  <span class="coffee-row__top">
+                    <span class="coffee-row__name">{{ coffee.name }}</span>
+                    <span class="coffee-row__price">¥{{ coffee.price }}</span>
+                  </span>
+                  <span class="coffee-row__notes">{{ formatNotes(coffee) }}</span>
+                </router-link>
+              </template>
+              <p v-else class="more-flavor__empty" role="status">
+                更多产地正在准备中。
+              </p>
+            </div>
+          </Transition>
+        </div>
+      </section>
+
+      <section class="menu-series" aria-labelledby="menu-series-title">
+        <header class="menu-series__header">
+          <h3 id="menu-series-title">探索更多系列</h3>
+          <p class="menu-series__lead">也可以，从另一种方式开始。</p>
+        </header>
+
+        <div class="menu-series__grid">
+          <router-link
+            v-for="item in seriesItems"
+            :key="item.id"
+            class="series-card"
+            :to="item.href || '/member/order'"
+            :aria-label="item.description ? `${item.name}，${item.description}` : item.name"
+          >
+            <div class="series-card__media">
+              <img
+                :src="item.image?.fallback || item.image?.jpg"
+                :alt="item.image?.alt || item.name"
+                width="400"
+                height="400"
+                loading="lazy"
+                decoding="async"
+                @error="onImageError"
+              >
+            </div>
+            <span class="series-card__name">{{ item.name }}</span>
+            <span class="series-card__explore" aria-hidden="true">了解更多 →</span>
+          </router-link>
+        </div>
+      </section>
     </div>
   </section>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { MENU_HERO_IMAGE, HOME_MENU_SERIES } from '@/data/homeMenu'
 
 const props = defineProps({
   products: { type: Array, required: true },
-  flavorRoutes: { type: Array, required: true }
+  flavorRoutes: { type: Array, required: true },
+  series: { type: Array, default: null },
+  loading: { type: Boolean, default: false }
 })
 
-defineEmits(['image-error'])
+const emit = defineEmits(['image-error'])
 
-const routes = computed(() => (Array.isArray(props.flavorRoutes) && props.flavorRoutes.length ? props.flavorRoutes : []))
-const activeRouteId = ref(props.flavorRoutes?.[0]?.id)
-const activeRoute = computed(() =>
-  routes.value.find(route => route.id === activeRouteId.value) || routes.value[0]
+const routes = computed(() =>
+  Array.isArray(props.flavorRoutes) && props.flavorRoutes.length ? props.flavorRoutes : []
 )
-const featuredCoffee = computed(() =>
-  props.products.find(product => product.id === activeRoute.value?.featured?.productId) || props.products[0]
+
+const activeRouteId = ref(props.flavorRoutes?.[0]?.id || 'floral')
+
+const activeRoute = computed(
+  () => routes.value.find(route => route.id === activeRouteId.value) || routes.value[0] || {}
 )
+
+const productMap = computed(() => {
+  const map = new Map()
+  for (const product of props.products || []) {
+    if (product?.id) map.set(product.id, product)
+  }
+  return map
+})
+
+const featuredCoffee = computed(() => {
+  const id = activeRoute.value?.featuredProductId
+  return productMap.value.get(id) || props.products?.[0] || null
+})
+
 const recommendedProducts = computed(() =>
-  (activeRoute.value?.menu?.productIds || [])
-    .map(id => props.products.find(product => product.id === id))
-    .filter(product => product?.available !== false)
+  (activeRoute.value?.productIds || [])
+    .map(id => productMap.value.get(id))
+    .filter(product => product && product.available !== false)
 )
 
-function roastLabel(level) {
-  return ({ light: 'Light Roast', medium: 'Medium Roast', dark: 'Dark Roast' })[level] || level
+const featuredCover = computed(() => {
+  const route = activeRoute.value
+  const product = featuredCoffee.value
+  return (
+    route?.coverImage ||
+    product?.heroImage || {
+      fallback: '/images/beans.jpg',
+      jpg: '',
+      avif: '',
+      webp: '',
+      alt: product?.name || '咖啡'
+    }
+  )
+})
+
+const featuredStory = computed(() => {
+  const product = featuredCoffee.value
+  if (!product) return ''
+  return product.story || activeRoute.value?.description || ''
+})
+
+const moreFlavorTitle = computed(() => {
+  if (!activeRoute.value?.id || activeRoute.value.id === 'all') return '探索今日菜单'
+  return `探索更多${activeRoute.value.label || ''}`
+})
+
+const moreFlavorTitleId = 'more-flavor-title'
+
+const seriesItems = computed(() =>
+  Array.isArray(props.series) && props.series.length ? props.series : HOME_MENU_SERIES
+)
+
+const heroImage = MENU_HERO_IMAGE
+
+const accentStyle = computed(() => ({
+  '--menu-accent': activeRoute.value?.accentColor || 'var(--cozy-primary)'
+}))
+
+const listMinHeightStyle = computed(() => ({
+  minHeight: 'min(288px, 50vw)'
+}))
+
+function formatNotes(product) {
+  const notes = product?.notes || product?.flavorNotes || []
+  const clipped = notes.slice(0, 3)
+  if (!clipped.length) return ''
+  let text = clipped.join(' · ')
+  if (notes.length > 3) text += ' …'
+  if (text.length > 55) text = `${text.slice(0, 52)}…`
+  return text
 }
+
+function selectRoute(id) {
+  activeRouteId.value = id
+}
+
+function onImageError(event) {
+  emit('image-error', event)
+  const image = event?.currentTarget
+  if (!image || image.dataset.fallbackApplied) return
+  image.dataset.fallbackApplied = 'true'
+  image.removeAttribute('srcset')
+  image.src = '/images/beans.jpg'
+  image.classList.add('image-fallback')
+}
+
+function preloadFeaturedImages() {
+  if (typeof window === 'undefined') return
+  const urls = new Set()
+  for (const route of routes.value) {
+    const cover = route.coverImage
+    if (cover?.fallback) urls.add(cover.fallback)
+    if (cover?.localFallback) urls.add(cover.localFallback)
+  }
+  for (const url of urls) {
+    const img = new Image()
+    img.decoding = 'async'
+    img.src = url
+  }
+}
+
+onMounted(() => {
+  preloadFeaturedImages()
+})
+
+watch(
+  () => props.flavorRoutes,
+  (next) => {
+    if (!next?.length) return
+    if (!next.some(route => route.id === activeRouteId.value)) {
+      activeRouteId.value = next[0].id
+    }
+    preloadFeaturedImages()
+  }
+)
 </script>
 
 <style scoped>
-.editorial-menu { padding-block: clamp(80px, 7.5vw, 120px); color: var(--cozy-ink); background: var(--cozy-surface); }
-.editorial-menu__shell { width: min(1180px, calc(100% - 48px)); margin-inline: auto; }
-.editorial-menu :where(a, button):focus-visible { outline: 3px solid var(--cozy-primary); outline-offset: 4px; }
-.editorial-menu__header { display: flex; align-items: end; justify-content: space-between; gap: 32px; }
-.editorial-menu__header h2 { max-width: 8em; margin: 0; font-family: var(--font-display); font-size: clamp(2rem, 4vw, 4rem); font-weight: 500; line-height: 1.14; letter-spacing: .01em; text-wrap: balance; }
-.editorial-menu__all { min-height: 44px; display: inline-flex; align-items: center; gap: 14px; margin-top: 28px; color: var(--cozy-primary); font-weight: 650; text-decoration: none; }
-.editorial-menu__all span { transition: transform .24s cubic-bezier(.22, 1, .36, 1); }
-.editorial-menu__all:hover span { transform: translateX(4px); }
-
-.flavor-direction { margin-top: clamp(20px, 2.4vw, 30px); }
-.flavor-direction__label { margin: 0 0 10px; color: var(--cozy-muted); font-size: 12px; letter-spacing: .08em; }
-.flavor-directory { display: flex; flex-wrap: wrap; gap: 18px 32px; padding-bottom: 14px; border-bottom: 1px solid var(--cozy-border); }
-.flavor-directory button { position: relative; min-height: 36px; padding: 0; border: 0; color: var(--cozy-muted); background: transparent; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
-.flavor-directory button::after { position: absolute; right: 0; bottom: 0; left: 0; height: 1px; background: var(--cozy-primary); content: ''; transform: scaleX(0); transform-origin: left; transition: transform .24s ease; }
-.flavor-directory button:hover,
-.flavor-directory button.is-active { color: var(--cozy-primary); font-weight: 650; }
-.flavor-directory button:hover::after,
-.flavor-directory button.is-active::after { transform: scaleX(1); }
-.flavor-direction__description { width: min(31em, 100%); min-height: 3.6em; margin: 16px 0 0; color: var(--cozy-muted); font-family: var(--font-display); font-size: clamp(1.05rem, 1.45vw, 1.3rem); line-height: 1.6; }
-
-.editorial-menu__body { min-height: 560px; display: grid; grid-template-columns: minmax(420px, .9fr) minmax(0, 1.1fr); gap: clamp(44px, 5vw, 68px); padding-top: 28px; }
-.editorial-menu__column--left { display: flex; flex-direction: column; min-width: 0; }
-.featured-coffee { min-width: 0; flex: 1; color: inherit; text-decoration: none; }
-.featured-coffee__image { width: 100%; max-width: 520px; aspect-ratio: 4 / 3; overflow: hidden; background: var(--cozy-bg); }
-.featured-coffee__image picture,
-.featured-coffee__image img { width: 100%; height: 100%; display: block; }
-.featured-coffee__image img { object-fit: cover; transition: transform .28s cubic-bezier(.22, 1, .36, 1); }
-.featured-coffee:hover .featured-coffee__image img,
-.featured-coffee:focus-visible .featured-coffee__image img { transform: scale(1.03); }
-.featured-coffee__content { min-height: 274px; padding-top: 22px; }
-.featured-coffee__kicker { margin: 0; color: var(--cozy-muted); font-size: 12px; letter-spacing: .08em; }
-.featured-coffee h3 { margin: 10px 0 0; font-family: var(--font-display); font-size: clamp(2rem, 3.4vw, 3.3rem); font-weight: 500; line-height: 1.12; }
-.featured-coffee__roast { margin: 13px 0 0; color: var(--cozy-primary); font-size: 12px; font-weight: 650; letter-spacing: .06em; }
-.featured-coffee__flavors { margin: 18px 0 0; color: var(--cozy-ink); font-size: 15px; }
-.featured-coffee__story { max-width: 28em; margin: 17px 0 0; color: var(--cozy-muted); font-size: 16px; line-height: 1.75; text-wrap: pretty; }
-.featured-coffee__price { display: block; margin-top: 22px; font-size: 17px; font-weight: 650; }
-
-.coffee-group { min-width: 0; }
-.coffee-group__header { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--cozy-ink); }
-.coffee-group__header h3 { margin: 0; font-family: var(--font-display); font-size: clamp(1.5rem, 2vw, 2rem); font-weight: 500; }
-.coffee-group__header p { margin: 0; color: var(--cozy-muted); font-size: 12px; letter-spacing: .06em; }
-.coffee-group__list { min-height: 192px; }
-.coffee-row { position: relative; min-height: 64px; display: grid; grid-template-columns: minmax(120px, .8fr) minmax(120px, 1fr) auto; align-items: center; gap: 12px 20px; color: inherit; border-bottom: 1px solid var(--cozy-border); text-decoration: none; transition: border-color .24s ease, color .24s ease; }
-.coffee-row::before { position: absolute; top: 0; bottom: -1px; left: -12px; width: 2px; background: var(--cozy-primary); content: ''; opacity: 0; transform: scaleY(.4); transition: opacity .24s ease, transform .24s ease; }
+.editorial-menu {
+  padding-block: clamp(72px, 8vw, 100px);
+  color: var(--cozy-ink);
+  background: var(--cozy-surface);
+}
+.editorial-menu__shell {
+  width: min(1240px, calc(100% - 80px));
+  margin-inline: auto;
+}
+.editorial-menu :where(a, button):focus-visible {
+  outline: 3px solid var(--cozy-primary);
+  outline-offset: 4px;
+}
+.menu-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: clamp(40px, 5vw, 56px);
+  align-items: center;
+}
+.menu-hero__chapter {
+  margin: 0 0 16px;
+  color: var(--cozy-muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.menu-hero h2 {
+  margin: 0;
+  max-width: 12em;
+  font-family: var(--font-display);
+  font-size: clamp(1.85rem, 3.2vw, 2.75rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+.menu-hero__lead {
+  max-width: 22em;
+  margin: 18px 0 0;
+  color: var(--cozy-muted);
+  font-size: clamp(15px, 1.2vw, 16px);
+  font-weight: 400;
+  line-height: 1.7;
+}
+.menu-hero__media {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 2px;
+  background: oklch(0.95 0.01 55);
+}
+.menu-hero__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.flavor-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 36px;
+  margin-top: clamp(80px, 9vw, 96px);
+  padding-bottom: 4px;
+}
+.flavor-nav__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--cozy-ink);
+  cursor: pointer;
+  text-align: left;
+}
+.flavor-nav__item::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--menu-accent, var(--cozy-primary));
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.flavor-nav__item:hover::after,
+.flavor-nav__item:focus-visible::after,
+.flavor-nav__item.is-active::after {
+  transform: scaleX(1);
+}
+.flavor-nav__label {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  transition: color 0.2s ease;
+}
+.flavor-nav__item.is-active .flavor-nav__label {
+  color: var(--menu-accent, var(--cozy-primary));
+}
+.flavor-nav__hint {
+  color: var(--cozy-muted);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+.flavor-nav__item:hover .flavor-nav__hint,
+.flavor-nav__item.is-active .flavor-nav__hint {
+  opacity: 0.85;
+}
+.todays-cup {
+  margin-top: clamp(96px, 11vw, 120px);
+  min-height: 320px;
+}
+.todays-cup__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: clamp(48px, 5vw, 64px);
+  align-items: center;
+}
+.todays-cup__media {
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 2px;
+  background: oklch(0.95 0.01 55);
+}
+.todays-cup__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.todays-cup__body:hover .todays-cup__media img {
+  transform: scale(1.025);
+}
+.todays-cup__copy {
+  min-width: 0;
+  padding-block: 8px;
+}
+.todays-cup__kicker {
+  margin: 0 0 24px;
+  color: var(--menu-accent, var(--cozy-primary));
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+}
+.todays-cup__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 2.8vw, 2.4rem);
+  font-weight: 500;
+  line-height: 1.18;
+}
+.todays-cup__notes {
+  margin: 14px 0 0;
+  color: var(--cozy-muted);
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+.todays-cup__story {
+  margin: 18px 0 0;
+  max-width: 28em;
+  min-height: 3.2em;
+  color: var(--cozy-ink);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.7;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.todays-cup__price {
+  margin: 20px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2vw, 1.65rem);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.todays-cup__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+  color: var(--menu-accent, var(--cozy-primary));
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+.todays-cup__cta-arrow {
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.todays-cup__cta:hover .todays-cup__cta-arrow {
+  transform: translateX(4px);
+}
+.todays-cup__empty {
+  padding: 48px 0;
+  color: var(--cozy-muted);
+  font-size: 15px;
+}
+.todays-cup__skeleton {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: clamp(48px, 5vw, 64px);
+  align-items: center;
+}
+.skel {
+  border-radius: 2px;
+  background: linear-gradient(90deg, oklch(0.94 0.01 55) 0%, oklch(0.97 0.008 55) 50%, oklch(0.94 0.01 55) 100%);
+  background-size: 200% 100%;
+  animation: skel-shine 1.2s ease-in-out infinite;
+}
+.skel--media { aspect-ratio: 4 / 3; width: 100%; }
+.skel-stack { display: grid; gap: 14px; }
+.skel--line { height: 14px; width: 70%; }
+.skel--sm { width: 28%; height: 12px; }
+.skel--md { width: 42%; }
+.skel--lg { width: 55%; height: 28px; }
+@keyframes skel-shine {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+.more-flavor {
+  margin-top: clamp(96px, 11vw, 120px);
+}
+.more-flavor__header h3 {
+  margin: 0 0 28px;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  font-weight: 500;
+}
+.more-flavor__list {
+  border-top: 1px solid var(--cozy-ink);
+}
+.coffee-row {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 22px 4px 22px 12px;
+  color: inherit;
+  border-bottom: 1px solid var(--cozy-border);
+  text-decoration: none;
+  transition: background-color 0.22s ease;
+}
+.coffee-row::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 2px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--menu-accent, var(--cozy-primary));
+  transform: translateY(-50%) scaleY(0);
+  transform-origin: center;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.coffee-row.is-featured::before {
+  transform: translateY(-50%) scaleY(1);
+}
 .coffee-row:hover,
-.coffee-row:focus-visible { border-bottom-color: color-mix(in oklch, var(--cozy-primary) 55%, var(--cozy-border)); }
-.coffee-row:hover::before,
-.coffee-row:focus-visible::before { opacity: .72; transform: scaleY(1); }
-.coffee-row__name { font-size: 17px; font-weight: 550; transition: font-weight .2s ease; }
-.coffee-row:hover .coffee-row__name,
-.coffee-row:focus-visible .coffee-row__name { color: var(--cozy-primary); font-weight: 700; }
-.coffee-row__flavors { color: var(--cozy-muted); font-size: 13px; }
-.coffee-row strong { font-size: 14px; font-weight: 600; white-space: nowrap; }
-
+.coffee-row:focus-visible {
+  background: oklch(0.97 0.008 55);
+}
+.coffee-row__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+}
+.coffee-row__name {
+  font-size: 17px;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+.coffee-row.is-featured .coffee-row__name,
+.coffee-row:hover .coffee-row__name {
+  color: var(--menu-accent, var(--cozy-primary));
+}
+.coffee-row__price {
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.coffee-row__notes {
+  color: var(--cozy-muted);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  max-width: 55ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.more-flavor__empty {
+  margin: 0;
+  padding: 36px 4px;
+  color: var(--cozy-muted);
+  font-size: 14px;
+}
+.menu-series {
+  margin-top: clamp(96px, 11vw, 120px);
+}
+.menu-series__header {
+  margin-bottom: 36px;
+}
+.menu-series__header h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  font-weight: 500;
+}
+.menu-series__lead {
+  margin: 12px 0 0;
+  color: var(--cozy-muted);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.menu-series__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 24px 28px;
+}
+.series-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: inherit;
+  text-decoration: none;
+}
+.series-card__media {
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 2px;
+  background: oklch(0.95 0.012 55);
+}
+.series-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.series-card:hover .series-card__media img,
+.series-card:focus-visible .series-card__media img {
+  transform: scale(1.03);
+}
+.series-card__name {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.series-card__explore {
+  color: var(--menu-accent, var(--cozy-primary));
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.series-card:hover .series-card__explore,
+.series-card:focus-visible .series-card__explore {
+  opacity: 1;
+  transform: translateY(0);
+}
 .menu-fade-enter-active,
-.menu-fade-leave-active { transition: opacity .13s ease; }
+.menu-fade-leave-active {
+  transition: opacity 0.28s ease-out, transform 0.28s ease-out;
+}
 .menu-fade-enter-from,
-.menu-fade-leave-to { opacity: 0; }
-
+.menu-fade-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+@media (max-width: 1024px) {
+  .editorial-menu__shell {
+    width: min(100% - 48px, 960px);
+  }
+}
 @media (max-width: 900px) {
-  .editorial-menu__body { min-height: 0; grid-template-columns: 1fr; gap: 40px; }
-  .editorial-menu__column--left { max-width: none; }
-  .featured-coffee { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(0, 1fr); gap: 28px; align-items: center; }
-  .featured-coffee__content { padding-top: 0; }
-  .coffee-group { margin-top: 8px; }
+  .menu-hero,
+  .todays-cup__body,
+  .todays-cup__skeleton {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .menu-hero__media {
+    order: -1;
+    max-width: 520px;
+  }
+  .todays-cup__kicker { margin-bottom: 18px; }
+  .todays-cup__story { min-height: 0; }
 }
-
 @media (max-width: 600px) {
-  .editorial-menu { padding-block: 72px; }
+  .editorial-menu { padding-block: 64px; }
   .editorial-menu__shell { width: min(100% - 32px, 520px); }
-  .editorial-menu__header h2 { max-width: 7em; }
-  .flavor-directory { flex-wrap: nowrap; gap: 26px; margin-right: -16px; padding-right: 16px; overflow-x: auto; scrollbar-width: none; }
-  .flavor-directory::-webkit-scrollbar { display: none; }
-  .flavor-direction__description { min-height: 4.8em; }
-  .editorial-menu__all { margin-top: 36px; }
-  .featured-coffee { display: block; }
-  .featured-coffee__image { max-width: none; }
-  .featured-coffee__content { min-height: 260px; padding-top: 20px; }
-  .coffee-group__header { padding-bottom: 14px; }
-  .coffee-row { min-height: 72px; grid-template-columns: 1fr auto; gap: 7px 16px; padding-block: 12px; }
-  .coffee-row__flavors { grid-column: 1; }
-  .coffee-row strong { grid-row: 1 / 3; grid-column: 2; }
+  .flavor-nav {
+    flex-wrap: nowrap;
+    gap: 8px 28px;
+    margin-right: -16px;
+    padding-right: 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .flavor-nav::-webkit-scrollbar { display: none; }
+  .flavor-nav__item { flex: 0 0 auto; }
+  .todays-cup,
+  .more-flavor,
+  .menu-series { margin-top: 80px; }
+  .menu-series__grid {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(132px, 42vw);
+    grid-template-columns: none;
+    overflow-x: auto;
+    margin-right: -16px;
+    padding-right: 16px;
+    scrollbar-width: none;
+  }
+  .menu-series__grid::-webkit-scrollbar { display: none; }
+  .series-card__explore { opacity: 0.7; transform: none; }
 }
-
 @media (prefers-reduced-motion: reduce) {
   .menu-fade-enter-active,
-  .menu-fade-leave-active { transition: none; }
-  .featured-coffee__image img,
-  .editorial-menu__all span,
-  .flavor-directory button::after,
+  .menu-fade-leave-active,
+  .flavor-nav__item::after,
+  .todays-cup__media img,
+  .todays-cup__cta-arrow,
+  .series-card__media img,
+  .series-card__explore,
   .coffee-row,
-  .coffee-row::before { transition: none; }
+  .coffee-row::before,
+  .skel {
+    transition: none !important;
+    animation: none !important;
+  }
+  .menu-fade-enter-from,
+  .menu-fade-leave-to { transform: none; }
 }
 </style>

@@ -31,6 +31,26 @@
 
     <EditorialMenu :products="menuItems" :flavor-routes="flavorRoutes" @image-error="handleImageError" />
 
+    <!-- Bridge：菜单 → 荣誉的节奏过渡。无 CTA，只保留向下视觉引导。
+         SVG line+chevron opacity 0.4 持续 2.4s 呼吸，告诉用户下面还有内容。
+         荣誉 banner 自带「了解我们的坚持 →」按钮，避免 CTA 重复。 -->
+    <section class="menu-bridge" aria-label="menu to brand rhythm">
+      <div class="warm-shell menu-bridge__shell">
+        <span class="menu-bridge__rule" aria-hidden="true"></span>
+        <h2 class="menu-bridge__title">
+          <span>每一颗豆子</span>
+          <span>都值得认真对待</span>
+        </h2>
+        <span class="menu-bridge__hint" aria-hidden="true">
+          <svg width="14" height="40" viewBox="0 0 14 40">
+            <line x1="7" y1="0" x2="7" y2="28" stroke="currentColor" stroke-width="1" />
+            <polyline points="3,25 7,30 11,25" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <span class="menu-bridge__rule" aria-hidden="true"></span>
+      </div>
+    </section>
+
     <section class="honor-banner" aria-labelledby="honor-banner-title">
       <picture class="honor-banner__media" aria-hidden="true">
         <source
@@ -356,6 +376,54 @@ onUnmounted(() => {
   overflow-x: clip;
   overflow-y: visible;
   background: #eee1d2;
+}
+
+/* Bridge 升级：上下短分隔线 + 两行标题 + ↓ 呼吸 SVG（无 CTA）。
+   padding-block 比之前略小，让 Bridge 不抢戏；honor banner 自己承担 CTA。 */
+.menu-bridge {
+  padding-block: clamp(64px, 7vw, 96px);
+  background: var(--cozy-surface);
+  color: var(--cozy-ink);
+}
+.menu-bridge__shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(18px, 2.6vw, 28px);
+}
+.menu-bridge__rule {
+  width: clamp(40px, 6vw, 96px);
+  height: 1px;
+  background: color-mix(in oklch, var(--cozy-primary) 35%, transparent);
+}
+.menu-bridge__title {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 2.4vw, 2rem);
+  font-weight: 500;
+  color: var(--cozy-primary);
+  letter-spacing: .02em;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+.menu-bridge__title span { display: block; }
+
+/* ↓ 视觉引导：opacity 0.4，2.4s 呼吸 translateY(4px)；reduced-motion 关掉动画。 */
+.menu-bridge__hint {
+  display: block;
+  color: var(--cozy-primary);
+  opacity: .4;
+  animation: menu-bridge-breathe 2.4s ease-in-out infinite;
+}
+@keyframes menu-bridge-breathe {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(4px); }
+}
+
+@media (max-width: 560px) {
+  .menu-bridge { padding-block: 48px; }
+  .menu-bridge__shell { gap: 16px; }
 }
 
 .warm-hero__media,
