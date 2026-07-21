@@ -20,10 +20,11 @@
       <div class="site-navbar__actions">
         <template v-if="!userStore.isLoggedIn">
           <router-link to="/login" class="site-navbar__text-action">登录</router-link>
-          <router-link to="/register" class="site-navbar__button">注册</router-link>
+          <router-link to="/register" class="site-navbar__button site-navbar__button--outline">注册</router-link>
         </template>
         <template v-else>
-          <router-link to="/member" class="site-navbar__button">
+          <router-link to="/member" class="site-navbar__button site-navbar__button--ghost">
+            <svg class="user-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             <span class="user-greeting">{{ userStore.userInfo?.nickname || '会员中心' }}</span>
           </router-link>
           <button class="site-navbar__text-action" type="button" @click="handleLogout">退出</button>
@@ -296,9 +297,18 @@ onUnmounted(() => {
 .site-navbar__links a.is-active::after { transform: scaleX(1); }
 
 .site-navbar__actions { display: flex; align-items: center; justify-self: end; gap: 8px; }
-.site-navbar__text-action { padding-inline: 12px; border: 0; background: transparent; cursor: pointer; font-size: 15px; }
-.site-navbar__button { min-width: 80px; padding: 9px 18px; border-radius: 10px; color: var(--cozy-on-primary); background: var(--cozy-primary); font-size: 15px; }
-.site-navbar__button:hover { background: var(--cozy-primary-hover); }
+.site-navbar__text-action { position: relative; padding-inline: 12px; border: 0; background: transparent; cursor: pointer; font-size: 15px; }
+/* 底部线条生长（方案 B） */
+.site-navbar__text-action::after { content: ""; position: absolute; bottom: -2px; left: 12px; width: 0; height: 1px; background: var(--cozy-primary); transition: width .28s ease; }
+.site-navbar__text-action:hover::after { width: calc(100% - 24px); }
+.site-navbar__button { display: inline-flex; align-items: center; gap: 6px; min-width: 80px; padding: 9px 18px; border-radius: 10px; border: none; font-size: 15px; cursor: pointer; transition: all .28s ease; }
+/* Outline: 注册按钮 — hover 仅边框+字色增强，不填充 */
+.site-navbar__button--outline { background: transparent; color: #8B6B4A; border: 1px solid rgba(180, 145, 110, .65); }
+.site-navbar__button--outline:hover { border-color: var(--cozy-primary); border-width: 1.5px; color: var(--cozy-primary); background: transparent; }
+/* Ghost: 登录后用户名 — 几乎无按钮感 */
+.site-navbar__button--ghost { min-width: 0; padding: 8px 12px; background: transparent; color: var(--cozy-on-surface); }
+.site-navbar__button--ghost:hover { background: rgba(120, 90, 60, .06); }
+.user-icon { flex-shrink: 0; opacity: .45; }
 .user-greeting { max-width: 112px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .site-navbar :where(a, button):focus-visible {
@@ -315,7 +325,7 @@ onUnmounted(() => {
 @media (max-width: 440px) {
   .site-navbar__logo img { width: 132px; }
   .site-navbar__text-action { padding-inline: 8px; }
-  .site-navbar__button { min-width: 68px; padding-inline: 12px; }
+  .site-navbar__button { min-width: 68px; padding-inline: 12px; font-size: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
