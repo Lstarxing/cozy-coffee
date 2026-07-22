@@ -831,7 +831,7 @@ onUnmounted(() => {
 .membership-error { padding-block: 64px; }
 .membership-error h3 { margin: 0; font-size: 1.5rem; }
 .membership-error > p { color: var(--cozy-muted-on-alt); margin-top: 12px; }
-.membership-skeleton { min-height: 360px; display: grid; align-content: center; gap: 20px; }
+.membership-skeleton { min-height: 620px; display: grid; align-content: center; gap: 20px; }
 .membership-skeleton span { display: block; height: 22px; max-width: 620px; border-radius: 6px; background: rgba(255,255,255,.11); animation: warm-pulse 1.4s ease-in-out infinite alternate; }
 .membership-skeleton span:nth-child(1) { width: 52%; height: 54px; }
 .membership-skeleton span:nth-child(2) { width: 76%; }
