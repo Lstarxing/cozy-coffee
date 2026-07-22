@@ -189,17 +189,6 @@ onUnmounted(() => {
 .warm-home :where(#home, #origins, #menu, #membership) {
   scroll-margin-top: var(--nav-height);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .warm-home *,
-  .warm-home *::before,
-  .warm-home *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
 </style>
 
 <style scoped>
@@ -450,5 +439,16 @@ onUnmounted(() => {
   .honor-banner__media img { object-position: 66% center; }
   .honor-banner__scrim { background: linear-gradient(90deg, rgba(20, 10, 6, .94) 0%, rgba(20, 10, 6, .72) 55%, rgba(20, 10, 6, .12) 100%); }
   .honor-banner__content { align-self: start; padding-block: 48px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .warm-home *,
+  .warm-home *::before,
+  .warm-home *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 </style>
