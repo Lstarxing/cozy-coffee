@@ -665,8 +665,7 @@ onUnmounted(() => {
   50%      { transform: translateX(-50%) scale(1.06); }
 }
 
-.warm-button,
-.warm-text-link {
+.warm-button {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -683,27 +682,12 @@ onUnmounted(() => {
   padding: 11px 22px;
 }
 
-.warm-button--primary {
-  color: var(--cozy-on-primary);
-  background: var(--cozy-primary);
-}
-
-.warm-button--primary:hover { background: var(--cozy-primary-hover); }
-
 .warm-button--inverse {
   color: var(--cozy-cta-alt-text);
   background: var(--cozy-cta-alt-bg);
 }
 
 .warm-button--inverse:hover { filter: brightness(0.94); }
-
-.warm-text-link {
-  color: var(--cozy-primary);
-}
-
-.warm-text-link:hover,
-.warm-text-link--light:hover { text-decoration: underline; text-underline-offset: 5px; }
-.warm-text-link--light { color: var(--cozy-on-surface-alt); }
 
 .warm-membership h2 { font-size: clamp(1.75rem, 3vw, 2.4rem); line-height: 1.2; font-weight: 500; }
 .membership-header__kicker { margin: 0 0 8px; font-size: 11px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: var(--cozy-muted-on-alt); }
@@ -842,7 +826,6 @@ onUnmounted(() => {
 @keyframes warm-pulse { from { opacity: .45; } to { opacity: 1; } }
 @media (max-width: 960px) {
   .warm-membership { padding-block: 96px; }
-  .membership-benefits__grid { grid-template-columns: 1fr; gap: 28px; }
 }
 
 @media (max-width: 760px) {
@@ -856,8 +839,6 @@ onUnmounted(() => {
   .honor-banner__media img { object-position: 66% center; }
   .honor-banner__scrim { background: linear-gradient(90deg, rgba(20, 10, 6, .94) 0%, rgba(20, 10, 6, .72) 55%, rgba(20, 10, 6, .12) 100%); }
   .honor-banner__content { align-self: start; padding-block: 48px; }
-  .membership-progress__levels { gap: 24px; }
-  .membership-benefits__grid { grid-template-columns: 1fr; }
   .membership-activity__grid { grid-template-columns: 1fr; gap: 24px; }
 }
 
