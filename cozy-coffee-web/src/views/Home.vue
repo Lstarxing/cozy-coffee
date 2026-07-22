@@ -207,7 +207,7 @@
                 <span class="benefit-item__seq">03</span>
                 <div class="benefit-item__body">
                   <p class="benefit-item__en">MEMBERSHIP JOURNEY</p>
-                  <p class="benefit-item__cn">会员成长</p>
+                  <p class="benefit-item__cn">等级成长</p>
                   <p class="benefit-item__desc">每一次停留，都让下一次体验更丰富</p>
                 </div>
               </article>
