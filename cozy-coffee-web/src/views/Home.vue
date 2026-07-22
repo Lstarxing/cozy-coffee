@@ -174,16 +174,8 @@ onUnmounted(() => {
   pointer-events: none;
   background: linear-gradient(to bottom, transparent 0%, var(--cozy-bg) 100%);
 }
-</style>
 
-<style scoped>
-.warm-home {
-  background: var(--cozy-bg);
-  color: var(--cozy-ink);
-  font-family: var(--font-sans);
-  overflow: clip;
-}
-
+/* 跨组件共享的布局工具：不受 scoped 限制，可穿透到子组件 */
 .warm-shell {
   width: min(var(--content-max), calc(100% - var(--content-gutter) - var(--content-gutter)));
   margin-inline: auto;
@@ -196,6 +188,15 @@ onUnmounted(() => {
 
 .warm-home :where(#home, #origins, #menu, #membership) {
   scroll-margin-top: var(--nav-height);
+}
+</style>
+
+<style scoped>
+.warm-home {
+  background: var(--cozy-bg);
+  color: var(--cozy-ink);
+  font-family: var(--font-sans);
+  overflow: clip;
 }
 
 .warm-hero {
