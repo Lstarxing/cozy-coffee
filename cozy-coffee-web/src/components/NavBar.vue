@@ -48,13 +48,26 @@ let membershipObserver = null
 let bindTimer = null
 let bindAttempts = 0
 let scrollHandler = null
+let sectionObserver = null
+
+// ── Section scroll spy — 状态机 ──
+// 两种模式：普通滚动（Observer 驱动）、点击滚动（锁定目标直到到达）
+const SECTION_IDS = ['home', 'origins', 'menu', 'membership']
+const SECTION_NAV = { home: '', origins: '#origins', menu: '#menu', membership: '#membership' }
+
+const scrollActiveKey = ref(null)       // 当前应高亮的 nav key：'' | '#origins' | '#menu' | '#membership'
+const isClickScrolling = ref(false)     // 点击锁定：期间忽略 Observer 的中间 section
+const targetSectionId = ref(null)       // 点击目标：SECTION_NAV 的 value，解锁条件
+const visibleSections = ref({})         // Observer 维护：{ home: true, origins: false, ... }
 
 const isHomePage = computed(() => route.path === '/')
 
-// 锚点导航激活判断：按 path + hash 精确匹配，避免 hash URL 被视作同名路由导致多链接同时亮
-// 首页（path='/' 且无 hash）→ '/'；带 hash 的首页 → '/#origins' 等；关于我们 → '/about'
+// 锚点导航激活判断：首页优先走滚动侦测，非首页按 route hash
 const activeRouteKey = computed(() => {
   if (route.path === '/about') return '/about'
+  if (route.path === '/' && scrollActiveKey.value !== null) {
+    return scrollActiveKey.value === '' ? '/' : `/${scrollActiveKey.value}`
+  }
   return `${route.path}${route.hash}`
 })
 
@@ -77,13 +90,18 @@ async function handleSectionClick(to, event) {
   const hash = to.slice(to.indexOf('#'))
   const targetPath = to.slice(0, to.indexOf('#')) || '/'
 
+  // 立即更新高亮
+  scrollActiveKey.value = hash
+
+  // 锁定：滚动过程中忽略 Observer 的中间 section
+  isClickScrolling.value = true
+  targetSectionId.value = hash
+
   if (route.path !== targetPath) {
-    // 跨页：先 push 到首页路由，hash 由 router scrollBehavior 接管
     await router.push(to)
     return
   }
 
-  // 同页：更新 hash（激活态 + 分享链接），再用原生滚动定位
   if (route.hash !== hash) {
     router.replace(to)
   }
@@ -130,6 +148,79 @@ async function bindMembershipObserver() {
   membershipObserver.observe(membership)
 }
 
+function disconnectSectionObserver() {
+  sectionObserver?.disconnect()
+  sectionObserver = null
+  visibleSections.value = {}
+  scrollActiveKey.value = null
+}
+
+// 统一决策：从 visibleSections 中选出距离视口顶部最近的 section
+function updateActive() {
+  const ids = Object.keys(visibleSections.value).filter(k => visibleSections.value[k])
+
+  // 决定最佳 section
+  let bestNav = null
+  if (ids.length > 0) {
+    let bestId = ids[0]
+    let bestDistance = Infinity
+    for (const id of ids) {
+      const el = document.getElementById(id)
+      if (!el) continue
+      const top = el.getBoundingClientRect().top
+      const distance = Math.abs(top)
+      if (distance < bestDistance) {
+        bestDistance = distance
+        bestId = id
+      }
+    }
+    bestNav = SECTION_NAV[bestId] ?? ''
+  } else if (window.scrollY < 120) {
+    // 近顶部且无可见 section → 回首页
+    bestNav = ''
+  }
+
+  if (bestNav === null) return
+
+  // 点击锁定：仅当目标成为最佳候选时才解锁并更新
+  if (isClickScrolling.value) {
+    if (bestNav === targetSectionId.value) {
+      isClickScrolling.value = false
+      targetSectionId.value = null
+      scrollActiveKey.value = bestNav
+    }
+    return
+  }
+
+  scrollActiveKey.value = bestNav
+}
+
+async function bindSectionObserver() {
+  disconnectSectionObserver()
+  if (route.path !== '/') return
+
+  await nextTick()
+  const elements = SECTION_IDS.map(id => document.getElementById(id)).filter(Boolean)
+  if (elements.length === 0) return
+
+  sectionObserver = new IntersectionObserver(
+    (entries) => {
+      const next = { ...visibleSections.value }
+      for (const entry of entries) {
+        next[entry.target.id] = entry.isIntersecting
+      }
+      visibleSections.value = next
+      updateActive()
+    },
+    {
+      root: null,
+      rootMargin: '-15% 0px -55% 0px',
+      threshold: 0
+    }
+  )
+  elements.forEach(el => sectionObserver.observe(el))
+}
+
 const handleLogout = async () => {
   const ok = await userStore.logout()
   if (ok) {
@@ -173,6 +264,7 @@ function unbindScroll() {
 
 watch(() => route.path, () => {
   bindMembershipObserver()
+  bindSectionObserver()
   if (isHomePage.value) {
     nextTick(bindScroll)
   } else {
@@ -182,10 +274,12 @@ watch(() => route.path, () => {
 })
 onMounted(() => {
   bindMembershipObserver()
+  bindSectionObserver()
   if (isHomePage.value) nextTick(bindScroll)
 })
 onUnmounted(() => {
   disconnectMembershipObserver()
+  disconnectSectionObserver()
   unbindScroll()
 })
 </script>
