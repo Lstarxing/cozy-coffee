@@ -1,8 +1,8 @@
 /**
  * 全局 SCSS 变量定义 — 余白の温度 (Warm Reserve)
  *
- * 设计方向: 日式克制 + 咖啡的温度感
- * 纯白底色、深烘咖啡棕主色、釉面绿语义色
+ * 设计方向: Web 品牌语言在移动端的克制延伸
+ * 纯白底色、深烘咖啡棕主色、釉面绿语义色、影像主导
  * 禁用: 渐变文字、奶油底、Glassmorphism、卡片套卡片
  */
 
@@ -34,6 +34,9 @@ $cozy-success: #52C41A;
 $cozy-warning: #FAAD14;
 $cozy-error: #FF4D4F;
 $cozy-info: #1890FF;
+$cozy-warning-soft: #FFF5E8;
+$cozy-error-soft: #FFF0EE;
+$cozy-info-soft: #EDF6FA;
 
 // ==================== 深色区 CTA (反色按钮) ====================
 $cozy-cta-alt-bg: #F2EDE8;
@@ -61,6 +64,15 @@ $font-size-lg: 32rpx;
 $font-size-xl: 36rpx;
 $font-size-xxl: 44rpx;
 $font-size-mega: 60rpx;
+
+// ==================== 字体角色 ====================
+$font-sans: 'PingFang SC', 'HarmonyOS Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', sans-serif;
+$font-display: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
+
+// ==================== 动效与抬升 ====================
+$cozy-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+$cozy-duration: 180ms;
+$cozy-shadow-raised: 0 4rpx 12rpx rgba(43, 30, 22, 0.1);
 
 // ==================== 布局安全区 ====================
 $nav-height: 88rpx;
@@ -96,7 +108,32 @@ $card-radius-lg: $cozy-radius-lg;
 $border-radius-sm: $cozy-radius-sm;
 $border-radius-md: $cozy-radius-md;
 $border-radius-lg: $cozy-radius-lg;
-$box-shadow: none;             // ⚠️ 禁用大面积阴影
+$box-shadow: none;             // 默认平面；仅底部操作条与弹层可使用抬升阴影
 $glass-blur: blur(0);         // ⚠️ 禁用毛玻璃
 
 $tabbar-height: 100rpx;       // tabbar 高度
+
+// ==================== 会员等级配色（仅会员专属卡片使用）====================
+$member-basic-bg: #F7F5F3;
+$member-basic-ink: #2B1E16;
+$member-basic-accent: #8D6E63;
+
+$member-silver-bg-start: #ECE8E4;
+$member-silver-bg-end: #D6D0CA;
+$member-silver-ink: #3E342E;
+$member-silver-accent: #8C7B70;
+
+$member-gold-bg-start: #E8D7A5;
+$member-gold-bg-end: #C9A45C;
+$member-gold-ink: #3B2920;
+$member-gold-accent: #B8862D;
+
+$member-diamond-bg-start: #DCE4E6;
+$member-diamond-bg-end: #B8C6CA;
+$member-diamond-ink: #263238;
+$member-diamond-accent: #546E7A;
+
+$member-black-bg: #171411;
+$member-black-ink: #E6C97A;
+$member-black-accent: #C9A227;
+$member-black-pattern: rgba(201, 162, 39, 0.08);
