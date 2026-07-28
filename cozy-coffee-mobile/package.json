@@ -4,7 +4,7 @@
     "description": "CozyCoffee 咖啡点单小程序",
     "main": "main.js",
     "scripts": {
-        "dev:mp-weixin": "uni -p mp-weixin",
+        "dev:mp-weixin": "uni --mode development -p mp-weixin",
         "build:mp-weixin": "uni build -p mp-weixin",
         "dev:h5": "uni",
         "build:h5": "uni build",

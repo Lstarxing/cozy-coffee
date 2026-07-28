@@ -63,8 +63,9 @@
       
       <!-- 空状态 -->
       <view class="empty-state" v-if="!loading && !errorMessage && filteredHistory.length === 0">
-        <text class="empty-icon">📊</text>
+        <text class="empty-icon">PTS</text>
         <text class="empty-text">暂无积分记录</text>
+        <text class="empty-hint">完成门店消费或每日签到后会显示在这里</text>
       </view>
     </view>
     
@@ -72,7 +73,7 @@
     <view class="points-tips">
       <view class="tips-title">积分规则说明</view>
       <view class="tips-item">• 消费 1 元 = 1 积分（等级越高倍率越高）</view>
-      <view class="tips-item">• 每日签到可获得 10-40 积分</view>
+      <view class="tips-item">• 每日签到固定获得 2 积分，连续 7 天赠满 35 减 10 券</view>
       <view class="tips-item">• 积分自获得之日起 365 天内有效</view>
       <view class="tips-item">• 积分可在积分商城兑换精美礼品</view>
     </view>
@@ -200,15 +201,15 @@ const filteredHistory = computed(() => {
 
 .load-state { padding: 80rpx 20rpx; color: $cozy-muted; text-align: center; }
 .load-state text { display: block; }
-.retry-button { width: 220rpx; margin-top: 24rpx; border-radius: 40rpx; background: $cozy-primary; color: #fff; font-size: 24rpx; }
+.retry-button { width: 220rpx; margin-top: 24rpx; border-radius: $cozy-radius-md; background: $cozy-primary; color: #fff; font-size: 24rpx; }
 
 .history-item {
   display: flex;
   justify-content: space-between;
-  background: $bg-white;
-  padding: $spacing-md;
-  border-radius: $cozy-radius-md;
-  margin-bottom: $spacing-sm;
+  gap: 24rpx;
+  padding: 28rpx 0;
+  border-bottom: 1rpx solid $cozy-border;
+  background: transparent;
   
   .item-left {
     .item-desc {
@@ -233,7 +234,7 @@ const filteredHistory = computed(() => {
       display: block;
       
       &.earn {
-        color: $success-color;
+        color: $cozy-accent;
       }
       
       &.spend {
@@ -256,21 +257,35 @@ const filteredHistory = computed(() => {
   padding: 100rpx 0;
   
   .empty-icon {
-    font-size: 100rpx;
+    width: 104rpx;
+    height: 104rpx;
     margin-bottom: $spacing-md;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: $cozy-surface;
+    color: $cozy-primary;
+    font-size: 22rpx;
+    font-weight: 800;
+    letter-spacing: .06em;
   }
   
   .empty-text {
-    color: $text-placeholder;
+    color: $cozy-ink;
+    font-size: 29rpx;
+    font-weight: 700;
   }
+
+  .empty-hint { margin-top: 10rpx; color: $cozy-muted; font-size: 22rpx; }
 }
 
 // 说明
 .points-tips {
-  margin: $spacing-md;
-  padding: $spacing-md;
+  margin: 8rpx 32rpx 32rpx;
+  padding: 28rpx 0 0;
+  border-top: 1rpx solid $cozy-border;
   background: $bg-white;
-  border-radius: $cozy-radius-md;
   
   .tips-title {
     font-size: $font-size-md;

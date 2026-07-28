@@ -5,26 +5,26 @@
   <view class="login-page">
     <!-- Logo 区域 -->
     <view class="logo-section">
-      <view class="logo">☕</view>
-      <text class="brand-name">CozyCoffee</text>
-      <text class="brand-slogan">品质生活，从一杯咖啡开始</text>
+      <view class="logo">COZY</view>
+      <text class="brand-name cozy-display">欢迎回来</text>
+      <text class="brand-slogan">登录后继续你的点单与会员日常</text>
     </view>
     
     <!-- 表单区域 -->
     <view class="form-section">
       <view class="form-item">
-        <text class="form-icon">📱</text>
+        <text class="form-icon">账号</text>
         <input 
-          v-model="phone" 
-          type="number" 
-          placeholder="请输入手机号" 
-          maxlength="11"
+          v-model="account"
+          type="text"
+          placeholder="请输入手机号或邮箱"
+          maxlength="100"
           class="form-input"
         />
       </view>
       
       <view class="form-item">
-        <text class="form-icon">🔒</text>
+        <text class="form-icon">密码</text>
         <input 
           v-model="password" 
           :password="!showPassword"
@@ -32,7 +32,7 @@
           class="form-input"
         />
         <text class="toggle-password" @click="showPassword = !showPassword">
-          {{ showPassword ? '🙈' : '👁️' }}
+          {{ showPassword ? '隐藏' : '显示' }}
         </text>
       </view>
       
@@ -57,7 +57,7 @@
       
       <view class="social-login">
         <view class="social-btn wechat" @click="handleWechatLogin">
-          <text class="icon">💬</text>
+          <text class="icon">WX</text>
           <text class="label">微信登录</text>
         </view>
       </view>
@@ -86,15 +86,20 @@ const userStore = useUserStore()
 const sessionStore = useSessionStore()
 const sessionService = new SessionService({ sessionStore })
 
-const phone = ref('')
+const account = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const isLoading = ref(false)
 const agreeTerms = ref(false)
 
+const PHONE_PATTERN = /^1[3-9]\d{9}$/
+const EMAIL_PATTERN = /^[\w.-]+@[\w.-]+\.\w+$/
+const normalizedAccount = computed(() => account.value.trim())
+const isValidAccount = computed(() => PHONE_PATTERN.test(normalizedAccount.value) || EMAIL_PATTERN.test(normalizedAccount.value))
+
 // 是否可以登录
 const canLogin = computed(() => {
-  return phone.value.length === 11 && password.value.length >= 6 && agreeTerms.value
+  return isValidAccount.value && password.value.length >= 6 && agreeTerms.value && !isLoading.value
 })
 
 // 登录
@@ -102,6 +107,10 @@ const handleLogin = async () => {
   if (!canLogin.value) {
     if (!agreeTerms.value) {
       uni.showToast({ title: '请先阅读并同意协议', icon: 'none' })
+    } else if (!isValidAccount.value) {
+      uni.showToast({ title: '请输入正确的手机号或邮箱', icon: 'none' })
+    } else if (password.value.length < 6) {
+      uni.showToast({ title: '密码长度至少为 6 位', icon: 'none' })
     }
     return
   }
@@ -109,7 +118,7 @@ const handleLogin = async () => {
   isLoading.value = true
   
   try {
-    const res = await login({ username: phone.value, password: password.value })
+    const res = await login({ username: normalizedAccount.value, password: password.value })
     if (res.code === 200) {
       // 1. 保存 Token
       // 假设后端返回结构: { code: 200, data: { token: '...', ... } }
@@ -196,7 +205,7 @@ const goToForget = () => {
 .login-page {
   min-height: 100vh;
   background: $cozy-surface;
-  padding: $spacing-xl $spacing-lg;
+  padding: 0 $spacing-lg $spacing-xl;
   display: flex;
   flex-direction: column;
 }
@@ -204,17 +213,20 @@ const goToForget = () => {
 // Logo 区域
 .logo-section {
   text-align: center;
-  padding: 100rpx 0 80rpx;
+  padding: 120rpx 0 68rpx;
   
   .logo {
-    font-size: 120rpx;
-    margin-bottom: $spacing-md;
+    color: $cozy-ink;
+    font-size: 40rpx;
+    font-weight: 850;
+    letter-spacing: .22em;
+    margin-bottom: 30rpx;
   }
   
   .brand-name {
-    font-size: $font-size-xxl;
-    font-weight: 700;
-    color: $primary-color;
+    font-size: 44rpx;
+    font-weight: 600;
+    color: $cozy-ink;
     display: block;
     margin-bottom: $spacing-xs;
   }
@@ -244,7 +256,10 @@ const goToForget = () => {
   }
   
   .form-icon {
-    font-size: 40rpx;
+    width: 68rpx;
+    color: $cozy-primary;
+    font-size: 20rpx;
+    font-weight: 700;
     margin-right: $spacing-md;
   }
   
@@ -254,17 +269,22 @@ const goToForget = () => {
   }
   
   .toggle-password {
-    font-size: 36rpx;
-    padding: $spacing-xs;
+    color: $cozy-primary;
+    font-size: 21rpx;
+    padding: 16rpx 0 16rpx 16rpx;
   }
 }
 
 .login-btn {
-  background: $cozy-surface-alt;
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $cozy-primary;
   color: white;
   text-align: center;
-  padding: $spacing-md;
-  border-radius: 44rpx;
+  padding: 0 $spacing-md;
+  border-radius: $cozy-radius-md;
   font-size: $font-size-lg;
   font-weight: 600;
   margin-top: $spacing-lg;
@@ -318,19 +338,27 @@ const goToForget = () => {
     justify-content: center;
     
     .social-btn {
+      min-width: 250rpx;
+      min-height: 88rpx;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       align-items: center;
-      padding: $spacing-md $spacing-xl;
+      justify-content: center;
+      gap: 16rpx;
+      padding: 0 $spacing-xl;
+      border: 1rpx solid $cozy-border;
+      border-radius: $cozy-radius-md;
+      background: #fff;
       
       .icon {
-        font-size: 60rpx;
-        margin-bottom: $spacing-xs;
+        color: $cozy-accent;
+        font-size: 20rpx;
+        font-weight: 800;
       }
       
       .label {
         font-size: $font-size-sm;
-        color: $text-secondary;
+        color: $cozy-ink;
       }
     }
   }

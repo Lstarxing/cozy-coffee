@@ -6,7 +6,7 @@
     <!-- 搜索框 -->
     <view class="search-header">
       <view class="search-input-wrapper">
-        <text class="search-icon">🔍</text>
+        <view class="search-icon" />
         <input 
           v-model="keyword" 
           class="search-input" 
@@ -41,7 +41,7 @@
     <!-- 热门搜索 -->
     <view class="hot-section" v-if="!keyword">
       <view class="section-header">
-        <text class="section-title">🔥 热门搜索</text>
+        <text class="section-title cozy-display">热门搜索</text>
       </view>
       <view class="hot-list">
         <view 
@@ -80,7 +80,7 @@
       
       <!-- 无结果 -->
       <view class="empty-state" v-else>
-        <text class="empty-icon">🔍</text>
+        <text class="empty-icon">搜</text>
         <text class="empty-text">没有找到相关商品</text>
         <text class="empty-hint">换个关键词试试</text>
       </view>
@@ -141,7 +141,7 @@ const goToDetail = (productId) => {
 <style lang="scss" scoped>
 .search-page {
   min-height: 100vh;
-  background: $bg-color;
+  background: #fff;
 }
 
 // 搜索头部
@@ -159,11 +159,28 @@ const goToDetail = (productId) => {
     display: flex;
     align-items: center;
     background: $bg-gray;
-    border-radius: 36rpx;
+    border-radius: $cozy-radius-md;
     padding: $spacing-sm $spacing-md;
     
     .search-icon {
+      position: relative;
+      width: 22rpx;
+      height: 22rpx;
+      border: 3rpx solid $cozy-muted;
+      border-radius: 50%;
       margin-right: $spacing-sm;
+
+      &::after {
+        position: absolute;
+        right: -9rpx;
+        bottom: -6rpx;
+        width: 11rpx;
+        height: 3rpx;
+        border-radius: 2rpx;
+        background: $cozy-muted;
+        content: '';
+        transform: rotate(45deg);
+      }
     }
     
     .search-input {
@@ -193,7 +210,7 @@ const goToDetail = (productId) => {
   margin-bottom: $spacing-md;
   
   .section-title {
-    font-size: $font-size-md;
+    font-size: 32rpx;
     font-weight: 600;
     color: $text-primary;
   }
@@ -206,9 +223,9 @@ const goToDetail = (productId) => {
 
 // 搜索历史
 .history-section {
-  padding: $spacing-md;
+  padding: 34rpx 28rpx;
   background: $bg-white;
-  margin-bottom: $spacing-sm;
+  border-bottom: 1rpx solid $cozy-border;
 }
 
 .history-tags {
@@ -219,7 +236,7 @@ const goToDetail = (productId) => {
   .history-tag {
     background: $bg-gray;
     padding: $spacing-xs $spacing-md;
-    border-radius: 30rpx;
+    border-radius: 999rpx;
     font-size: $font-size-sm;
     color: $text-secondary;
   }
@@ -227,7 +244,7 @@ const goToDetail = (productId) => {
 
 // 热门搜索
 .hot-section {
-  padding: $spacing-md;
+  padding: 34rpx 28rpx;
   background: $bg-white;
 }
 
@@ -278,9 +295,8 @@ const goToDetail = (productId) => {
 .product-card {
   display: flex;
   background: $bg-white;
-  border-radius: $cozy-radius-md;
-  padding: $spacing-sm;
-  margin-bottom: $spacing-sm;
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid $cozy-border;
   
   .product-image {
     width: 160rpx;
@@ -322,7 +338,16 @@ const goToDetail = (productId) => {
   padding: 100rpx 0;
   
   .empty-icon {
-    font-size: 100rpx;
+    width: 88rpx;
+    height: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: $cozy-surface;
+    color: $cozy-primary;
+    font-size: 28rpx;
+    font-weight: 750;
     margin-bottom: $spacing-md;
   }
   

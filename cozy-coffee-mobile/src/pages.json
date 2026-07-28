@@ -37,6 +37,12 @@
             }
         },
         {
+            "path": "pages/profile/edit",
+            "style": {
+                "navigationBarTitleText": "个人资料"
+            }
+        },
+        {
             "path": "pages/mall/index",
             "style": {
                 "navigationBarTitleText": "积分商城"
@@ -77,7 +83,7 @@
         {
             "path": "pages/address/list",
             "style": {
-                "navigationBarTitleText": "收货地址"
+                "navigationBarTitleText": "地址管理"
             }
         },
         {
@@ -114,7 +120,7 @@
         {
             "path": "pages/store/list",
             "style": {
-                "navigationBarTitleText": "附近门店"
+                "navigationBarTitleText": "门店信息"
             }
         },
         {
@@ -126,16 +132,16 @@
     ],
     "globalStyle": {
         "navigationBarTextStyle": "black",
-        "navigationBarTitleText": "Antigravity",
-        "navigationBarBackgroundColor": "#F8F5F2",
-        "backgroundColor": "#F8F5F2",
+        "navigationBarTitleText": "CozyCoffee",
+        "navigationBarBackgroundColor": "#FFFFFF",
+        "backgroundColor": "#F7F5F3",
         "backgroundTextStyle": "dark"
     },
     "tabBar": {
-        "color": "#999999",
-        "selectedColor": "#C69C6D",
+        "color": "#756A63",
+        "selectedColor": "#753A22",
         "backgroundColor": "#FFFFFF",
-        "borderStyle": "black",
+        "borderStyle": "white",
         "list": [
             {
                 "pagePath": "pages/index/index",

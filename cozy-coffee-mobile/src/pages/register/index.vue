@@ -5,15 +5,15 @@
   <view class="register-page">
     <!-- Logo 区域 -->
     <view class="logo-section">
-      <view class="logo">☕</view>
-      <text class="brand-name">CozyCoffee</text>
-      <text class="brand-slogan">品质生活，从一杯咖啡开始</text>
+      <view class="logo">COZY</view>
+      <text class="brand-name cozy-display">创建会员账户</text>
+      <text class="brand-slogan">保存订单、积分与券包，继续每一次咖啡日常</text>
     </view>
 
     <!-- 表单区域 -->
     <view class="form-section">
       <view class="form-item">
-        <text class="form-icon">📱</text>
+        <text class="form-icon">账号</text>
         <input
           v-model="form.username"
           type="text"
@@ -23,7 +23,7 @@
       </view>
 
       <view class="form-item">
-        <text class="form-icon">🔒</text>
+        <text class="form-icon">密码</text>
         <input
           v-model="form.password"
           :password="!showPassword"
@@ -31,12 +31,12 @@
           class="form-input"
         />
         <text class="toggle-password" @click="showPassword = !showPassword">
-          {{ showPassword ? '🙈' : '👁️' }}
+          {{ showPassword ? '隐藏' : '显示' }}
         </text>
       </view>
 
       <view class="form-item">
-        <text class="form-icon">🔒</text>
+        <text class="form-icon">确认</text>
         <input
           v-model="form.confirmPassword"
           :password="!showConfirmPassword"
@@ -44,22 +44,22 @@
           class="form-input"
         />
         <text class="toggle-password" @click="showConfirmPassword = !showConfirmPassword">
-          {{ showConfirmPassword ? '🙈' : '👁️' }}
+          {{ showConfirmPassword ? '隐藏' : '显示' }}
         </text>
       </view>
 
       <view class="form-item">
-        <text class="form-icon">🎁</text>
+        <text class="form-icon">邀请</text>
         <input
           v-model="form.inviterCode"
           type="text"
-          placeholder="邀请码（选填，可获得额外积分）"
+          placeholder="邀请码（选填，首单后按规则奖励）"
           maxlength="8"
           class="form-input invite-input"
         />
       </view>
       <view v-if="form.inviterCode" class="invite-hint">
-        填写好友邀请码，双方各得积分奖励
+        绑定邀请关系后，首单完成时按后端规则发放奖励
       </view>
 
       <view class="register-btn" :class="{ disabled: !canRegister }" @click="handleRegister">
@@ -165,24 +165,27 @@ const goToLogin = () => {
 .register-page {
   min-height: 100vh;
   background: $cozy-surface;
-  padding: $spacing-xl $spacing-lg;
+  padding: 0 $spacing-lg $spacing-xl;
   display: flex;
   flex-direction: column;
 }
 
 .logo-section {
   text-align: center;
-  padding: 80rpx 0 60rpx;
+  padding: 100rpx 0 56rpx;
 
   .logo {
-    font-size: 100rpx;
-    margin-bottom: $spacing-md;
+    color: $cozy-ink;
+    font-size: 38rpx;
+    font-weight: 850;
+    letter-spacing: .22em;
+    margin-bottom: 28rpx;
   }
 
   .brand-name {
-    font-size: $font-size-xxl;
-    font-weight: 700;
-    color: $primary-color;
+    font-size: 42rpx;
+    font-weight: 600;
+    color: $cozy-ink;
     display: block;
     margin-bottom: $spacing-xs;
   }
@@ -195,7 +198,7 @@ const goToLogin = () => {
 
 .form-section {
   background: $bg-white;
-  border-radius: 24rpx;
+  border-radius: $cozy-radius-lg;
   padding: $spacing-lg;
   box-shadow: none;
 }
@@ -207,7 +210,10 @@ const goToLogin = () => {
   border-bottom: 1rpx solid $border-color;
 
   .form-icon {
-    font-size: 40rpx;
+    width: 68rpx;
+    color: $cozy-primary;
+    font-size: 19rpx;
+    font-weight: 700;
     margin-right: $spacing-md;
   }
 
@@ -219,12 +225,12 @@ const goToLogin = () => {
   .invite-input {
     text-transform: uppercase;
     letter-spacing: 2rpx;
-    font-family: monospace;
   }
 
   .toggle-password {
-    font-size: 36rpx;
-    padding: $spacing-xs;
+    color: $cozy-primary;
+    font-size: 21rpx;
+    padding: 16rpx 0 16rpx 16rpx;
   }
 }
 
@@ -236,11 +242,15 @@ const goToLogin = () => {
 }
 
 .register-btn {
-  background: $cozy-surface-alt;
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $cozy-primary;
   color: white;
   text-align: center;
-  padding: $spacing-md;
-  border-radius: 44rpx;
+  padding: 0 $spacing-md;
+  border-radius: $cozy-radius-md;
   font-size: $font-size-lg;
   font-weight: 600;
   margin-top: $spacing-lg;

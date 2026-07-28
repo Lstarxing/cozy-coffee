@@ -1,8 +1,14 @@
 <!--
-  地址管理页 - 收货地址列表与编辑
+  地址管理页 - 账户常用地址列表与编辑
 -->
 <template>
   <view class="address-page">
+    <view class="pickup-note">
+      <text class="note-kicker">FIXED PICKUP</text>
+      <text class="note-title">咖啡订单仅支持中心店自提</text>
+      <text class="note-copy">常用地址仅作为账户资料保留，不参与当前点单流程。</text>
+    </view>
+
     <!-- 地址列表 -->
     <view class="address-list" v-if="addresses.length > 0">
       <view class="address-card" v-for="item in addresses" :key="item.id">
@@ -16,15 +22,12 @@
         </view>
         <view class="address-actions">
           <view class="action-item" @click="setDefault(item)" v-if="!item.isDefault">
-            <text class="action-icon">⭐</text>
             <text class="action-text">设为默认</text>
           </view>
           <view class="action-item" @click="editAddress(item)">
-            <text class="action-icon">✏️</text>
             <text class="action-text">编辑</text>
           </view>
-          <view class="action-item" @click="deleteAddress(item)">
-            <text class="action-icon">🗑️</text>
+          <view class="action-item action-item--danger" @click="deleteAddress(item)">
             <text class="action-text">删除</text>
           </view>
         </view>
@@ -33,14 +36,15 @@
     
     <!-- 空状态 -->
     <view class="empty-state" v-else>
-      <text class="empty-icon">📍</text>
-      <text class="empty-text">暂无收货地址</text>
+      <text class="empty-icon">址</text>
+      <text class="empty-text">暂无常用地址</text>
+      <text class="empty-hint">当前点单无需填写地址，可直接选择商品。</text>
     </view>
     
     <!-- 添加按钮 -->
     <view class="add-btn-wrapper safe-area-bottom">
       <view class="add-btn" @click="addAddress">
-        + 新增收货地址
+        新增常用地址
       </view>
     </view>
     
@@ -53,8 +57,8 @@
         </view>
         <view class="modal-body">
           <view class="form-item">
-            <text class="form-label">收货人</text>
-            <input v-model="editForm.name" placeholder="请输入收货人姓名" class="form-input" />
+            <text class="form-label">联系人</text>
+            <input v-model="editForm.name" placeholder="请输入联系人姓名" class="form-input" />
           </view>
           <view class="form-item">
             <text class="form-label">手机号</text>
@@ -235,20 +239,23 @@ const selectAddress = (item) => {
 <style lang="scss" scoped>
 .address-page {
   min-height: 100vh;
-  background: $bg-color;
-  padding-bottom: 140rpx;
+  padding-bottom: 156rpx;
+  background: $cozy-bg;
 }
+
+.pickup-note { padding: 32rpx; background: $cozy-surface-alt; color: $cozy-on-dark; }
+.note-kicker { display: block; color: $cozy-muted-on-dark; font-size: 18rpx; font-weight: 750; letter-spacing: .12em; }
+.note-title { display: block; margin-top: 10rpx; font-size: 31rpx; font-weight: 700; }
+.note-copy { display: block; margin-top: 10rpx; color: $cozy-muted-on-dark; font-size: 22rpx; line-height: 1.5; }
 
 // 地址列表
 .address-list {
-  padding: $spacing-md;
+  padding: 12rpx 32rpx 0;
 }
 
 .address-card {
+  border-bottom: 1rpx solid $cozy-border;
   background: $bg-white;
-  border-radius: $border-radius-md;
-  margin-bottom: $spacing-md;
-  overflow: hidden;
   
   .address-main {
     padding: $spacing-md;
@@ -292,21 +299,19 @@ const selectAddress = (item) => {
     
     .action-item {
       flex: 1;
+      min-height: 80rpx;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: $spacing-sm 0;
-      
-      .action-icon {
-        font-size: 28rpx;
-        margin-right: $spacing-xs;
-      }
+      padding: 12rpx 0;
       
       .action-text {
         font-size: $font-size-sm;
         color: $text-secondary;
       }
     }
+
+    .action-item--danger .action-text { color: $cozy-error; }
   }
 }
 
@@ -315,16 +320,29 @@ const selectAddress = (item) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 200rpx 0;
+  padding: 146rpx 32rpx;
   
   .empty-icon {
-    font-size: 120rpx;
+    width: 104rpx;
+    height: 104rpx;
     margin-bottom: $spacing-md;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: $cozy-surface;
+    color: $cozy-primary;
+    font-size: 46rpx;
+    font-weight: 700;
   }
   
   .empty-text {
-    color: $text-placeholder;
+    color: $cozy-ink;
+    font-size: 29rpx;
+    font-weight: 700;
   }
+
+  .empty-hint { margin-top: 12rpx; color: $cozy-muted; font-size: 22rpx; text-align: center; }
 }
 
 // 添加按钮
@@ -334,14 +352,18 @@ const selectAddress = (item) => {
   left: 0;
   right: 0;
   padding: $spacing-md;
+  border-top: 1rpx solid $cozy-border;
   background: $bg-white;
   
   .add-btn {
     background: $cozy-primary;
     color: white;
     text-align: center;
-    padding: $spacing-md;
-    border-radius: 44rpx;
+    min-height: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $cozy-radius-md;
     font-size: $font-size-md;
     font-weight: 600;
   }
@@ -442,7 +464,7 @@ const selectAddress = (item) => {
       color: white;
       text-align: center;
       padding: $spacing-md;
-      border-radius: 44rpx;
+      border-radius: $cozy-radius-md;
       font-size: $font-size-md;
       font-weight: 600;
     }

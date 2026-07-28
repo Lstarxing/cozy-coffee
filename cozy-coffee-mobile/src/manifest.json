@@ -15,19 +15,14 @@
         }
     },
     "mp-weixin": {
-        "appid": "wx1234567890abcdef",
+        "appid": "wxb5998188781680b5",
         "setting": {
             "urlCheck": false,
             "es6": true,
             "minified": true,
             "postcss": true
         },
-        "usingComponents": true,
-        "permission": {
-            "scope.userLocation": {
-                "desc": "您的位置信息将用于查找附近门店"
-            }
-        }
+        "usingComponents": true
     },
     "h5": {
         "title": "CozyCoffee 咖啡",

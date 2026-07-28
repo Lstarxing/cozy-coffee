@@ -1,9 +1,9 @@
 <!--
-  App.vue - 应用根组件
-  
-  职责：
-  1. 定义应用生命周期钩子
-  2. 引入全局样式
+  THESIS: 把 Web 端的烘焙台体验装进口袋，拒绝通用商城式卡片堆叠。
+  OWN-WORLD: 瓷白、深烘棕、釉面绿与真实咖啡影像；无衬线负责操作，宋体只留给品牌停顿。
+  STORY: 用户先看见咖啡与门店，再迅速完成选品、规格、结算、取餐与会员回馈。
+  FIRST VIEWPORT: COZY 字标与搜索压在全幅门店影像上，首要点单动作和当前会员状态紧随其后。
+  FORM: Web established-world extension / Operate；brief-pinned identity，未运行随机 seed。
 -->
 <script setup>
 import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
@@ -26,12 +26,12 @@ onLaunch(() => {
   sessionService.establishSilentSession().catch(error => {
     Logger.warn('Silent Session Skipped', { code: error.code })
   })
-  console.log('🚀 Antigravity Coffee App 启动')
+  console.log('CozyCoffee App 启动')
   
   // 检查登录状态
   const token = uni.getStorageSync('token')
   if (token) {
-    console.log('✅ 用户已登录')
+    console.log('用户已登录')
   }
 })
 
@@ -42,13 +42,13 @@ onShow(() => {
   }
   hiddenAt = null
   networkService.refresh()
-  console.log('📱 App 进入前台')
+  console.log('App 进入前台')
 })
 
 // 应用隐藏时触发（从前台进入后台）
 onHide(() => {
   hiddenAt = Date.now()
-  console.log('📱 App 进入后台')
+  console.log('App 进入后台')
 })
 </script>
 
@@ -59,16 +59,40 @@ onHide(() => {
 /* ==================== 全局基础样式 ==================== */
 page {
   background-color: $bg-color;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 
-               'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-family: $font-sans;
   font-size: $font-size-md;
   color: $text-primary;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* 去除默认边距 */
-view, text, image {
+view, text, image, button, input, textarea {
   box-sizing: border-box;
+}
+
+image {
+  display: block;
+}
+
+button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+}
+
+button::after {
+  border: 0;
+}
+
+.cozy-display {
+  font-family: $font-display;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 /* ==================== 通用工具类 ==================== */
@@ -112,30 +136,53 @@ view, text, image {
 .card {
   background: $bg-white;
   border-radius: $border-radius-md;
-  box-shadow: $box-shadow;
   padding: $spacing-md;
   margin: $spacing-sm;
 }
 
 /* ==================== 按钮样式 ==================== */
 .btn-primary {
-  background: linear-gradient(135deg, $primary-color, $primary-dark);
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $primary-color;
   color: $text-white;
   border: none;
   border-radius: $border-radius-md;
   padding: $spacing-sm $spacing-lg;
   font-size: $font-size-md;
-  font-weight: 500;
+  font-weight: 650;
+  transition: background $cozy-duration $cozy-ease-out, transform $cozy-duration $cozy-ease-out;
+}
+
+.btn-primary:active {
+  background: $primary-dark;
+  transform: scale(0.985);
 }
 
 .btn-outline {
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   color: $primary-color;
-  border: 2rpx solid $primary-color;
+  border: 1rpx solid $primary-color;
   border-radius: $border-radius-md;
   padding: $spacing-sm $spacing-lg;
   font-size: $font-size-md;
 }
+
+/* #ifdef H5 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+/* #endif */
 
 /* ==================== 安全区域适配 ==================== */
 .safe-area-bottom {

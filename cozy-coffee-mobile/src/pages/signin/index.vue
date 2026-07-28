@@ -14,7 +14,7 @@
     <!-- 签到日历 -->
     <view class="signin-calendar">
       <view class="calendar-header">
-        <text class="calendar-title">连续签到领积分</text>
+        <text class="calendar-title">每日签到领积分</text>
         <text class="calendar-hint">已连续签到 {{ consecutiveDays }} 天</text>
       </view>
       
@@ -31,7 +31,7 @@
         >
           <view class="day-circle">
             <text class="day-icon" v-if="index < consecutiveDays">✓</text>
-            <text class="day-icon gift" v-else-if="index === 6">🎁</text>
+            <text class="day-icon gift" v-else-if="index === 6">券</text>
             <text class="day-icon" v-else>{{ index + 1 }}</text>
           </view>
           <text class="day-points">+{{ day.points }}</text>
@@ -43,10 +43,10 @@
       <view class="signin-action">
         <view 
           class="signin-btn" 
-          :class="{ disabled: hasSigned }"
+          :class="{ disabled: hasSigned || signing }"
           @click="handleSignin"
         >
-          {{ hasSigned ? '今日已签到' : '立即签到' }}
+          {{ hasSigned ? '今日已签到' : (signing ? '签到中…' : '立即签到') }}
         </view>
         <text class="signin-hint" v-if="!hasSigned">
           签到可获得 <text class="highlight">{{ todayPoints }}</text> 积分
@@ -63,11 +63,11 @@
       <view class="rules-list">
         <view class="rule-item">
           <text class="rule-dot">•</text>
-          <text class="rule-text">每日签到可获得积分，连续签到积分递增</text>
+          <text class="rule-text">每日签到固定获得 2 积分</text>
         </view>
         <view class="rule-item">
           <text class="rule-dot">•</text>
-          <text class="rule-text">连续7天签到可额外获得 200 积分奖励</text>
+          <text class="rule-text">连续签到 7 天赠送满 35 减 10 元优惠券，有效期 3 天</text>
         </view>
         <view class="rule-item">
           <text class="rule-dot">•</text>
@@ -75,7 +75,7 @@
         </view>
         <view class="rule-item">
           <text class="rule-dot">•</text>
-          <text class="rule-text">每月签到积分封顶 800 积分</text>
+          <text class="rule-text">签到积分有效期 365 天，以积分流水和券包到账结果为准</text>
         </view>
       </view>
     </view>
@@ -83,10 +83,12 @@
     <!-- 签到成功弹窗 -->
     <view class="modal-mask" v-if="showSuccessModal" @click="showSuccessModal = false">
       <view class="success-modal" @click.stop>
-        <view class="success-icon">🎉</view>
+        <view class="success-icon">✓</view>
         <text class="success-title">签到成功</text>
         <text class="success-points">+{{ earnedPoints }} 积分</text>
-        <text class="success-hint">已连续签到 {{ consecutiveDays }} 天</text>
+        <text class="success-hint">
+          {{ consecutiveDays === 7 ? '连续7天达成，满35减10券将发放至券包' : `已连续签到 ${consecutiveDays} 天` }}
+        </text>
         <view class="success-btn" @click="showSuccessModal = false">知道了</view>
       </view>
     </view>
@@ -94,7 +96,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
 import { signIn, getMemberInfo } from '@/api/member'
 
@@ -105,29 +108,40 @@ const consecutiveDays = ref(0)
 const currentPoints = ref(0)
 const showSuccessModal = ref(false)
 const earnedPoints = ref(0)
+const signing = ref(false)
 
 // 7天签到配置
 const weekDays = [
-  { label: '第1天', points: 10 },
-  { label: '第2天', points: 15 },
-  { label: '第3天', points: 20 },
-  { label: '第4天', points: 25 },
-  { label: '第5天', points: 30 },
-  { label: '第6天', points: 35 },
-  { label: '第7天', points: 40 }
+  { label: '第1天', points: 2 },
+  { label: '第2天', points: 2 },
+  { label: '第3天', points: 2 },
+  { label: '第4天', points: 2 },
+  { label: '第5天', points: 2 },
+  { label: '第6天', points: 2 },
+  { label: '第7天', points: 2 }
 ]
 
-// 页面加载时获取会员信息
-onMounted(async () => {
+const getLocalDateText = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// 每次进入页面刷新签到状态
+onShow(async () => {
   try {
     const res = await getMemberInfo()
     if (res.code === 200) {
-      currentPoints.value = res.data.currentPoints || 0
-      consecutiveDays.value = res.data.consecutiveSignDays || 0
+      currentPoints.value = res.data.currentPoints ?? 0
+      consecutiveDays.value = res.data.consecutiveSignDays ?? 0
+      userStore.setMemberInfo(res.data)
       // 判断今天是否已签到
       if (res.data.lastSigninDate) {
-        const today = new Date().toISOString().slice(0, 10)
-        hasSigned.value = res.data.lastSigninDate === today
+        hasSigned.value = res.data.lastSigninDate === getLocalDateText()
+      } else {
+        hasSigned.value = false
       }
     }
   } catch (e) {
@@ -151,23 +165,31 @@ const tomorrowPoints = computed(() => {
 
 // 执行签到
 const handleSignin = async () => {
-  if (hasSigned.value) return
+  if (hasSigned.value || signing.value) return
+  signing.value = true
   
   try {
     const res = await signIn()
     if (res.code === 200) {
       hasSigned.value = true
-      consecutiveDays.value = res.data.consecutiveDays || consecutiveDays.value + 1
-      earnedPoints.value = res.data.pointsEarned || todayPoints.value
-      currentPoints.value = res.data.currentPoints || currentPoints.value + earnedPoints.value
+      consecutiveDays.value = res.data.consecutiveDays ?? consecutiveDays.value + 1
+      earnedPoints.value = res.data.pointsEarned ?? 2
+      currentPoints.value = res.data.currentPoints ?? currentPoints.value + earnedPoints.value
       showSuccessModal.value = true
       
       // 更新用户状态
-      userStore.setMemberInfo({ currentPoints: currentPoints.value })
+      userStore.setMemberInfo({
+        currentPoints: currentPoints.value,
+        totalPoints: res.data.totalPoints ?? userStore.memberInfo?.totalPoints,
+        consecutiveSignDays: consecutiveDays.value,
+        lastSigninDate: getLocalDateText()
+      })
     }
   } catch (error) {
     console.error('签到失败', error)
-    uni.showToast({ title: '签到失败', icon: 'none' })
+    uni.showToast({ title: error?.message || '签到失败', icon: 'none' })
+  } finally {
+    signing.value = false
   }
 }
 </script>
@@ -308,7 +330,7 @@ const handleSignin = async () => {
     background: $cozy-surface-alt;
     color: white;
     padding: $spacing-md $spacing-xl;
-    border-radius: 44rpx;
+    border-radius: $cozy-radius-md;
     font-size: $font-size-lg;
     font-weight: 600;
     display: inline-block;
@@ -416,7 +438,7 @@ const handleSignin = async () => {
     background: $primary-color;
     color: white;
     padding: $spacing-sm $spacing-xl;
-    border-radius: 40rpx;
+    border-radius: $cozy-radius-md;
     font-size: $font-size-md;
     display: inline-block;
   }

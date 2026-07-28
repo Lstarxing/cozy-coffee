@@ -68,14 +68,14 @@
       
       <!-- 空状态 -->
       <view class="empty-state" v-if="filteredCoupons.length === 0">
-        <text class="empty-icon">🎫</text>
+        <text class="empty-icon">券</text>
         <text class="empty-text">暂无{{ tabText }}的优惠券</text>
       </view>
     </scroll-view>
     
     <!-- 兑换入口 -->
     <view class="exchange-entry" @click="goToMall">
-      <text class="entry-text">👉 去积分商城兑换更多优惠券</text>
+      <text class="entry-text">去积分商城兑换更多优惠券 →</text>
     </view>
   </view>
 </template>
@@ -168,7 +168,7 @@ const goToMall = () => {
 <style lang="scss" scoped>
 .coupon-page {
   min-height: 100vh;
-  background: $bg-color;
+  background: $cozy-surface;
   display: flex;
   flex-direction: column;
 }
@@ -184,26 +184,18 @@ const goToMall = () => {
   .tab-item {
     flex: 1;
     text-align: center;
-    padding: $spacing-md 0;
+    margin: 14rpx 8rpx;
+    padding: 16rpx 8rpx;
+    border-radius: 999rpx;
+    background: $cozy-surface;
     font-size: $font-size-md;
     color: $text-secondary;
     position: relative;
     
     &.active {
-      color: $primary-color;
+      background: $cozy-surface-alt;
+      color: #fff;
       font-weight: 600;
-      
-      &::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 60rpx;
-        height: 4rpx;
-        background: $primary-color;
-        border-radius: 2rpx;
-      }
     }
   }
 }
@@ -302,20 +294,20 @@ const goToMall = () => {
       background: $primary-color;
       color: white;
       padding: $spacing-xs $spacing-md;
-      border-radius: 30rpx;
+      border-radius: $cozy-radius-md;
       font-size: $font-size-sm;
     }
   }
   
   .status-tag {
     position: absolute;
-    top: 20rpx;
-    right: -40rpx;
-    background: rgba(0,0,0,0.5);
-    color: white;
-    padding: 4rpx 50rpx;
+    top: 18rpx;
+    right: 18rpx;
+    border-radius: 999rpx;
+    background: $cozy-surface;
+    color: $cozy-muted;
+    padding: 6rpx 14rpx;
     font-size: $font-size-xs;
-    transform: rotate(45deg);
   }
 }
 
@@ -327,7 +319,16 @@ const goToMall = () => {
   padding: 100rpx 0;
   
   .empty-icon {
-    font-size: 100rpx;
+    width: 88rpx;
+    height: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: $cozy-surface-alt;
+    color: #fff;
+    font-size: 28rpx;
+    font-weight: 750;
     margin-bottom: $spacing-md;
   }
   

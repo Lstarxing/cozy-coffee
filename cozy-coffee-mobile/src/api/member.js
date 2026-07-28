@@ -48,6 +48,16 @@ export const getMonthlyTask = () => {
     return get('/member/monthly-task')
 }
 
+// 获取本月等级权益领取状态
+export const getMemberBenefits = () => {
+    return get('/member/benefits/status')
+}
+
+// 领取本月等级权益
+export const receiveMonthlyBenefit = () => {
+    return post('/member/benefits/receive-monthly')
+}
+
 // ==================== 收货地址 ====================
 
 // 获取默认地址
