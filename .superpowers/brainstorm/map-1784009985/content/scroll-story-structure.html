@@ -1,0 +1,50 @@
+<style>
+  .stage{border:1px solid #ddd6d0;border-radius:16px;overflow:hidden;background:#fff;margin-top:26px;box-shadow:0 18px 50px rgba(54,37,29,.08)}
+  .stage-top{display:grid;grid-template-columns:1.55fr .8fr;min-height:540px}
+  .map-side{position:relative;padding:34px;background:#fff;border-right:1px solid #e8e2de}
+  .map-side svg{width:100%;height:400px}.land{fill:#eee9e5;stroke:#c9bbb2;stroke-width:1.1}.belt{fill:rgba(117,58,34,.055)}.route{fill:none;stroke:#753a22;stroke-width:1.8;stroke-dasharray:5 5;opacity:.22}.route.active{opacity:1;stroke-dasharray:none}.point{fill:#b7aaa3;stroke:#fff;stroke-width:2}.point.active,.hangzhou{fill:#526c43}.hangzhou{stroke:#fff;stroke-width:3}.pulse{fill:none;stroke:#526c43;stroke-width:1;opacity:.4}.map-title{position:absolute;left:34px;top:28px}.map-title span{font-size:11px;letter-spacing:.1em;color:#776b65}.map-title strong{display:block;margin-top:6px;font-size:20px;color:#261c18}.hangzhou-label{font:700 9px system-ui;fill:#526c43}.origin-label{font:600 8px system-ui;fill:#6f625c}
+  .story-side{padding:42px 34px;display:flex;flex-direction:column}.counter{font-size:12px;letter-spacing:.1em;color:#8a7d76}.story-side h3{font-size:31px;margin:34px 0 4px;color:#211915}.en{font-size:14px;color:#81746d;margin:0 0 24px}.intro{font-size:16px;line-height:1.7;color:#514742;margin:0 0 28px}.facts{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:22px 0;border-block:1px solid #e7e1dd}.facts dt{font-size:11px;color:#8b7f78;margin-bottom:5px}.facts dd{margin:0;font-size:14px;color:#2e2521}.flavors{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}.flavors span{padding:7px 10px;border-radius:999px;background:#f4f1ef;color:#4c403a;font-size:12px}.scroll-hint{margin-top:auto;padding-top:28px;font-size:12px;color:#8a7d76}.scroll-hint b{color:#526c43}
+  .timeline{display:grid;grid-template-columns:repeat(9,1fr);gap:0;padding:20px 34px;border-top:1px solid #e8e2de;background:#faf9f8}.stop{position:relative;padding-top:14px;text-align:center;font-size:10px;color:#8c817b}.stop:before{content:"";position:absolute;top:0;left:50%;width:7px;height:7px;border-radius:50%;background:#c2b8b2;transform:translateX(-50%)}.stop:after{content:"";position:absolute;top:3px;left:-50%;right:50%;height:1px;background:#d7cfca}.stop:first-child:after{display:none}.stop.current{color:#526c43;font-weight:700}.stop.current:before{background:#526c43;box-shadow:0 0 0 4px rgba(82,108,67,.13)}.stop.done:before{background:#753a22}.stop.done:after,.stop.current:after{background:#753a22}.stop.destination{color:#526c43;font-weight:700}.stop.destination:before{background:#526c43}
+  .rules{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:22px}.rule{padding:20px;border:1px solid #e3ddd8;border-radius:12px;background:#fff}.rule strong{display:block;margin-bottom:8px;color:#2b211d}.rule p{margin:0;color:#71655f;font-size:13px;line-height:1.55}
+  .mobile-note{margin-top:18px;padding:18px 20px;border-radius:12px;background:#f4f1ef;color:#544943;line-height:1.6;font-size:13px}.approval{margin-top:22px;padding:18px 20px;border-left:3px solid #526c43;background:#f6f8f4;color:#35402f}
+  @media(max-width:850px){.stage-top{grid-template-columns:1fr}.map-side{border-right:0;border-bottom:1px solid #e8e2de}.rules{grid-template-columns:1fr}.timeline{overflow-x:auto;grid-template-columns:repeat(9,100px)}}
+</style>
+
+<h2>A 方向细化：Sticky Map Scroll Story</h2>
+<p class="subtitle">地图固定在左侧，右侧滚动经过 8 个产区；每一步只强化一个产区和一条通往杭州的航线。</p>
+
+<div class="stage">
+  <div class="stage-top">
+    <div class="map-side">
+      <div class="map-title"><span>COFFEE BELT · ORIGIN 03 / 08</span><strong>世界风味，正在汇聚杭州</strong></div>
+      <svg viewBox="0 0 660 360" aria-hidden="true">
+        <rect class="belt" x="20" y="125" width="620" height="105" rx="52"/>
+        <path class="land" d="M46 102l82-38 77 16 37 51-20 46-68 18-31 55-54-29-14-48zM266 68l91-23 79 29 21 45-47 31-8 95-38 39-33-68-48-44-43-60zM449 96l100-35 65 34-22 46-61 9-29 72-43-33 22-47zM556 231l57 6 23 38-33 25-55-16z"/>
+        <path class="route" d="M129 201Q344 74 523 168"/><path class="route active" d="M192 138Q365 103 523 168"/><path class="route" d="M315 164Q409 132 523 168"/><path class="route" d="M373 203Q447 165 523 168"/><path class="route" d="M421 112Q471 139 523 168"/><path class="route" d="M471 218Q496 188 523 168"/><path class="route" d="M568 252Q543 207 523 168"/><path class="route" d="M506 181Q515 174 523 168"/>
+        <circle class="point" cx="129" cy="201" r="5"/><circle class="point active" cx="192" cy="138" r="7"/><circle class="point" cx="315" cy="164" r="5"/><circle class="point" cx="373" cy="203" r="5"/><circle class="point" cx="421" cy="112" r="5"/><circle class="point" cx="471" cy="218" r="5"/><circle class="point" cx="568" cy="252" r="5"/><circle class="point" cx="506" cy="181" r="5"/>
+        <circle class="pulse" cx="523" cy="168" r="15"/><circle class="hangzhou" cx="523" cy="168" r="8"/>
+        <text class="origin-label" x="171" y="126">COLOMBIA</text><text class="hangzhou-label" x="535" y="164">HANGZHOU</text>
+      </svg>
+    </div>
+    <aside class="story-side">
+      <span class="counter">03 / 08 · SOUTH AMERICA</span>
+      <h3>哥伦比亚</h3><p class="en">Colombia · Andes</p>
+      <p class="intro">安第斯山脉把不同海拔、微气候与成熟期折叠在同一片土地里，形成明亮而平衡的杯中结构。</p>
+      <dl class="facts"><div><dt>海拔</dt><dd>1,200–2,000 m</dd></div><div><dt>处理法</dt><dd>水洗</dd></div><div><dt>代表品种</dt><dd>Caturra · Castillo</dd></div><div><dt>风味骨架</dt><dd>甜感与酸质平衡</dd></div></dl>
+      <div class="flavors"><span>焦糖</span><span>红莓</span><span>坚果</span><span>平衡酸质</span></div>
+      <p class="scroll-hint"><b>● 当前航线</b> 哥伦比亚 → 杭州烘焙中心</p>
+    </aside>
+  </div>
+  <div class="timeline">
+    <div class="stop done">埃塞俄比亚</div><div class="stop done">肯尼亚</div><div class="stop current">哥伦比亚</div><div class="stop">巴西</div><div class="stop">巴拿马</div><div class="stop">危地马拉</div><div class="stop">印尼</div><div class="stop">云南</div><div class="stop destination">杭州</div>
+  </div>
+</div>
+
+<div class="rules">
+  <div class="rule"><strong>滚动节奏</strong><p>开场地图约 70vh；随后 8 个产区各占约 70–85vh。地图保持 sticky，信息面板自然滚动，不做强制整屏吸附。</p></div>
+  <div class="rule"><strong>航线累积</strong><p>当前航线为实线咖啡棕；已探索航线保留为 22% 透明度；到云南结束时，八条航线同时汇聚杭州。</p></div>
+  <div class="rule"><strong>最终收束</strong><p>杭州节点转为釉面绿并轻微呼吸，文案落在“八地风味，在杭州完成烘焙”，随后衔接六款菜单。</p></div>
+</div>
+
+<div class="mobile-note"><strong>移动端：</strong>地图固定在顶部约 42svh，信息卡从下方进入；地图标签减少到“当前产区 + 杭州”，避免小屏文字拥挤。关闭复杂豆粒子，只保留点亮与航线描边。</div>
+<div class="approval"><strong>请确认这一节：</strong>是否采用“左侧 sticky 地图 + 右侧 8 段信息 + 航线逐步累积 + 最终汇聚杭州”的滚动结构？</div>

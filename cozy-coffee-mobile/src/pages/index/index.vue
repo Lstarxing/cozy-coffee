@@ -1,615 +1,205 @@
 <!--
-  首页 - 商业化重构版
-  特点：沉浸式导航、艺术轮播、悬浮会员卡、金刚区、横向滚动推荐
+  首页：精品咖啡品牌首屏。
+  任务排序：点单效率 → 品牌感知 → 复购关系。
+  不做电商式首页（优惠券/爆款/活动）；会员信息全部下沉到「我的」tab。
 -->
 <template>
   <view class="home-page">
-    
-    <!-- 顶部背景 (随滚动变色) -->
-    <view class="nav-bg" :style="{ opacity: navOpacity }"></view>
+    <view class="nav-bg" :style="{ opacity: navOpacity }" />
 
-    <!-- 沉浸式导航栏 -->
-    <view class="custom-nav" :style="{ paddingTop: statusBarHeight + 'px' }">
+    <view class="custom-nav" :class="{ solid: navOpacity > 0.72 }" :style="{ paddingTop: statusBarHeight + 'px', paddingRight: navRight + 'px' }">
       <view class="nav-content">
-        <!-- 搜索框 -->
-        <view class="search-bar" @click="goToPage('/pages/search/index')">
-          <text class="search-icon">🔍</text>
-          <text class="placeholder">想喝点什么？</text>
+        <view class="brand-lockup">
+          <text class="brand-mark">COZY</text>
+          <text class="brand-sub">ROASTED IN HANGZHOU</text>
         </view>
-        <!-- 消息图标 -->
-        <view class="nav-icon">🔔</view>
+        <view class="nav-actions">
+          <view class="pickup-chip" @click="goToPage('/pages/store/list')">{{ fixedStore.shortName }} · 自提</view>
+          <view class="avatar-entry" @click="handleAvatarClick">
+            <image :src="avatarUrl" class="avatar-img" mode="aspectFill" />
+          </view>
+        </view>
       </view>
     </view>
-    
-    <!-- 内容滚动区域 -->
-    <scroll-view 
-      scroll-y 
-      class="content-scroll" 
-      @scroll="onScroll"
-    >
-      <!-- 艺术轮播 -->
-      <view class="banner-section">
-        <swiper 
-          class="banner-swiper" 
-          autoplay 
-          circular 
-          interval="5000"
-          @change="onBannerChange"
-        >
-          <swiper-item v-for="(banner, index) in (banners.length ? banners : defaultBanners)" :key="index">
-            <image :src="banner.image" mode="aspectFill" class="banner-image" />
-          </swiper-item>
-        </swiper>
-        <!-- 自定义指示器 -->
-        <view class="custom-dots">
-          <view 
-            class="dot" 
-            v-for="(banner, index) in banners" 
-            :key="index"
-            :class="{ active: currentBanner === index }"
-          ></view>
+
+    <scroll-view scroll-y class="content-scroll" @scroll="onScroll">
+      <HomeHero @order="switchToTab('/pages/menu/menu')" @explore="onHeroExplore" />
+
+      <FeaturedCoffee @select="onFeaturedSelect" />
+
+      <CoffeeOrigin @explore="goToPage('/pages/menu/menu')" />
+
+      <view class="store-brief" @click="goToPage('/pages/store/list')">
+        <view class="store-copy">
+          <text class="store-status"><text class="status-dot" /> 今日营业</text>
+          <text class="store-name">{{ fixedStore.name }}</text>
+        </view>
+        <view class="store-time">
+          <text class="time-value">约 {{ fixedStore.pickupMinutes }}</text>
+          <text class="time-unit">分钟可取</text>
         </view>
       </view>
 
-      <!-- 悬浮会员卡 (Overlapping Effect) -->
-      <view class="member-card-wrapper" @click="handleMemberClick">
-        <view class="member-card" :class="userLevel">
-          <view class="card-left">
-            <view class="level-badge">
-              <text class="level-icon">👑</text>
-              <text class="level-name">{{ getLevelName(userLevel) }}</text>
-            </view>
-            <text class="points-text">当前积分 <text class="points-num">{{ currentPoints }}</text></text>
-            <!-- 进度条 -->
-            <view class="level-progress">
-              <view class="progress-bar">
-                <view class="progress-fill" :style="{ width: expPercent + '%' }"></view>
-              </view>
-              <text class="progress-hint">再消费 {{ nextLevelExp }}EXP 升级</text>
-            </view>
+      <view class="quick-order">
+        <view class="quick-order-head">
+          <view>
+            <text class="quick-kicker">ORDER AT COZY</text>
+            <text class="quick-title cozy-display">为此刻，选一杯合适的咖啡</text>
           </view>
-          <view class="card-right">
-            <view class="signin-btn" @click.stop="goToPage('/pages/signin/index')">
-              <text>📅 签到</text>
-            </view>
-            <text class="benefits-link">会员权益 ></text>
+          <text class="quick-note">门店现制 · 到店自提</text>
+        </view>
+        <view class="quick-chips">
+          <view
+            v-for="cat in orderCategories"
+            :key="cat.id"
+            class="quick-chip"
+            @click="goToMenuCategory(cat.id)"
+          >
+            <text class="chip-glyph">{{ cat.glyph }}</text>
+            <text class="chip-name">{{ cat.name }}</text>
           </view>
-          <!-- 背景纹理 -->
-          <view class="card-texture"></view>
         </view>
       </view>
 
-      <!-- 金刚区 (Grid Menu) -->
-      <view class="grid-menu">
-        <view class="grid-item" @click="switchToTab('/pages/menu/menu')">
-          <view class="icon-box primary">☕</view>
-          <text class="grid-text">现在点单</text>
+      <view class="service-links">
+        <view class="service-link" @click="goToPage('/pages/mall/index')">
+          <text class="service-code">PTS</text>
+          <text class="service-name">积分商城</text>
         </view>
-        <view class="grid-item" @click="goToPage('/pages/mall/index')">
-          <view class="icon-box">🎁</view>
-          <text class="grid-text">积分商城</text>
+        <view class="service-link" @click="goToPage('/pages/coupon/list')">
+          <text class="service-code">CPN</text>
+          <text class="service-name">我的券包</text>
         </view>
-        <view class="grid-item" @click="goToPage('/pages/coupon/list')">
-          <view class="icon-box">🎫</view>
-          <text class="grid-text">我的券包</text>
-        </view>
-        <view class="grid-item" @click="goToPage('/pages/store/list')">
-          <view class="icon-box">🏪</view>
-          <text class="grid-text">附近门店</text>
+        <view class="service-link" @click="goToPage('/pages/store/list')">
+          <text class="service-code">SHOP</text>
+          <text class="service-name">门店信息</text>
         </view>
       </view>
 
-      <!-- 新品推荐 (Horizontal Scroll) -->
-      <view class="section">
-        <view class="section-header">
-          <text class="section-title">本季新品 🔥</text>
-          <text class="section-more" @click="switchToTab('/pages/menu/menu')">全部 ></text>
+      <FeaturedCoffee @select="onFeaturedSelect" />
+
+      <view class="honor-section" @click="switchToTab('/pages/menu/menu')">
+        <image src="/static/images/promo.png" mode="aspectFill" class="honor-image" />
+        <view class="honor-copy">
+          <text class="honor-title cozy-display">让每一次出杯，都有来处</text>
+          <text class="honor-description">从选豆、烘焙到制作，把风味认真交到你手中。</text>
+          <text class="honor-link">去选择一杯 →</text>
         </view>
-        <scroll-view scroll-x class="horizontal-scroll" show-scrollbar="false">
-          <view class="scroll-inner">
-            <view 
-              class="polaroid-card" 
-              v-for="(item, index) in recommendProducts" 
-              :key="index"
-              @click="goToDetail(item.id)"
-            >
-              <image :src="item.image" mode="aspectFill" class="card-image" />
-              <view class="card-info">
-                <text class="card-name">{{ item.name }}</text>
-                <view class="card-bottom">
-                  <text class="card-price">¥{{ item.price }}</text>
-                  <view class="add-btn">+</view>
-                </view>
-              </view>
-            </view>
-          </view>
-        </scroll-view>
       </view>
 
-      <!-- 营销大图 -->
-      <view class="promo-banner" @click="switchToTab('/pages/menu/menu')">
-        <image src="/static/images/promo.png" mode="aspectFill" class="promo-image" />
-        <view class="promo-overlay">
-          <text class="promo-title">下午茶套餐</text>
-          <text class="promo-desc">拿铁 + 提拉米苏 立减 ¥8</text>
-        </view>
-      </view>
-      
-      <!-- 底部留白 -->
-      <view class="bottom-spacer"></view>
+      <view class="bottom-spacer" />
     </scroll-view>
+    <DevLevelSwitcher />
   </view>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { getRecommendProducts, getBanners } from '@/api/product'
+import { FIXED_STORE } from '@/config/store'
+import { getImageUrl } from '@/utils/image'
+import HomeHero from '@/components/home/HomeHero.vue'
+import CoffeeOrigin from '@/components/home/CoffeeOrigin.vue'
+import FeaturedCoffee from '@/components/home/FeaturedCoffee.vue'
+import DevLevelSwitcher from '@/components/dev/DevLevelSwitcher.vue'
 
 const userStore = useUserStore()
-
-// 状态栏高度适配
+const fixedStore = FIXED_STORE
 const statusBarHeight = ref(20)
-// 导航背根据滚动渐变
+const navRight = ref(16) // px — capsule-safe right padding
 const navOpacity = ref(0)
-// 当前轮播索引
-const currentBanner = ref(0)
 
-// 用户数据
-const userLevel = ref(userStore.userLevel || 'silver')
-const currentPoints = ref(userStore.memberInfo?.currentPoints || 0)
-const expPercent = ref(65) // 模拟
-const nextLevelExp = ref(350) // 模拟
+const orderCategories = [
+  { id: 'signature', name: '季节特调', glyph: '调' },
+  { id: 'latte', name: '拿铁系列', glyph: '奶' },
+  { id: 'coffee', name: '经典咖啡', glyph: '咖' },
+  { id: 'bakery', name: '烘焙甜点', glyph: '甜' }
+]
 
-const banners = ref([])
-const defaultBanners = ref([
-  { image: '/static/images/banner1.png' },
-  { image: '/static/images/banner2.png' },
-  { image: '/static/images/banner3.png' }
-])
-const recommendProducts = ref([])
+const isLoggedIn = computed(() => userStore.isLoggedIn)
 
-onMounted(async () => {
-  // 获取状态栏高度
-  const info = uni.getSystemInfoSync()
-  statusBarHeight.value = info.statusBarHeight || 20
-
-  // 加载推荐商品
-  try {
-    const res = await getRecommendProducts()
-    if (res.code === 200 && res.data) {
-      // 适配字段名：后端用 imageUrl，前端用 image
-      // 只取前6个作为推荐
-      recommendProducts.value = res.data.slice(0, 6).map(item => ({
-        ...item,
-        image: item.imageUrl || item.image || '/static/images/default-product.png'
-      }))
-    }
-  } catch (e) {
-    console.error('Failed to load recommend products', e)
-  }
-  
-  // 加载 Banner（目前后端没有专门接口，使用默认数据）
-  try {
-    const bannerRes = await getBanners()
-    if (bannerRes.code === 200 && bannerRes.data && bannerRes.data.length > 0) {
-      banners.value = bannerRes.data
-    }
-  } catch (e) {
-    console.error('Failed to load banners', e)
-    // 使用默认 Banner，模板中已有 fallback 逻辑
-  }
+const avatarUrl = computed(() => {
+  const avatar = userStore.userInfo?.avatar
+  if (!isLoggedIn.value || !avatar || avatar === '/images/default-avatar.png') return '/static/images/default-avatar.png'
+  return getImageUrl(avatar)
 })
 
-// 滚动监听
-const onScroll = (e) => {
-  const scrollTop = e.detail.scrollTop
-  // 滚动 100px 内渐变
-  navOpacity.value = Math.min(scrollTop / 100, 1)
-}
+onMounted(() => {
+  const info = uni.getSystemInfoSync()
+  statusBarHeight.value = info.statusBarHeight || 20
+  try {
+    const capsule = uni.getMenuButtonBoundingClientRect()
+    if (capsule) {
+      navRight.value = info.windowWidth - capsule.left + 12
+    }
+  } catch (_) { /* fallback to default */ }
+})
 
-const onBannerChange = (e) => {
-  currentBanner.value = e.detail.current
-}
+function onScroll(event) { navOpacity.value = Math.min(event.detail.scrollTop / 120, 1) }
 
-// 辅助函数
-const getLevelName = (level) => {
-  const map = { basic: '基础会员', silver: '白银会员', gold: '黄金会员', diamond: '钻石会员', black: '黑金会员' }
-  return map[level] || '注册会员'
+function goToPage(url) { uni.navigateTo({ url }) }
+function switchToTab(url) { uni.switchTab({ url }) }
+function onHeroExplore() { switchToTab('/pages/menu/menu') }
+function onFeaturedSelect(item) { uni.navigateTo({ url: `/pages/menu/detail?id=${item.id}` }) }
+function handleAvatarClick() { goToPage(isLoggedIn.value ? '/pages/profile/edit' : '/pages/login/index') }
+function goToMenuCategory(categoryId) {
+  uni.setStorageSync('cozy_menu_category', categoryId)
+  switchToTab('/pages/menu/menu')
 }
-
-// 跳转逻辑
-const goToPage = (url) => uni.navigateTo({ url })
-const switchToTab = (url) => uni.switchTab({ url })
-const goToDetail = (id) => uni.navigateTo({ url: `/pages/menu/detail?id=${id}` })
-const handleMemberClick = () => uni.navigateTo({ url: '/pages/benefits/index' })
 </script>
 
 <style lang="scss" scoped>
-.home-page {
-  height: 100vh;
-  background: $bg-color;
-  position: relative;
-  overflow: hidden;
-}
+.home-page { position: relative; height: 100vh; overflow: hidden; background: $cozy-bg; }
+.content-scroll { height: 100%; }
+.nav-bg { position: fixed; inset: 0 0 auto; z-index: 98; height: calc(var(--status-bar-height) + 88rpx); background: rgba(255,255,255,.97); border-bottom: 1rpx solid $cozy-border; pointer-events: none; }
+.custom-nav { position: fixed; inset: 0 0 auto; z-index: 100; color: #fff; transition: color $cozy-duration $cozy-ease-out; }
+.custom-nav.solid { color: $cozy-ink; }
+.nav-content { height: 44px; padding: 0 28rpx; display: flex; align-items: center; justify-content: space-between; gap: 20rpx; }
+.brand-lockup { min-width: 0; display: flex; flex-direction: column; }
+.brand-mark { font-size: 31rpx; font-weight: 850; letter-spacing: .2em; line-height: 1; }
+.brand-sub { margin-top: 7rpx; font-size: 14rpx; font-weight: 650; letter-spacing: .12em; opacity: .78; }
+.nav-actions { display: flex; align-items: center; gap: 12rpx; }
+.pickup-chip { min-height: 58rpx; padding: 0 18rpx; display: flex; align-items: center; border: 1rpx solid currentColor; border-radius: 999rpx; font-size: 20rpx; font-weight: 600; }
+.avatar-entry { width: 64rpx; height: 64rpx; flex: none; border-radius: 50%; overflow: hidden; background: #fff; border: 1rpx solid rgba(255,255,255,.45); }
+.solid .avatar-entry { border-color: $cozy-border; }
+.avatar-img { width: 100%; height: 100%; }
 
-// 导航背景遮罩
-.nav-bg {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: calc(var(--status-bar-height) + 88rpx);
-  background: rgba(255, 255, 255, 0.95);
-  z-index: 99;
-  pointer-events: none;
-}
+.store-brief { min-height: 112rpx; padding: 20rpx 30rpx; display: flex; align-items: center; justify-content: space-between; gap: 24rpx; border-bottom: 1rpx solid $cozy-border; background: #fff; }
+.store-copy { min-width: 0; }
+.store-status { display: flex; align-items: center; gap: 9rpx; color: $cozy-accent; font-size: 20rpx; font-weight: 700; }
+.status-dot { width: 10rpx; height: 10rpx; border-radius: 50%; background: $cozy-accent; }
+.store-name { display: block; margin-top: 6rpx; color: $cozy-ink; font-size: 27rpx; font-weight: 650; }
+.store-time { flex: none; display: flex; align-items: baseline; gap: 7rpx; color: $cozy-ink; }
+.time-value { font-size: 32rpx; font-weight: 750; }
+.time-unit { color: $cozy-muted; font-size: 20rpx; }
 
-// 沉浸式导航
-.custom-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  
-  .nav-content {
-    height: 44px;
-    display: flex;
-    align-items: center;
-    padding: 0 $spacing-md;
-    
-    .search-bar {
-      flex: 1;
-      height: 64rpx;
-      background: rgba(255, 255, 255, 0.6); // 半透明背景
-      border-radius: 32rpx;
-      display: flex;
-      align-items: center;
-      padding: 0 $spacing-md;
-      border: 1rpx solid rgba(0,0,0,0.05);
-      
-      .search-icon {
-        font-size: 28rpx;
-        margin-right: $spacing-xs;
-      }
-      
-      .placeholder {
-        font-size: $font-size-sm;
-        color: $text-secondary; // 深一些以便在浅色背景可见
-      }
-    }
-    
-    .nav-icon {
-      margin-left: $spacing-md;
-      font-size: 40rpx;
-    }
-  }
-}
+/* 快速点单：品牌叙事 + 分类直达 */
+.quick-order { margin: 28rpx 28rpx 0; padding: 30rpx 28rpx 26rpx; border-radius: $cozy-radius-lg; background: $cozy-surface; }
+.quick-order-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24rpx; }
+.quick-kicker { display: block; color: $cozy-primary; font-size: 18rpx; font-weight: 800; letter-spacing: .13em; }
+.quick-title { display: block; max-width: 460rpx; margin-top: 10rpx; color: $cozy-ink; font-size: 34rpx; line-height: 1.32; }
+.quick-note { flex: none; padding-bottom: 5rpx; color: $cozy-muted; font-size: 19rpx; }
+.quick-chips { margin-top: 24rpx; display: flex; gap: 16rpx; }
+.quick-chip { flex: 1; padding: 22rpx 0 18rpx; display: flex; flex-direction: column; align-items: center; gap: 12rpx; border-radius: $cozy-radius-md; background: #fff; border: 1rpx solid $cozy-border; }
+.quick-chip:active { background: $cozy-surface; }
+.chip-glyph { width: 64rpx; height: 64rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: $cozy-primary; color: #fff; font-size: 28rpx; font-weight: 750; }
+.chip-name { color: $cozy-ink; font-size: 21rpx; font-weight: 650; }
 
-.content-scroll {
-  height: 100%;
-}
+.service-links { margin: 28rpx 28rpx 0; display: flex; border-top: 1rpx solid $cozy-border; border-bottom: 1rpx solid $cozy-border; }
+.service-link { min-width: 0; flex: 1; padding: 24rpx 10rpx; text-align: center; }
+.service-link + .service-link { border-left: 1rpx solid $cozy-border; }
+.service-code { display: block; color: $cozy-primary; font-size: 17rpx; font-weight: 800; letter-spacing: .1em; }
+.service-name { display: block; margin-top: 7rpx; color: $cozy-ink; font-size: 23rpx; font-weight: 600; }
 
-// 艺术轮播
-.banner-section {
-  position: relative;
-  width: 100%;
-  height: 500rpx;
-  
-  .banner-swiper {
-    width: 100%;
-    height: 100%;
-    
-    .banner-image {
-      width: 100%;
-      height: 100%;
-      background: #E0E0E0;
-    }
-  }
-  
-  // 自定义指示器
-  .custom-dots {
-    position: absolute;
-    bottom: 60rpx; // 向上移，为了给悬浮卡片留空间
-    left: $spacing-lg;
-    display: flex;
-    gap: 8rpx;
-    
-    .dot {
-      width: 12rpx;
-      height: 12rpx;
-      background: rgba(255, 255, 255, 0.5);
-      border-radius: 6rpx;
-      transition: all 0.3s;
-      
-      &.active {
-        width: 32rpx;
-        background: #FFFFFF;
-      }
-    }
-  }
-}
+.honor-section { margin: 54rpx 28rpx 0; overflow: hidden; border-radius: $cozy-radius-lg; background: $cozy-surface-alt; color: #fff; }
+.honor-image { width: 100%; height: 210rpx; }
+.honor-copy { padding: 30rpx; }
+.honor-title { display: block; font-size: 35rpx; }
+.honor-description { display: block; margin-top: 12rpx; color: $cozy-muted-on-dark; font-size: 21rpx; line-height: 1.55; }
+.honor-link { display: block; margin-top: 20rpx; color: #fff; font-size: 22rpx; font-weight: 650; }
+.bottom-spacer { height: 150rpx; }
 
-// 悬浮会员卡
-.member-card-wrapper {
-  margin: -40rpx $spacing-md 0;
-  position: relative;
-  z-index: 10;
-}
-
-.member-card {
-  height: 180rpx;
-  background: $cozy-surface-alt;
-  border-radius: $cozy-radius-md;
-  display: flex;
-  justify-content: space-between;
-  padding: $spacing-lg;
-  position: relative;
-  overflow: hidden;
-  color: $cozy-on-dark;
-
-  // 等级 accent 色条
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 24rpx;
-    bottom: 24rpx;
-    width: 4rpx;
-    border-radius: 2rpx;
-  }
-
-  &.basic::before  { background: $cozy-muted; }
-  &.silver::before { background: #C0C0C0; }
-  &.gold::before   { background: #D4AF37; }
-  &.diamond::before { background: #4DD0E1; }
-  &.black::before  { background: $cozy-accent; }
-
-  .card-left {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    z-index: 2;
-
-    .level-badge {
-      display: flex;
-      align-items: center;
-
-      .level-icon { margin-right: $spacing-xs; font-size: 32rpx; }
-      .level-name { font-weight: 700; font-size: $font-size-lg; }
-    }
-
-    .points-text {
-      font-size: $font-size-sm;
-      opacity: 0.8;
-
-      .points-num {
-        font-size: $font-size-xl;
-        font-weight: 700;
-        margin-left: 4rpx;
-      }
-    }
-  }
-
-  .card-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: space-between;
-    z-index: 2;
-
-    .signin-btn {
-      background: $cozy-cta-alt-bg;
-      color: $cozy-cta-alt-text;
-      padding: 8rpx 20rpx;
-      border-radius: $cozy-radius * 4;
-      font-size: $font-size-sm;
-    }
-
-    .benefits-link {
-      font-size: $font-size-xs;
-      opacity: 0.7;
-    }
-  }
-
-  .level-progress {
-    margin-top: $spacing-xs;
-
-    .progress-bar {
-      width: 240rpx;
-      height: 6rpx;
-      background: rgba(255,255,255,0.15);
-      border-radius: 3rpx;
-      overflow: hidden;
-      margin-bottom: 4rpx;
-
-      .progress-fill {
-        height: 100%;
-        background: $cozy-accent;
-      }
-    }
-
-    .progress-hint {
-      font-size: 18rpx;
-      opacity: 0.6;
-    }
-  }
-
-  // 纹理装饰
-  .card-texture {
-    position: absolute;
-    right: -20rpx;
-    bottom: -20rpx;
-    width: 200rpx;
-    height: 200rpx;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.05);
-    pointer-events: none;
-  }
-}
-
-// 金刚区
-.grid-menu {
-  display: flex;
-  justify-content: space-between;
-  padding: $spacing-lg $spacing-md;
-  
-  .grid-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    
-    .icon-box {
-      width: 96rpx;
-      height: 96rpx;
-      background: $cozy-surface;
-      border-radius: $cozy-radius-md;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 48rpx;
-      margin-bottom: $spacing-sm;
-      transition: transform 0.1s;
-
-      &:active { transform: scale(0.95); }
-
-      &.primary {
-        background: $cozy-primary;
-        color: white;
-      }
-    }
-    
-    .grid-text {
-      font-size: $font-size-sm;
-      color: $text-main;
-      font-weight: 500;
-    }
-  }
-}
-
-// 推荐区块
-.section {
-  padding: $spacing-md 0 $spacing-lg;
-  
-  .section-header {
-    padding: 0 $spacing-md $spacing-md;
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    
-    .section-title {
-      font-size: 34rpx;
-      font-weight: 700;
-      color: $secondary-color;
-    }
-    
-    .section-more {
-      font-size: $font-size-sm;
-      color: $text-sub;
-    }
-  }
-}
-
-.horizontal-scroll {
-  width: 100%;
-  white-space: nowrap;
-}
-
-.scroll-inner {
-  padding: 0 $spacing-md;
-  display: flex;
-  gap: $spacing-md;
-}
-
-.polaroid-card {
-  flex-shrink: 0;
-  width: 260rpx;
-  background: $bg-white;
-  border-radius: $card-radius;
-  overflow: hidden;
-
-  .card-image {
-    width: 260rpx;
-    height: 260rpx;
-  }
-  
-  .card-info {
-    padding: $spacing-sm;
-    
-    .card-name {
-      font-size: $font-size-md;
-      color: $text-main;
-      font-weight: 600;
-      display: block;
-      margin-bottom: $spacing-xs;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    
-    .card-bottom {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      
-      .card-price {
-        font-size: $font-size-md;
-        font-weight: 700;
-        color: $secondary-color;
-      }
-      
-      .add-btn {
-        width: 44rpx;
-        height: 44rpx;
-        background: $primary-color;
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 32rpx;
-      }
-    }
-  }
-}
-
-// 营销大图
-.promo-banner {
-  margin: $spacing-md;
-  height: 240rpx;
-  border-radius: $cozy-radius-md;
-  overflow: hidden;
-  position: relative;
-  
-  .promo-image {
-    width: 100%;
-    height: 100%;
-  }
-  
-  .promo-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    padding: $spacing-md;
-    background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
-    
-    .promo-title {
-      color: white;
-      font-size: $font-size-lg;
-      font-weight: 700;
-      display: block;
-    }
-    
-    .promo-desc {
-      color: rgba(255,255,255,0.9);
-      font-size: $font-size-sm;
-    }
-  }
-}
-
-.bottom-spacer {
-  height: 120rpx;
+@media (prefers-reduced-motion: reduce) {
+  .custom-nav { transition: none; }
 }
 </style>

@@ -409,6 +409,17 @@ public class UserServiceImpl implements UserService {
             user.setNickname(request.getNickname().trim());
             hasUpdate = true;
         }
+        if (request.getAvatar() != null && !request.getAvatar().trim().isEmpty()) {
+            String avatar = request.getAvatar().trim();
+            if (!avatar.startsWith("/uploads/")
+                    && !avatar.startsWith("/images/")
+                    && !avatar.startsWith("http://")
+                    && !avatar.startsWith("https://")) {
+                throw new BusinessException("头像地址格式不正确");
+            }
+            user.setAvatar(avatar);
+            hasUpdate = true;
+        }
         if (request.getPhone() != null) {
             String newPhone = request.getPhone().trim();
             if (!newPhone.isEmpty()) {

@@ -1,0 +1,79 @@
+<style>
+  .direction-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:28px}
+  .direction-card{border:1px solid #ded8d2;border-radius:14px;overflow:hidden;background:#fff;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s}
+  .direction-card:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(49,34,27,.10)}
+  .direction-card.selected{border-color:#753a22;box-shadow:0 0 0 2px rgba(117,58,34,.18)}
+  .preview{height:290px;position:relative;overflow:hidden;padding:22px}
+  .preview svg{width:100%;height:100%}
+  .preview-label{position:absolute;left:20px;top:18px;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+  .preview-copy{position:absolute;left:22px;bottom:20px;right:22px}
+  .preview-copy strong{display:block;font-size:17px;margin-bottom:5px}.preview-copy span{font-size:12px;opacity:.72}
+  .body{padding:18px 20px 22px}.body h3{margin:0 0 8px;font-size:18px}.body p{margin:0;color:#6b625e;line-height:1.55;font-size:14px}
+  .tag{display:inline-flex;margin-top:12px;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:700}
+  .warm{background:#fff;color:#251b17}.warm .land{fill:#eee9e5;stroke:#c9bbb2}.warm .route{stroke:#753a22}.warm .point{fill:#753a22}.warm .active{fill:#526c43}.warm .tag{background:#f0e8e3;color:#753a22}
+  .night{background:#201714;color:#f8f5f2}.night .land{fill:#322520;stroke:#6f5b50}.night .route{stroke:#d3a96f}.night .point{fill:#d3a96f}.night .active{fill:#86a072}.night .tag{background:#3a2a24;color:#e8c694}
+  .paper{background:#f5f3f1;color:#2a2421}.paper:before{content:"";position:absolute;inset:0;background:repeating-radial-gradient(ellipse at 60% 40%,transparent 0 18px,rgba(91,72,62,.06) 19px 20px);opacity:.8}.paper svg{position:relative}.paper .land{fill:#fff;stroke:#8f8179}.paper .route{stroke:#4d4642}.paper .point{fill:#4d4642}.paper .active{fill:#526c43}.paper .tag{background:#e5e1dd;color:#4d4642}
+  .land{stroke-width:1.2}.route{fill:none;stroke-width:1.6;stroke-dasharray:4 5}.point{stroke:#fff;stroke-width:2}.active{stroke:#fff;stroke-width:2.5}.city-label{font-size:9px;font-family:system-ui,sans-serif;fill:currentColor}
+  .recommend{display:inline-flex;align-items:center;gap:7px;margin-bottom:8px;color:#526c43;font-size:12px;font-weight:700}
+  @media(max-width:900px){.direction-grid{grid-template-columns:1fr}.preview{height:250px}}
+</style>
+
+<h2>世界咖啡溯源地图：视觉方向</h2>
+<p class="subtitle">共同结构：8 个产区依次点亮，航线汇聚至杭州 CozyCoffee 烘焙中心。请选择更符合“余白の温度”的地图气质。</p>
+
+<div class="direction-grid">
+  <div class="direction-card option" data-choice="warm-ink-atlas" onclick="toggleSelect(this)">
+    <div class="preview warm">
+      <div class="preview-label">Coffee Belt · 01 / 08</div>
+      <svg viewBox="0 0 600 280" aria-hidden="true">
+        <path class="land" d="M50 80l72-31 72 15 32 42-18 40-60 16-28 46-47-25-12-42zM246 52l80-19 70 24 18 38-42 27-7 83-34 35-29-60-42-38-38-52zM408 76l88-30 57 29-19 38-54 8-25 62-38-27 19-41zM503 191l50 5 20 32-29 22-48-14z"/>
+        <path class="route" d="M126 169Q310 70 477 139M174 116Q329 92 477 139M285 136Q376 110 477 139M340 168Q404 142 477 139M383 91Q429 112 477 139M430 182Q454 160 477 139M514 207Q497 172 477 139M464 150Q470 144 477 139"/>
+        <circle class="point" cx="126" cy="169" r="5"/><circle class="point" cx="174" cy="116" r="5"/><circle class="point" cx="285" cy="136" r="5"/><circle class="active" cx="340" cy="168" r="7"/><circle class="point" cx="383" cy="91" r="5"/><circle class="point" cx="430" cy="182" r="5"/><circle class="point" cx="514" cy="207" r="5"/><circle class="point" cx="464" cy="150" r="5"/><circle class="active" cx="477" cy="139" r="8"/>
+        <text class="city-label" x="487" y="136">HANGZHOU</text>
+      </svg>
+      <div class="preview-copy"><strong>埃塞俄比亚 · 咖啡的故乡</strong><span>茉莉 · 蓝莓 · 柑橘 · 茶感</span></div>
+    </div>
+    <div class="body">
+      <div class="recommend">● 推荐方向</div>
+      <h3>A. Warm Ink Atlas</h3>
+      <p>纯白底、暖灰地图、咖啡棕航线；仅用釉面绿标记当前产区与杭州终点。克制、清晰，不抢会员区的深色重心。</p>
+      <span class="tag">最符合 Warm Reserve</span>
+    </div>
+  </div>
+
+  <div class="direction-card option" data-choice="night-expedition" onclick="toggleSelect(this)">
+    <div class="preview night">
+      <div class="preview-label">Origin Route · Ethiopia</div>
+      <svg viewBox="0 0 600 280" aria-hidden="true">
+        <path class="land" d="M50 80l72-31 72 15 32 42-18 40-60 16-28 46-47-25-12-42zM246 52l80-19 70 24 18 38-42 27-7 83-34 35-29-60-42-38-38-52zM408 76l88-30 57 29-19 38-54 8-25 62-38-27 19-41zM503 191l50 5 20 32-29 22-48-14z"/>
+        <path class="route" d="M126 169Q310 70 477 139M174 116Q329 92 477 139M285 136Q376 110 477 139M340 168Q404 142 477 139M383 91Q429 112 477 139M430 182Q454 160 477 139M514 207Q497 172 477 139M464 150Q470 144 477 139"/>
+        <circle class="point" cx="126" cy="169" r="5"/><circle class="point" cx="174" cy="116" r="5"/><circle class="active" cx="285" cy="136" r="7"/><circle class="point" cx="340" cy="168" r="5"/><circle class="point" cx="383" cy="91" r="5"/><circle class="point" cx="430" cy="182" r="5"/><circle class="point" cx="514" cy="207" r="5"/><circle class="point" cx="464" cy="150" r="5"/><circle class="active" cx="477" cy="139" r="8"/>
+        <text class="city-label" x="487" y="136">HANGZHOU</text>
+      </svg>
+      <div class="preview-copy"><strong>一颗咖啡豆的环球旅程</strong><span>产区发光 · 金色航线 · 深夜地图</span></div>
+    </div>
+    <div class="body">
+      <h3>B. Night Expedition</h3>
+      <p>深焙黑棕底、哑金产区点、亮色航线。沉浸感最强，但会制造第二个深色高潮，削弱 Membership 的唯一 Committed Moment。</p>
+      <span class="tag">戏剧感最强</span>
+    </div>
+  </div>
+
+  <div class="direction-card option" data-choice="topographic-paper" onclick="toggleSelect(this)">
+    <div class="preview paper">
+      <div class="preview-label">Field Notes · 1800–2200m</div>
+      <svg viewBox="0 0 600 280" aria-hidden="true">
+        <path class="land" d="M50 80l72-31 72 15 32 42-18 40-60 16-28 46-47-25-12-42zM246 52l80-19 70 24 18 38-42 27-7 83-34 35-29-60-42-38-38-52zM408 76l88-30 57 29-19 38-54 8-25 62-38-27 19-41zM503 191l50 5 20 32-29 22-48-14z"/>
+        <path class="route" d="M126 169Q310 70 477 139M174 116Q329 92 477 139M285 136Q376 110 477 139M340 168Q404 142 477 139M383 91Q429 112 477 139M430 182Q454 160 477 139M514 207Q497 172 477 139M464 150Q470 144 477 139"/>
+        <circle class="point" cx="126" cy="169" r="5"/><circle class="active" cx="174" cy="116" r="7"/><circle class="point" cx="285" cy="136" r="5"/><circle class="point" cx="340" cy="168" r="5"/><circle class="point" cx="383" cy="91" r="5"/><circle class="point" cx="430" cy="182" r="5"/><circle class="point" cx="514" cy="207" r="5"/><circle class="point" cx="464" cy="150" r="5"/><circle class="active" cx="477" cy="139" r="8"/>
+        <text class="city-label" x="487" y="136">HANGZHOU</text>
+      </svg>
+      <div class="preview-copy"><strong>产地手记 · Kenya</strong><span>黑加仑 · 莓果 · 葡萄酒酸质</span></div>
+    </div>
+    <div class="body">
+      <h3>C. Topographic Paper</h3>
+      <p>极微暖灰底、地形等高线、编辑式标注。知识感更强，适合强调海拔与处理法，但容易偏向地理杂志而非咖啡品牌。</p>
+      <span class="tag">信息感最强</span>
+    </div>
+  </div>
+</div>
