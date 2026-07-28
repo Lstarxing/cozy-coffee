@@ -4,8 +4,9 @@
 <template>
   <view class="benefits-page">
     <!-- 当前等级卡片 -->
-    <view class="current-level" :class="currentLevel">
+    <view class="current-level" :class="[currentLevel, { 'is-dark': isDark }]" :style="themeStyle">
       <view class="level-info">
+        <view class="level-badge-wrap"><LevelBadge :level="themeLevel" color="var(--member-accent)" :size="40" /></view>
         <text class="level-name">{{ getLevelName(currentLevel) }}</text>
         <text class="level-desc">{{ getLevelDesc(currentLevel) }}</text>
       </view>
@@ -18,6 +19,34 @@
         </text>
         <text class="progress-text" v-else>已达到最高等级</text>
       </view>
+    </view>
+
+    <!-- 后端真实月度权益状态 -->
+    <view class="monthly-benefit-section">
+      <view class="section-heading-row">
+        <view>
+          <text class="section-title compact">本月等级权益</text>
+          <text class="section-subtitle">权益内容与领取状态来自会员服务</text>
+        </view>
+        <text class="month-badge">{{ getLevelName(currentLevel) }}</text>
+      </view>
+      <view v-if="benefitLoading" class="inline-state">正在查询本月权益…</view>
+      <view v-else-if="benefitError" class="inline-state error" @click="loadBenefitsPage">
+        {{ benefitError }}，点击重试
+      </view>
+      <template v-else>
+        <text class="benefit-package-name">{{ monthlyBenefitStatus.benefitName || '暂无权益说明' }}</text>
+        <view
+          class="receive-benefit-btn"
+          :class="{ disabled: !canReceiveMonthlyBenefit }"
+          @click="handleReceiveMonthlyBenefit"
+        >
+          {{ benefitActionText }}
+        </view>
+        <text v-if="shouldShowUpgradeTip" class="upgrade-notice">
+          本月已按 {{ getLevelName(monthlyBenefitStatus.claimedLevel) }} 领取，当前等级礼包将在下月生效
+        </text>
+      </template>
     </view>
     
     <!-- 等级权益列表 -->
@@ -40,13 +69,48 @@
       <!-- 权益详情 -->
       <view class="benefits-list">
         <view class="benefit-item" v-for="(benefit, index) in currentBenefits" :key="index">
-          <text class="benefit-icon">{{ benefit.icon }}</text>
+          <text class="benefit-icon">{{ benefit.code }}</text>
           <view class="benefit-info">
             <text class="benefit-name">{{ benefit.name }}</text>
             <text class="benefit-desc">{{ benefit.desc }}</text>
           </view>
           <view class="benefit-status" :class="{ unlocked: isUnlocked(selectedLevel) }">
             {{ isUnlocked(selectedLevel) ? '已解锁' : '未解锁' }}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 月度挑战任务（当前阶段不展示外卖任务） -->
+    <view class="monthly-task-section">
+      <view class="section-heading-row">
+        <view>
+          <text class="section-title compact">月度挑战</text>
+          <text class="section-subtitle">{{ monthlyTask.taskMonth || '本月' }} · 完成订单后自动结算积分</text>
+        </view>
+        <text class="task-summary">{{ completedTaskCount }}/{{ monthlyChallenges.length }} 完成</text>
+      </view>
+      <view v-if="taskLoading" class="inline-state">正在加载任务进度…</view>
+      <view v-else-if="taskError" class="inline-state error" @click="loadBenefitsPage">
+        {{ taskError }}，点击重试
+      </view>
+      <view v-else class="task-list">
+        <view v-for="task in monthlyChallenges" :key="task.key" class="task-card">
+          <view class="task-topline">
+            <view class="task-copy">
+              <text class="task-title">{{ task.title }}</text>
+              <text class="task-description">{{ task.description }}</text>
+            </view>
+            <text class="task-reward">+{{ task.reward }} 积分</text>
+          </view>
+          <view class="task-progress-track">
+            <view class="task-progress-fill" :style="{ width: task.progress + '%' }" />
+          </view>
+          <view class="task-bottomline">
+            <text>{{ task.displayCurrent }}/{{ task.target }}</text>
+            <text :class="{ completed: task.claimed }">
+              {{ task.claimed ? '已完成 · 奖励已发放' : (task.progress >= 100 ? '等待系统结算' : '进行中') }}
+            </text>
           </view>
         </view>
       </view>
@@ -65,7 +129,8 @@
         <view class="table-row" v-for="(row, index) in compareData" :key="index">
           <view class="table-cell row-name">{{ row.name }}</view>
           <view class="table-cell" v-for="level in levels" :key="level">
-            <text class="check" v-if="row[level]">✓</text>
+            <text v-if="typeof row[level] === 'string'">{{ row[level] }}</text>
+            <text class="check" v-else-if="row[level]">✓</text>
             <text class="cross" v-else>-</text>
           </view>
         </view>
@@ -77,56 +142,68 @@
       <view class="section-title">如何升级</view>
       <view class="upgrade-tips">
         <view class="tip-item">
-          <text class="tip-icon">☕</text>
+          <text class="tip-icon">EXP</text>
           <text class="tip-text">消费 1 元 = 1 EXP</text>
         </view>
         <view class="tip-item">
-          <text class="tip-icon">🎯</text>
-          <text class="tip-text">完成月度任务获得额外 EXP</text>
+          <text class="tip-icon">月</text>
+          <text class="tip-text">完成月度挑战可获得额外积分</text>
         </view>
         <view class="tip-item">
-          <text class="tip-icon">🎁</text>
-          <text class="tip-text">参与活动赢取 EXP 加成</text>
+          <text class="tip-icon">单</text>
+          <text class="tip-text">订单完成后按实付金额累计 EXP</text>
         </view>
       </view>
     </view>
+    <DevLevelSwitcher />
   </view>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
+import { getMemberBenefits, getMemberInfo, getMonthlyTask, receiveMonthlyBenefit } from '@/api/member'
+import { MEMBER_LEVELS, MEMBER_LEVEL_THRESHOLDS, getMemberLevelName } from '@/constants/member'
+import { buildMonthlyChallenges } from '@/domain/member/memberRules'
+import { useMemberTheme } from '@/composables/useMemberTheme'
+import LevelBadge from '@/components/member/LevelBadge.vue'
+import DevLevelSwitcher from '@/components/dev/DevLevelSwitcher.vue'
 
 const userStore = useUserStore()
+const { themeStyle, isDark, level: themeLevel } = useMemberTheme()
 
-const levels = ['basic', 'silver', 'gold', 'diamond', 'black']
-const currentLevel = ref(userStore.userLevel || 'silver')
+const levels = MEMBER_LEVELS
+const currentLevel = ref(userStore.userLevel || 'basic')
 const selectedLevel = ref(currentLevel.value)
-const currentExp = ref(userStore.memberInfo?.expTotal || 2350)
+const currentExp = ref(Number(userStore.memberInfo?.expTotal) || 0)
+const levelThresholds = MEMBER_LEVEL_THRESHOLDS
 
-// 等级门槛
-const levelThresholds = {
-  basic: 0,
-  silver: 1000,
-  gold: 3000,
-  diamond: 6000,
-  black: 10000
-}
+const benefitLoading = ref(false)
+const benefitError = ref('')
+const taskLoading = ref(false)
+const taskError = ref('')
+const claimingBenefit = ref(false)
+const monthlyBenefitStatus = ref({
+  claimed: false,
+  canClaim: false,
+  benefitName: '',
+  currentLevel: null,
+  claimedLevel: null
+})
+const monthlyTask = ref({})
 
 // 等级名称
-const getLevelName = (level) => {
-  const map = { basic: '基础会员', silver: '白银会员', gold: '黄金会员', diamond: '钻石会员', black: '黑金会员' }
-  return map[level] || '基础会员'
-}
+const getLevelName = getMemberLevelName
 
 // 等级描述
 const getLevelDesc = (level) => {
   const map = {
     basic: '开启你的咖啡之旅',
-    silver: '累计消费满1000元',
-    gold: '累计消费满3000元',
-    diamond: '尊贵钻石专属服务',
-    black: '顶级黑金至尊体验'
+    silver: '日常消费开始获得更多回馈',
+    gold: '积分倍率与饮品礼遇同步提升',
+    diamond: '解锁更完整的门店会员权益',
+    black: '当前最高等级与月度权益包'
   }
   return map[level]
 }
@@ -156,7 +233,27 @@ const progressPercent = computed(() => {
   
   const curr = levelThresholds[currentLevel.value]
   const next = levelThresholds[levels[idx + 1]]
-  return Math.min(100, ((currentExp.value - curr) / (next - curr)) * 100)
+  return Math.max(0, Math.min(100, ((currentExp.value - curr) / (next - curr)) * 100))
+})
+
+const monthlyChallenges = computed(() => buildMonthlyChallenges(monthlyTask.value))
+const completedTaskCount = computed(() => monthlyChallenges.value.filter(task => task.claimed).length)
+const canReceiveMonthlyBenefit = computed(() => (
+  monthlyBenefitStatus.value.canClaim &&
+  !monthlyBenefitStatus.value.claimed &&
+  !claimingBenefit.value
+))
+const benefitActionText = computed(() => {
+  if (claimingBenefit.value) return '领取中…'
+  if (monthlyBenefitStatus.value.claimed) return '本月权益已领取'
+  if (!monthlyBenefitStatus.value.canClaim) return '本月暂无可领权益'
+  return '领取到券包'
+})
+const shouldShowUpgradeTip = computed(() => {
+  if (!monthlyBenefitStatus.value.claimed) return false
+  const currentIndex = levels.indexOf(monthlyBenefitStatus.value.currentLevel)
+  const claimedIndex = levels.indexOf(monthlyBenefitStatus.value.claimedLevel)
+  return currentIndex > claimedIndex && claimedIndex >= 0
 })
 
 // 是否已解锁该等级
@@ -167,32 +264,31 @@ const isUnlocked = (level) => {
 // 各等级权益
 const benefitsData = {
   basic: [
-    { icon: '☕', name: '消费积分', desc: '1元=1积分' },
-    { icon: '📅', name: '每日签到', desc: '获得积分奖励' }
+    { code: '积', name: '消费积分', desc: '1元=1积分' },
+    { code: '签', name: '每日签到', desc: '每日+2积分，连签7天送满35减10券' },
+    { code: '包', name: '月度权益', desc: '每月可领取等级礼包' }
   ],
   silver: [
-    { icon: '☕', name: '消费积分', desc: '1元=1.1积分' },
-    { icon: '🎂', name: '生日礼遇', desc: '8折饮品券×1' },
-    { icon: '🚚', name: '配送费立减', desc: '每月1次封顶3元' }
+    { code: '积', name: '消费积分', desc: '1元=1.1积分' },
+    { code: '兑', name: '积分兑换', desc: '积分商城9.8折' },
+    { code: '包', name: '月度权益', desc: '每月可领取白银等级礼包' }
   ],
   gold: [
-    { icon: '☕', name: '消费积分', desc: '1元=1.2积分' },
-    { icon: '🎂', name: '生日礼遇', desc: '美式兑换券×1' },
-    { icon: '🧋', name: '免费加料', desc: '每月1次' },
-    { icon: '🚚', name: '配送费立减', desc: '每月2次封顶4元' }
+    { code: '积', name: '消费积分', desc: '1元=1.2积分' },
+    { code: '兑', name: '积分兑换', desc: '积分商城9.5折' },
+    { code: '包', name: '月度权益', desc: '每月可领取黄金等级礼包' }
   ],
   diamond: [
-    { icon: '☕', name: '消费积分', desc: '1元=1.3积分' },
-    { icon: '🎂', name: '生日礼遇', desc: '拿铁兑换券×1' },
-    { icon: '📐', name: '免费升杯', desc: '每月1次' },
-    { icon: '🚚', name: '配送费立减', desc: '每月3次封顶5元' }
+    { code: '积', name: '消费积分', desc: '1元=1.3积分' },
+    { code: '兑', name: '积分兑换', desc: '积分商城9折' },
+    { code: '包', name: '月度权益', desc: '每月可领取钻石等级礼包' }
   ],
   black: [
-    { icon: '🚀', name: '加速包', desc: '每月前300元消费1.7倍积分' },
-    { icon: '☕', name: '消费积分', desc: '1元=1.35积分' },
-    { icon: '🎂', name: '生日礼遇', desc: '任意饮品券×1' },
-    { icon: '🆓', name: '免配送费', desc: '每月1次+立减4次' },
-    { icon: '🌟', name: '新品优先', desc: '新品试饮/优先购' }
+    { code: '速', name: '积分加速包', desc: '每月前300元消费1.7倍积分' },
+    { code: '积', name: '消费积分', desc: '1元=1.35积分' },
+    { code: '兑', name: '积分兑换', desc: '积分商城8.5折' },
+    { code: '包', name: '月度权益包', desc: '按月领取专属会员礼遇' },
+    { code: '新', name: '新品优先', desc: '新品试饮与优先购' }
   ]
 }
 
@@ -202,57 +298,116 @@ const currentBenefits = computed(() => benefitsData[selectedLevel.value] || [])
 // 对比数据
 const compareData = [
   { name: '积分倍率', basic: '1.0x', silver: '1.1x', gold: '1.2x', diamond: '1.3x', black: '1.35x' },
-  { name: '生日礼遇', basic: false, silver: true, gold: true, diamond: true, black: true },
-  { name: '配送费立减', basic: false, silver: true, gold: true, diamond: true, black: true },
-  { name: '免费加料/升杯', basic: false, silver: false, gold: true, diamond: true, black: true },
+  { name: '积分兑换', basic: '原价', silver: '9.8折', gold: '9.5折', diamond: '9折', black: '8.5折' },
+  { name: '月度礼包', basic: true, silver: true, gold: true, diamond: true, black: true },
   { name: '黑卡加速包', basic: false, silver: false, gold: false, diamond: false, black: true }
 ]
+
+async function loadBenefitsPage() {
+  benefitLoading.value = true
+  taskLoading.value = true
+  benefitError.value = ''
+  taskError.value = ''
+
+  try {
+    const memberResponse = await getMemberInfo()
+    if (memberResponse.code === 200 && memberResponse.data) {
+      userStore.setMemberInfo(memberResponse.data)
+      currentLevel.value = memberResponse.data.memberLevel || 'basic'
+      selectedLevel.value = currentLevel.value
+      currentExp.value = Number(memberResponse.data.expTotal) || 0
+    }
+  } catch (error) {
+    console.warn('会员信息加载失败', error)
+  }
+
+  try {
+    const benefitResponse = await getMemberBenefits()
+    monthlyBenefitStatus.value = { ...monthlyBenefitStatus.value, ...(benefitResponse.data || {}) }
+  } catch (error) {
+    benefitError.value = error?.message || '本月权益加载失败'
+  } finally {
+    benefitLoading.value = false
+  }
+
+  try {
+    const taskResponse = await getMonthlyTask()
+    monthlyTask.value = taskResponse.data || {}
+  } catch (error) {
+    taskError.value = error?.message || '月度任务加载失败'
+  } finally {
+    taskLoading.value = false
+  }
+}
+
+async function handleReceiveMonthlyBenefit() {
+  if (!canReceiveMonthlyBenefit.value) return
+  claimingBenefit.value = true
+  try {
+    await receiveMonthlyBenefit()
+    uni.showToast({ title: '权益已发放至券包', icon: 'success' })
+    const response = await getMemberBenefits()
+    monthlyBenefitStatus.value = { ...monthlyBenefitStatus.value, ...(response.data || {}) }
+  } catch (error) {
+    uni.showToast({ title: error?.message || '领取失败，请稍后重试', icon: 'none' })
+  } finally {
+    claimingBenefit.value = false
+  }
+}
+
+onShow(loadBenefitsPage)
 </script>
 
 <style lang="scss" scoped>
 .benefits-page {
   min-height: 100vh;
-  background: $bg-color;
+  background: $cozy-surface;
   padding-bottom: $spacing-xl;
 }
 
 // 当前等级卡片
 .current-level {
-  padding: $spacing-xl $spacing-lg;
-  color: white;
-  
-  &.basic { background: #804A00; }
-  &.silver { background: #7F8C8D; }
-  &.gold { background: #D4AF37; color: #4A3000; }
-  &.diamond { background: #3498DB; }
-  &.black { background: #1A1A1A; }
-  
+  position: relative;
+  overflow: hidden;
+  padding: 44rpx 32rpx 38rpx;
+  color: var(--member-text, white);
+  background: var(--member-surface, #{$cozy-surface-alt});
+
+  .level-info, .level-progress { position: relative; z-index: 1; }
+  &.is-dark.black::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    background-image: radial-gradient(#{$member-black-pattern} 1px, transparent 1px);
+    background-size: 18rpx 18rpx; pointer-events: none;
+  }
+  .level-badge-wrap { display: inline-flex; margin-bottom: $spacing-sm; }
+
   .level-info {
     margin-bottom: $spacing-md;
-    
+
     .level-name {
-      font-size: $font-size-xxl;
-      font-weight: 700;
+      font-family: $font-display;
+      font-size: 42rpx;
+      font-weight: 600;
       display: block;
       margin-bottom: $spacing-xs;
     }
-    
+
     .level-desc {
       font-size: $font-size-sm;
       opacity: 0.8;
     }
   }
-  
+
   .level-progress {
     .progress-bar {
       height: 12rpx;
       background: rgba(255,255,255,0.3);
       border-radius: 6rpx;
       overflow: hidden;
-      
+
       .progress-fill {
         height: 100%;
-        background: rgba(255,255,255,0.9);
+        background: var(--member-accent, #{$cozy-accent});
         border-radius: 6rpx;
       }
     }
@@ -268,16 +423,174 @@ const compareData = [
 
 // 区块标题
 .section-title {
-  font-size: $font-size-lg;
+  font-family: $font-display;
+  font-size: 34rpx;
   font-weight: 600;
   color: $text-primary;
   padding: $spacing-md;
+
+  &.compact {
+    padding: 0;
+    display: block;
+  }
+}
+
+.section-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.section-subtitle {
+  display: block;
+  margin-top: 6rpx;
+  color: $text-secondary;
+  font-size: $font-size-xs;
+}
+
+.monthly-benefit-section,
+.monthly-task-section {
+  margin: 20rpx 24rpx 0;
+  padding: $spacing-md;
+  border-radius: $cozy-radius-lg;
+  background: $bg-white;
+}
+
+.month-badge,
+.task-summary {
+  flex-shrink: 0;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  background: $cozy-accent-soft;
+  color: $cozy-primary;
+  font-size: $font-size-xs;
+  font-weight: 600;
+}
+
+.benefit-package-name {
+  display: block;
+  padding: $spacing-md;
+  border-radius: $cozy-radius-md;
+  background: $cozy-surface;
+  color: $text-primary;
+  font-size: $font-size-sm;
+  line-height: 1.7;
+}
+
+.receive-benefit-btn {
+  margin-top: $spacing-md;
+  padding: 22rpx 24rpx;
+  border-radius: $cozy-radius-md;
+  background: $cozy-primary;
+  color: #fff;
+  text-align: center;
+  font-size: $font-size-md;
+  font-weight: 600;
+
+  &.disabled {
+    background: $bg-gray;
+    color: $text-placeholder;
+  }
+}
+
+.upgrade-notice {
+  display: block;
+  margin-top: $spacing-sm;
+  color: $cozy-accent;
+  font-size: $font-size-xs;
+  line-height: 1.5;
+}
+
+.inline-state {
+  padding: 36rpx 12rpx;
+  color: $text-secondary;
+  text-align: center;
+  font-size: $font-size-sm;
+
+  &.error {
+    color: $error-color;
+  }
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.task-card {
+  padding: $spacing-md;
+  border: 1rpx solid $border-color;
+  border-radius: $cozy-radius-md;
+}
+
+.task-topline,
+.task-bottomline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-sm;
+}
+
+.task-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.task-title,
+.task-description {
+  display: block;
+}
+
+.task-title {
+  color: $text-primary;
+  font-size: $font-size-md;
+  font-weight: 600;
+}
+
+.task-description {
+  margin-top: 4rpx;
+  color: $text-secondary;
+  font-size: $font-size-xs;
+}
+
+.task-reward {
+  flex-shrink: 0;
+  color: $cozy-primary;
+  font-size: $font-size-sm;
+  font-weight: 600;
+}
+
+.task-progress-track {
+  height: 10rpx;
+  margin: $spacing-sm 0;
+  overflow: hidden;
+  border-radius: 999rpx;
+  background: $bg-gray;
+}
+
+.task-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: $cozy-accent;
+}
+
+.task-bottomline {
+  color: $text-placeholder;
+  font-size: $font-size-xs;
+
+  .completed {
+    color: $success-color;
+  }
 }
 
 // 权益部分
 .benefits-section {
   background: $bg-white;
-  margin-bottom: $spacing-sm;
+  margin: 20rpx 24rpx 0;
+  border-radius: $cozy-radius-lg;
 }
 
 .level-tabs {
@@ -290,12 +603,12 @@ const compareData = [
   padding: $spacing-sm $spacing-md;
   margin-right: $spacing-sm;
   background: $bg-gray;
-  border-radius: 30rpx;
+  border-radius: 999rpx;
   font-size: $font-size-sm;
   color: $text-secondary;
   
   &.active {
-    background: $primary-color;
+    background: $cozy-surface-alt;
     color: white;
   }
 }
@@ -315,7 +628,16 @@ const compareData = [
   }
   
   .benefit-icon {
-    font-size: 48rpx;
+    width: 62rpx;
+    height: 62rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $cozy-radius-md;
+    background: $cozy-surface;
+    color: $cozy-primary;
+    font-size: 21rpx;
+    font-weight: 750;
     margin-right: $spacing-md;
   }
   
@@ -343,8 +665,8 @@ const compareData = [
     color: $text-placeholder;
     
     &.unlocked {
-      background: rgba($success-color, 0.1);
-      color: $success-color;
+      background: $cozy-accent-soft;
+      color: $cozy-accent;
     }
   }
 }
@@ -352,7 +674,8 @@ const compareData = [
 // 对比表格
 .compare-section {
   background: $bg-white;
-  margin-bottom: $spacing-sm;
+  margin: 20rpx 24rpx 0;
+  border-radius: $cozy-radius-lg;
 }
 
 .compare-table {
@@ -400,6 +723,8 @@ const compareData = [
 // 升级指南
 .upgrade-section {
   background: $bg-white;
+  margin: 20rpx 24rpx 0;
+  border-radius: $cozy-radius-lg;
 }
 
 .upgrade-tips {
@@ -412,7 +737,10 @@ const compareData = [
   padding: $spacing-sm 0;
   
   .tip-icon {
-    font-size: 40rpx;
+    width: 58rpx;
+    color: $cozy-primary;
+    font-size: 19rpx;
+    font-weight: 750;
     margin-right: $spacing-md;
   }
   
