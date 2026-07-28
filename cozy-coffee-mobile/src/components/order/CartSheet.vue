@@ -42,8 +42,8 @@ const totalCount = computed(() => props.items.reduce((sum, line) => sum + Number
 
 <style lang="scss" scoped>
 .cart-layer { position: fixed; inset: 0; z-index: 105; }
-.cart-mask { position: absolute; inset: 0; background: rgba(25, 18, 14, .46); }
-.cart-sheet { position: absolute; left: 0; right: 0; bottom: 150rpx; max-height: 64vh; padding: 30rpx 32rpx 20rpx; border-radius: 24rpx 24rpx 0 0; background: #fff; animation: cart-in 200ms ease-out; }
+.cart-mask { position: absolute; inset: 0; background: rgba(25, 18, 14, .54); }
+.cart-sheet { position: absolute; left: 0; right: 0; bottom: 150rpx; max-height: 64vh; padding: 30rpx 32rpx 20rpx; border-radius: 24rpx 24rpx 0 0; background: #fff; box-shadow: 0 -6rpx 12rpx rgba(43,30,22,.08); animation: cart-in 200ms $cozy-ease-out; }
 /* #ifdef H5 */
 .cart-sheet { bottom: calc(150rpx + 50px); }
 /* #endif */
@@ -54,7 +54,7 @@ const totalCount = computed(() => props.items.reduce((sum, line) => sum + Number
 .cart-scroll { max-height: 42vh; }
 .cart-summary { display: flex; align-items: baseline; justify-content: flex-end; gap: 14rpx; padding-top: 20rpx; }
 .summary-label { color: $cozy-muted; font-size: 24rpx; }
-.summary-price { color: $cozy-primary; font-size: 34rpx; font-weight: 750; }
+.summary-price { color: $cozy-primary; font-size: 38rpx; font-weight: 760; }
 @keyframes cart-in { from { transform: translateY(40rpx); opacity: .4; } to { transform: translateY(0); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .cart-sheet { animation: none; } }
 </style>

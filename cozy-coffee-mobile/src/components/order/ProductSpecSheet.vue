@@ -194,8 +194,8 @@ function confirm() {
 </script>
 
 <style lang="scss" scoped>
-.sheet-layer { position: fixed; inset: 0; z-index: 120; }
-.sheet-mask { position: absolute; inset: 0; background: rgba(25, 18, 14, .46); }
+.sheet-layer { position: fixed; inset: 0; z-index: 1000; }
+.sheet-mask { position: absolute; inset: 0; background: rgba(25, 18, 14, .54); }
 .sheet-panel {
   position: absolute;
   left: 0;
@@ -205,7 +205,8 @@ function confirm() {
   overflow: hidden;
   border-radius: 24rpx 24rpx 0 0;
   background: #fff;
-  animation: sheet-in 220ms cubic-bezier(.22, 1, .36, 1);
+  box-shadow: 0 -6rpx 12rpx rgba(43,30,22,.08);
+  animation: sheet-in 220ms $cozy-ease-out;
 }
 .sheet-handle { width: 72rpx; height: 8rpx; margin: 16rpx auto 6rpx; border-radius: 999rpx; background: $cozy-border; }
 .sheet-header { position: relative; display: flex; gap: 20rpx; padding: 18rpx 32rpx 24rpx; border-bottom: 1rpx solid $cozy-border; }
@@ -239,11 +240,11 @@ function confirm() {
 .option.selected .option-extra { color: $cozy-primary; }
 .option-grid--two .option { width: calc(50% - 7rpx); }
 .sheet-footer { display: flex; align-items: center; gap: 24rpx; padding: 20rpx 32rpx max(20rpx, env(safe-area-inset-bottom)); border-top: 1rpx solid $cozy-border; background: #fff; }
-.quantity-control { height: 88rpx; display: flex; align-items: center; border: 1rpx solid $cozy-border; border-radius: 999rpx; }
+.quantity-control { height: 88rpx; display: flex; align-items: center; border: 1rpx solid $cozy-border; border-radius: $cozy-radius-md; }
 .quantity-button { width: 76rpx; height: 88rpx; display: flex; align-items: center; justify-content: center; color: $cozy-ink; font-size: 38rpx; }
 .quantity-button.disabled { color: $cozy-placeholder; }
 .quantity-value { min-width: 48rpx; text-align: center; color: $cozy-ink; font-size: 27rpx; font-weight: 650; }
-.confirm-button { flex: 1; height: 88rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; background: $cozy-primary; color: #fff; font-size: 28rpx; font-weight: 700; }
+.confirm-button { flex: 1; height: 88rpx; display: flex; align-items: center; justify-content: center; border-radius: $cozy-radius-md; background: $cozy-primary; color: #fff; font-size: 28rpx; font-weight: 700; }
 @keyframes sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .sheet-panel { animation: none; } }
 </style>

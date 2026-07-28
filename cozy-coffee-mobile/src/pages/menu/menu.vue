@@ -1,18 +1,27 @@
 <template>
   <view class="menu-page">
-    <view class="store-strip">
-      <view class="store-copy">
-        <view class="store-line">
-          <text class="store-name">CozyCoffee 中心店</text>
-          <text class="store-status">营业中</text>
+    <view class="menu-header">
+      <view class="menu-brand-row">
+        <view>
+          <text class="menu-brand">COZY MENU</text>
+          <text class="menu-title cozy-display">今天想喝什么？</text>
         </view>
-        <text class="store-meta">到店自提 · 预计 15 分钟</text>
+        <view class="search-entry" @click="goToSearch">
+          <view class="search-glyph" />
+          <text>搜索</text>
+        </view>
       </view>
-      <view class="search-entry" @click="goToSearch">搜索</view>
+      <view class="store-row">
+        <view class="store-copy">
+          <text class="store-name">CozyCoffee 中心店</text>
+          <text class="store-meta">固定门店自提 · 预计 15 分钟</text>
+        </view>
+        <text class="store-status"><text class="status-dot" /> 营业中</text>
+      </view>
     </view>
 
-    <view class="menu-container">
-      <scroll-view scroll-y class="category-sidebar" :scroll-into-view="`cat-${currentCategoryIndex}`">
+    <view class="menu-body">
+      <scroll-view scroll-y class="category-sidebar" :scroll-into-view="`cat-${currentCategoryIndex}`" scroll-with-animation>
         <view
           v-for="(category, index) in categories"
           :id="`cat-${index}`"
@@ -27,32 +36,28 @@
         <view class="sidebar-spacer" />
       </scroll-view>
 
-      <scroll-view scroll-y class="product-scroll" :scroll-into-view="scrollTarget" scroll-with-animation>
-        <LoadingState v-if="loading" text="正在准备菜单…" />
+      <scroll-view scroll-y class="product-scroll" scroll-with-animation>
+        <LoadingState v-if="loading" text="正在准备今日菜单…" />
         <OfflineState v-else-if="offline" @retry="loadMenu" />
         <RetryState v-else-if="errorMessage" :description="errorMessage" @retry="loadMenu" />
         <EmptyState v-else-if="!categories.length" title="今日菜单准备中" description="请稍后刷新看看" action-text="刷新菜单" @action="loadMenu" />
 
         <view v-else class="product-content">
-          <view class="menu-notice">
-            <text class="notice-title">高效点单</text>
-            <text class="notice-copy">选择商品后直接配置规格，无需跳转详情页</text>
-          </view>
-
-          <view v-for="(category, index) in categories" :id="`products-${index}`" :key="category.id" class="product-group">
-            <view class="group-heading">
-              <text class="group-title">{{ category.name }}</text>
-              <text class="group-count">{{ category.products.length }} 款</text>
+          <view class="group-heading">
+            <view>
+              <text class="group-title cozy-display">{{ currentCategory.name }}</text>
+              <text class="group-description">{{ categoryDescription(currentCategory.id) }}</text>
             </view>
-            <ProductListItem
-              v-for="product in category.products"
-              :key="product.id"
-              :product="product"
-              :count="productCount(product.id)"
-              @select="openSpec"
-              @add="openSpec"
-            />
+            <text class="group-count">{{ currentCategory.products.length }} 款</text>
           </view>
+          <ProductListItem
+            v-for="product in currentCategory.products"
+            :key="product.id"
+            :product="product"
+            :count="productCount(product.id)"
+            @select="openSpec"
+            @add="openSpec"
+          />
           <view class="product-spacer" />
         </view>
       </scroll-view>
@@ -75,7 +80,7 @@
 
 <script setup>
 import { computed, nextTick, ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { getMenuData } from '@/api/product'
 import { useCartStore } from '@/stores/cart'
 import { NetworkError } from '@/services/errors/AppError'
@@ -91,7 +96,6 @@ import OfflineState from '@/components/states/OfflineState.vue'
 const cartStore = useCartStore()
 const categories = ref([])
 const currentCategoryIndex = ref(0)
-const scrollTarget = ref('')
 const loading = ref(true)
 const offline = ref(false)
 const errorMessage = ref('')
@@ -100,10 +104,27 @@ const specVisible = ref(false)
 const activeProduct = ref({})
 const editingLine = ref(null)
 
+const currentCategory = computed(() => categories.value[currentCategoryIndex.value] || { id: '', name: '', products: [] })
 const allProducts = computed(() => categories.value.flatMap(category => category.products))
 
-onLoad(loadMenu)
+onLoad((options) => {
+  pendingCategory = (options && options.category) ? String(options.category).toLowerCase() : ''
+  loadMenu()
+})
+onShow(() => {
+  const preset = uni.getStorageSync('cozy_menu_category')
+  if (preset) {
+    uni.removeStorageSync('cozy_menu_category')
+    pendingCategory = String(preset).toLowerCase()
+    loadMenu()
+    return
+  }
+  if (!uni.getStorageSync('cozy_open_cart_on_menu')) return
+  uni.removeStorageSync('cozy_open_cart_on_menu')
+  nextTick(() => { cartVisible.value = cartStore.items.length > 0 })
+})
 
+let pendingCategory = ''
 async function loadMenu() {
   loading.value = true
   offline.value = false
@@ -130,6 +151,13 @@ async function loadMenu() {
       })
 
     categories.value = Array.from(categoryMap.values())
+    if (pendingCategory) {
+      const idx = categories.value.findIndex(category => category.id === pendingCategory)
+      currentCategoryIndex.value = idx >= 0 ? idx : 0
+      pendingCategory = ''
+    } else {
+      currentCategoryIndex.value = 0
+    }
   } catch (error) {
     offline.value = error instanceof NetworkError
     errorMessage.value = error?.message || '菜单加载失败，请稍后重试'
@@ -145,10 +173,16 @@ function categoryName(code) {
   })[code] || code
 }
 
+function categoryDescription(code) {
+  return ({
+    espresso: '浓缩基底，直接而有力量', coffee: '熟悉风味，适合日常', latte: '咖啡与奶的平衡',
+    signature: '随季节更新的门店表达', soe: '单一产地与清晰风味', bakery: '适合与咖啡一起享用',
+    dessert: '轻甜收尾', addon: '为当前饮品增加变化', other: '其他今日供应'
+  })[code] || '门店今日供应'
+}
+
 function selectCategory(index) {
   currentCategoryIndex.value = index
-  scrollTarget.value = ''
-  nextTick(() => { scrollTarget.value = `products-${index}` })
 }
 
 function productCount(productId) {
@@ -212,29 +246,35 @@ function goToSearch() { uni.navigateTo({ url: '/pages/search/index' }) }
 
 <style lang="scss" scoped>
 .menu-page { height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #fff; }
-.store-strip { min-height: 116rpx; padding: 20rpx 28rpx; display: flex; align-items: center; gap: 20rpx; border-bottom: 1rpx solid $cozy-border; background: #fff; box-sizing: border-box; }
-.store-copy { min-width: 0; flex: 1; }
-.store-line { display: flex; align-items: center; gap: 12rpx; }
-.store-name { overflow: hidden; color: $cozy-ink; font-size: 30rpx; font-weight: 750; white-space: nowrap; text-overflow: ellipsis; }
-.store-status { padding: 4rpx 10rpx; border-radius: 999rpx; background: $cozy-accent-soft; color: $cozy-accent; font-size: 19rpx; font-weight: 650; }
-.store-meta { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 22rpx; }
-.search-entry { min-width: 104rpx; height: 72rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; background: $cozy-surface; color: $cozy-ink; font-size: 24rpx; }
-.menu-container { min-height: 0; flex: 1; display: flex; overflow: hidden; }
-.category-sidebar { width: 172rpx; height: 100%; flex: none; background: $cozy-surface; }
-.category-item { position: relative; min-height: 104rpx; padding: 18rpx 18rpx 18rpx 24rpx; display: flex; align-items: center; justify-content: center; color: $cozy-muted; font-size: 24rpx; text-align: center; box-sizing: border-box; }
+.menu-header { flex: none; padding: 28rpx 28rpx 24rpx; background: $cozy-surface-alt; color: #fff; }
+.menu-brand-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 24rpx; }
+.menu-brand { display: block; color: $cozy-muted-on-dark; font-size: 18rpx; font-weight: 780; letter-spacing: .14em; }
+.menu-title { display: block; margin-top: 10rpx; font-size: 40rpx; }
+.search-entry { min-width: 112rpx; height: 70rpx; padding: 0 18rpx; display: flex; align-items: center; justify-content: center; gap: 14rpx; border: 1rpx solid $cozy-border-on-dark; border-radius: $cozy-radius-md; color: #fff; font-size: 22rpx; font-weight: 650; }
+.search-glyph { position: relative; width: 21rpx; height: 21rpx; border: 3rpx solid currentColor; border-radius: 50%; }
+.search-glyph::after { position: absolute; right: -9rpx; bottom: -6rpx; width: 11rpx; height: 3rpx; border-radius: 2rpx; background: currentColor; content: ''; transform: rotate(45deg); }
+.store-row { margin-top: 25rpx; padding-top: 22rpx; display: flex; align-items: flex-end; justify-content: space-between; gap: 20rpx; border-top: 1rpx solid $cozy-border-on-dark; }
+.store-copy { min-width: 0; }
+.store-name { display: block; overflow: hidden; font-size: 26rpx; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.store-meta { display: block; margin-top: 8rpx; color: $cozy-muted-on-dark; font-size: 20rpx; }
+.store-status { flex: none; display: flex; align-items: center; gap: 8rpx; color: #dbe7d4; font-size: 20rpx; font-weight: 650; }
+.status-dot { width: 10rpx; height: 10rpx; border-radius: 50%; background: #9fbc8f; }
+
+.menu-body { flex: 1; display: flex; min-height: 0; overflow: hidden; }
+
+.category-sidebar { flex: none; width: 180rpx; height: 100%; background: $cozy-surface; }
+.sidebar-spacer { height: 120rpx; }
+.category-item { position: relative; min-height: 112rpx; padding: 18rpx 14rpx; display: flex; align-items: center; justify-content: center; color: $cozy-muted; font-size: 24rpx; text-align: center; box-sizing: border-box; }
 .category-item.active { background: #fff; color: $cozy-ink; font-weight: 700; }
-.category-item.active::before { position: absolute; left: 0; top: 34rpx; bottom: 34rpx; width: 7rpx; border-radius: 0 999rpx 999rpx 0; background: $cozy-primary; content: ''; }
+.category-item.active::before { position: absolute; left: 0; top: 36rpx; bottom: 36rpx; width: 6rpx; border-radius: 0 999rpx 999rpx 0; background: $cozy-primary; content: ''; }
 .category-name { line-height: 1.35; }
-.category-count { position: absolute; top: 10rpx; right: 8rpx; min-width: 30rpx; height: 30rpx; padding: 0 5rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; background: $cozy-primary; color: #fff; font-size: 18rpx; box-sizing: border-box; }
-.sidebar-spacer { height: 220rpx; }
+.category-count { position: absolute; top: 10rpx; right: 10rpx; min-width: 30rpx; height: 30rpx; padding: 0 5rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; background: $cozy-primary; color: #fff; font-size: 18rpx; box-sizing: border-box; }
+
 .product-scroll { min-width: 0; flex: 1; height: 100%; background: #fff; }
 .product-content { padding: 0 26rpx; }
-.menu-notice { margin: 24rpx 0 8rpx; padding: 24rpx; border-radius: $cozy-radius-md; background: $cozy-surface-alt; }
-.notice-title { display: block; color: #fff; font-size: 28rpx; font-weight: 700; }
-.notice-copy { display: block; margin-top: 7rpx; color: $cozy-muted-on-dark; font-size: 21rpx; line-height: 1.45; }
-.product-group { scroll-margin-top: 0; }
-.group-heading { position: sticky; top: 0; z-index: 5; display: flex; align-items: baseline; justify-content: space-between; padding: 28rpx 0 12rpx; background: #fff; }
-.group-title { color: $cozy-ink; font-size: 30rpx; font-weight: 750; }
-.group-count { color: $cozy-muted; font-size: 21rpx; }
+.group-heading { padding: 28rpx 0 16rpx; display: flex; align-items: flex-end; justify-content: space-between; gap: 20rpx; }
+.group-title { display: block; color: $cozy-ink; font-size: 36rpx; }
+.group-description { display: block; margin-top: 7rpx; color: $cozy-muted; font-size: 19rpx; }
+.group-count { flex: none; padding-bottom: 2rpx; color: $cozy-muted; font-size: 20rpx; }
 .product-spacer { height: 220rpx; }
 </style>

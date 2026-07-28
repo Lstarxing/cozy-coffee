@@ -14,7 +14,7 @@
           <text v-if="hasMultipleSpecs" class="price-suffix">起</text>
         </view>
         <view class="add-button" hover-class="add-button--pressed" @click.stop="$emit('add', product)">
-          <text class="add-icon">＋</text>
+          <text class="add-label">选规格</text>
           <text v-if="count" class="product-count">{{ count }}</text>
         </view>
       </view>
@@ -39,15 +39,15 @@ const formatPrice = value => Number(value || 0).toFixed(0)
 <style lang="scss" scoped>
 .product-item {
   display: flex;
-  gap: 20rpx;
-  padding: 24rpx 0;
+  gap: 22rpx;
+  padding: 26rpx 0;
   border-bottom: 1rpx solid $cozy-border;
 }
 
 .product-image {
-  width: 164rpx;
-  height: 164rpx;
-  flex: 0 0 164rpx;
+  width: 178rpx;
+  height: 178rpx;
+  flex: 0 0 178rpx;
   border-radius: $cozy-radius-md;
   background: $cozy-surface;
 }
@@ -68,8 +68,8 @@ const formatPrice = value => Number(value || 0).toFixed(0)
 .product-name {
   min-width: 0;
   color: $cozy-ink;
-  font-size: 30rpx;
-  font-weight: 650;
+  font-size: 29rpx;
+  font-weight: 680;
   line-height: 1.35;
 }
 
@@ -88,7 +88,7 @@ const formatPrice = value => Number(value || 0).toFixed(0)
   overflow: hidden;
   margin-top: 10rpx;
   color: $cozy-muted;
-  font-size: 23rpx;
+  font-size: 22rpx;
   line-height: 1.5;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -114,18 +114,21 @@ const formatPrice = value => Number(value || 0).toFixed(0)
 
 .add-button {
   position: relative;
-  width: 72rpx;
-  height: 72rpx;
+  min-width: 112rpx;
+  height: 66rpx;
+  padding: 0 18rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: $cozy-primary;
+  border: 1rpx solid $cozy-primary;
+  border-radius: $cozy-radius-md;
+  background: #fff;
+  color: $cozy-primary;
   transition: transform 160ms ease-out, background 160ms ease-out;
 }
 
-.add-button--pressed { transform: scale(.94); background: $cozy-primary-hover; }
-.add-icon { color: #fff; font-size: 42rpx; font-weight: 400; line-height: 1; }
+.add-button--pressed { transform: scale(.97); background: $cozy-surface; }
+.add-label { font-size: 21rpx; font-weight: 700; }
 
 .product-count {
   position: absolute;
@@ -137,9 +140,9 @@ const formatPrice = value => Number(value || 0).toFixed(0)
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 3rpx solid #fff;
+  border: 2rpx solid #fff;
   border-radius: 999rpx;
-  background: $cozy-ink;
+  background: $cozy-primary;
   color: #fff;
   font-size: 19rpx;
   box-sizing: border-box;

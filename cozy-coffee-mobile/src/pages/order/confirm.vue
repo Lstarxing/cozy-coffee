@@ -253,7 +253,7 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 .confirm-content { padding: 24rpx 24rpx 0; }
 .section-block { margin-top: 20rpx; padding: 28rpx; border-radius: $cozy-radius-lg; background: #fff; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18rpx; }
-.section-title { color: $cozy-ink; font-size: 29rpx; font-weight: 750; }
+.section-title { color: $cozy-ink; font-family: $font-display; font-size: 30rpx; font-weight: 600; }
 .section-note { color: $cozy-muted; font-size: 22rpx; }
 .pickup-option { min-height: 96rpx; display: flex; align-items: center; gap: 18rpx; }
 .pickup-radio { width: 38rpx; height: 38rpx; display: flex; align-items: center; justify-content: center; border: 2rpx solid $cozy-primary; border-radius: 50%; }

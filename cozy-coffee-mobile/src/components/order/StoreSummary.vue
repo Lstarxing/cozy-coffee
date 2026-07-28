@@ -13,10 +13,12 @@
 </template>
 
 <script setup>
+import { FIXED_STORE } from '@/config/store'
+
 defineProps({
-  name: { type: String, default: 'CozyCoffee 中心店' },
-  address: { type: String, default: '固定自提门店 · 具体地址以门店公告为准' },
-  pickupLabel: { type: String, default: '尽快取餐（约 15 分钟）' }
+  name: { type: String, default: FIXED_STORE.name },
+  address: { type: String, default: FIXED_STORE.address },
+  pickupLabel: { type: String, default: FIXED_STORE.pickupLabel }
 })
 </script>
 

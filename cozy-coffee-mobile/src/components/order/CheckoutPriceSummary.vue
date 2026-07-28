@@ -2,7 +2,7 @@
   <view class="price-summary">
     <view class="summary-row"><text>商品小计</text><text>¥{{ money(preview?.subtotal) }}</text></view>
     <view v-if="Number(preview?.discount || 0) > 0" class="summary-row discount"><text>优惠</text><text>-¥{{ money(preview.discount) }}</text></view>
-    <view class="summary-row"><text>配送费</text><text>¥0.00</text></view>
+    <view class="summary-row"><text>到店自提</text><text>免费</text></view>
     <view class="summary-divider" />
     <view class="summary-row total"><text>应付</text><text>¥{{ money(preview?.payable) }}</text></view>
     <text v-if="preview?.source === 'local-fallback'" class="preview-note">当前为本地试算，提交时以后端金额为准</text>

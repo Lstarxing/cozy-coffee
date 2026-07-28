@@ -30,6 +30,6 @@ function onSubmit() { if (!props.disabled) emit('submit') }
 .submit-price { min-width: 0; flex: 1; }
 .submit-label { margin-right: 10rpx; color: $cozy-muted; font-size: 23rpx; }
 .submit-amount { color: $cozy-primary; font-size: 38rpx; font-weight: 750; }
-.submit-button { min-width: 270rpx; height: 88rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; background: $cozy-primary; color: #fff; font-size: 28rpx; font-weight: 700; }
+.submit-button { min-width: 270rpx; height: 88rpx; display: flex; align-items: center; justify-content: center; border-radius: $cozy-radius-md; background: $cozy-primary; color: #fff; font-size: 28rpx; font-weight: 700; }
 .submit-button.disabled { background: #bdb4ae; color: #f7f5f3; }
 </style>

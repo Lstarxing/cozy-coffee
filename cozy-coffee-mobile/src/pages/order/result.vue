@@ -32,6 +32,8 @@
 import { computed, ref } from 'vue'
 import { onHide, onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { getOrderDetail } from '@/api/order'
+import { useSessionStore } from '@/stores/session'
+import { refreshMemberProfile } from '@/services/session/MemberProfileService'
 import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
 
@@ -39,14 +41,17 @@ const orderId = ref('')
 const order = ref(null)
 const loading = ref(true)
 const errorMessage = ref('')
+const sessionStore = useSessionStore()
 const statusTitle = computed(() => ['cancelled', 'canceled'].includes(String(order.value?.status).toLowerCase()) ? '订单已取消' : '下单成功')
 const normalizedStatus = computed(() => String(order.value?.status || '').toLowerCase())
 let pollTimer = null
+let memberRefreshTimer = null
+const refreshedMemberStages = new Set()
 
 onLoad(options => { orderId.value = options.orderId || options.id || ''; loadOrder() })
 onShow(startPolling)
 onHide(stopPolling)
-onUnload(stopPolling)
+onUnload(() => { stopPolling(); clearMemberRefreshTimer() })
 
 async function loadOrder(silent = false) {
   if (!orderId.value) { loading.value = false; errorMessage.value = '缺少订单编号，请前往订单列表查看'; return }
@@ -55,6 +60,7 @@ async function loadOrder(silent = false) {
   try {
     const response = await getOrderDetail(orderId.value)
     order.value = response?.data ?? response
+    refreshMemberForOrder(order.value)
   } catch (error) {
     errorMessage.value = error?.message || '暂时无法读取订单详情，可前往订单列表查看'
   } finally { if (!silent) loading.value = false }
@@ -69,6 +75,34 @@ function startPolling() {
   }, 3000)
 }
 function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
+
+async function refreshMemberForOrder(currentOrder) {
+  const status = String(currentOrder?.status || '').toLowerCase()
+  if (['cancelled', 'canceled'].includes(status)) return
+  const stage = status === 'completed' ? 'completed' : 'payment'
+  if (refreshedMemberStages.has(stage)) return
+
+  refreshedMemberStages.add(stage)
+  try {
+    await refreshMemberProfile(sessionStore)
+  } catch (_) {
+    refreshedMemberStages.delete(stage)
+    return
+  }
+
+  if (stage === 'completed') {
+    clearMemberRefreshTimer()
+    memberRefreshTimer = setTimeout(() => {
+      refreshMemberProfile(sessionStore).catch(() => {})
+    }, 1500)
+  }
+}
+
+function clearMemberRefreshTimer() {
+  if (!memberRefreshTimer) return
+  clearTimeout(memberRefreshTimer)
+  memberRefreshTimer = null
+}
 
 function statusText(status) { return ({ pending: '待接单', pending_payment: '待处理', preparing: '制作中', processing: '制作中', completed: '已完成', cancelled: '已取消' })[String(status || '').toLowerCase()] || '已提交' }
 function money(value) { return Number(value || 0).toFixed(2) }
@@ -91,7 +125,7 @@ function goToDetail() { uni.navigateTo({ url: `/pages/order/detail?id=${encodeUR
 .info-row.total { margin-top: 8rpx; border-top: 1rpx solid $cozy-border; color: $cozy-ink; font-weight: 700; }
 .info-row.total text:last-child { color: $cozy-primary; font-size: 32rpx; }
 .action-group { display: flex; gap: 18rpx; margin-top: 30rpx; }
-.secondary-button, .primary-button { flex: 1; height: 88rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; font-size: 25rpx; font-weight: 650; }
+.secondary-button, .primary-button { flex: 1; height: 88rpx; display: flex; align-items: center; justify-content: center; border-radius: $cozy-radius-md; font-size: 25rpx; font-weight: 650; }
 .secondary-button { border: 2rpx solid $cozy-primary; color: $cozy-primary; }
 .primary-button { background: $cozy-primary; color: #fff; }
 </style>
