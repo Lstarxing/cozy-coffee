@@ -1,12 +1,6 @@
 <!-- 订单页：咖啡订单与积分兑换订单两类，收据式层级呈现。 -->
 <template>
-  <view class="order-page">
-    <view class="order-intro">
-      <text class="intro-brand">COZY ORDERS</text>
-      <text class="intro-title cozy-display">每一杯，都有清楚进度</text>
-      <text class="intro-copy">查看咖啡订单进度与积分兑换记录。</text>
-    </view>
-
+  <view class="order-page" :style="{ paddingTop: statusBarHeight + 44 + 'px' }">
     <view class="category-switch">
       <view
         v-for="cat in categories"
@@ -101,27 +95,34 @@
       </template>
     </view>
 
-    <EmptyState
-      v-else
-      :icon="currentCategory === 'coffee' ? '杯' : '礼'"
-      :title="currentCategory === 'coffee' ? '还没有咖啡订单' : '还没有兑换记录'"
-      :description="currentCategory === 'coffee' ? '选择一杯喜欢的咖啡，门店会为你现制。' : '去积分商城兑换心仪礼品。'"
-      :action-text="currentCategory === 'coffee' ? '去点单' : '去积分商城'"
-      @action="currentCategory === 'coffee' ? goToMenu() : goToMall()"
-    />
+    <!-- 咖啡订单空状态 -->
+    <view v-else-if="currentCategory === 'coffee'" class="editorial-empty">
+      <CozyIcon name="coffee" :size="48" color="#8B6958" class="empty-icon" />
+      <text class="empty-title">还没有咖啡订单</text>
+      <text class="empty-desc">选择一杯喜欢的咖啡，<br>我们会为你现制</text>
+      <view class="empty-action" @click="goToMenu">探索咖啡 →</view>
+    </view>
+
+    <!-- 兑换订单空状态 -->
+    <view v-else class="editorial-empty">
+      <CozyIcon name="gift" :size="48" color="#8B6958" class="empty-icon" />
+      <text class="empty-title">还没有兑换记录</text>
+      <text class="empty-desc">累计积分，<br>兑换你的咖啡礼遇</text>
+      <view class="empty-action" @click="goToMall">查看会员权益 →</view>
+    </view>
   </view>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { onHide, onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { getOrderList } from '@/api/order'
 import { getMyRedemptions } from '@/api/member'
 import { useCartStore } from '@/stores/cart'
 import { restoreOrderToCart } from '@/services/order/ReorderService'
 import LoadingState from '@/components/states/LoadingState.vue'
-import EmptyState from '@/components/states/EmptyState.vue'
 import RetryState from '@/components/states/RetryState.vue'
+import CozyIcon from '@/components/CozyIcon.vue'
 
 const categories = [
   { value: 'coffee', label: '咖啡订单' },
@@ -129,6 +130,7 @@ const categories = [
 ]
 
 const currentCategory = ref('coffee')
+const statusBarHeight = ref(20)
 const coffeeOrders = ref([])
 const redeemOrders = ref([])
 const loading = ref(false)
@@ -141,6 +143,10 @@ let ticker = null
 onLoad(options => {
   const cat = options?.category
   if (categories.some(c => c.value === cat)) currentCategory.value = cat
+})
+
+onMounted(() => {
+  statusBarHeight.value = uni.getSystemInfoSync().statusBarHeight || 20
 })
 
 onShow(() => {
@@ -353,10 +359,6 @@ function openRestoredCart() {
 
 <style lang="scss" scoped>
 .order-page { min-height: 100vh; padding-bottom: 140rpx; background: $cozy-surface; }
-.order-intro { padding: 34rpx 28rpx 28rpx; background: #fff; }
-.intro-brand { display: block; color: $cozy-primary; font-size: 18rpx; font-weight: 800; letter-spacing: .14em; }
-.intro-title { display: block; margin-top: 12rpx; color: $cozy-ink; font-size: 39rpx; }
-.intro-copy { display: block; margin-top: 9rpx; color: $cozy-muted; font-size: 21rpx; }
 
 /* 一级分类切换：咖啡订单 / 兑换订单 */
 .category-switch {
@@ -411,4 +413,27 @@ function openRestoredCart() {
 .summary-total.virtual-tag { color: $cozy-accent; }
 .order-action { min-height: 66rpx; padding: 0 20rpx; display: flex; align-items: center; border: 1rpx solid $cozy-primary; border-radius: $cozy-radius-md; color: $cozy-primary; font-size: 21rpx; font-weight: 650; }
 .detail-link { padding-bottom: 9rpx; color: $cozy-primary; font-size: 20rpx; font-weight: 650; }
+
+/* 编辑式空状态 */
+.editorial-empty {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 420rpx 60rpx 120rpx; text-align: center;
+}
+.empty-icon {
+  margin-bottom: 32rpx;
+}
+.empty-title {
+  display: block; color: $cozy-ink; font-size: 34rpx; font-weight: 680;
+  letter-spacing: 2rpx;
+}
+.empty-desc {
+  display: block; margin-top: 20rpx; color: $cozy-muted; font-size: 24rpx;
+  line-height: 1.8; letter-spacing: 1rpx;
+}
+.empty-action {
+  margin-top: 44rpx; padding: 18rpx 48rpx;
+  border: 1rpx solid #5B4033; border-radius: $cozy-radius-md;
+  color: #5B4033; font-size: 24rpx; font-weight: 600;
+  letter-spacing: 1rpx; transition: all $cozy-duration $cozy-ease-out;
+}
 </style>
