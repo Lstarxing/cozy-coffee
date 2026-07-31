@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>我的 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  .page { padding:24px 20px 120px; }
+
+  /* ── 会员头 ── */
+  .member-header {
+    padding:32px 24px;
+    border-radius:12px;
+    background:linear-gradient(135deg,#2C1E18,#3D2A20);
+    color:#fff;
+    display:flex; align-items:center; gap:16px;
+  }
+  .avatar {
+    flex:none; width:60px; height:60px; border-radius:50%;
+    background:rgba(255,255,255,.12);
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px;
+  }
+  .member-info { flex:1; min-width:0; }
+  .member-name {
+    display:block; font-family:var(--serif); font-size:22px; font-weight:600;
+  }
+  .member-level {
+    display:inline-block; margin-top:8px; padding:4px 12px;
+    font-size:10px; font-weight:700; letter-spacing:.06em;
+    border-radius:999px; background:rgba(255,255,255,.14); color:rgba(255,255,255,.85);
+  }
+  .member-edit {
+    flex:none; font-size:12px; color:rgba(255,255,255,.55);
+    cursor:pointer; white-space:nowrap;
+  }
+
+  /* ── 等级进度 ── */
+  .level-progress {
+    margin-top:12px; padding:0 24px;
+    border-radius:0 0 12px 12px;
+  }
+  .progress-bar {
+    height:3px; border-radius:2px; background:rgba(255,255,255,.14);
+    overflow:hidden;
+  }
+  .progress-fill { height:100%; border-radius:2px; background:rgba(255,255,255,.65); }
+  .progress-text {
+    display:block; margin-top:8px; padding-bottom:20px;
+    font-size:11px; text-align:center; color:rgba(255,255,255,.6);
+  }
+
+  /* ── 积分账本 ── */
+  .ledger {
+    margin-top:16px; padding:4px 20px;
+    border-radius:12px; background:var(--card);
+    display:flex;
+  }
+  .ledger-cell {
+    flex:1; padding:18px 0; text-align:center; cursor:pointer;
+    border-right:1px solid var(--border);
+  }
+  .ledger-cell:last-child { border-right:0; }
+  .ledger-value { display:block; font-size:22px; font-weight:700; color:var(--ink); }
+  .ledger-label { display:block; margin-top:4px; font-size:11px; color:var(--muted); }
+
+  /* ── 功能宫格 ── */
+  .feature-grid {
+    margin-top:16px; padding:20px 12px 16px;
+    border-radius:12px; background:var(--card);
+    display:grid; grid-template-columns:repeat(4,1fr); gap:20px 8px;
+  }
+  .feature-item {
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    cursor:pointer;
+  }
+  .feature-icon {
+    width:44px; height:44px; border-radius:12px;
+    background:var(--surface);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; color:var(--primary);
+  }
+  .feature-name { font-size:11px; color:var(--ink); font-weight:500; }
+
+  /* ── 账户链接 ── */
+  .account-links {
+    margin-top:16px; padding:4px 20px;
+    border-radius:12px; background:var(--card);
+  }
+  .account-row {
+    min-height:50px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    border-bottom:1px solid var(--border); cursor:pointer;
+  }
+  .account-row:last-child { border-bottom:0; }
+  .account-name { font-size:14px; color:var(--ink); }
+  .account-note { flex:1; text-align:right; font-size:11px; color:var(--muted); }
+  .account-arrow { font-size:16px; color:var(--muted); }
+
+  /* ── 底部 TabBar ── */
+  .tabbar {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:390px; height:54px;
+    display:flex; align-items:center; justify-content:space-around;
+    background:rgba(247,243,238,.94);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-top:1px solid var(--border);
+    z-index:10;
+  }
+  .tabbar-item {
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    font-size:9px; font-weight:400; color:var(--muted);
+    cursor:pointer; transition:color .25s;
+  }
+  .tabbar-item.active { color:var(--ink); }
+  .tabbar-icon { font-size:16px; line-height:1; }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+</style>
+</head>
+<body>
+
+  <div class="page">
+
+    <!-- 会员头 -->
+    <div class="member-header">
+      <div class="avatar">☕</div>
+      <div class="member-info">
+        <span class="member-name">Cozy 咖啡爱好者</span>
+        <span class="member-level">SILVER · 白银会员</span>
+      </div>
+      <span class="member-edit" onclick="toast('编辑资料')">编辑 ›</span>
+    </div>
+    <div class="member-header level-progress">
+      <div style="width:100%;">
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:62%;"></div>
+        </div>
+        <span class="progress-text">距离黄金会员还需 380 EXP</span>
+      </div>
+    </div>
+
+    <!-- 积分账本 -->
+    <div class="ledger">
+      <div class="ledger-cell" onclick="goPage('signin.html')">
+        <span class="ledger-value">3,280</span>
+        <span class="ledger-label">积分</span>
+      </div>
+      <div class="ledger-cell" onclick="toast('我的券包')">
+        <span class="ledger-value">2</span>
+        <span class="ledger-label">优惠券</span>
+      </div>
+      <div class="ledger-cell" onclick="toast('收货地址')">
+        <span class="ledger-value">1</span>
+        <span class="ledger-label">地址</span>
+      </div>
+    </div>
+
+    <!-- 功能宫格 -->
+    <div class="feature-grid">
+      <div class="feature-item" onclick="goPage('mall.html')">
+        <div class="feature-icon">◇</div>
+        <span class="feature-name">积分商城</span>
+      </div>
+      <div class="feature-item" onclick="goPage('benefits.html')">
+        <div class="feature-icon">◉</div>
+        <span class="feature-name">会员权益</span>
+      </div>
+      <div class="feature-item" onclick="goPage('signin.html')">
+        <div class="feature-icon">☀</div>
+        <span class="feature-name">每日签到</span>
+      </div>
+      <div class="feature-item" onclick="toast('个人资料')">
+        <div class="feature-icon">◎</div>
+        <span class="feature-name">个人资料</span>
+      </div>
+    </div>
+
+    <!-- 账户链接 -->
+    <div class="account-links">
+      <div class="account-row" onclick="goPage('store.html')">
+        <span class="account-name">自提门店</span>
+        <span class="account-note">CozyCoffee 中心店</span>
+        <span class="account-arrow">›</span>
+      </div>
+      <div class="account-row" onclick="toast('账户设置')">
+        <span class="account-name">账户设置</span>
+        <span class="account-note">安全、隐私与退出登录</span>
+        <span class="account-arrow">›</span>
+      </div>
+      <div class="account-row" onclick="goPage('about.html')">
+        <span class="account-name">关于我们</span>
+        <span class="account-note">品牌故事与咖啡旅程</span>
+        <span class="account-arrow">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部 TabBar -->
+  <nav class="tabbar">
+    <div class="tabbar-item" onclick="goTab('index.html')">
+      <span class="tabbar-icon">⌂</span><span>首页</span>
+    </div>
+    <div class="tabbar-item" onclick="goTab('menu.html')">
+      <span class="tabbar-icon">☰</span><span>菜单</span>
+    </div>
+    <div class="tabbar-item" onclick="goTab('order.html')">
+      <span class="tabbar-icon">⊞</span><span>订单</span>
+    </div>
+    <div class="tabbar-item active" onclick="goTab('profile.html')">
+      <span class="tabbar-icon">◎</span><span>我的</span>
+    </div>
+  </nav>
+
+<script>
+  function goTab(href) { location.href = href; }
+  function goPage(href) { location.href = href; }
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
+  }
+</script>
+</body>
+</html>

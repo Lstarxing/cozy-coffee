@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>门店信息 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  .nav {
+    display:flex; align-items:center; gap:12px;
+    padding:16px 20px; border-bottom:1px solid var(--border);
+    background:var(--surface);
+  }
+  .nav-back {
+    font-size:26px; line-height:1; color:var(--ink);
+    text-decoration:none; padding:4px 8px 4px 0; cursor:pointer;
+  }
+  .nav-title { font-size:15px; font-weight:600; letter-spacing:.04em; }
+
+  .page { padding:20px 20px 160px; }
+
+  /* ── 门店 Hero ── */
+  .store-hero {
+    padding:32px 24px;
+    border-radius:12px;
+    background:linear-gradient(135deg,#2C1E18,#3D2A20);
+    color:#fff;
+  }
+  .eyebrow { display:block; font-size:11px; font-weight:600; letter-spacing:.18em; color:rgba(255,255,255,.55); }
+  .store-name {
+    display:block; margin-top:12px;
+    font-family:var(--serif); font-size:28px; font-weight:600;
+  }
+  .store-description {
+    display:block; margin-top:10px;
+    font-size:12px; line-height:1.7; color:rgba(255,255,255,.65);
+  }
+
+  /* ── 信息面板 ── */
+  .store-panel {
+    margin-top:16px; padding:4px 20px;
+    border-radius:12px; background:var(--card);
+  }
+  .status-row, .info-row {
+    min-height:52px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    border-bottom:1px solid var(--border);
+  }
+  .info-row:last-child { border-bottom:0; }
+  .open-status {
+    display:flex; align-items:center; gap:8px;
+    color:var(--accent); font-size:14px; font-weight:700;
+  }
+  .status-dot {
+    width:9px; height:9px; border-radius:50%; background:var(--accent);
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+  .hours { font-size:14px; font-weight:650; color:var(--ink); }
+  .info-label { flex:none; font-size:13px; color:var(--muted); }
+  .info-value { font-size:13px; line-height:1.5; text-align:right; color:var(--ink); }
+
+  /* ── 服务范围 ── */
+  .scope-note {
+    margin-top:16px; padding:20px;
+    border:1px solid var(--border); border-radius:12px;
+  }
+  .note-title {
+    display:block; font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink);
+  }
+  .note-copy {
+    display:block; margin-top:8px;
+    font-size:13px; line-height:1.7; color:var(--muted);
+  }
+
+  /* ── 底部按钮 ── */
+  .order-button {
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    width:calc(100% - 40px); max-width:350px; height:46px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:8px;
+    background:var(--primary); color:#fff;
+    font-size:15px; font-weight:600; cursor:pointer;
+    text-decoration:none;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+</style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a class="nav-back" href="index.html">‹</a>
+    <span class="nav-title">门店信息</span>
+  </nav>
+
+  <div class="page">
+
+    <!-- 门店 Hero -->
+    <div class="store-hero">
+      <span class="eyebrow">FIXED PICKUP STORE</span>
+      <span class="store-name">CozyCoffee 中心店</span>
+      <span class="store-description">当前阶段仅开放这一家固定门店，所有移动端订单均在此自提。</span>
+    </div>
+
+    <!-- 信息面板 -->
+    <div class="store-panel">
+      <div class="status-row">
+        <div class="open-status"><div class="status-dot"></div>营业中</div>
+        <span class="hours">08:00–22:00</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">门店地址</span>
+        <span class="info-value">固定自提门店 · 具体地址以门店公告为准</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">取餐方式</span>
+        <span class="info-value">到店自提</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">预计时间</span>
+        <span class="info-value">下单后约 15 分钟</span>
+      </div>
+    </div>
+
+    <!-- 服务范围 -->
+    <div class="scope-note">
+      <span class="note-title">当前服务范围</span>
+      <span class="note-copy">暂不提供多门店切换、外卖配送和门店定位；无需选择门店即可直接点单。</span>
+    </div>
+  </div>
+
+  <a class="order-button" href="index.html" onclick="toast('前往点单')">前往点单</a>
+
+<script>
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
+  }
+</script>
+</body>
+</html>

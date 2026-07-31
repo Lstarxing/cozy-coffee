@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE;
+    color:#2C2723;
+    overflow-x:hidden;
+    max-width:390px;
+    margin:0 auto;
+    min-height:100vh;
+  }
+
+  :root {
+    --bg:#F7F3EE;
+    --ink:#2C2723;
+    --muted:#8B8178;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  .page { min-height:100vh; background:var(--bg); }
+
+  /* ═══════════════════════════════════════
+     HERO
+     ═══════════════════════════════════════ */
+  .hero {
+    position:relative;
+    height:55vh;
+    overflow:hidden;
+  }
+  .hero-img {
+    width:100%; height:100%; object-fit:cover; object-position:75% center;
+    display:block;
+  }
+  .hero-copy {
+    position:absolute; top:55px; left:40px;
+    width:120px;
+    display:flex; flex-direction:column; align-items:flex-start;
+  }
+  .hero-kicker {
+    display:block;
+    font-size:12px; font-weight:500; letter-spacing:.42em;
+    color:rgba(44,39,35,.55);
+    white-space:nowrap;
+  }
+  .hero-cn {
+    display:block; margin-top:70px;
+    font-family:var(--serif); font-size:28px; font-weight:400;
+    color:#3A342E; line-height:1; letter-spacing:.03em;
+    white-space:nowrap;
+  }
+  .hero-en {
+    display:block; margin-top:40px;
+    font-family:var(--serif); font-size:12px; font-weight:400;
+    color:rgba(44,39,35,.55); line-height:1.6; letter-spacing:.08em;
+    font-style:italic;
+  }
+  .hero-divider {
+    align-self:center;
+    margin-top:18px;
+    width:1px; height:22px;
+    background:var(--ink); opacity:.5;
+  }
+  .hero-icon {
+    display:block; align-self:center;
+    margin-top:14px;
+    font-size:18px; color:var(--muted); opacity:.65;
+    line-height:1;
+  }
+
+  .hero-dot {
+    display:inline-block; margin:0 3px;
+    color:var(--muted); opacity:.4;
+  }
+
+  /* ═══════════════════════════════════════
+     SERVICE AREA — 30%
+     ═══════════════════════════════════════ */
+  .service {
+    padding:0 20px; height:30vh;
+    display:flex; flex-direction:column; justify-content:center;
+    background:var(--bg);
+  }
+
+  /* Pickup / Delivery split */
+  .pickup-row {
+    display:flex; align-items:stretch;
+    margin-bottom:28px;
+  }
+  .pickup-half {
+    flex:1; text-align:center; cursor:pointer;
+    padding:12px 0;
+  }
+  .pickup-cn {
+    display:block;
+    font-family:var(--serif); font-size:22px; font-weight:600;
+    color:var(--ink);
+  }
+  .pickup-en {
+    display:block; margin-top:4px;
+    font-size:10px; font-weight:500; letter-spacing:.14em;
+    color:var(--muted);
+  }
+  .pickup-divider {
+    width:1px; align-self:stretch;
+    background:var(--muted); opacity:.18;
+  }
+
+  /* Five minimal entries */
+  .entry-row {
+    display:flex; justify-content:space-between;
+  }
+  .entry-item {
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    cursor:pointer;
+    color:var(--muted); transition:color .25s;
+  }
+  .entry-item:hover { color:var(--ink); }
+  .entry-icon {
+    width:20px; height:20px; display:flex; align-items:center; justify-content:center;
+    font-size:16px; opacity:.5;
+  }
+  .entry-label {
+    font-size:10px; font-weight:400; letter-spacing:.04em;
+  }
+
+  /* ═══════════════════════════════════════
+     TAB BAR — fixed bottom
+     ═══════════════════════════════════════ */
+  .tabbar {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:390px; height:54px;
+    display:flex; align-items:center; justify-content:space-around;
+    background:rgba(247,243,238,.94);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    z-index:10;
+  }
+  .tabbar-item {
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    font-size:9px; font-weight:400; color:var(--muted);
+    cursor:pointer; transition:color .25s;
+  }
+  .tabbar-item.active { color:var(--ink); }
+  .tabbar-icon { font-size:16px; line-height:1; }
+
+  /* ── 子页面占位导航 ── */
+  .sub-page {
+    position:fixed; top:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:390px; height:100vh;
+    background:var(--bg); z-index:20;
+    display:none;
+    flex-direction:column;
+  }
+  .sub-page.open { display:flex; }
+  .sub-nav {
+    display:flex; align-items:center; gap:12px;
+    padding:16px 20px;
+    border-bottom:1px solid var(--border);
+    background:var(--bg);
+  }
+  .sub-back {
+    font-size:24px; line-height:1; color:var(--ink);
+    cursor:pointer; padding:4px;
+  }
+  .sub-title {
+    font-size:14px; font-weight:600; letter-spacing:.06em;
+    color:var(--ink);
+  }
+  .sub-body {
+    flex:1;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px;
+  }
+  .sub-icon { font-size:32px; color:var(--muted); }
+  .sub-name {
+    font-family:var(--serif); font-size:22px; font-weight:600;
+    color:var(--ink);
+  }
+  .sub-path {
+    font-size:11px; color:var(--muted); letter-spacing:.04em;
+    font-family:'Inter',monospace;
+  }
+  .sub-note {
+    margin-top:8px; font-size:10px; color:var(--muted); opacity:.6;
+  }
+
+  /* ═══════════════════════════════════════
+     ANIMATIONS
+     ═══════════════════════════════════════ */
+  @keyframes fadeIn {
+    from { opacity:0; }
+    to { opacity:1; }
+  }
+  @keyframes slideUp {
+    from { opacity:0; transform:translateY(16px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  .hero-copy { animation:slideUp .8s .2s ease both; }
+  .service { animation:slideUp .8s .4s ease both; }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+
+  .bottom-spacer { height:70px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ═══ HERO ═══ -->
+  <section class="hero">
+    <img class="hero-img" src="assets/coffee-hero.jpg" alt="Yunnan Natural coffee" />
+    <div class="hero-copy">
+      <span class="hero-kicker">COZY COFFEE</span>
+      <span class="hero-cn">一杯咖啡</span>
+      <span class="hero-cn" style="margin-top:20px;font-size:22px;">一段安静时光</span>
+      <span class="hero-en">A quiet moment with coffee</span>
+    </div>
+  </section>
+
+  <!-- ═══ SERVICE ═══ -->
+  <section class="service">
+    <div class="pickup-row">
+      <div class="pickup-half" onclick="goMenu()">
+        <span class="pickup-cn">自提</span>
+        <span class="pickup-en">PICK UP</span>
+      </div>
+      <div class="pickup-divider"></div>
+      <div class="pickup-half" onclick="goMenu()">
+        <span class="pickup-cn">外送</span>
+        <span class="pickup-en">DELIVERY</span>
+      </div>
+    </div>
+    <div class="entry-row">
+      <div class="entry-item" onclick="goPage('积分商城','/pages/mall/index')">
+        <span class="entry-icon">◇</span>
+        <span class="entry-label">积分商城</span>
+      </div>
+      <div class="entry-item" onclick="goPage('每日签到','/pages/signin/index')">
+        <span class="entry-icon">☀</span>
+        <span class="entry-label">每日签到</span>
+      </div>
+      <div class="entry-item" onclick="goPage('会员权益','/pages/benefits/index')">
+        <span class="entry-icon">◉</span>
+        <span class="entry-label">会员权益</span>
+      </div>
+      <div class="entry-item" onclick="goPage('门店信息','/pages/store/list')">
+        <span class="entry-icon">□</span>
+        <span class="entry-label">门店信息</span>
+      </div>
+      <div class="entry-item" onclick="goPage('关于我们','/pages/about/index')">
+        <span class="entry-icon">△</span>
+        <span class="entry-label">关于我们</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="bottom-spacer"></div>
+
+  <!-- ═══ TAB BAR ═══ -->
+  <nav class="tabbar">
+    <div class="tabbar-item active" onclick="goTab(this,'index.html')">
+      <span class="tabbar-icon">⌂</span><span>首页</span>
+    </div>
+    <div class="tabbar-item" onclick="goTab(this,'menu.html')">
+      <span class="tabbar-icon">☰</span><span>菜单</span>
+    </div>
+    <div class="tabbar-item" onclick="goTab(this,'order.html')">
+      <span class="tabbar-icon">⊞</span><span>订单</span>
+    </div>
+    <div class="tabbar-item" onclick="goTab(this,'profile.html')">
+      <span class="tabbar-icon">◎</span><span>我的</span>
+    </div>
+  </nav>
+
+</div>
+
+<script>
+  const PAGES = {
+    '积分商城': { icon:'◇', href:'mall.html' },
+    '每日签到': { icon:'☀', href:'signin.html' },
+    '会员权益': { icon:'◉', href:'benefits.html' },
+    '门店信息': { icon:'□', href:'store.html' },
+    '关于我们': { icon:'△', href:'about.html' }
+  };
+
+  function goPage(name, path) {
+    const p = PAGES[name];
+    location.href = (p && p.href) || 'index.html';
+  }
+  function goMenu() {
+    location.href = 'menu.html';
+  }
+  function goTab(el, href) {
+    document.querySelectorAll('.tabbar-item').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    location.href = href;
+  }
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      t.style.cssText = `
+        position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+        padding:10px 22px; border-radius:20px;
+        background:rgba(44,39,35,.88); color:#F7F3EE;
+        font-size:12px; pointer-events:none; z-index:99;
+        opacity:0; transition:opacity .3s ease;
+      `;
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
+  }
+
+  // IntersectionObserver for subtle reveal
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.style.opacity = '1';
+    });
+  }, { threshold:.1 });
+  document.querySelectorAll('.entry-item').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transition = 'opacity .5s ease';
+    observer.observe(el);
+  });
+</script>
+</body>
+</html>

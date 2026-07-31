@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>订单 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  /* ── 分类切换 ── */
+  .category-switch {
+    display:flex; height:48px;
+    background:var(--card);
+    border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+  }
+  .category-item {
+    flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+    font-size:14px; font-weight:600; color:var(--muted);
+    cursor:pointer; position:relative;
+  }
+  .category-item.active { color:var(--primary); font-weight:700; }
+  .category-item.active::after {
+    content:''; position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+    width:32px; height:2px; background:var(--primary);
+  }
+  .category-count {
+    min-width:16px; padding:0 4px; height:16px;
+    display:inline-flex; align-items:center; justify-content:center;
+    border-radius:999px; background:var(--surface);
+    font-size:10px; font-weight:700; color:var(--muted);
+  }
+
+  .page { padding:16px 12px 120px; }
+
+  /* ── 订单收据卡 ── */
+  .order-receipt {
+    margin-bottom:12px; overflow:hidden;
+    border-radius:12px; background:var(--card);
+  }
+  .receipt-head {
+    padding:14px 14px 12px;
+    display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
+    border-bottom:1px solid var(--border);
+  }
+  .store-name { display:block; font-size:14px; font-weight:650; color:var(--ink); }
+  .order-no { display:block; margin-top:3px; font-size:10px; color:var(--muted); }
+  .status-block { flex:none; text-align:right; }
+  .order-status {
+    display:inline-block; padding:3px 10px; border-radius:999px;
+    font-size:10px; font-weight:700;
+  }
+  .order-status.processing { background:#EAF0F2; color:#285B70; }
+  .order-status.completed { background:#E8EDE5; color:var(--accent); }
+  .order-status.pending { background:#F4EBDD; color:#8A4D10; }
+  .expire-countdown {
+    display:block; margin-top:4px; font-size:10px; color:var(--muted);
+  }
+  .expire-countdown.urgent { color:#9B3932; font-weight:600; }
+
+  .receipt-items { padding:2px 14px; }
+  .order-item {
+    display:flex; align-items:center; gap:12px;
+    padding:12px 0; border-bottom:1px solid var(--border);
+  }
+  .order-item:last-child { border-bottom:0; }
+  .item-image {
+    flex:none; width:56px; height:56px; border-radius:8px;
+    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
+  }
+  .item-info { flex:1; min-width:0; }
+  .item-name { display:block; font-size:13px; font-weight:650; color:var(--ink); }
+  .item-spec { display:block; margin-top:3px; font-size:10px; color:var(--muted); }
+  .item-right { flex:none; text-align:right; }
+  .item-price { display:block; font-size:13px; font-weight:650; color:var(--ink); }
+  .item-qty { display:block; margin-top:3px; font-size:10px; color:var(--muted); }
+  .item-points { display:block; font-size:14px; font-weight:700; color:var(--primary); }
+
+  .receipt-summary {
+    padding:12px 14px;
+    display:flex; justify-content:space-between; align-items:flex-end; gap:12px;
+    background:var(--surface);
+  }
+  .summary-label { display:block; font-size:10px; color:var(--muted); }
+  .summary-total { display:block; margin-top:4px; font-size:14px; font-weight:700; color:var(--primary); }
+  .summary-total.virtual { color:var(--accent); }
+  .order-action {
+    flex:none; padding:8px 14px;
+    border:1px solid var(--primary); border-radius:8px;
+    color:var(--primary); font-size:11px; font-weight:650; cursor:pointer;
+  }
+  .detail-link { flex:none; padding-bottom:4px; color:var(--primary); font-size:11px; font-weight:650; }
+
+  /* ── 空状态 ── */
+  .empty-state {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:120px 40px 60px; text-align:center;
+  }
+  .empty-icon { font-size:40px; color:var(--muted); }
+  .empty-title {
+    margin-top:20px; font-family:var(--serif); font-size:22px; font-weight:600; color:var(--ink);
+  }
+  .empty-desc { margin-top:10px; font-size:13px; line-height:1.7; color:var(--muted); }
+  .empty-action {
+    margin-top:28px; padding:12px 32px;
+    border:1px solid var(--primary); border-radius:8px;
+    color:var(--primary); font-size:13px; font-weight:600; cursor:pointer;
+  }
+
+  /* ── 底部 TabBar ── */
+  .tabbar {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:390px; height:54px;
+    display:flex; align-items:center; justify-content:space-around;
+    background:rgba(247,243,238,.94);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-top:1px solid var(--border);
+    z-index:10;
+  }
+  .tabbar-item {
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    font-size:9px; font-weight:400; color:var(--muted);
+    cursor:pointer; transition:color .25s;
+  }
+  .tabbar-item.active { color:var(--ink); }
+  .tabbar-icon { font-size:16px; line-height:1; }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+</style>
+</head>
+<body>
+
+  <!-- 分类切换 -->
+  <div class="category-switch">
+    <div class="category-item active" onclick="switchCat(this,'咖啡订单')">
+      咖啡订单<span class="category-count">2</span>
+    </div>
+    <div class="category-item" onclick="switchCat(this,'兑换订单')">
+      兑换订单<span class="category-count">1</span>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <!-- 咖啡订单视图 -->
+    <div id="coffeeView">
+      <div class="order-receipt" onclick="toast('订单详情')">
+        <div class="receipt-head">
+          <div>
+            <span class="store-name">CozyCoffee 中心店</span>
+            <span class="order-no">订单 COZ2026073110</span>
+          </div>
+          <div class="status-block">
+            <span class="order-status processing">制作中</span>
+            <span class="expire-countdown">预计 15:32 可取</span>
+          </div>
+        </div>
+        <div class="receipt-items">
+          <div class="order-item">
+            <div class="item-image"></div>
+            <div class="item-info">
+              <span class="item-name">云南保山 SOE</span>
+              <span class="item-spec">热 · 中杯 · 微甜</span>
+            </div>
+            <div class="item-right">
+              <span class="item-price">¥28.00</span>
+              <span class="item-qty">× 1</span>
+            </div>
+          </div>
+          <div class="order-item">
+            <div class="item-image" style="background:linear-gradient(135deg,#D4C8B8,#C8B8A4);"></div>
+            <div class="item-info">
+              <span class="item-name">Dirty</span>
+              <span class="item-spec">冰 · 中杯 · 正常</span>
+            </div>
+            <div class="item-right">
+              <span class="item-price">¥32.00</span>
+              <span class="item-qty">× 1</span>
+            </div>
+          </div>
+        </div>
+        <div class="receipt-summary">
+          <div>
+            <span class="summary-label">共 2 件 · 到店自提</span>
+            <span class="summary-total">实付 ¥60.00</span>
+          </div>
+          <span class="detail-link">查看详情 →</span>
+        </div>
+      </div>
+
+      <div class="order-receipt" onclick="toast('订单详情')">
+        <div class="receipt-head">
+          <div>
+            <span class="store-name">CozyCoffee 中心店</span>
+            <span class="order-no">订单 COZ2026072907</span>
+          </div>
+          <span class="order-status completed">已完成</span>
+        </div>
+        <div class="receipt-items">
+          <div class="order-item">
+            <div class="item-image" style="background:linear-gradient(135deg,#C8D0C8,#B8C4B8);"></div>
+            <div class="item-info">
+              <span class="item-name">冷萃咖啡</span>
+              <span class="item-spec">冰 · 中杯 · 无糖</span>
+            </div>
+            <div class="item-right">
+              <span class="item-price">¥30.00</span>
+              <span class="item-qty">× 2</span>
+            </div>
+          </div>
+        </div>
+        <div class="receipt-summary">
+          <div>
+            <span class="summary-label">共 2 件 · 到店自提</span>
+            <span class="summary-total">实付 ¥60.00</span>
+          </div>
+          <span class="order-action">再次点单</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 兑换订单视图 -->
+    <div id="redeemView" style="display:none;">
+      <div class="order-receipt" onclick="toast('兑换详情')">
+        <div class="receipt-head">
+          <div>
+            <span class="store-name">积分兑换</span>
+            <span class="order-no">订单 COZ2026073000</span>
+          </div>
+          <span class="order-status completed">已完成</span>
+        </div>
+        <div class="receipt-items">
+          <div class="order-item">
+            <div class="item-image"></div>
+            <div class="item-info">
+              <span class="item-name">云南保山 SOE 咖啡豆</span>
+              <span class="item-spec">数量 × 1</span>
+            </div>
+            <div class="item-right">
+              <span class="item-points">1,200 积分</span>
+            </div>
+          </div>
+        </div>
+        <div class="receipt-summary">
+          <div>
+            <span class="summary-label">2026-07-30 14:22</span>
+            <span class="summary-total">已发放至券包</span>
+          </div>
+          <span class="detail-link">查看详情 →</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 空状态（无数据时） -->
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <span class="empty-icon">☕</span>
+      <span class="empty-title">还没有咖啡订单</span>
+      <span class="empty-desc">选择一杯喜欢的咖啡，<br>我们会为你现制。</span>
+      <span class="empty-action">探索咖啡 →</span>
+    </div>
+
+  </div>
+
+  <!-- 底部 TabBar -->
+  <nav class="tabbar">
+    <div class="tabbar-item" onclick="goTab('index.html')">
+      <span class="tabbar-icon">⌂</span><span>首页</span>
+    </div>
+    <div class="tabbar-item" onclick="goTab('menu.html')">
+      <span class="tabbar-icon">☰</span><span>菜单</span>
+    </div>
+    <div class="tabbar-item active" onclick="goTab('order.html')">
+      <span class="tabbar-icon">⊞</span><span>订单</span>
+    </div>
+    <div class="tabbar-item" onclick="goTab('profile.html')">
+      <span class="tabbar-icon">◎</span><span>我的</span>
+    </div>
+  </nav>
+
+<script>
+  function goTab(href) {
+    location.href = href;
+  }
+
+  function switchCat(el, label) {
+    document.querySelectorAll('.category-item').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    const isCoffee = label === '咖啡订单';
+    document.getElementById('coffeeView').style.display = isCoffee ? 'block' : 'none';
+    document.getElementById('redeemView').style.display = isCoffee ? 'none' : 'block';
+  }
+
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
+  }
+</script>
+</body>
+</html>

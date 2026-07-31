@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>每日签到 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  .nav {
+    display:flex; align-items:center; gap:12px;
+    padding:16px 20px; border-bottom:1px solid var(--border);
+    background:var(--surface);
+  }
+  .nav-back {
+    font-size:26px; line-height:1; color:var(--ink);
+    text-decoration:none; padding:4px 8px 4px 0; cursor:pointer;
+  }
+  .nav-title { font-size:15px; font-weight:600; letter-spacing:.04em; }
+
+  .page { padding:20px 20px 120px; }
+
+  /* ── 积分卡片 ── */
+  .points-card {
+    padding:26px 24px;
+    border-radius:12px;
+    background:linear-gradient(135deg,#2C1E18,#3D2A20);
+    color:#fff;
+  }
+  .points-label { display:block; font-size:12px; letter-spacing:.1em; color:rgba(255,255,255,.6); }
+  .points-value { display:block; margin-top:4px; font-size:34px; font-weight:700; }
+
+  /* ── 签到日历 ── */
+  .signin-calendar {
+    margin-top:16px; padding:24px 20px;
+    border-radius:12px; background:var(--card);
+  }
+  .calendar-header {
+    display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+    margin-bottom:20px;
+  }
+  .calendar-title {
+    font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink);
+  }
+  .calendar-hint { font-size:12px; color:var(--muted); }
+
+  .calendar-days {
+    display:grid; grid-template-columns:repeat(7,1fr); gap:8px;
+  }
+  .day-item { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .day-circle {
+    width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:600;
+    border:1px solid var(--border); color:var(--muted);
+    background:var(--surface);
+  }
+  .day-circle.signed {
+    background:var(--accent); border-color:var(--accent); color:#fff;
+  }
+  .day-circle.today {
+    background:var(--primary); border-color:var(--primary); color:#fff;
+  }
+  .day-circle .day-icon.gift { font-size:11px; }
+  .day-points { font-size:10px; color:var(--muted); }
+  .day-label { font-size:10px; color:var(--muted); }
+
+  /* ── 签到按钮 ── */
+  .signin-action { margin-top:22px; text-align:center; }
+  .signin-btn {
+    height:46px; display:flex; align-items:center; justify-content:center;
+    border-radius:8px;
+    background:var(--primary); color:#fff;
+    font-size:15px; font-weight:600; cursor:pointer;
+  }
+  .signin-btn.disabled { background:var(--border); color:var(--muted); }
+  .signin-hint {
+    display:block; margin-top:10px; font-size:12px; color:var(--muted);
+  }
+  .highlight { color:var(--primary); font-weight:700; }
+
+  /* ── 规则 ── */
+  .rules-section {
+    margin-top:16px; padding:20px;
+    border:1px solid var(--border); border-radius:12px;
+  }
+  .rules-title {
+    font-family:var(--serif); font-size:17px; font-weight:600; color:var(--ink);
+    margin-bottom:14px;
+  }
+  .rule-item { display:flex; gap:8px; margin-bottom:10px; }
+  .rule-item:last-child { margin-bottom:0; }
+  .rule-dot { color:var(--primary); }
+  .rule-text { font-size:13px; line-height:1.6; color:var(--muted); }
+
+  /* ── 成功弹窗 ── */
+  .modal-mask {
+    position:fixed; inset:0; z-index:30;
+    background:rgba(28,20,14,.5);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .success-modal {
+    width:280px; padding:32px 24px;
+    text-align:center;
+    background:var(--surface); border-radius:16px;
+  }
+  .success-icon {
+    width:56px; height:56px; margin:0 auto;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:50%; background:var(--accent); color:#fff;
+    font-size:26px;
+  }
+  .success-title {
+    display:block; margin-top:16px;
+    font-family:var(--serif); font-size:20px; font-weight:600;
+  }
+  .success-points {
+    display:block; margin-top:8px;
+    font-size:22px; font-weight:700; color:var(--primary);
+  }
+  .success-hint {
+    display:block; margin-top:8px;
+    font-size:12px; line-height:1.6; color:var(--muted);
+  }
+  .success-btn {
+    margin-top:20px; height:42px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:8px; background:var(--primary); color:#fff;
+    font-size:14px; font-weight:600; cursor:pointer;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+</style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a class="nav-back" href="index.html">‹</a>
+    <span class="nav-title">每日签到</span>
+  </nav>
+
+  <div class="page">
+
+    <!-- 积分卡片 -->
+    <div class="points-card">
+      <span class="points-label">当前积分</span>
+      <span class="points-value">3,280</span>
+    </div>
+
+    <!-- 签到日历 -->
+    <div class="signin-calendar">
+      <div class="calendar-header">
+        <span class="calendar-title">每日签到领积分</span>
+        <span class="calendar-hint">已连续签到 3 天</span>
+      </div>
+      <div class="calendar-days" id="dayGrid"></div>
+      <div class="signin-action">
+        <div class="signin-btn" id="signinBtn" onclick="doSignin()">立即签到</div>
+        <span class="signin-hint" id="signinHint">签到可获得 <span class="highlight">2</span> 积分</span>
+      </div>
+    </div>
+
+    <!-- 规则 -->
+    <div class="rules-section">
+      <div class="rules-title">签到规则</div>
+      <div class="rule-item"><span class="rule-dot">•</span><span class="rule-text">每日签到固定获得 2 积分</span></div>
+      <div class="rule-item"><span class="rule-dot">•</span><span class="rule-text">连续签到 7 天赠送满 35 减 10 元优惠券，有效期 3 天</span></div>
+      <div class="rule-item"><span class="rule-dot">•</span><span class="rule-text">中断签到后，连续天数将重新计算</span></div>
+      <div class="rule-item"><span class="rule-dot">•</span><span class="rule-text">签到积分有效期 365 天，以积分流水和券包到账结果为准</span></div>
+    </div>
+  </div>
+
+  <!-- 成功弹窗 -->
+  <div class="modal-mask" id="successModal" style="display:none;" onclick="closeModal()">
+    <div class="success-modal" onclick="event.stopPropagation()">
+      <div class="success-icon">✓</div>
+      <span class="success-title">签到成功</span>
+      <span class="success-points">+2 积分</span>
+      <span class="success-hint" id="successHint">已连续签到 4 天</span>
+      <div class="success-btn" onclick="closeModal()">知道了</div>
+    </div>
+  </div>
+
+<script>
+  // 7 天签到进度：前 3 天已签，第 4 天今天
+  const consecutive = 3;
+  const dayData = [
+    { points:2, label:'周一' }, { points:2, label:'周二' }, { points:2, label:'周三' },
+    { points:2, label:'周四' }, { points:2, label:'周五' }, { points:2, label:'周六' },
+    { points:10, label:'周日', gift:true }
+  ];
+
+  function renderDays() {
+    const grid = document.getElementById('dayGrid');
+    grid.innerHTML = dayData.map((d, i) => {
+      let cls = 'day-circle';
+      let content;
+      if (i < consecutive) { cls += ' signed'; content = '✓'; }
+      else if (i === consecutive) { cls += ' today'; content = String(i+1); }
+      else { content = String(i+1); }
+      const icon = i === 6 && i >= consecutive ? '<span class="day-icon gift">券</span>' : `<span class="day-icon">${content}</span>`;
+      return `
+        <div class="day-item">
+          <div class="${cls}">${icon}</div>
+          <span class="day-points">+${d.points}</span>
+          <span class="day-label">${d.label}</span>
+        </div>`;
+    }).join('');
+  }
+  renderDays();
+
+  let signed = false;
+  function doSignin() {
+    if (signed) return;
+    signed = true;
+    const btn = document.getElementById('signinBtn');
+    btn.textContent = '今日已签到';
+    btn.classList.add('disabled');
+    document.getElementById('signinHint').innerHTML = '明天签到可获得 <span class="highlight">2</span> 积分';
+    document.getElementById('successModal').style.display = 'flex';
+  }
+  function closeModal() {
+    document.getElementById('successModal').style.display = 'none';
+  }
+
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
+  }
+</script>
+</body>
+</html>

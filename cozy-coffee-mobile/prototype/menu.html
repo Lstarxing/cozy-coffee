@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>点单 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  /* ── 导航胶囊 ── */
+  .menu-nav {
+    padding:16px 16px 0;
+    background:var(--card);
+    display:flex; justify-content:flex-start;
+  }
+  .nav-capsule {
+    display:flex; align-items:center; gap:2px;
+    border:1px solid var(--border); border-radius:20px;
+    padding:4px 6px; background:var(--card);
+  }
+  .nav-capsule a {
+    width:34px; height:30px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px; color:var(--ink); text-decoration:none;
+  }
+  .nav-capsule .divider { width:1px; height:16px; background:var(--border); }
+
+  /* ── 门店信息 ── */
+  .store-info {
+    padding:14px 24px 16px;
+    background:var(--card); border-bottom:1px solid var(--border);
+  }
+  .store-row { display:flex; justify-content:space-between; align-items:center; }
+  .store-left { display:flex; align-items:center; gap:8px; }
+  .store-fav { color:var(--primary); }
+  .store-name { font-size:15px; font-weight:650; color:var(--ink); }
+  .pickup-switch {
+    display:flex; border:1px solid var(--border); border-radius:6px; overflow:hidden;
+  }
+  .pickup-opt {
+    padding:5px 14px; font-size:11px; color:var(--muted); background:var(--surface);
+  }
+  .pickup-opt.active { background:var(--primary); color:#fff; }
+  .store-meta { margin-top:6px; font-size:11px; color:var(--muted); }
+  .store-foot {
+    margin-top:8px; display:flex; justify-content:space-between;
+    font-size:11px; color:var(--muted);
+  }
+  .store-more { color:var(--muted); }
+
+  /* ── 主体：左分类右商品 ── */
+  .menu-body { display:flex; height:calc(100vh - 118px); overflow:hidden; }
+  .category-sidebar {
+    width:90px; flex:none; height:100%; overflow-y:auto;
+    background:var(--surface);
+  }
+  .category-sidebar::-webkit-scrollbar { display:none; }
+  .category-item {
+    padding:16px 8px; text-align:center;
+    font-size:13px; color:var(--muted); cursor:pointer;
+  }
+  .category-item.active { background:var(--card); color:var(--primary); font-weight:700; }
+  .category-item.active::before {
+    content:''; display:block; width:3px; height:100%;
+    background:var(--primary); margin-left:-8px;
+  }
+
+  .product-scroll {
+    flex:1; min-width:0; height:100%; overflow-y:auto;
+    background:var(--card); padding-bottom:90px;
+  }
+  .product-scroll::-webkit-scrollbar { display:none; }
+  .group-heading { padding:20px 16px 8px; }
+  .group-title {
+    display:block; font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink);
+  }
+  .group-desc {
+    display:block; margin-top:4px; font-size:11px; color:var(--muted);
+  }
+  .product-item {
+    display:flex; gap:12px; padding:14px 16px;
+    border-bottom:1px solid var(--border);
+  }
+  .product-image {
+    flex:none; width:84px; height:84px; border-radius:10px;
+    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
+  }
+  .product-info { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .product-name {
+    font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink);
+  }
+  .product-desc {
+    margin-top:4px; font-size:11px; line-height:1.5; color:var(--muted);
+  }
+  .product-foot {
+    margin-top:auto; display:flex; justify-content:space-between; align-items:center;
+  }
+  .product-price { font-size:16px; font-weight:700; color:var(--primary); }
+  .add-btn {
+    width:26px; height:26px; border-radius:50%;
+    background:var(--primary); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; cursor:pointer;
+  }
+
+  /* ── 门店详情抽屉 ── */
+  .store-sheet {
+    position:fixed; inset:0; z-index:30;
+    display:none;
+  }
+  .store-sheet.open { display:block; }
+  .sheet-mask {
+    position:absolute; inset:0;
+    background:rgba(28,20,14,.45);
+  }
+  .sheet-content {
+    position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:390px;
+    background:var(--card); border-radius:16px 16px 0 0;
+    padding:0 20px 24px;
+    animation:sheet-up .35s ease both;
+  }
+  @keyframes sheet-up {
+    from { transform:translate(-50%,100%); }
+    to { transform:translate(-50%,0); }
+  }
+  .sheet-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 0 16px;
+    border-bottom:1px solid var(--border);
+  }
+  .sheet-title {
+    font-family:var(--serif); font-size:18px; font-weight:600; color:var(--ink);
+  }
+  .sheet-close {
+    font-size:20px; color:var(--muted); cursor:pointer;
+    padding:4px 8px;
+  }
+  .sheet-row {
+    display:flex; align-items:center; gap:14px;
+    padding:14px 0; border-bottom:1px solid var(--border);
+  }
+  .sheet-row:last-child { border-bottom:0; }
+  .sheet-label {
+    flex:none; width:60px;
+    font-size:12px; color:var(--muted);
+  }
+  .sheet-value {
+    flex:1; font-size:13px; color:var(--ink); line-height:1.4;
+  }
+  .sheet-icon { flex:none; font-size:16px; color:var(--muted); }
+
+  /* ── 底部购物车条 ── */
+  .cart-bar {
+    position:fixed; bottom:54px; left:50%; transform:translateX(-50%);
+    width:100%; max-width:390px; height:56px;
+    display:flex; align-items:center; gap:16px;
+    padding:0 20px;
+    background:rgba(44,39,35,.92); color:#fff;
+  }
+  .cart-count {
+    width:32px; height:32px; border-radius:50%;
+    background:var(--primary); display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:700;
+  }
+  .cart-total { flex:1; font-size:13px; color:rgba(255,255,255,.8); }
+  .cart-total strong { font-size:16px; color:#fff; }
+  .cart-checkout {
+    padding:10px 20px; border-radius:8px;
+    background:var(--primary); font-size:13px; font-weight:600;
+  }
+
+  /* ── 底部 TabBar ── */
+  .tabbar {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:390px; height:54px;
+    display:flex; align-items:center; justify-content:space-around;
+    background:rgba(247,243,238,.94);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-top:1px solid var(--border);
+    z-index:10;
+  }
+  .tabbar-item {
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    font-size:9px; font-weight:400; color:var(--muted);
+    cursor:pointer; transition:color .25s;
+  }
+  .tabbar-item.active { color:var(--ink); }
+  .tabbar-icon { font-size:16px; line-height:1; }
+
+  /* ── 商品详情覆盖层 ── */
+  .detail-overlay {
+    position:fixed; top:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:390px; height:100vh;
+    background:var(--surface); z-index:25;
+    display:none; flex-direction:column;
+  }
+  .detail-overlay.open { display:flex; }
+  .detail-image-area {
+    position:relative;
+    height:40vh; min-height:280px;
+    overflow:hidden;
+  }
+  .detail-image {
+    width:100%; height:100%;
+    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
+  }
+  .detail-close {
+    position:absolute; top:16px; left:16px;
+    width:32px; height:32px; border-radius:50%;
+    background:rgba(255,255,255,.85);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; color:var(--ink); cursor:pointer;
+    z-index:2;
+  }
+  .detail-scroll {
+    flex:1; overflow-y:auto;
+    padding:20px 24px 0;
+    background:var(--card);
+  }
+  .detail-name {
+    font-family:var(--serif); font-size:22px; font-weight:600; color:var(--ink);
+  }
+  .detail-desc {
+    margin-top:8px; font-size:12px; line-height:1.6; color:var(--muted);
+  }
+  .detail-price {
+    margin-top:14px; font-size:24px; font-weight:700; color:var(--primary);
+  }
+  .detail-spec-group { margin-top:20px; }
+  .spec-title {
+    font-size:13px; font-weight:600; color:var(--ink);
+    margin-bottom:10px;
+  }
+  .spec-options { display:flex; flex-wrap:wrap; gap:8px; }
+  .spec-option {
+    padding:7px 14px;
+    font-size:12px; color:var(--ink);
+    border-radius:999px;
+    border:1px solid var(--border); background:var(--surface);
+    cursor:pointer;
+  }
+  .spec-option.active {
+    background:var(--primary); border-color:var(--primary); color:#fff;
+  }
+  .detail-story { margin-top:20px; padding-bottom:24px; }
+  .detail-notes {
+    font-size:12px; line-height:1.7; color:var(--muted);
+  }
+  .detail-bottom {
+    height:60px; display:flex; align-items:center; gap:14px;
+    padding:0 20px;
+    background:var(--surface); border-top:1px solid var(--border);
+  }
+  .detail-qty {
+    display:flex; align-items:center; gap:12px;
+    border:1px solid var(--border); border-radius:8px;
+    padding:6px 12px;
+  }
+  .qty-btn {
+    width:22px; height:22px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px; color:var(--ink); cursor:pointer;
+  }
+  .qty-value { min-width:20px; text-align:center; font-size:14px; font-weight:600; }
+  .detail-add {
+    flex:1; height:40px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:8px;
+    background:var(--primary); color:#fff;
+    font-size:14px; font-weight:600; cursor:pointer;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+</style>
+</head>
+<body>
+
+  <!-- 导航胶囊 -->
+  <div class="menu-nav">
+    <div class="nav-capsule">
+      <a href="index.html" title="首页">⌂</a>
+      <span class="divider"></span>
+      <a href="#" onclick="toast('搜索')" title="搜索">⌕</a>
+    </div>
+  </div>
+
+  <!-- 门店信息 -->
+  <div class="store-info">
+    <div class="store-row">
+      <div class="store-left">
+        <span class="store-fav">☆</span>
+        <span class="store-name">CozyCoffee 中心店</span>
+      </div>
+      <div class="pickup-switch">
+        <div class="pickup-opt active">自提</div>
+        <div class="pickup-opt">外送</div>
+      </div>
+    </div>
+    <div class="store-meta">距离您 1.2km</div>
+    <div class="store-foot">
+      <span>☼ 精品咖啡每日新鲜烘焙</span>
+      <span class="store-more" onclick="openStoreDetail()">详情 ›</span>
+    </div>
+  </div>
+
+  <!-- 门店详情抽屉 -->
+  <div class="store-sheet" id="storeSheet">
+    <div class="sheet-mask" onclick="closeStoreDetail()"></div>
+    <div class="sheet-content">
+      <div class="sheet-header">
+        <span class="sheet-title">门店信息</span>
+        <span class="sheet-close" onclick="closeStoreDetail()">×</span>
+      </div>
+      <div class="sheet-row">
+        <span class="sheet-label">地址</span>
+        <span class="sheet-value">CozyCoffee 中心店 · 杭州市西湖区</span>
+        <span class="sheet-icon">↗</span>
+      </div>
+      <div class="sheet-row">
+        <span class="sheet-label">电话</span>
+        <span class="sheet-value">400-888-8888</span>
+        <span class="sheet-icon">☎</span>
+      </div>
+      <div class="sheet-row">
+        <span class="sheet-label">营业时间</span>
+        <span class="sheet-value">08:00–22:00</span>
+      </div>
+      <div class="sheet-row">
+        <span class="sheet-label">取餐方式</span>
+        <span class="sheet-value">到店自提 · 约 15 分钟</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 菜单主体 -->
+  <div class="menu-body">
+    <div class="category-sidebar" id="categorySidebar"></div>
+    <div class="product-scroll" id="productScroll"></div>
+  </div>
+
+  <!-- 底部购物车条 -->
+  <div class="cart-bar">
+    <div class="cart-count" onclick="toast('购物车')">0</div>
+    <div class="cart-total">购物车为空 · <strong>¥0</strong></div>
+    <div class="cart-checkout" onclick="toast('请先选择商品')">去结算</div>
+  </div>
+
+  <!-- 底部 TabBar -->
+  <nav class="tabbar" style="bottom:56px;">
+    <div class="tabbar-item" onclick="goTab('index.html')">
+      <span class="tabbar-icon">⌂</span><span>首页</span>
+    </div>
+    <div class="tabbar-item active" onclick="goTab('menu.html')">
+      <span class="tabbar-icon">☰</span><span>菜单</span>
+    </div>
+    <div class="tabbar-item" onclick="goTab('order.html')">
+      <span class="tabbar-icon">⊞</span><span>订单</span>
+    </div>
+    <div class="tabbar-item" onclick="goTab('profile.html')">
+      <span class="tabbar-icon">◎</span><span>我的</span>
+    </div>
+  </nav>
+
+  <!-- 商品详情覆盖层 -->
+  <div class="detail-overlay" id="detailOverlay">
+    <div class="detail-image-area">
+      <span class="detail-close" onclick="closeDetail()">×</span>
+      <div class="detail-image" id="detailImage"></div>
+    </div>
+    <div class="detail-scroll">
+      <div class="detail-name" id="detailName">商品名称</div>
+      <div class="detail-desc" id="detailDesc">商品描述</div>
+      <div class="detail-price" id="detailPrice">¥28</div>
+
+      <div class="detail-spec-group">
+        <div class="spec-title">规格</div>
+        <div class="spec-options">
+          <span class="spec-option active" data-spec="size" data-value="标准杯">标准杯</span>
+          <span class="spec-option" data-spec="size" data-value="大杯">大杯 +6</span>
+        </div>
+      </div>
+
+      <div class="detail-spec-group">
+        <div class="spec-title">温度</div>
+        <div class="spec-options">
+          <span class="spec-option active" data-spec="temp" data-value="热">热</span>
+          <span class="spec-option" data-spec="temp" data-value="冰">冰</span>
+        </div>
+      </div>
+
+      <div class="detail-spec-group">
+        <div class="spec-title">糖度</div>
+        <div class="spec-options">
+          <span class="spec-option" data-spec="sugar" data-value="无糖">无糖</span>
+          <span class="spec-option active" data-spec="sugar" data-value="标准糖">标准糖</span>
+          <span class="spec-option" data-spec="sugar" data-value="微糖">微糖</span>
+        </div>
+      </div>
+
+      <div class="detail-story">
+        <div class="spec-title">风味</div>
+        <div class="detail-notes" id="detailNotes">花香 · 柑橘 · 蜂蜜</div>
+      </div>
+    </div>
+
+    <div class="detail-bottom">
+      <div class="detail-qty">
+        <div class="qty-btn" onclick="changeQty(-1)">−</div>
+        <span class="qty-value" id="detailQty">1</span>
+        <div class="qty-btn" onclick="changeQty(1)">+</div>
+      </div>
+      <div class="detail-add" id="detailAdd" onclick="addToCart()">加入购物车 · ¥28</div>
+    </div>
+  </div>
+
+<script>
+  const categories = [
+    { id:'espresso', name:'意式咖啡', desc:'浓缩基底，直接而有力量' },
+    { id:'coffee', name:'经典咖啡', desc:'熟悉风味，适合日常' },
+    { id:'latte', name:'拿铁系列', desc:'咖啡与奶的平衡' },
+    { id:'signature', name:'季节特调', desc:'随季节更新的门店表达' },
+    { id:'soe', name:'手冲精品', desc:'单一产地与清晰风味' },
+    { id:'bakery', name:'烘焙甜点', desc:'适合与咖啡一起享用' },
+    { id:'other', name:'其他', desc:'其他今日供应' }
+  ];
+  const products = {
+    espresso: [
+      { name:'浓缩咖啡', desc:'双份浓缩基底', price:18 },
+      { name:'美式咖啡', desc:'浓缩加水，清爽明亮', price:22 }
+    ],
+    coffee: [
+      { name:'经典手冲', desc:'云南保山 SOE，花香柑橘', price:28 },
+      { name:'云南日晒', desc:'日晒处理，黑糖甜感', price:30 }
+    ],
+    latte: [
+      { name:'Dirty', desc:'浓缩碰撞冰牛奶，渐变层次', price:32 },
+      { name:'海盐焦糖拿铁', desc:'海盐 · 焦糖 · 丝滑', price:34 },
+      { name:'燕麦拿铁', desc:'燕麦奶，谷物香气', price:36 }
+    ],
+    signature: [
+      { name:'荔枝特调', desc:'当季限定，清爽果香', price:38 }
+    ],
+    soe: [
+      { name:'埃塞俄比亚 耶加雪菲', desc:'茉莉 · 柠檬 · 茶感', price:42 },
+      { name:'巴拿马 瑰夏', desc:'花香 · 蜂蜜，精致余韵', price:58 }
+    ],
+    bakery: [
+      { name:'手工燕麦曲奇', desc:'谷物香，配咖啡刚好', price:15 },
+      { name:'海盐焦糖牛角包', desc:'酥脆外皮，咸甜平衡', price:18 }
+    ],
+    other: [
+      { name:'热可可', desc:'浓郁可可，冬日暖意', price:26 }
+    ]
+  };
+
+  let currentCat = 0;
+
+  function renderSidebar() {
+    document.getElementById('categorySidebar').innerHTML = categories.map((c,i) =>
+      `<div class="category-item ${i === currentCat ? 'active' : ''}" onclick="selectCategory(${i})">${c.name}</div>`
+    ).join('');
+  }
+
+  function renderProducts() {
+    const cat = categories[currentCat];
+    const list = products[cat.id] || [];
+    document.getElementById('productScroll').innerHTML = `
+      <div class="group-heading">
+        <span class="group-title">${cat.name}</span>
+        <span class="group-desc">${cat.desc}</span>
+      </div>
+      ${list.map(p => `
+        <div class="product-item">
+          <div class="product-image"></div>
+          <div class="product-info">
+            <span class="product-name">${p.name}</span>
+            <span class="product-desc">${p.desc}</span>
+            <div class="product-foot">
+              <span class="product-price">¥${p.price}</span>
+              <div class="add-btn" onclick="openDetail('${p.name}','${p.desc}',${p.price})">+</div>
+            </div>
+          </div>
+        </div>`).join('')}`;
+  }
+
+  function selectCategory(i) {
+    currentCat = i;
+    renderSidebar();
+    renderProducts();
+  }
+
+  renderSidebar();
+  renderProducts();
+
+  function goTab(href) {
+    location.href = href;
+  }
+
+  function openStoreDetail() {
+    document.getElementById('storeSheet').classList.add('open');
+  }
+  function closeStoreDetail() {
+    document.getElementById('storeSheet').classList.remove('open');
+  }
+
+  // ── 商品详情 ──
+  let detailPrice = 0, detailQty = 1;
+  function openDetail(name, desc, price) {
+    detailPrice = price; detailQty = 1;
+    document.getElementById('detailName').textContent = name;
+    document.getElementById('detailDesc').textContent = desc;
+    document.getElementById('detailPrice').textContent = '¥' + price;
+    document.getElementById('detailQty').textContent = '1';
+    document.getElementById('detailAdd').textContent = `加入购物车 · ¥${price}`;
+    document.getElementById('detailNotes').textContent = desc;
+    document.getElementById('detailOverlay').classList.add('open');
+  }
+  function closeDetail() {
+    document.getElementById('detailOverlay').classList.remove('open');
+  }
+  function changeQty(d) {
+    detailQty += d;
+    if (detailQty < 1) detailQty = 1;
+    document.getElementById('detailQty').textContent = detailQty;
+    const total = (detailPrice * detailQty).toFixed(2);
+    document.getElementById('detailAdd').textContent = `加入购物车 · ¥${total}`;
+  }
+  document.getElementById('detailOverlay').addEventListener('click', e => {
+    if (e.target.classList.contains('spec-option')) {
+      const opt = e.target;
+      const spec = opt.dataset.spec;
+      document.querySelectorAll(`.spec-option[data-spec="${spec}"]`).forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+    }
+  });
+  function addToCart() {
+    closeDetail();
+    toast(`已加入购物车 · 数量 ${detailQty}`);
+  }
+
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
+  }
+</script>
+</body>
+</html>
