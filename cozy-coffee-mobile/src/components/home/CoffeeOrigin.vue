@@ -1,32 +1,26 @@
-<!-- CoffeeOrigin: 精品咖啡产区档案 — 多色节点 + 统一航线 + 色彩图例。 -->
+<!-- CoffeeOrigin: 产区国家轮廓 — 简化 silhouette + 散点布局。 -->
 <template>
   <view class="coffee-origin">
     <view class="origin-head">
+      <text class="origin-label">ORIGIN ARCHIVE</text>
       <text class="origin-title cozy-display">风味从土地开始</text>
-      <text class="origin-sub">8 个产区，汇聚于杭州</text>
+      <text class="origin-sub">来自世界的八种风味，在杭州相遇</text>
     </view>
 
-    <view class="origin-map">
-      <canvas
-        v-if="!mapImage"
-        type="2d"
-        id="origin-canvas"
-        class="origin-canvas"
-        :style="{ width: canvasWidth + 'px', height: canvasHeight + 'px' }"
-      />
-      <image
-        v-if="mapImage"
-        :src="mapImage"
-        mode="widthFix"
-        class="origin-image"
-        :style="{ width: canvasWidth + 'px' }"
-      />
-    </view>
-
-    <view class="origin-legend">
-      <view class="legend-item" v-for="o in originColors" :key="o.id">
-        <view class="legend-dot" :style="{ background: o.color }" />
-        <text class="legend-name">{{ o.name }}</text>
+    <view class="origin-scatter">
+      <view
+        v-for="o in origins"
+        :key="o.id"
+        class="scatter-item"
+        :class="{ 'scatter-em': o.id === 'yunnan' }"
+        :style="{ left: o.pos[0], top: o.pos[1] }"
+      >
+        <view
+          class="scatter-silhouette"
+          :style="{ background: o.color, clipPath: o.silhouette, width: o.size[0], height: o.size[1] }"
+        />
+        <text class="scatter-name">{{ o.name }}</text>
+        <text class="scatter-flavor">{{ o.flavor }}</text>
       </view>
     </view>
 
@@ -37,236 +31,175 @@
 </template>
 
 <script setup>
-import { onMounted, ref, getCurrentInstance, nextTick } from 'vue'
-import { WORLD_COUNTRY_PATHS } from '@/data/worldCountryPaths'
-import { COFFEE_ORIGINS, HANGZHOU_POINT } from '@/data/coffeeOrigins'
-import { normalizedToViewBox, buildQuadraticRoute, drawSvgPath } from '@/utils/coffeeMap'
-
 const emit = defineEmits(['explore'])
-const instance = getCurrentInstance()
 
-const VB_W = 1000
-const VB_H = 500
-const canvasWidth = ref(360)
-const canvasHeight = ref(180)
-const mapImage = ref('')
-
-const HZ_COLOR = '#753A22'
-const ROUTE_COLOR = '#E3DED8'
-const MUTED = '#756A63'
-const SURFACE = '#F7F5F3'
-
-// Origin colors — data-driven, each origin gets a distinct warm/earthy tone
-const originColors = [
-  { id: 'ethiopia', name: 'Ethiopia', color: '#C97A3D' },
-  { id: 'kenya', name: 'Kenya', color: '#D65A45' },
-  { id: 'brazil', name: 'Brazil', color: '#B58A45' },
-  { id: 'colombia', name: 'Colombia', color: '#8A6B45' },
-  { id: 'guatemala', name: 'Guatemala', color: '#6B7C55' },
-  { id: 'panama', name: 'Panama', color: '#D49B5A' },
-  { id: 'indonesia', name: 'Indonesia', color: '#526C7A' },
-  { id: 'yunnan', name: 'Yunnan', color: '#753A22' }
+const origins = [
+  {
+    id: 'ethiopia',
+    name: 'ETHIOPIA',
+    flavor: '花香 · 柑橘',
+    color: '#D8CBB8',
+    size: ['90rpx', '80rpx'],
+    silhouette: 'polygon(40% 0, 65% 3%, 90% 8%, 100% 18%, 95% 35%, 78% 55%, 55% 72%, 30% 100%, 15% 88%, 5% 62%, 0 38%, 8% 18%, 18% 5%)',
+    pos: ['47%', '13%']
+  },
+  {
+    id: 'kenya',
+    name: 'KENYA',
+    flavor: '莓果 · 明亮',
+    color: '#D8C1B5',
+    size: ['78rpx', '70rpx'],
+    silhouette: 'polygon(30% 0, 55% 2%, 78% 8%, 100% 22%, 88% 45%, 70% 60%, 55% 82%, 35% 100%, 15% 85%, 5% 58%, 0 32%, 8% 12%)',
+    pos: ['15%', '31%']
+  },
+  {
+    id: 'colombia',
+    name: 'COLOMBIA',
+    flavor: '焦糖 · 均衡',
+    color: '#B8AD98',
+    size: ['64rpx', '88rpx'],
+    silhouette: 'polygon(38% 0, 62% 2%, 80% 8%, 90% 16%, 72% 28%, 65% 42%, 78% 62%, 68% 80%, 52% 100%, 30% 88%, 15% 65%, 8% 40%, 12% 18%, 22% 5%)',
+    pos: ['79%', '27%']
+  },
+  {
+    id: 'yunnan',
+    name: 'YUNNAN',
+    flavor: '茶感 · 坚果',
+    color: '#753A22',
+    size: ['100rpx', '84rpx'],
+    silhouette: 'polygon(30% 0, 55% 3%, 80% 6%, 100% 12%, 95% 28%, 85% 42%, 72% 58%, 55% 78%, 40% 100%, 22% 90%, 8% 68%, 2% 42%, 5% 20%, 15% 5%)',
+    pos: ['47%', '53%']
+  },
+  {
+    id: 'brazil',
+    name: 'BRAZIL',
+    flavor: '坚果 · 巧克力',
+    color: '#C9B99A',
+    size: ['100rpx', '68rpx'],
+    silhouette: 'polygon(8% 5%, 30% 0, 55% 2%, 78% 8%, 100% 22%, 95% 48%, 82% 68%, 58% 100%, 32% 85%, 12% 58%, 2% 30%, 4% 12%)',
+    pos: ['13%', '65%']
+  },
+  {
+    id: 'indonesia',
+    name: 'INDONESIA',
+    flavor: '草本 · 木质',
+    color: '#AAB4B5',
+    size: ['96rpx', '50rpx'],
+    silhouette: 'polygon(5% 25%, 20% 8%, 42% 0, 62% 8%, 80% 5%, 100% 18%, 92% 45%, 72% 65%, 50% 100%, 28% 85%, 10% 65%, 2% 40%)',
+    pos: ['81%', '63%']
+  },
+  {
+    id: 'guatemala',
+    name: 'GUATEMALA',
+    flavor: '香料 · 坚果',
+    color: '#B4BEAA',
+    size: ['68rpx', '60rpx'],
+    silhouette: 'polygon(15% 0, 45% 5%, 75% 8%, 100% 22%, 88% 48%, 62% 68%, 35% 100%, 12% 85%, 2% 55%, 5% 25%)',
+    pos: ['27%', '85%']
+  },
+  {
+    id: 'panama',
+    name: 'PANAMA',
+    flavor: '花香 · 茶感',
+    color: '#D6C3A8',
+    size: ['78rpx', '38rpx'],
+    silhouette: 'polygon(2% 25%, 18% 5%, 40% 0, 62% 10%, 82% 8%, 100% 25%, 92% 55%, 72% 80%, 48% 100%, 22% 82%, 8% 58%, 3% 38%)',
+    pos: ['67%', '87%']
+  }
 ]
 
-function originColor(id) {
-  return originColors.find(o => o.id === id)?.color || HZ_COLOR
-}
-
-const hangzhouVB = normalizedToViewBox(HANGZHOU_POINT)
-
-function mx(vbX) { return (vbX / VB_W) * canvasWidth.value }
-function my(vbY) { return (vbY / VB_H) * canvasHeight.value }
-
-onMounted(() => {
-  const info = uni.getSystemInfoSync()
-  const w = info.windowWidth - 28 * 2
-  canvasWidth.value = w
-  canvasHeight.value = Math.round(w * 0.52)
-
-  nextTick(() => {
-    setTimeout(() => {
-      initCanvas(info)
-    }, 300)
-  })
-})
-
-function initCanvas(info) {
-  const query = uni.createSelectorQuery().in(instance)
-  query.select('#origin-canvas')
-    .fields({ node: true, size: true })
-    .exec((res) => {
-      if (!res || !res[0] || !res[0].node) return
-      const canvas = res[0].node
-      const ctx = canvas.getContext('2d')
-      const dpr = info.pixelRatio || 2
-      canvas.width = canvasWidth.value * dpr
-      canvas.height = canvasHeight.value * dpr
-      ctx.scale(dpr, dpr)
-
-      drawMap(ctx)
-
-      uni.canvasToTempFilePath({
-        canvas,
-        fileType: 'png',
-        quality: 1,
-        success: (result) => { mapImage.value = result.tempFilePath },
-        fail: (err) => { console.error('canvasToTempFilePath failed', err) }
-      })
-    })
-}
-
-function drawMap(ctx) {
-  const w = canvasWidth.value
-  const h = canvasHeight.value
-  const sw = w / VB_W
-  const sh = h / VB_H
-
-  ctx.clearRect(0, 0, w, h)
-  ctx.fillStyle = '#FFFFFF'
-  ctx.fillRect(0, 0, w, h)
-
-  // Country outlines — faint, editorial
-  ctx.save()
-  ctx.scale(sw, sh)
-  WORLD_COUNTRY_PATHS.forEach(country => {
-    ctx.beginPath()
-    drawSvgPath(ctx, country.d)
-    ctx.closePath()
-    ctx.fillStyle = SURFACE
-    ctx.fill()
-    ctx.strokeStyle = MUTED + '20'
-    ctx.lineWidth = 0.6 / sw
-    ctx.stroke()
-  })
-  ctx.restore()
-
-  // Routes — all #E3DED8, unified
-  ctx.save()
-  ctx.scale(sw, sh)
-  COFFEE_ORIGINS.forEach(origin => {
-    const route = buildQuadraticRoute(origin.origin, HANGZHOU_POINT, origin.routeBend)
-    ctx.beginPath()
-    ctx.moveTo(route.start.x, route.start.y)
-    ctx.quadraticCurveTo(route.control.x, route.control.y, route.end.x, route.end.y)
-    ctx.strokeStyle = ROUTE_COLOR
-    ctx.lineWidth = 0.7
-    ctx.setLineDash([3, 4])
-    ctx.stroke()
-    ctx.setLineDash([])
-  })
-  ctx.restore()
-
-  // Origin points — per-origin color, 6px radius
-  const dotR = 6
-  COFFEE_ORIGINS.forEach(origin => {
-    const pt = normalizedToViewBox(origin.origin)
-    const px = mx(pt.x)
-    const py = my(pt.y)
-    const color = originColor(origin.id)
-
-    ctx.beginPath()
-    ctx.arc(px, py, dotR, 0, Math.PI * 2)
-    ctx.fillStyle = color
-    ctx.fill()
-    ctx.strokeStyle = '#FFFFFF'
-    ctx.lineWidth = 1.5
-    ctx.stroke()
-  })
-
-  // Hangzhou hub — double ring, 14px
-  const hx = mx(hangzhouVB.x)
-  const hy = my(hangzhouVB.y)
-
-  ctx.beginPath()
-  ctx.arc(hx, hy, 14, 0, Math.PI * 2)
-  ctx.fillStyle = HZ_COLOR + '20'
-  ctx.fill()
-  ctx.strokeStyle = HZ_COLOR
-  ctx.lineWidth = 1.2
-  ctx.stroke()
-
-  ctx.beginPath()
-  ctx.arc(hx, hy, 6, 0, Math.PI * 2)
-  ctx.fillStyle = HZ_COLOR
-  ctx.fill()
-  ctx.strokeStyle = '#FFFFFF'
-  ctx.lineWidth = 1.5
-  ctx.stroke()
-
-  // Hangzhou label
-  ctx.fillStyle = HZ_COLOR
-  ctx.font = 'bold 10px sans-serif'
-  ctx.textAlign = 'center'
-  ctx.fillText('杭州', hx, hy - 22)
-}
-
 function onExplore() {
-  emit('explore')
+  uni.navigateTo({ url: '/pages/origins/index' })
 }
 </script>
 
 <style lang="scss" scoped>
 .coffee-origin {
-  padding: 72rpx 28rpx;
+  padding: 56rpx 12rpx 36rpx;
   background: $cozy-bg;
 }
 
 .origin-head {
-  margin-bottom: 36rpx;
+  margin-bottom: 48rpx;
+  padding: 0 16rpx;
+}
+
+.origin-label {
+  display: block;
+  color: $cozy-muted;
+  font-size: 17rpx;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  margin-bottom: 12rpx;
 }
 
 .origin-title {
   display: block;
   color: $cozy-ink;
-  font-size: 40rpx;
+  font-size: 36rpx;
 }
 
 .origin-sub {
   display: block;
-  margin-top: 8rpx;
+  margin-top: 6rpx;
   color: $cozy-muted;
   font-size: 22rpx;
 }
 
-.origin-map {
+.origin-scatter {
+  position: relative;
   width: 100%;
-  min-height: 20rpx;
+  height: 580rpx;
+  padding: 32rpx 24rpx 8rpx;
+  box-sizing: content-box;
 }
 
-.origin-canvas,
-.origin-image {
-  display: block;
-}
-
-.origin-legend {
-  margin-top: 24rpx;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14rpx 8rpx;
-  justify-items: center;
-}
-
-.legend-item {
+.scatter-item {
+  position: absolute;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8rpx;
+  gap: 10rpx;
+  transform: translate(-50%, -50%);
+}
+
+.scatter-em {
+  z-index: 1;
+}
+
+.scatter-em .scatter-name {
+  color: $cozy-primary;
+  font-size: 22rpx;
+  letter-spacing: 0.12em;
+}
+
+/* 国家轮廓色块 */
+.scatter-silhouette {
+  opacity: 0.78;
+  background-image:
+    radial-gradient(rgba(0,0,0,0.05) 0.5px, transparent 0.5px),
+    radial-gradient(rgba(255,255,255,0.08) 0.8px, transparent 0.8px);
+  background-size: 3px 3px, 5px 5px;
+  background-position: 0 0, 2px 1px;
+}
+
+.scatter-name {
+  color: $cozy-ink;
+  font-size: 18rpx;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   white-space: nowrap;
 }
 
-.legend-dot {
-  width: 10rpx;
-  height: 10rpx;
-  flex: none;
-  border-radius: 50%;
-}
-
-.legend-name {
+.scatter-flavor {
   color: $cozy-muted;
-  font-size: 18rpx;
+  font-size: 17rpx;
+  white-space: nowrap;
 }
 
 .origin-foot {
   margin-top: 28rpx;
+  text-align: center;
 }
 
 .origin-cta {
