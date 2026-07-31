@@ -119,6 +119,11 @@
         <text class="account-note">安全、隐私与退出登录</text>
         <text class="account-arrow">›</text>
       </view>
+      <view class="account-row" @click="navigateTo('/pages/about/index')">
+        <text class="account-name">关于我们</text>
+        <text class="account-note">品牌故事与咖啡旅程</text>
+        <text class="account-arrow">›</text>
+      </view>
     </view>
 
     <view class="profile-footer">
