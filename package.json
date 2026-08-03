@@ -1,0 +1,31 @@
+{
+  "name": "cozy-coffee",
+  "version": "1.0.0",
+  "description": "<div align=\"center\">",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lstarxing/cozy-coffee.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Lstarxing/cozy-coffee/issues"
+  },
+  "homepage": "https://github.com/Lstarxing/cozy-coffee#readme",
+  "dependencies": {
+    "d3-geo": "^3.1.1",
+    "sharp": "^0.35.3",
+    "topojson-client": "^3.1.0",
+    "topojson-server": "^3.0.1",
+    "world-atlas": "^2.0.2"
+  }
+}
