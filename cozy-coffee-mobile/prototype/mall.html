@@ -16,197 +16,201 @@
   :root {
     --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
     --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
+    --gold:#C69C6D; --danger:#9B3932;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
 
-  /* ── 导航栏 ── */
-  .nav {
-    display:flex; align-items:center; gap:12px;
-    padding:16px 20px; border-bottom:1px solid var(--border);
+  /* ═══════════════════════════════════════
+     积分头
+     ═══════════════════════════════════════ */
+  .points-header {
+    padding:28px 24px 16px;
     background:var(--surface);
   }
-  .nav-back {
-    font-size:26px; line-height:1; color:var(--ink);
-    text-decoration:none; padding:4px 8px 4px 0; cursor:pointer;
+  .points-label {
+    display:block;
+    font-size:13px; color:var(--muted); letter-spacing:.04em;
   }
-  .nav-title {
-    font-size:15px; font-weight:600; letter-spacing:.04em; color:var(--ink);
-  }
-
-  .page { padding-bottom:120px; }
-
-  /* ── 积分头 ── */
-  .points-header {
-    margin:20px 20px 0; padding:22px 24px;
-    display:flex; align-items:center; justify-content:space-between;
-    border-radius:12px;
-    background:linear-gradient(135deg,#2C1E18,#3D2A20);
-    color:#fff;
-  }
-  .points-label { display:block; font-size:12px; letter-spacing:.1em; color:rgba(255,255,255,.6); }
-  .points-value { display:block; margin-top:4px; font-size:32px; font-weight:700; }
-  .points-action {
-    font-size:12px; color:rgba(255,255,255,.75); cursor:pointer;
-    border-bottom:1px solid rgba(255,255,255,.3); padding-bottom:2px;
+  .points-value {
+    display:block; margin-top:8px;
+    font-family:var(--serif); font-size:46px; font-weight:600;
+    color:var(--ink); line-height:1;
   }
 
-  /* ── Tabs ── */
+  /* ═══════════════════════════════════════
+     文字快捷链接
+     ═══════════════════════════════════════ */
+  .quick-links {
+    display:flex; align-items:center;
+    padding:16px 24px 22px;
+    background:var(--surface);
+  }
+  .quick-link {
+    flex:1; text-align:center;
+    font-size:13px; color:var(--ink); cursor:pointer;
+    letter-spacing:.04em;
+  }
+  .quick-link:active { opacity:.6; }
+  .quick-divider {
+    width:1px; height:13px; background:var(--border);
+  }
+
+  /* ═══════════════════════════════════════
+     分类 Tab
+     ═══════════════════════════════════════ */
   .mall-tabs {
-    margin-top:20px; padding:0 20px;
-    display:flex; gap:28px;
+    display:flex;
+    margin:12px 20px 0; padding:0 4px;
     border-bottom:1px solid var(--border);
   }
   .mall-tab {
-    padding:12px 2px 10px;
-    font-size:15px; font-weight:600; color:var(--muted);
-    cursor:pointer; border-bottom:2px solid transparent;
+    flex:1; padding:14px 0;
+    text-align:center;
+    font-size:15px; color:var(--muted);
+    cursor:pointer;
+    position:relative;
     transition:color .25s;
   }
-  .mall-tab.active { color:var(--ink); border-bottom-color:var(--ink); }
-
-  /* ── 折扣提示 ── */
-  .discount-tip {
-    margin:14px 20px 0; padding:10px 14px;
-    font-size:12px; line-height:1.6; color:var(--primary);
-    background:#EFE7DF; border-radius:8px;
+  .mall-tab.active { color:var(--ink); font-weight:600; }
+  .mall-tab.active::after {
+    content:''; position:absolute;
+    left:50%; bottom:-1px; transform:translateX(-50%);
+    width:24px; height:2px;
+    background:var(--ink);
   }
 
-  /* ── 商品网格 ── */
+  /* ═══════════════════════════════════════
+     商品网格
+     ═══════════════════════════════════════ */
   .products-grid {
     margin:16px 20px 0;
-    display:grid; grid-template-columns:1fr 1fr; gap:14px;
+    display:grid; grid-template-columns:1fr 1fr; gap:16px 14px;
+    padding-bottom:48px;
   }
-  .product-card {
-    border-radius:12px; overflow:hidden;
-    background:var(--card); cursor:pointer;
+  .product-card { cursor:pointer; }
+  .product-card:active .product-image { transform:scale(.98); }
+  .product-image {
+    position:relative;
+    width:100%; aspect-ratio:1/1;
+    border-radius:8px;
+    overflow:hidden;
     transition:transform .25s;
   }
-  .product-card:active { transform:scale(.97); }
-  .product-image {
-    width:100%; height:150px;
-    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
+  .product-image svg {
+    width:62%; height:62%; color:rgba(255,255,255,.92);
   }
-  .product-info { padding:14px 14px 16px; }
+  .product-info { padding:12px 2px 0; }
   .product-name {
-    display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
-    font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink);
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+    overflow:hidden;
+    font-family:var(--serif); font-size:14px; font-weight:600;
+    color:var(--ink); line-height:1.4;
   }
-  .product-desc {
-    display:block; margin-top:4px;
-    height:30px; overflow:hidden;
-    font-size:11px; line-height:1.4; color:var(--muted);
+  .product-points {
+    display:flex; align-items:baseline; gap:3px;
+    margin-top:8px;
   }
-  .product-limit {
-    display:block; margin-top:6px;
-    font-size:10px; color:#B08A3E;
-  }
-  .product-footer {
-    margin-top:10px;
-    display:flex; align-items:center; justify-content:space-between; gap:8px;
-  }
-  .product-price { display:flex; align-items:baseline; gap:4px; }
-  .price-value { font-size:18px; font-weight:700; color:var(--primary); }
-  .price-unit { font-size:10px; color:var(--muted); }
-  .original-points {
-    font-size:11px; color:var(--muted);
-    text-decoration:line-through; opacity:.6;
-  }
-  .redeem-btn {
-    padding:6px 12px;
-    font-size:11px; font-weight:600; color:#fff;
-    background:var(--primary); border-radius:6px;
-  }
-  .redeem-btn.disabled { background:var(--border); color:var(--muted); }
+  .points-num { font-size:17px; font-weight:700; color:var(--primary); }
+  .points-unit { font-size:11px; color:var(--muted); }
 
-  /* ── 兑换记录 ── */
-  .redemption-list { margin:16px 20px 0; }
-  .redemption-card {
-    margin-bottom:14px; padding:16px;
-    border-radius:12px; background:var(--card);
+  /* ═══════════════════════════════════════
+     详情覆盖层
+     ═══════════════════════════════════════ */
+  .detail-page {
+    position:fixed; inset:0;
+    background:#fff; z-index:50;
+    overflow-y:auto;
+    transform:translateX(100%);
+    transition:transform .35s cubic-bezier(.32,.72,.32,1);
   }
-  .redemption-header {
-    display:flex; justify-content:space-between; align-items:center;
-    padding-bottom:10px; border-bottom:1px solid var(--border);
+  .detail-page.open { transform:translateX(0); }
+  .detail-back {
+    position:fixed; top:14px; left:14px;
+    width:36px; height:36px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:28px; line-height:1;
+    color:var(--ink); cursor:pointer;
+    z-index:2;
   }
-  .order-no { font-size:12px; color:var(--muted); }
-  .order-status { font-size:12px; font-weight:600; color:var(--accent); }
-  .redemption-product {
-    display:flex; gap:12px; align-items:center;
-    padding:14px 0; border-bottom:1px solid var(--border);
-  }
-  .redemption-product img {
-    width:64px; height:64px; border-radius:8px;
-    background:var(--surface);
-  }
-  .redemption-copy { min-width:0; }
-  .redemption-name {
-    display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
-    font-size:14px; font-weight:600; color:var(--ink);
-  }
-  .redemption-meta {
-    display:block; margin-top:3px; font-size:11px; color:var(--muted);
-  }
-  .fulfillment-code {
-    margin-top:10px; padding:8px 10px;
-    font-size:11px; color:var(--primary); background:#EFE7DF; border-radius:6px;
-  }
-  .redemption-actions {
-    margin-top:10px; display:flex; justify-content:space-between; align-items:center;
-  }
-  .redemption-actions span { font-size:11px; color:var(--muted); }
-  .cancel-order-btn { font-size:11px; color:#9B3932; cursor:pointer; }
 
-  /* ── 弹窗 ── */
-  .modal-mask {
-    position:fixed; inset:0; z-index:30;
-    background:rgba(28,20,14,.45);
-    display:flex; align-items:flex-end; justify-content:center;
+  .detail-image-area {
+    padding:60px 32px 24px;
+    background:#fff;
+    display:flex; align-items:center; justify-content:center;
   }
-  .modal-content {
-    width:100%; max-width:390px;
-    background:var(--surface); border-radius:20px 20px 0 0;
-    padding:24px 24px 32px;
+  .detail-image {
+    width:240px; height:240px;
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
   }
-  .modal-header {
-    display:flex; justify-content:space-between; align-items:center;
-    margin-bottom:16px;
+  .detail-image svg {
+    width:65%; height:65%; color:rgba(255,255,255,.95);
   }
-  .modal-title { font-family:var(--serif); font-size:20px; font-weight:600; }
-  .modal-close { font-size:24px; color:var(--muted); cursor:pointer; }
-  .modal-image {
-    width:100%; height:180px; border-radius:12px;
-    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
+
+  .detail-head {
+    padding:0 24px 22px;
+    border-bottom:1px solid var(--border);
   }
-  .modal-name {
-    display:block; margin-top:14px;
-    font-family:var(--serif); font-size:18px; font-weight:600;
+  .detail-name {
+    display:block;
+    font-family:var(--serif); font-size:22px; font-weight:600;
+    color:var(--ink); line-height:1.3;
   }
-  .quantity-row {
-    margin-top:16px; display:flex; justify-content:space-between; align-items:center;
+  .detail-tags {
+    margin-top:14px;
+    display:flex; flex-wrap:wrap; gap:8px;
   }
-  .quantity-label { font-size:13px; color:var(--muted); }
-  .stepper { display:flex; align-items:center; gap:16px; }
-  .stepper-btn {
-    width:28px; height:28px; display:flex; align-items:center; justify-content:center;
-    border:1px solid var(--border); border-radius:6px; font-size:16px;
-    cursor:pointer; color:var(--ink); background:var(--card);
+  .tag {
+    display:inline-block; padding:5px 11px;
+    font-size:11px;
+    border:1px solid var(--ink);
+    color:var(--ink);
+    border-radius:2px;
+    letter-spacing:.02em;
   }
-  .stepper-btn.disabled { opacity:.35; }
-  .stepper-value { min-width:24px; text-align:center; font-size:15px; font-weight:600; }
-  .modal-price { display:block; margin-top:14px; font-size:18px; font-weight:700; color:var(--primary); }
-  .modal-original-price { display:block; margin-top:4px; font-size:11px; color:var(--muted); }
-  .modal-stock { display:block; margin-top:6px; font-size:11px; color:var(--muted); }
-  .points-warning { display:block; margin-top:6px; font-size:12px; color:#9B3932; }
-  .modal-footer {
-    margin-top:22px; display:flex; gap:12px;
+  .tag--limit {
+    border-color:var(--danger);
+    color:var(--danger);
   }
-  .modal-btn {
-    flex:1; height:44px; display:flex; align-items:center; justify-content:center;
-    border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;
+
+  /* ── 补充信息 ── */
+  .detail-sections { padding:0 24px; }
+  .detail-section {
+    padding:18px 0;
+    border-bottom:1px solid var(--border);
   }
-  .modal-btn.cancel { background:var(--card); border:1px solid var(--border); color:var(--ink); }
-  .modal-btn.confirm { background:var(--primary); color:#fff; }
-  .modal-btn.confirm.disabled { opacity:.4; }
+  .detail-section:last-child { border-bottom:0; }
+  .section-label {
+    display:block;
+    font-size:14px; font-weight:600;
+    color:var(--ink);
+  }
+  .section-value {
+    display:block; margin-top:8px;
+    font-size:13px; line-height:1.7;
+    color:var(--muted);
+  }
+
+  /* ── 底部 CTA ── */
+  .detail-cta-wrap {
+    padding:20px 24px 32px;
+    background:#fff;
+    margin-top:8px;
+  }
+  .detail-cta {
+    height:48px;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--primary); color:#fff;
+    font-size:15px; font-weight:600;
+    border-radius:24px;
+    cursor:pointer;
+    transition:opacity .2s;
+  }
+  .detail-cta:active { opacity:.85; }
+  .detail-cta.disabled {
+    background:var(--border); color:var(--muted); cursor:not-allowed;
+  }
 
   /* ── Toast ── */
   .toast {
@@ -220,171 +224,322 @@
 </head>
 <body>
 
-  <!-- 导航栏 -->
-  <nav class="nav">
-    <a class="nav-back" href="index.html">‹</a>
-    <span class="nav-title">积分商城</span>
-  </nav>
+<div class="page">
 
-  <div class="page">
-
-    <!-- 积分头 -->
-    <div class="points-header">
-      <div>
-        <span class="points-label">当前积分</span>
-        <span class="points-value">3,280</span>
-      </div>
-      <span class="points-action" onclick="toast('积分明细')">积分明细 ›</span>
-    </div>
-
-    <!-- Tabs -->
-    <div class="mall-tabs">
-      <div class="mall-tab active" onclick="switchTab(this,'兑换商城')">兑换商城</div>
-      <div class="mall-tab" onclick="switchTab(this,'兑换记录')">兑换记录</div>
-    </div>
-
-    <!-- 折扣提示 -->
-    <div class="discount-tip">白银会员积分兑换享 95 折，结算积分按后端规则向上取整</div>
-
-    <!-- 商品网格 -->
-    <div class="products-grid" id="productGrid"></div>
-
+  <!-- 积分头 -->
+  <div class="points-header">
+    <span class="points-label">当前可用积分</span>
+    <span class="points-value">53</span>
   </div>
 
-  <!-- 兑换记录视图（隐藏） -->
-  <div class="redemption-list" id="ordersView" style="display:none; margin:16px 20px 0;">
-    <div class="redemption-card">
-      <div class="redemption-header">
-        <span class="order-no">COZ202607300001</span>
-        <span class="order-status">已完成</span>
-      </div>
-      <div class="redemption-product">
-        <img src="assets/coffee-hero.jpg" alt="">
-        <div class="redemption-copy">
-          <span class="redemption-name">云南保山 SOE 咖啡豆</span>
-          <span class="redemption-meta">数量 ×1 · 1,200 积分</span>
-          <span class="redemption-meta">2026-07-30 14:22</span>
-        </div>
-      </div>
-      <div class="fulfillment-code">取货码：A0231</div>
-      <div class="redemption-actions">
-        <span>到店自提</span>
-        <span class="cancel-order-btn" onclick="toast('已完成订单不可取消')">取消兑换</span>
-      </div>
-    </div>
-    <div class="redemption-card">
-      <div class="redemption-header">
-        <span class="order-no">COZ202607120003</span>
-        <span class="order-status">已发放</span>
-      </div>
-      <div class="redemption-product">
-        <img src="assets/coffee-hero.jpg" alt="">
-        <div class="redemption-copy">
-          <span class="redemption-name">满 35 减 10 优惠券</span>
-          <span class="redemption-meta">数量 ×1 · 500 积分</span>
-          <span class="redemption-meta">2026-07-12 09:03</span>
-        </div>
-      </div>
-      <div class="fulfillment-code">权益码：VT-88-3K2P</div>
-      <div class="redemption-actions">
-        <span>已发放至券包</span>
-        <span class="cancel-order-btn" onclick="toast('虚拟权益不可取消')">取消兑换</span>
-      </div>
+  <!-- 文字快捷链接 -->
+  <div class="quick-links">
+    <span class="quick-link" onclick="toast('积分明细')">积分明细</span>
+    <span class="quick-divider"></span>
+    <span class="quick-link" onclick="toast('兑换记录')">兑换记录</span>
+    <span class="quick-divider"></span>
+    <span class="quick-link" onclick="toast('积分规则')">积分规则</span>
+  </div>
+
+  <!-- 分类 Tab -->
+  <div class="mall-tabs">
+    <div class="mall-tab active" data-type="all" onclick="switchTab(this)">全部</div>
+    <div class="mall-tab" data-type="coupon" onclick="switchTab(this)">优惠券</div>
+    <div class="mall-tab" data-type="physical" onclick="switchTab(this)">实物礼品</div>
+  </div>
+
+  <!-- 商品网格 -->
+  <div class="products-grid" id="productGrid"></div>
+
+</div>
+
+<!-- 商品详情（覆盖层） -->
+<div class="detail-page" id="detailPage">
+  <span class="detail-back" onclick="closeDetail()">‹</span>
+
+  <div class="detail-image-area">
+    <div class="detail-image" id="detailImage"></div>
+  </div>
+
+  <div class="detail-head">
+    <span class="detail-name" id="detailName"></span>
+    <div class="detail-tags">
+      <span class="tag" id="detailMember"></span>
+      <span class="tag tag--limit" id="detailLimit"></span>
     </div>
   </div>
 
-  <!-- 兑换弹窗 -->
-  <div class="modal-mask" id="redeemModal" style="display:none;" onclick="closeModal()">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <span class="modal-title">确认兑换</span>
-        <span class="modal-close" onclick="closeModal()">×</span>
-      </div>
-      <div class="modal-image" id="modalImage"></div>
-      <span class="modal-name" id="modalName">商品名称</span>
-      <div class="quantity-row">
-        <span class="quantity-label">兑换数量</span>
-        <div class="stepper">
-          <div class="stepper-btn" onclick="stepQty(-1)" id="qtyMinus">−</div>
-          <span class="stepper-value" id="qtyValue">1</span>
-          <div class="stepper-btn" onclick="stepQty(1)">＋</div>
-        </div>
-      </div>
-      <span class="modal-price" id="modalTotal">1,200 积分</span>
-      <span class="modal-original-price" id="modalOriginal">原价 1,200 积分 · 白银会员 95 折</span>
-      <span class="modal-stock" id="modalStock">库存 12 件，当前最多可兑 12 件</span>
-      <div class="modal-footer">
-        <div class="modal-btn cancel" onclick="closeModal()">取消</div>
-        <div class="modal-btn confirm" onclick="toast('兑换成功')">确认兑换</div>
-      </div>
+  <div class="detail-sections">
+    <div class="detail-section">
+      <span class="section-label">商品类型</span>
+      <span class="section-value" id="detailType"></span>
+    </div>
+    <div class="detail-section">
+      <span class="section-label">有效期限</span>
+      <span class="section-value" id="detailValidity"></span>
+    </div>
+    <div class="detail-section">
+      <span class="section-label">抵扣对象</span>
+      <span class="section-value" id="detailDeduction"></span>
+    </div>
+    <div class="detail-section">
+      <span class="section-label">可用门店</span>
+      <span class="section-value" id="detailStores"></span>
+    </div>
+    <div class="detail-section">
+      <span class="section-label">可用场景</span>
+      <span class="section-value" id="detailScenarios"></span>
+    </div>
+    <div class="detail-section">
+      <span class="section-label">礼品说明</span>
+      <span class="section-value" id="detailNotes"></span>
+    </div>
+    <div class="detail-section">
+      <span class="section-label">礼品介绍</span>
+      <span class="section-value" id="detailIntro"></span>
     </div>
   </div>
+
+  <div class="detail-cta-wrap">
+    <div class="detail-cta disabled" id="detailCta" onclick="redeem()">53 积分不足</div>
+  </div>
+</div>
 
 <script>
+  // 当前用户积分
+  const CURRENT_POINTS = 53;
+
+  // 商品图标的 SVG（白色，opacity .9）
+  const ICONS = {
+    shot: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 14h20l-3 36a4 4 0 0 1-4 4h-6a4 4 0 0 1-4-4z"/><path d="M18 22h28"/><path d="M26 32h12"/></svg>',
+    delivery: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 38h6l4-8h28l4 8h6"/><circle cx="18" cy="46" r="4"/><circle cx="46" cy="46" r="4"/><path d="M14 38V22h18v16"/></svg>',
+    coupon5: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 18h34v10a4 4 0 0 0 0 8v10H10V36a4 4 0 0 0 0-8z"/><circle cx="20" cy="32" r="1.2" fill="currentColor"/><circle cx="34" cy="32" r="1.2" fill="currentColor"/><text x="32" y="38" text-anchor="middle" font-family="serif" font-size="14" font-weight="600" fill="currentColor" stroke="none">¥5</text></svg>',
+    bogo: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14h14l-3 36h-8z"/><path d="M36 14h14l-3 36h-8z"/><path d="M16 26h10M38 26h10"/></svg>',
+    star: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M32 8l6 14 16 2-12 11 3 16-13-8-13 8 3-16-12-11 16-2z"/></svg>',
+    sticker: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="12" y="14" width="40" height="36" rx="3"/><circle cx="22" cy="26" r="3"/><circle cx="36" cy="24" r="2.5"/><circle cx="44" cy="32" r="3"/><circle cx="28" cy="38" r="2.5"/><circle cx="40" cy="42" r="3"/></svg>',
+    spoon: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="14" rx="10" ry="6"/><path d="M32 20v36"/><path d="M28 56h8"/></svg>',
+    mug: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 22h32v22a8 8 0 0 1-8 8H22a8 8 0 0 1-8-8z"/><path d="M46 28h6a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4h-6"/><path d="M20 14c0 2 2 2 2 4s-2 2-2 4M28 14c0 2 2 2 2 4s-2 2-2 4M36 14c0 2 2 2 2 4s-2 2-2 4"/></svg>',
+    tote: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 22h32l-3 30H19z"/><path d="M24 22v-4a8 8 0 0 1 16 0v4"/></svg>',
+    tshirt: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12l-10 6 4 10 6-3v25h20V25l6 3 4-10-10-6-3 4a6 6 0 0 1-8 0z"/></svg>',
+    giftbox: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="22" width="44" height="30" rx="2"/><path d="M10 30h44"/><path d="M32 22v30"/><path d="M22 22a6 6 0 0 1 10-4 6 6 0 0 1 10 4"/></svg>'
+  };
+
+  // 商品数据（按会员积分体系白皮书 v6.0）
   const products = [
-    { name:'云南保山 SOE 咖啡豆', desc:'花香 · 柑橘 · 蜂蜜，单一产地精品豆 200g', price:1200, limit:true },
-    { name:'冷萃咖啡体验装', desc:'12 小时低温萃取，柔和甘甜 3 瓶装', price:880, limit:false },
-    { name:'满 35 减 10 优惠券', desc:'券包通用，有效期 3 天', price:500, limit:false },
-    { name:'Cozy 手冲陶瓷杯', desc:'哑光米白，日式极简手作', price:1500, limit:false },
-    { name:'埃塞俄比亚 耶加雪菲豆', desc:'茉莉 · 柠檬 · 茶感，浅烘焙 200g', price:1380, limit:false },
-    { name:'Dirty 双人套餐', desc:'浓缩碰撞冰牛奶，渐变层次', price:960, limit:false }
+    // 优惠券
+    {
+      id: 'shot', name: '加浓缩 (Shot) 券', points: 80, type: 'coupon',
+      icon: 'shot', gradient: 'linear-gradient(135deg, #6B4A2E, #3D2A1E)',
+      member: '全部会员', limit: '限兑 5 件',
+      productType: '附加券 · 加料（L2 辅券）',
+      validity: '自获取之日起 7 天内有效',
+      deduction: '所有含"额外浓缩 (+¥5)"加料选项的现制饮品',
+      stores: '杭州中心店',
+      scenarios: '到店自提 · 外卖配送',
+      notes: 'L2 辅券，可与 L1 主券叠加；同类辅券可叠加多张',
+      intro: '专为深度咖啡爱好者设计的附加权益，抵扣 ¥5 加料费，让每日浓缩更醇厚。'
+    },
+    {
+      id: 'delivery', name: '配送费抵扣券', points: 120, type: 'coupon',
+      icon: 'delivery', gradient: 'linear-gradient(135deg, #7A8580, #4A5650)',
+      member: '全部会员', limit: '限兑 5 件',
+      productType: '附加券 · 配送（L2 辅券）',
+      validity: '自获取之日起 30 天内有效',
+      deduction: '外卖订单产生的配送费用（仅限抵扣配送费）',
+      stores: '杭州中心店',
+      scenarios: '仅限外卖配送',
+      notes: 'L2 辅券，可与 L1 主券叠加使用',
+      intro: '消除外卖心理障碍，专为高频外卖用户准备。'
+    },
+    {
+      id: 'coupon5', name: '5 元代金券', points: 150, type: 'coupon',
+      icon: 'coupon5', gradient: 'linear-gradient(135deg, #C9A876, #8B6F47)',
+      member: '全部会员', limit: '限兑 10 件',
+      productType: 'L1 主券 · 代金券',
+      validity: '自获取之日起 15 天内有效',
+      deduction: '全场通用，无门槛抵用（30 积分 ≈ 1 元）',
+      stores: '杭州中心店',
+      scenarios: '到店自提 · 外卖配送',
+      notes: 'L1 主券，单笔订单仅限使用 1 张；不可与其他主券叠加',
+      intro: '全场通用无门槛代金券，凑单与小酌皆宜。'
+    },
+    {
+      id: 'bogo', name: '买一赠一券 (BOGO)', points: 350, type: 'coupon',
+      icon: 'bogo', gradient: 'linear-gradient(135deg, #B88859, #6E4E33)',
+      member: '全部会员', limit: '限兑 3 件',
+      productType: 'L1 主券 · 买一赠一',
+      validity: '自获取之日起 15 天内有效',
+      deduction: '仅限现制饮品（排除瓶装/周边/烘焙），赠品封顶 ¥40',
+      stores: '杭州中心店',
+      scenarios: '到店自提 · 外卖配送',
+      notes: '单笔订单 ≥ 2 杯饮品；不可分次核销；不可与主券叠加',
+      intro: '结伴神器，点两杯免低价杯，与好友共享一杯醇香。'
+    },
+    {
+      id: 'redeem', name: '任选饮品通兑券', points: 800, type: 'coupon',
+      icon: 'star', gradient: 'linear-gradient(135deg, #C69C6D, #8B6E45)',
+      member: '白银及以上会员', limit: '限兑 2 件',
+      productType: 'L1 主券 · 通兑免单',
+      validity: '自获取之日起 30 天内有效',
+      deduction: '全场饮品通用（最高抵扣 ¥40，超出补差价）',
+      stores: '杭州中心店',
+      scenarios: '到店自提 · 外卖配送',
+      notes: '商城最高价值奖励，结算按系统最优匹配',
+      intro: '商城最高价值奖励，全场饮品通用，节日自饮皆宜。'
+    },
+
+    // 实物礼品
+    {
+      id: 'stickers', name: 'Cozy 品牌贴纸包', points: 100, type: 'physical',
+      icon: 'sticker', gradient: 'linear-gradient(135deg, #E8DDD2, #B8A998)',
+      member: '全部会员', limit: '限兑 5 件',
+      productType: '实体周边 · 装饰',
+      validity: '兑换后 14 天内发货',
+      deduction: '3 张原创贴纸 · 含咖啡豆/拉花/Cozy Logo',
+      stores: '到店自提 · 包邮到家',
+      scenarios: '到店自提 · 邮寄到家',
+      notes: '极易兑换，装饰电脑/手机增加品牌曝光',
+      intro: '3 张原创插画贴纸，文艺青年的日常仪式感。'
+    },
+    {
+      id: 'spoon', name: '定制拿铁金搅拌勺', points: 600, type: 'physical',
+      icon: 'spoon', gradient: 'linear-gradient(135deg, #D4B58A, #8E6E45)',
+      member: '全部会员', limit: '限兑 2 件',
+      productType: '实体周边 · 餐厨',
+      validity: '兑换后 14 天内发货',
+      deduction: '金属搅拌勺 · 拿铁金（PVD）涂层',
+      stores: '到店自提 · 包邮到家',
+      scenarios: '到店自提 · 邮寄到家',
+      notes: '首个长期奋斗目标，提升居家冲煮仪式感',
+      intro: '金属质感搅拌勺，拿铁金配色，居家办公皆宜。'
+    },
+    {
+      id: 'mug', name: '拿铁金定制马克杯', points: 1200, type: 'physical',
+      icon: 'mug', gradient: 'linear-gradient(135deg, #F0E8DA, #B8A988)',
+      member: '白银及以上会员', limit: '限兑 2 件',
+      productType: '实体周边 · 餐厨',
+      validity: '兑换后 14 天内发货',
+      deduction: '哑光米白 · 12 oz · Cozy 烫金 logo',
+      stores: '到店自提 · 包邮到家',
+      scenarios: '到店自提 · 邮寄到家',
+      notes: '办公桌常驻，UI 重点展示项目',
+      intro: '哑光米白磨砂质感，12 oz 标准容量，Cozy 烫金 logo。'
+    },
+    {
+      id: 'tote', name: 'Cozy 经典帆布包', points: 1600, type: 'physical',
+      icon: 'tote', gradient: 'linear-gradient(135deg, #EDE5D0, #B4A088)',
+      member: '黄金及以上会员', limit: '限兑 2 件',
+      productType: '实体周边 · 日用',
+      validity: '兑换后 14 天内发货',
+      deduction: '12 oz 帆布 · 米白底烫金 logo',
+      stores: '到店自提 · 包邮到家',
+      scenarios: '到店自提 · 邮寄到家',
+      notes: '高频日用单品，行走的品牌广告牌',
+      intro: '12 oz 帆布托特，容量充足，米白底配烫金 logo。'
+    },
+    {
+      id: 'tshirt', name: '"COZY"主题 T 恤', points: 2200, type: 'physical',
+      icon: 'tshirt', gradient: 'linear-gradient(135deg, #2C2723, #4A423C)',
+      member: '黄金及以上会员', limit: '限兑 1 件',
+      productType: '实体周边 · 服饰',
+      validity: '兑换后 14 天内发货',
+      deduction: '纯棉 · S/M/L/XL · 黑/白/灰三色',
+      stores: '到店自提 · 包邮到家',
+      scenarios: '到店自提 · 邮寄到家',
+      notes: '身份象征，核心粉丝认证',
+      intro: '纯棉舒适面料，胸前 COZY logo，核心粉丝的身份象征。'
+    },
+    {
+      id: 'giftbox', name: '挂耳咖啡精选礼盒', points: 3500, type: 'physical',
+      icon: 'giftbox', gradient: 'linear-gradient(135deg, #B88859, #5E3F26)',
+      member: '钻石及以上会员', limit: '限兑 1 件',
+      productType: '实体周边 · 礼品',
+      validity: '兑换后 14 天内发货',
+      deduction: '10 包挂耳 · 4 种产地 · 礼盒装',
+      stores: '到店自提 · 包邮到家',
+      scenarios: '到店自提 · 邮寄到家',
+      notes: '高单价目标，维持积分含金量，适合送礼',
+      intro: '10 包精选挂耳，4 种产地甄选，节日送礼首选。'
+    }
   ];
 
-  function renderProducts() {
+  // ── 渲染 ──
+  function renderProducts(type) {
+    const list = type === 'all' ? products : products.filter(p => p.type === type);
     const grid = document.getElementById('productGrid');
-    grid.innerHTML = products.map((p,i) => `
-      <div class="product-card" onclick="openRedeem(${i})">
-        <div class="product-image"></div>
+    grid.innerHTML = list.map(p => `
+      <div class="product-card" onclick="openDetail('${p.id}')">
+        <div class="product-image" style="background:${p.gradient};">
+          ${ICONS[p.icon]}
+        </div>
         <div class="product-info">
           <span class="product-name">${p.name}</span>
-          <span class="product-desc">${p.desc}</span>
-          ${p.limit ? '<span class="product-limit">本月剩余 8 件</span>' : ''}
-          <div class="product-footer">
-            <div class="product-price">
-              <span class="price-value">${p.price.toLocaleString()}</span>
-              <span class="price-unit">积分</span>
-              <span class="original-points">${Math.round(p.price/0.95).toLocaleString()}</span>
-            </div>
-            <div class="redeem-btn">兑换</div>
+          <div class="product-points">
+            <span class="points-num">${p.points}</span>
+            <span class="points-unit">积分</span>
           </div>
         </div>
       </div>
     `).join('');
   }
-  renderProducts();
 
-  let qty = 1, currentIndex = 0;
-  function openRedeem(i) {
-    currentIndex = i;
-    qty = 1;
-    const p = products[i];
-    document.getElementById('modalName').textContent = p.name;
-    document.getElementById('modalTotal').textContent = (p.price * qty).toLocaleString() + ' 积分';
-    document.getElementById('modalStock').textContent = '库存 12 件，当前最多可兑 12 件';
-    document.getElementById('qtyValue').textContent = '1';
-    document.getElementById('qtyMinus').classList.add('disabled');
-    document.getElementById('redeemModal').style.display = 'flex';
-  }
-  function closeModal() {
-    document.getElementById('redeemModal').style.display = 'none';
-  }
-  function stepQty(d) {
-    const p = products[currentIndex];
-    qty += d;
-    if (qty < 1) qty = 1;
-    document.getElementById('qtyValue').textContent = qty;
-    document.getElementById('qtyMinus').classList.toggle('disabled', qty <= 1);
-    document.getElementById('modalTotal').textContent = (p.price * qty).toLocaleString() + ' 积分';
-  }
-
-  function switchTab(el, label) {
-    const isProducts = label === '兑换商城';
+  // ── Tab ──
+  function switchTab(el) {
     document.querySelectorAll('.mall-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-    document.getElementById('productGrid').style.display = isProducts ? 'grid' : 'none';
-    document.getElementById('ordersView').style.display = isProducts ? 'none' : 'block';
+    renderProducts(el.dataset.type);
   }
 
+  // ── 详情 ──
+  let currentId = null;
+  function openDetail(id) {
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+    currentId = id;
+
+    document.getElementById('detailName').textContent = p.name;
+    document.getElementById('detailMember').textContent = p.member;
+    document.getElementById('detailLimit').textContent = p.limit;
+    document.getElementById('detailType').textContent = p.productType;
+    document.getElementById('detailValidity').textContent = p.validity;
+    document.getElementById('detailDeduction').textContent = p.deduction;
+    document.getElementById('detailStores').textContent = p.stores;
+    document.getElementById('detailScenarios').textContent = p.scenarios;
+    document.getElementById('detailNotes').textContent = p.notes;
+    document.getElementById('detailIntro').textContent = p.intro;
+
+    document.getElementById('detailImage').style.background = p.gradient;
+    document.getElementById('detailImage').innerHTML = ICONS[p.icon];
+
+    const cta = document.getElementById('detailCta');
+    if (CURRENT_POINTS >= p.points) {
+      cta.classList.remove('disabled');
+      cta.textContent = `立即兑换 · ${p.points} 积分`;
+    } else {
+      cta.classList.add('disabled');
+      cta.textContent = `积分不足 · 还差 ${(p.points - CURRENT_POINTS).toLocaleString()} 积分`;
+    }
+
+    document.getElementById('detailPage').classList.add('open');
+  }
+
+  function closeDetail() {
+    document.getElementById('detailPage').classList.remove('open');
+    currentId = null;
+  }
+
+  function redeem() {
+    if (!currentId) return;
+    const p = products.find(x => x.id === currentId);
+    if (!p || CURRENT_POINTS < p.points) {
+      toast('积分不足');
+      return;
+    }
+    toast(`已兑换 ${p.name} · ${p.points} 积分`);
+    setTimeout(closeDetail, 800);
+  }
+
+  // ── Toast ──
   function toast(msg) {
     let t = document.querySelector('.toast');
     if (!t) {
@@ -397,6 +552,9 @@
     clearTimeout(t._timer);
     t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
   }
+
+  // 初始化
+  renderProducts('all');
 </script>
 </body>
 </html>
