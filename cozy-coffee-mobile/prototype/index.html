@@ -81,11 +81,29 @@
     color:var(--muted); opacity:.4;
   }
 
+  /* ── 第一屏容器 + 向下滚动提示 ── */
+  .screen-1 {
+    position:relative;
+    height:100vh;
+    display:flex; flex-direction:column;
+  }
+  .scroll-hint {
+    position:absolute; bottom:64px; left:50%;
+    transform:translateX(-50%);
+    font-size:20px; line-height:1; color:var(--muted); opacity:.65;
+    pointer-events:none;
+    animation:hint-bounce 1.8s ease-in-out infinite;
+  }
+  @keyframes hint-bounce {
+    0%,100% { transform:translate(-50%,0); }
+    50% { transform:translate(-50%,6px); }
+  }
+
   /* ═══════════════════════════════════════
      SERVICE AREA — 30%
      ═══════════════════════════════════════ */
   .service {
-    padding:0 20px; height:30vh;
+    padding:0 20px; flex:1;
     display:flex; flex-direction:column; justify-content:center;
     background:var(--bg);
   }
@@ -130,6 +148,60 @@
   }
   .entry-label {
     font-size:10px; font-weight:400; letter-spacing:.04em;
+  }
+
+  /* ═══════════════════════════════════════
+     ORIGIN ARCHIVE — 八个产区色块
+     ═══════════════════════════════════════ */
+  .origin-archive {
+    padding:56px 6px 40px;
+    background:var(--bg);
+  }
+  .origin-head { margin-bottom:48px; padding:0 8px; text-align:center; }
+  .origin-label {
+    display:block;
+    font-size:11px; font-weight:700; letter-spacing:.14em; color:var(--muted);
+  }
+  .origin-title {
+    display:block; margin-top:10px;
+    font-family:var(--serif); font-size:26px; font-weight:600; color:var(--ink);
+  }
+  .origin-sub {
+    display:block; margin-top:6px;
+    font-size:13px; color:var(--muted);
+  }
+  .origin-scatter {
+    position:relative;
+    width:100%; height:290px;
+    padding:16px 12px 4px;
+    box-sizing:content-box;
+  }
+  .scatter-item {
+    position:absolute;
+    display:flex; flex-direction:column; align-items:center; gap:5px;
+    transform:translate(-50%,-50%);
+  }
+  .silhouette {
+    opacity:.78;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.05) 0.5px, transparent 0.5px),
+      radial-gradient(rgba(255,255,255,0.08) 0.8px, transparent 0.8px);
+    background-size:3px 3px, 5px 5px;
+    background-position:0 0, 2px 1px;
+  }
+  .scatter-item.em { z-index:1; }
+  .scatter-item.em .scatter-name { color:#753A22; font-size:11px; letter-spacing:.12em; }
+  .scatter-name {
+    color:var(--ink); font-size:10px; font-weight:700; letter-spacing:.08em;
+    white-space:nowrap;
+  }
+  .scatter-flavor {
+    color:var(--muted); font-size:9px;
+    white-space:nowrap;
+  }
+  .origin-foot { margin-top:28px; text-align:center; }
+  .origin-cta {
+    color:#753A22; font-size:13px; font-weight:650; cursor:pointer;
   }
 
   /* ═══════════════════════════════════════
@@ -222,51 +294,111 @@
 <body>
 <div class="page">
 
-  <!-- ═══ HERO ═══ -->
-  <section class="hero">
-    <img class="hero-img" src="assets/coffee-hero.jpg" alt="Yunnan Natural coffee" />
-    <div class="hero-copy">
-      <span class="hero-kicker">COZY COFFEE</span>
-      <span class="hero-cn">一杯咖啡</span>
-      <span class="hero-cn" style="margin-top:20px;font-size:22px;">一段安静时光</span>
-      <span class="hero-en">A quiet moment with coffee</span>
-    </div>
+  <!-- ═══ 第一屏：Hero + 服务入口 ═══ -->
+  <section class="screen-1">
+    <section class="hero">
+      <img class="hero-img" src="assets/coffee-hero.jpg" alt="Yunnan Natural coffee" />
+      <div class="hero-copy">
+        <span class="hero-kicker">COZY COFFEE</span>
+        <span class="hero-cn">一杯咖啡</span>
+        <span class="hero-cn" style="margin-top:20px;font-size:22px;">一段安静时光</span>
+        <span class="hero-en">A quiet moment with coffee</span>
+      </div>
+    </section>
+
+    <section class="service">
+      <div class="pickup-row">
+        <div class="pickup-half" onclick="goMenu()">
+          <span class="pickup-cn">自提</span>
+          <span class="pickup-en">PICK UP</span>
+        </div>
+        <div class="pickup-divider"></div>
+        <div class="pickup-half" onclick="goMenu()">
+          <span class="pickup-cn">外送</span>
+          <span class="pickup-en">DELIVERY</span>
+        </div>
+      </div>
+      <div class="entry-row">
+        <div class="entry-item" onclick="goPage('积分商城','/pages/mall/index')">
+          <span class="entry-icon">◇</span>
+          <span class="entry-label">积分商城</span>
+        </div>
+        <div class="entry-item" onclick="goPage('每日签到','/pages/signin/index')">
+          <span class="entry-icon">☀</span>
+          <span class="entry-label">每日签到</span>
+        </div>
+        <div class="entry-item" onclick="goPage('会员权益','/pages/benefits/index')">
+          <span class="entry-icon">◉</span>
+          <span class="entry-label">会员权益</span>
+        </div>
+        <div class="entry-item" onclick="goPage('门店信息','/pages/store/list')">
+          <span class="entry-icon">□</span>
+          <span class="entry-label">门店信息</span>
+        </div>
+        <div class="entry-item" onclick="goPage('关于我们','/pages/about/index')">
+          <span class="entry-icon">△</span>
+          <span class="entry-label">关于我们</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 向下滚动提示 -->
+    <span class="scroll-hint">⌄</span>
   </section>
 
-  <!-- ═══ SERVICE ═══ -->
-  <section class="service">
-    <div class="pickup-row">
-      <div class="pickup-half" onclick="goMenu()">
-        <span class="pickup-cn">自提</span>
-        <span class="pickup-en">PICK UP</span>
+  <!-- ═══ 第二屏：Origin Archive — 八个产区色块 ═══ -->
+  <section class="origin-archive">
+    <div class="origin-head">
+      <span class="origin-label">ORIGIN ARCHIVE</span>
+      <span class="origin-title">风味从土地开始</span>
+      <span class="origin-sub">来自世界的八种风味，在杭州相遇</span>
+    </div>
+
+    <div class="origin-scatter">
+      <div class="scatter-item" style="left:47%;top:13%;">
+        <div class="silhouette" style="background-color:#D8CBB8;clip-path:polygon(40% 0,65% 3%,90% 8%,100% 18%,95% 35%,78% 55%,55% 72%,30% 100%,15% 88%,5% 62%,0 38%,8% 18%,18% 5%);width:45px;height:40px;"></div>
+        <span class="scatter-name">ETHIOPIA</span>
+        <span class="scatter-flavor">花香 · 柑橘</span>
       </div>
-      <div class="pickup-divider"></div>
-      <div class="pickup-half" onclick="goMenu()">
-        <span class="pickup-cn">外送</span>
-        <span class="pickup-en">DELIVERY</span>
+      <div class="scatter-item" style="left:15%;top:31%;">
+        <div class="silhouette" style="background-color:#D8C1B5;clip-path:polygon(30% 0,55% 2%,78% 8%,100% 22%,88% 45%,70% 60%,55% 82%,35% 100%,15% 85%,5% 58%,0 32%,8% 12%);width:39px;height:35px;"></div>
+        <span class="scatter-name">KENYA</span>
+        <span class="scatter-flavor">莓果 · 明亮</span>
+      </div>
+      <div class="scatter-item" style="left:79%;top:27%;">
+        <div class="silhouette" style="background-color:#B8AD98;clip-path:polygon(38% 0,62% 2%,80% 8%,90% 16%,72% 28%,65% 42%,78% 62%,68% 80%,52% 100%,30% 88%,15% 65%,8% 40%,12% 18%,22% 5%);width:32px;height:44px;"></div>
+        <span class="scatter-name">COLOMBIA</span>
+        <span class="scatter-flavor">焦糖 · 均衡</span>
+      </div>
+      <div class="scatter-item em" style="left:47%;top:53%;">
+        <div class="silhouette" style="background-color:#753A22;clip-path:polygon(30% 0,55% 3%,80% 6%,100% 12%,95% 28%,85% 42%,72% 58%,55% 78%,40% 100%,22% 90%,8% 68%,2% 42%,5% 20%,15% 5%);width:50px;height:42px;"></div>
+        <span class="scatter-name">YUNNAN</span>
+        <span class="scatter-flavor">茶感 · 坚果</span>
+      </div>
+      <div class="scatter-item" style="left:13%;top:65%;">
+        <div class="silhouette" style="background-color:#C9B99A;clip-path:polygon(8% 5%,30% 0,55% 2%,78% 8%,100% 22%,95% 48%,82% 68%,58% 100%,32% 85%,12% 58%,2% 30%,4% 12%);width:50px;height:34px;"></div>
+        <span class="scatter-name">BRAZIL</span>
+        <span class="scatter-flavor">坚果 · 巧克力</span>
+      </div>
+      <div class="scatter-item" style="left:81%;top:63%;">
+        <div class="silhouette" style="background-color:#AAB4B5;clip-path:polygon(5% 25%,20% 8%,42% 0,62% 8%,80% 5%,100% 18%,92% 45%,72% 65%,50% 100%,28% 85%,10% 65%,2% 40%);width:48px;height:25px;"></div>
+        <span class="scatter-name">INDONESIA</span>
+        <span class="scatter-flavor">草本 · 木质</span>
+      </div>
+      <div class="scatter-item" style="left:27%;top:85%;">
+        <div class="silhouette" style="background-color:#B4BEAA;clip-path:polygon(15% 0,45% 5%,75% 8%,100% 22%,88% 48%,62% 68%,35% 100%,12% 85%,2% 55%,5% 25%);width:34px;height:30px;"></div>
+        <span class="scatter-name">GUATEMALA</span>
+        <span class="scatter-flavor">香料 · 坚果</span>
+      </div>
+      <div class="scatter-item" style="left:67%;top:87%;">
+        <div class="silhouette" style="background-color:#D6C3A8;clip-path:polygon(2% 25%,18% 5%,40% 0,62% 10%,82% 8%,100% 25%,92% 55%,72% 80%,48% 100%,22% 82%,8% 58%,3% 38%);width:39px;height:19px;"></div>
+        <span class="scatter-name">PANAMA</span>
+        <span class="scatter-flavor">花香 · 茶感</span>
       </div>
     </div>
-    <div class="entry-row">
-      <div class="entry-item" onclick="goPage('积分商城','/pages/mall/index')">
-        <span class="entry-icon">◇</span>
-        <span class="entry-label">积分商城</span>
-      </div>
-      <div class="entry-item" onclick="goPage('每日签到','/pages/signin/index')">
-        <span class="entry-icon">☀</span>
-        <span class="entry-label">每日签到</span>
-      </div>
-      <div class="entry-item" onclick="goPage('会员权益','/pages/benefits/index')">
-        <span class="entry-icon">◉</span>
-        <span class="entry-label">会员权益</span>
-      </div>
-      <div class="entry-item" onclick="goPage('门店信息','/pages/store/list')">
-        <span class="entry-icon">□</span>
-        <span class="entry-label">门店信息</span>
-      </div>
-      <div class="entry-item" onclick="goPage('关于我们','/pages/about/index')">
-        <span class="entry-icon">△</span>
-        <span class="entry-label">关于我们</span>
-      </div>
+
+    <div class="origin-foot">
+      <span class="origin-cta" onclick="toast('探索 8 个产区')">探索 8 个产区 →</span>
     </div>
   </section>
 
