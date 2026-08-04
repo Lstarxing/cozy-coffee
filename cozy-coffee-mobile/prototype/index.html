@@ -26,7 +26,13 @@
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
 
-  .page { min-height:100vh; background:var(--bg); }
+  .page {
+    height:100vh;
+    overflow-y:auto;
+    overscroll-behavior-y:none;
+    background:var(--bg);
+    scroll-snap-type:y mandatory;
+  }
 
   /* ═══════════════════════════════════════
      HERO
@@ -85,7 +91,10 @@
   .screen-1 {
     position:relative;
     height:100vh;
+    overflow:hidden;
     display:flex; flex-direction:column;
+    scroll-snap-align:start;
+    scroll-snap-stop:always;
   }
   .scroll-hint {
     position:absolute; bottom:64px; left:50%;
@@ -103,8 +112,9 @@
      SERVICE AREA — 30%
      ═══════════════════════════════════════ */
   .service {
-    padding:0 20px; flex:1;
-    display:flex; flex-direction:column; justify-content:center;
+    padding:32px 20px 0;
+    flex:1;
+    display:flex; flex-direction:column; justify-content:flex-start;
     background:var(--bg);
   }
 
@@ -154,8 +164,12 @@
      ORIGIN ARCHIVE — 八个产区色块
      ═══════════════════════════════════════ */
   .origin-archive {
+    min-height:100vh;
     padding:56px 6px 40px;
     background:var(--bg);
+    display:flex; flex-direction:column; justify-content:center;
+    scroll-snap-align:start;
+    scroll-snap-stop:always;
   }
   .origin-head { margin-bottom:48px; padding:0 8px; text-align:center; }
   .origin-label {
