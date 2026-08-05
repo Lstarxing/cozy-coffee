@@ -60,28 +60,13 @@
   }
   .store-more { color:var(--muted); }
 
-  /* ── 主体：左分类右商品 ── */
-  .menu-body { display:flex; height:calc(100vh - 118px); overflow:hidden; }
-  .category-sidebar {
-    width:90px; flex:none; height:100%; overflow-y:auto;
-    background:var(--surface);
-  }
-  .category-sidebar::-webkit-scrollbar { display:none; }
-  .category-item {
-    padding:16px 8px; text-align:center;
-    font-size:13px; color:var(--muted); cursor:pointer;
-  }
-  .category-item.active { background:var(--card); color:var(--primary); font-weight:700; }
-  .category-item.active::before {
-    content:''; display:block; width:3px; height:100%;
-    background:var(--primary); margin-left:-8px;
-  }
-
-  .product-scroll {
-    flex:1; min-width:0; height:100%; overflow-y:auto;
+  /* ── 主体：全宽 editorial 滚动 ── */
+  .menu-content {
+    height:calc(100vh - 118px);
+    overflow-y:auto;
     background:var(--card); padding-bottom:110px;
   }
-  .product-scroll::-webkit-scrollbar { display:none; }
+  .menu-content::-webkit-scrollbar { display:none; }
   /* Table of Contents — Editorial nav */
   .category-nav {
     position:sticky; top:0; z-index:6;
@@ -127,19 +112,19 @@
     font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink);
   }
   .product-item {
-    display:flex; gap:12px; padding:14px 16px;
+    display:flex; gap:14px; padding:18px 16px;
     border-bottom:1px solid var(--border);
   }
   .product-image {
-    flex:none; width:84px; height:84px; border-radius:10px;
+    flex:none; width:96px; height:96px; border-radius:10px;
     background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
   }
   .product-info { flex:1; min-width:0; display:flex; flex-direction:column; }
   .product-name {
-    font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink);
+    font-family:var(--serif); font-size:17px; font-weight:600; color:var(--ink);
   }
   .product-desc {
-    margin-top:4px; font-size:11px; line-height:1.5; color:var(--muted);
+    margin-top:4px; font-size:12px; line-height:1.5; color:var(--muted);
   }
   .product-foot {
     margin-top:auto; display:flex; justify-content:space-between; align-items:center;
@@ -549,11 +534,8 @@
     </div>
   </div>
 
-  <!-- 菜单主体 -->
-  <div class="menu-body">
-    <div class="category-sidebar" id="categorySidebar"></div>
-    <div class="product-scroll" id="productScroll"></div>
-  </div>
+  <!-- 主体：全宽 editorial 滚动 -->
+  <div class="menu-content" id="menuContent"></div>
 
   <!-- 底部购物车条 -->
   <div class="cart-bar">
@@ -704,16 +686,7 @@
     ]
   };
 
-  let currentCat = 0;
-
-  function renderSidebar() {
-    document.getElementById('categorySidebar').innerHTML = categories.map((c,i) =>
-      `<div class="category-item ${i === currentCat ? 'active' : ''}" onclick="selectCategory(${i})">${c.name}</div>`
-    ).join('');
-    // sidebar active item 滚动到可见
-    const activeItem = document.querySelector('.category-item.active');
-    if (activeItem) activeItem.scrollIntoView({block:'nearest', behavior:'smooth'});
-  }
+  let activeIdx = 0;
 
   function renderAllProducts() {
     const navLinks = categories.map((cat, i) =>
@@ -743,29 +716,27 @@
             </div>`).join('')}
         </div>`;
     }).join('');
-    document.getElementById('productScroll').innerHTML = navHtml + sectionsHtml;
+    document.getElementById('menuContent').innerHTML = navHtml + sectionsHtml;
 
-    // 挂载 IntersectionObserver
     mountScrollSpy();
   }
 
-  const NAV_HEIGHT = 46; // sticky nav 高度，section 滚动偏移用
-  let isClickScrolling = false;
-  let clickTimeout;
+  const NAV_HEIGHT = 46;
 
   function setActiveCategory(idx) {
-    if (idx === currentCat) return;
-    currentCat = idx;
-    // 横向 nav
+    if (idx === activeIdx) return;
+    activeIdx = idx;
     document.querySelectorAll('.cat-nav-link').forEach((link, i) => {
       link.classList.toggle('active', i === idx);
       if (i === idx) link.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
     });
-    // 左侧 sidebar
-    renderSidebar();
   }
 
+  let isClickScrolling = false;
+  let clickTimeout;
+
   function mountScrollSpy() {
+    const scrollEl = document.getElementById('menuContent');
     const observer = new IntersectionObserver((entries) => {
       if (isClickScrolling) return;
       let maxRatio = 0, maxIdx = 0;
@@ -777,7 +748,7 @@
       });
       if (maxRatio > 0) setActiveCategory(maxIdx);
     }, {
-      root: document.getElementById('productScroll'),
+      root: scrollEl,
       rootMargin: `-${NAV_HEIGHT}px 0px 0px 0px`,
       threshold: [0, 0.1, 0.25, 0.5]
     });
@@ -791,9 +762,9 @@
     clearTimeout(clickTimeout);
     clickTimeout = setTimeout(() => { isClickScrolling = false; }, 900);
 
+    const scrollEl = document.getElementById('menuContent');
     const section = document.querySelector(`.category-section[data-cat-index="${i}"]`);
     if (section) {
-      const scrollEl = document.getElementById('productScroll');
       const containerTop = scrollEl.getBoundingClientRect().top;
       const sectionTop = section.getBoundingClientRect().top;
       const target = scrollEl.scrollTop + sectionTop - containerTop - NAV_HEIGHT;
@@ -802,13 +773,12 @@
   }
 
   // 横向 nav 点击
-  document.getElementById('productScroll').addEventListener('click', (e) => {
+  document.getElementById('menuContent').addEventListener('click', (e) => {
     const link = e.target.closest('.cat-nav-link');
     if (!link) return;
     selectCategory(parseInt(link.dataset.target));
-  }, true /* capture phase, before spec-option handler */);
+  }, true);
 
-  renderSidebar();
   renderAllProducts();
 
   function goTab(href) {
