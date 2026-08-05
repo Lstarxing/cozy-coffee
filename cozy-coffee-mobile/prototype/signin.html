@@ -17,8 +17,8 @@
     --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
     --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+    --cask:#3D2A20;
   }
-
 
   .back-btn {
     display:inline-flex; align-items:center; justify-content:center;
@@ -35,112 +35,188 @@
 
   .page { padding:20px 20px 120px; }
 
-  /* ── 积分卡片 ── */
-  .points-card {
-    padding:26px 24px;
-    border-radius:12px;
-    background:linear-gradient(135deg,#2C1E18,#3D2A20);
+  /* ── 会员区 ── */
+  .member-hero {
+    padding:32px 24px 28px;
+    border-radius:14px;
+    background:var(--cask);
     color:#fff;
   }
-  .points-label { display:block; font-size:12px; letter-spacing:.1em; color:rgba(255,255,255,.6); }
-  .points-value { display:block; margin-top:4px; font-size:34px; font-weight:700; }
+  .member-badge {
+    display:inline-block; padding:4px 12px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.28);
+    font-size:10px; font-weight:700; letter-spacing:.12em;
+    color:rgba(255,255,255,.75);
+  }
+  .member-greeting {
+    display:block; margin-top:20px;
+    font-family:var(--serif); font-size:24px; font-weight:500;
+    letter-spacing:.04em;
+  }
+  .points-display { margin-top:18px; display:flex; align-items:baseline; gap:8px; }
+  .points-number {
+    font-size:40px; font-weight:700; line-height:1;
+  }
+  .points-unit {
+    font-size:15px; color:rgba(255,255,255,.6);
+    letter-spacing:.06em;
+  }
 
-  /* ── 签到日历 ── */
-  .signin-calendar {
-    margin-top:16px; padding:24px 20px;
-    border-radius:12px; background:var(--card);
+  /* 进度条 */
+  .level-progress { margin-top:24px; }
+  .progress-bar {
+    height:3px; border-radius:2px;
+    background:rgba(255,255,255,.14);
+    overflow:hidden;
   }
-  .calendar-header {
-    display:flex; justify-content:space-between; align-items:baseline; gap:12px;
-    margin-bottom:20px;
+  .progress-fill {
+    height:100%; border-radius:2px;
+    background:rgba(255,255,255,.6);
+    transition:width .6s ease;
   }
-  .calendar-title {
-    font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink);
+  .progress-text {
+    display:block; margin-top:10px;
+    font-size:12px; color:rgba(255,255,255,.55);
+    letter-spacing:.04em;
   }
-  .calendar-hint { font-size:12px; color:var(--muted); }
 
-  .calendar-days {
-    display:grid; grid-template-columns:repeat(7,1fr); gap:8px;
+  /* ── 签到区 ── */
+  .checkin-section {
+    margin-top:20px; padding:28px 24px;
+    border-radius:14px; background:var(--card);
   }
-  .day-item { display:flex; flex-direction:column; align-items:center; gap:6px; }
-  .day-circle {
-    width:36px; height:36px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    font-size:14px; font-weight:600;
-    border:1px solid var(--border); color:var(--muted);
+  .checkin-header {
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:22px;
+  }
+  .checkin-title {
+    font-family:var(--serif); font-size:19px; font-weight:600; color:var(--ink);
+  }
+  .checkin-streak {
+    font-size:12px; color:var(--muted);
+    letter-spacing:.04em;
+  }
+  .checkin-streak em {
+    font-style:normal; font-weight:700; color:var(--primary);
+  }
+
+  .strip-days {
+    display:flex; gap:8px;
+  }
+  .strip-day {
+    flex:1; aspect-ratio:3/4;
+    border-radius:10px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+    font-size:13px; font-weight:600; color:var(--muted);
     background:var(--surface);
+    transition:background .25s, color .25s;
   }
-  .day-circle.signed {
-    background:var(--accent); border-color:var(--accent); color:#fff;
-  }
-  .day-circle.today {
-    background:var(--primary); border-color:var(--primary); color:#fff;
-  }
-  .day-circle .day-icon.gift { font-size:11px; }
-  .day-points { font-size:10px; color:var(--muted); }
-  .day-label { font-size:10px; color:var(--muted); }
+  .strip-day .day-label { font-size:11px; font-weight:500; }
+  .strip-day .day-pts { font-size:10px; font-weight:400; opacity:.6; }
 
-  /* ── 签到按钮 ── */
-  .signin-action { margin-top:22px; text-align:center; }
-  .signin-btn {
-    height:46px; display:flex; align-items:center; justify-content:center;
-    border-radius:8px;
+  .strip-day.signed {
+    background:var(--accent); color:#fff;
+  }
+  .strip-day.signed .day-pts { opacity:.8; }
+  .strip-day.today {
+    background:var(--primary); color:#fff;
+    box-shadow:0 0 0 3px rgba(117,58,34,.12);
+  }
+  .strip-day.today .day-pts { opacity:.8; }
+  .strip-day.gift {
+    background:var(--surface);
+    border:1px dashed var(--border);
+    color:var(--muted);
+  }
+  .strip-day.gift.signed,
+  .strip-day.gift.today {
+    background:var(--accent); color:#fff; border-color:var(--accent);
+    border-style:solid;
+  }
+
+  /* 签到按钮 */
+  .checkin-action { margin-top:24px; text-align:center; }
+  .checkin-btn {
+    height:48px; display:flex; align-items:center; justify-content:center;
+    border-radius:10px;
     background:var(--primary); color:#fff;
     font-size:15px; font-weight:600; cursor:pointer;
+    transition:background .25s;
   }
-  .signin-btn.disabled { background:var(--border); color:var(--muted); }
-  .signin-hint {
-    display:block; margin-top:10px; font-size:12px; color:var(--muted);
+  .checkin-btn:active { background:#5E2E1A; }
+  .checkin-btn.done {
+    background:var(--border); color:var(--muted); cursor:default;
   }
-  .highlight { color:var(--primary); font-weight:700; }
+  .checkin-btn.done:active { background:var(--border); }
+  .checkin-hint {
+    display:block; margin-top:12px;
+    font-size:12px; color:var(--muted);
+    letter-spacing:.04em;
+  }
+  .checkin-hint em {
+    font-style:normal; color:var(--primary); font-weight:700;
+  }
 
-  /* ── 规则 ── */
-  .rules-section {
-    margin-top:16px; padding:20px;
-    border:1px solid var(--border); border-radius:12px;
+  /* ── 权益说明（Editorial） ── */
+  .benefits-section {
+    margin-top:20px; padding:28px 24px;
+    border-radius:14px; background:var(--card);
   }
-  .rules-title {
-    font-family:var(--serif); font-size:17px; font-weight:600; color:var(--ink);
-    margin-bottom:14px;
+  .benefits-title {
+    display:block; margin-bottom:22px;
+    font-family:var(--serif); font-size:19px; font-weight:600; color:var(--ink);
   }
-  .rule-item { display:flex; gap:8px; margin-bottom:10px; }
-  .rule-item:last-child { margin-bottom:0; }
-  .rule-dot { color:var(--primary); }
-  .rule-text { font-size:13px; line-height:1.6; color:var(--muted); }
+  .benefit-card {
+    padding:16px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .benefit-card:last-child { border-bottom:0; padding-bottom:0; }
+  .benefit-head {
+    display:block;
+    font-size:14px; font-weight:600; color:var(--ink);
+    letter-spacing:.04em;
+  }
+  .benefit-desc {
+    display:block; margin-top:8px;
+    font-size:13px; line-height:1.7; color:var(--muted);
+  }
 
   /* ── 成功弹窗 ── */
   .modal-mask {
     position:fixed; inset:0; z-index:30;
     background:rgba(28,20,14,.5);
-    display:flex; align-items:center; justify-content:center;
+    display:none; align-items:center; justify-content:center;
   }
+  .modal-mask.open { display:flex; }
   .success-modal {
-    width:280px; padding:32px 24px;
+    width:280px; padding:36px 28px;
     text-align:center;
-    background:var(--surface); border-radius:16px;
+    background:var(--card); border-radius:14px;
   }
   .success-icon {
     width:56px; height:56px; margin:0 auto;
     display:flex; align-items:center; justify-content:center;
-    border-radius:50%; background:var(--accent); color:#fff;
+    border-radius:12px; background:var(--accent); color:#fff;
     font-size:26px;
   }
   .success-title {
-    display:block; margin-top:16px;
-    font-family:var(--serif); font-size:20px; font-weight:600;
+    display:block; margin-top:20px;
+    font-family:var(--serif); font-size:21px; font-weight:600;
+    color:var(--ink);
+  }
+  .success-sub {
+    display:block; margin-top:6px;
+    font-size:13px; color:var(--muted);
   }
   .success-points {
-    display:block; margin-top:8px;
-    font-size:22px; font-weight:700; color:var(--primary);
-  }
-  .success-hint {
-    display:block; margin-top:8px;
-    font-size:12px; line-height:1.6; color:var(--muted);
+    display:block; margin-top:14px;
+    font-size:24px; font-weight:700; color:var(--primary);
   }
   .success-btn {
-    margin-top:20px; height:42px;
+    margin-top:22px; height:44px;
     display:flex; align-items:center; justify-content:center;
-    border-radius:8px; background:var(--primary); color:#fff;
+    border-radius:10px; background:var(--primary); color:#fff;
     font-size:14px; font-weight:600; cursor:pointer;
   }
 
@@ -156,90 +232,112 @@
 </head>
 <body>
 
-  <div class="page">
+<div class="page">
 
-    <a class="back-btn" href="index.html">‹</a>
+  <a class="back-btn" href="index.html">‹</a>
 
-    <!-- 积分卡片 -->
-    <div class="points-card">
-      <span class="points-label">当前积分</span>
-      <span class="points-value">3,280</span>
+  <!-- 会员区 -->
+  <div class="member-hero">
+    <span class="member-badge">SILVER</span>
+    <span class="member-greeting">下午好，咖啡爱好者</span>
+    <div class="points-display">
+      <span class="points-number">3,280</span>
+      <span class="points-unit">积分</span>
     </div>
-
-    <!-- 签到日历 -->
-    <div class="signin-calendar">
-      <div class="calendar-header">
-        <span class="calendar-title">每日签到领积分</span>
-        <span class="calendar-hint">已连续签到 3 天</span>
+    <div class="level-progress">
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:62%"></div>
       </div>
-      <div class="calendar-days" id="dayGrid"></div>
-      <div class="signin-action">
-        <div class="signin-btn" id="signinBtn" onclick="doSignin()">立即签到</div>
-        <span class="signin-hint" id="signinHint">签到可获得 <span class="highlight">2</span> 积分</span>
-      </div>
-    </div>
-
-    <!-- 规则 -->
-    <div class="rules-section">
-      <div class="rules-title">签到规则</div>
-      <div class="rule-item"><span class="rule-dot">•</span><span class="rule-text">每日签到固定获得 2 积分</span></div>
-      <div class="rule-item"><span class="rule-dot">•</span><span class="rule-text">连续签到 7 天赠送满 35 减 10 元优惠券，有效期 3 天</span></div>
-      <div class="rule-item"><span class="rule-dot">•</span><span class="rule-text">中断签到后，连续天数将重新计算</span></div>
-      <div class="rule-item"><span class="rule-dot">•</span><span class="rule-text">签到积分有效期 365 天，以积分流水和券包到账结果为准</span></div>
+      <span class="progress-text">距离黄金会员还需 380 EXP</span>
     </div>
   </div>
 
-  <!-- 成功弹窗 -->
-  <div class="modal-mask" id="successModal" style="display:none;" onclick="closeModal()">
-    <div class="success-modal" onclick="event.stopPropagation()">
-      <div class="success-icon">✓</div>
-      <span class="success-title">签到成功</span>
-      <span class="success-points">+2 积分</span>
-      <span class="success-hint" id="successHint">已连续签到 4 天</span>
-      <div class="success-btn" onclick="closeModal()">知道了</div>
+  <!-- 签到区 -->
+  <div class="checkin-section">
+    <div class="checkin-header">
+      <span class="checkin-title">每日签到仪式</span>
+      <span class="checkin-streak">已连续 <em>3</em> 天</span>
+    </div>
+    <div class="strip-days" id="dayGrid"></div>
+    <div class="checkin-action">
+      <div class="checkin-btn" id="signinBtn" onclick="doSignin()">立即签到</div>
+      <span class="checkin-hint" id="signinHint">今日签到可获得 <em>2</em> 积分</span>
     </div>
   </div>
+
+  <!-- 权益说明 -->
+  <div class="benefits-section">
+    <span class="benefits-title">积分说明</span>
+    <div class="benefit-card">
+      <span class="benefit-head">每日签到</span>
+      <span class="benefit-desc">每签到一次固定获得 2 积分。连续签到 7 天额外赠送满 35 减 10 元优惠券，有效期 3 天。</span>
+    </div>
+    <div class="benefit-card">
+      <span class="benefit-head">连续签到</span>
+      <span class="benefit-desc">中断签到后连续天数重新计算。坚持每天来打卡，培养你的咖啡仪式感。</span>
+    </div>
+    <div class="benefit-card">
+      <span class="benefit-head">积分使用</span>
+      <span class="benefit-desc">签到积分有效期 365 天，可在积分商城兑换优惠券、限量周边与咖啡礼盒。</span>
+    </div>
+    <div class="benefit-card">
+      <span class="benefit-head">会员成长</span>
+      <span class="benefit-desc">消费 1 元 = 1 积分 = 1 EXP，积分累积同步提升会员等级，解锁更多专属权益。</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- 成功弹窗 -->
+<div class="modal-mask" id="successModal" onclick="closeModal()">
+  <div class="success-modal" onclick="event.stopPropagation()">
+    <div class="success-icon">✓</div>
+    <span class="success-title">今日签到完成</span>
+    <span class="success-sub">一杯好咖啡，从此刻开始</span>
+    <span class="success-points">+2 积分</span>
+    <div class="success-btn" onclick="closeModal()">知道了</div>
+  </div>
+</div>
 
 <script>
-  // 7 天签到进度：前 3 天已签，第 4 天今天
-  const consecutive = 3;
-  const dayData = [
-    { points:2, label:'周一' }, { points:2, label:'周二' }, { points:2, label:'周三' },
-    { points:2, label:'周四' }, { points:2, label:'周五' }, { points:2, label:'周六' },
-    { points:10, label:'周日', gift:true }
-  ];
+  const DAY_LABELS = ['一','二','三','四','五','六','日'];
+  const DAY_POINTS = [2,2,2,2,2,2,10];
+  let consecutive = 3; // 已连续签到 3 天
+  let signed = false;
 
   function renderDays() {
     const grid = document.getElementById('dayGrid');
-    grid.innerHTML = dayData.map((d, i) => {
-      let cls = 'day-circle';
-      let content;
-      if (i < consecutive) { cls += ' signed'; content = '✓'; }
-      else if (i === consecutive) { cls += ' today'; content = String(i+1); }
-      else { content = String(i+1); }
-      const icon = i === 6 && i >= consecutive ? '<span class="day-icon gift">券</span>' : `<span class="day-icon">${content}</span>`;
+    grid.innerHTML = DAY_LABELS.map((label, i) => {
+      let cls = 'strip-day';
+      if (i < consecutive) cls += ' signed';
+      else if (i === consecutive) cls += ' today';
+      if (i === 6) cls += ' gift';
       return `
-        <div class="day-item">
-          <div class="${cls}">${icon}</div>
-          <span class="day-points">+${d.points}</span>
-          <span class="day-label">${d.label}</span>
+        <div class="${cls}">
+          <span class="day-label">${label}</span>
+          <span class="day-pts">+${DAY_POINTS[i]}</span>
         </div>`;
     }).join('');
   }
   renderDays();
 
-  let signed = false;
   function doSignin() {
     if (signed) return;
     signed = true;
     const btn = document.getElementById('signinBtn');
     btn.textContent = '今日已签到';
-    btn.classList.add('disabled');
-    document.getElementById('signinHint').innerHTML = '明天签到可获得 <span class="highlight">2</span> 积分';
-    document.getElementById('successModal').style.display = 'flex';
+    btn.classList.add('done');
+    document.getElementById('signinHint').innerHTML = '明天签到可获得 <em>2</em> 积分';
+    // update strip: mark today as signed
+    const days = document.querySelectorAll('.strip-day');
+    days[consecutive].classList.remove('today');
+    days[consecutive].classList.add('signed');
+
+    document.getElementById('successModal').classList.add('open');
   }
+
   function closeModal() {
-    document.getElementById('successModal').style.display = 'none';
+    document.getElementById('successModal').classList.remove('open');
   }
 
   function toast(msg) {
