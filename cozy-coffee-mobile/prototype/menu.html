@@ -98,6 +98,28 @@
     font-family:var(--serif); font-size:13px; font-weight:600;
     color:var(--ink); letter-spacing:.06em;
   }
+  /* 横向分类导航 */
+  .category-nav {
+    position:sticky; top:0; z-index:6;
+    display:flex; flex-wrap:nowrap; overflow-x:auto;
+    background:var(--card);
+    border-bottom:1px solid var(--border);
+    padding:0 8px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .category-nav::-webkit-scrollbar { display:none; }
+  .cat-nav-link {
+    flex:0 0 auto; padding:14px 14px;
+    font-size:13px; color:var(--muted); cursor:pointer;
+    white-space:nowrap; position:relative;
+    transition:color .25s;
+  }
+  .cat-nav-link.active { color:var(--ink); font-weight:600; }
+  .cat-nav-link.active::after {
+    content:''; position:absolute;
+    bottom:8px; left:14px; right:14px; height:2px;
+    background:var(--ink); border-radius:1px;
+  }
   .group-heading { padding:16px 16px 6px; }
   .group-title {
     display:block; font-family:var(--serif); font-size:13px; font-weight:600; color:var(--ink);
@@ -682,7 +704,6 @@
   };
 
   let currentCat = 0;
-  let scrollSpyLock = false; // 防止程序化滚动触发互抢
 
   function renderSidebar() {
     document.getElementById('categorySidebar').innerHTML = categories.map((c,i) =>
@@ -694,11 +715,12 @@
   }
 
   function renderAllProducts() {
-    const navHtml = `
-      <div class="right-nav" id="rightNav">
-        <span class="right-nav-name" id="rightNavName">${categories[0].name}</span>
-      </div>`;
-    const sectionsHtml = categories.map((cat,i) => {
+    const navLinks = categories.map((cat, i) =>
+      `<span class="cat-nav-link${i === 0 ? ' active' : ''}" data-target="${i}">${cat.name}</span>`
+    ).join('');
+    const navHtml = `<div class="category-nav" id="categoryNav">${navLinks}</div>`;
+
+    const sectionsHtml = categories.map((cat, i) => {
       const list = products[cat.id] || [];
       return `
         <div class="category-section" data-cat-index="${i}">
@@ -720,53 +742,69 @@
         </div>`;
     }).join('');
     document.getElementById('productScroll').innerHTML = navHtml + sectionsHtml;
+
+    // 挂载 IntersectionObserver
+    mountScrollSpy();
   }
 
-  function updateRightNav(idx) {
-    document.getElementById('rightNavName').textContent = categories[idx].name;
-    // 静态标题位于 section.top + 16（padding）+ ~16（文字） ≈ section.top + 32
-    // nav 高 42px，所以 section.top < 10 时静态标题被 nav 遮挡，nav 显示
-    // section.top > 10 时静态标题完整可见，nav 隐藏避免重复
-    const section = document.querySelector(`.category-section[data-cat-index="${idx}"]`);
-    const containerTop = productScroll.getBoundingClientRect().top;
-    const sectionTop = section.getBoundingClientRect().top - containerTop;
-    const nav = document.getElementById('rightNav');
-    if (sectionTop > 10) nav.classList.add('fading');
-    else nav.classList.remove('fading');
+  const NAV_HEIGHT = 46; // sticky nav 高度，section 滚动偏移用
+  let isClickScrolling = false;
+  let clickTimeout;
+
+  function setActiveCategory(idx) {
+    if (idx === currentCat) return;
+    currentCat = idx;
+    // 横向 nav
+    document.querySelectorAll('.cat-nav-link').forEach((link, i) => {
+      link.classList.toggle('active', i === idx);
+      if (i === idx) link.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+    });
+    // 左侧 sidebar
+    renderSidebar();
+  }
+
+  function mountScrollSpy() {
+    const observer = new IntersectionObserver((entries) => {
+      if (isClickScrolling) return;
+      let maxRatio = 0, maxIdx = 0;
+      entries.forEach(entry => {
+        if (entry.intersectionRatio > maxRatio) {
+          maxRatio = entry.intersectionRatio;
+          maxIdx = parseInt(entry.target.dataset.catIndex);
+        }
+      });
+      if (maxRatio > 0) setActiveCategory(maxIdx);
+    }, {
+      root: document.getElementById('productScroll'),
+      rootMargin: `-${NAV_HEIGHT}px 0px 0px 0px`,
+      threshold: [0, 0.1, 0.25, 0.5]
+    });
+
+    document.querySelectorAll('.category-section').forEach(s => observer.observe(s));
   }
 
   function selectCategory(i) {
-    currentCat = i;
-    renderSidebar();
-    updateRightNav(i);
-    scrollSpyLock = true;
+    setActiveCategory(i);
+    isClickScrolling = true;
+    clearTimeout(clickTimeout);
+    clickTimeout = setTimeout(() => { isClickScrolling = false; }, 900);
+
     const section = document.querySelector(`.category-section[data-cat-index="${i}"]`);
     if (section) {
-      section.scrollIntoView({behavior:'smooth', block:'start'});
+      const scrollEl = document.getElementById('productScroll');
+      const containerTop = scrollEl.getBoundingClientRect().top;
+      const sectionTop = section.getBoundingClientRect().top;
+      const target = scrollEl.scrollTop + sectionTop - containerTop - NAV_HEIGHT;
+      scrollEl.scrollTo({ top: target, behavior: 'smooth' });
     }
-    setTimeout(() => { scrollSpyLock = false; }, 600);
   }
 
-  // scroll-spy
-  const productScroll = document.getElementById('productScroll');
-  productScroll.addEventListener('scroll', () => {
-    if (scrollSpyLock) return;
-    const containerTop = productScroll.getBoundingClientRect().top;
-    const sections = productScroll.querySelectorAll('.category-section');
-    let nearestIdx = 0, nearestDist = Infinity;
-    sections.forEach((sec, i) => {
-      const top = sec.getBoundingClientRect().top - containerTop;
-      if (top <= 80 && Math.abs(top) < nearestDist) {
-        nearestDist = Math.abs(top);
-        nearestIdx = i;
-      }
-    });
-    if (nearestIdx !== currentCat) {
-      currentCat = nearestIdx;
-      renderSidebar();
-      updateRightNav(nearestIdx);
-    }
-  });
+  // 横向 nav 点击
+  document.getElementById('productScroll').addEventListener('click', (e) => {
+    const link = e.target.closest('.cat-nav-link');
+    if (!link) return;
+    selectCategory(parseInt(link.dataset.target));
+  }, true /* capture phase, before spec-option handler */);
 
   renderSidebar();
   renderAllProducts();
