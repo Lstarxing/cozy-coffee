@@ -88,6 +88,11 @@
     background:var(--card);
     border-bottom:1px solid var(--border);
     text-align:left;
+    transition:opacity .2s ease;
+  }
+  .right-nav.fading {
+    opacity:0;
+    pointer-events:none;
   }
   .right-nav-name {
     font-family:var(--serif); font-size:13px; font-weight:600;
@@ -690,13 +695,16 @@
 
   function renderAllProducts() {
     const navHtml = `
-      <div class="right-nav">
+      <div class="right-nav" id="rightNav">
         <span class="right-nav-name" id="rightNavName">${categories[0].name}</span>
       </div>`;
     const sectionsHtml = categories.map((cat,i) => {
       const list = products[cat.id] || [];
       return `
         <div class="category-section" data-cat-index="${i}">
+          <div class="group-heading">
+            <span class="group-title">${cat.name}</span>
+          </div>
           ${list.map(p => `
             <div class="product-item">
               <div class="product-image"></div>
@@ -716,6 +724,15 @@
 
   function updateRightNav(idx) {
     document.getElementById('rightNavName').textContent = categories[idx].name;
+    // 静态标题位于 section.top + 16（padding）+ ~16（文字） ≈ section.top + 32
+    // nav 高 42px，所以 section.top < 10 时静态标题被 nav 遮挡，nav 显示
+    // section.top > 10 时静态标题完整可见，nav 隐藏避免重复
+    const section = document.querySelector(`.category-section[data-cat-index="${idx}"]`);
+    const containerTop = productScroll.getBoundingClientRect().top;
+    const sectionTop = section.getBoundingClientRect().top - containerTop;
+    const nav = document.getElementById('rightNav');
+    if (sectionTop > 10) nav.classList.add('fading');
+    else nav.classList.remove('fading');
   }
 
   function selectCategory(i) {
