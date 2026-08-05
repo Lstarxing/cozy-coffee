@@ -739,18 +739,15 @@
     const scrollEl = document.getElementById('menuContent');
     const observer = new IntersectionObserver((entries) => {
       if (isClickScrolling) return;
-      let maxRatio = 0, maxIdx = 0;
       entries.forEach(entry => {
-        if (entry.intersectionRatio > maxRatio) {
-          maxRatio = entry.intersectionRatio;
-          maxIdx = parseInt(entry.target.dataset.catIndex);
+        if (entry.isIntersecting) {
+          setActiveCategory(parseInt(entry.target.dataset.catIndex));
         }
       });
-      if (maxRatio > 0) setActiveCategory(maxIdx);
     }, {
       root: scrollEl,
       rootMargin: `-${NAV_HEIGHT}px 0px 0px 0px`,
-      threshold: [0, 0.1, 0.25, 0.5]
+      threshold: 0
     });
 
     document.querySelectorAll('.category-section').forEach(s => observer.observe(s));
