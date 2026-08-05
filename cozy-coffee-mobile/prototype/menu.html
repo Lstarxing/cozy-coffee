@@ -82,48 +82,49 @@
     background:var(--card); padding-bottom:110px;
   }
   .product-scroll::-webkit-scrollbar { display:none; }
-  .right-nav {
-    position:sticky; top:0; z-index:5;
-    padding:12px 20px;
-    background:var(--card);
-    border-bottom:1px solid var(--border);
-    text-align:left;
-    transition:opacity .2s ease;
-  }
-  .right-nav.fading {
-    opacity:0;
-    pointer-events:none;
-  }
-  .right-nav-name {
-    font-family:var(--serif); font-size:13px; font-weight:600;
-    color:var(--ink); letter-spacing:.06em;
-  }
-  /* 横向分类导航 */
+  /* Table of Contents — Editorial nav */
   .category-nav {
     position:sticky; top:0; z-index:6;
     display:flex; flex-wrap:nowrap; overflow-x:auto;
     background:var(--card);
     border-bottom:1px solid var(--border);
-    padding:0 8px;
+    height:46px; align-items:center;
+    padding:0 12px;
     -webkit-overflow-scrolling:touch;
   }
   .category-nav::-webkit-scrollbar { display:none; }
   .cat-nav-link {
-    flex:0 0 auto; padding:14px 14px;
-    font-size:13px; color:var(--muted); cursor:pointer;
-    white-space:nowrap; position:relative;
-    transition:color .25s;
+    flex:0 0 auto;
+    height:100%;
+    display:inline-flex; align-items:center;
+    padding:0 16px;
+    font-size:14px; color:var(--muted);
+    cursor:pointer; white-space:nowrap;
+    position:relative;
+    letter-spacing:.02em;
+    transition:color .25s ease;
   }
-  .cat-nav-link.active { color:var(--ink); font-weight:600; }
-  .cat-nav-link.active::after {
+  .cat-nav-link::after {
     content:''; position:absolute;
-    bottom:8px; left:14px; right:14px; height:2px;
-    background:var(--ink); border-radius:1px;
+    bottom:0; left:16px; right:16px; height:2px;
+    background:transparent; border-radius:1px;
+    transition:background .25s ease;
   }
-  .group-heading { padding:16px 16px 6px; }
+  .cat-nav-link.active {
+    color:var(--primary); font-weight:700;
+  }
+  .cat-nav-link.active::after {
+    background:var(--primary);
+  }
+  .group-heading { padding:32px 16px 12px; }
+  .group-sub {
+    display:block;
+    font-size:10px; font-weight:700; letter-spacing:.18em;
+    color:var(--muted);
+  }
   .group-title {
-    display:block; font-family:var(--serif); font-size:13px; font-weight:600; color:var(--ink);
-    letter-spacing:.06em;
+    display:block; margin-top:6px;
+    font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink);
   }
   .product-item {
     display:flex; gap:12px; padding:14px 16px;
@@ -639,13 +640,13 @@
 
 <script>
   const categories = [
-    { id:'espresso', name:'意式咖啡', desc:'浓缩基底，直接而有力量' },
-    { id:'coffee', name:'经典咖啡', desc:'熟悉风味，适合日常' },
-    { id:'latte', name:'拿铁系列', desc:'咖啡与奶的平衡' },
-    { id:'signature', name:'季节特调', desc:'随季节更新的门店表达' },
-    { id:'soe', name:'手冲精品', desc:'单一产地与清晰风味' },
-    { id:'bakery', name:'烘焙甜点', desc:'适合与咖啡一起享用' },
-    { id:'other', name:'其他', desc:'其他今日供应' }
+    { id:'espresso', name:'意式咖啡', en:'ESPRESSO' },
+    { id:'coffee', name:'经典咖啡', en:'CLASSIC COFFEE' },
+    { id:'latte', name:'拿铁系列', en:'LATTE' },
+    { id:'signature', name:'季节特调', en:'SIGNATURE' },
+    { id:'soe', name:'手冲精品', en:'HAND BREW' },
+    { id:'bakery', name:'烘焙甜点', en:'BAKERY' },
+    { id:'other', name:'其他', en:'MORE' }
   ];
   const products = {
     espresso: [
@@ -725,6 +726,7 @@
       return `
         <div class="category-section" data-cat-index="${i}">
           <div class="group-heading">
+            <span class="group-sub">${cat.en}</span>
             <span class="group-title">${cat.name}</span>
           </div>
           ${list.map(p => `
