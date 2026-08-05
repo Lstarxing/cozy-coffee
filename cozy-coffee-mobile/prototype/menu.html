@@ -84,24 +84,19 @@
   .product-scroll::-webkit-scrollbar { display:none; }
   .right-nav {
     position:sticky; top:0; z-index:5;
-    padding:14px 20px;
+    padding:12px 20px;
     background:var(--card);
     border-bottom:1px solid var(--border);
-    text-align:center;
-  }
-  .right-nav-idx {
-    display:block;
-    font-size:10px; font-weight:700; letter-spacing:.14em;
-    color:var(--muted);
+    text-align:left;
   }
   .right-nav-name {
-    display:block; margin-top:4px;
-    font-family:var(--serif); font-size:17px; font-weight:600;
-    color:var(--ink);
+    font-family:var(--serif); font-size:13px; font-weight:600;
+    color:var(--ink); letter-spacing:.06em;
   }
-  .group-heading { padding:20px 16px 8px; }
+  .group-heading { padding:16px 16px 6px; }
   .group-title {
-    display:block; font-family:var(--serif); font-size:15px; font-weight:600; color:var(--ink);
+    display:block; font-family:var(--serif); font-size:13px; font-weight:600; color:var(--ink);
+    letter-spacing:.06em;
   }
   .product-item {
     display:flex; gap:12px; padding:14px 16px;
@@ -694,16 +689,17 @@
   }
 
   function renderAllProducts() {
-    const total = categories.length;
     const navHtml = `
       <div class="right-nav">
-        <span class="right-nav-idx" id="rightNavIdx">01 / ${String(total).padStart(2,'0')}</span>
         <span class="right-nav-name" id="rightNavName">${categories[0].name}</span>
       </div>`;
     const sectionsHtml = categories.map((cat,i) => {
       const list = products[cat.id] || [];
       return `
         <div class="category-section" data-cat-index="${i}">
+          <div class="group-heading">
+            <span class="group-title">${cat.name}</span>
+          </div>
           ${list.map(p => `
             <div class="product-item">
               <div class="product-image"></div>
@@ -723,8 +719,6 @@
 
   function updateRightNav(idx) {
     document.getElementById('rightNavName').textContent = categories[idx].name;
-    document.getElementById('rightNavIdx').textContent =
-      `${String(idx+1).padStart(2,'0')} / ${String(categories.length).padStart(2,'0')}`;
   }
 
   function selectCategory(i) {
