@@ -260,28 +260,37 @@
     font-size:12px; line-height:1.7; color:var(--muted);
   }
   .detail-bottom {
-    height:60px; display:flex; align-items:center; gap:14px;
+    height:60px; display:flex; align-items:center;
     padding:0 20px;
     background:var(--surface); border-top:1px solid var(--border);
   }
+  /* 数量加减 — 商品图右上角 */
   .detail-qty {
-    display:flex; align-items:center; gap:12px;
-    border:1px solid var(--border); border-radius:8px;
-    padding:6px 12px;
+    position:absolute; top:16px; right:16px;
+    display:flex; align-items:center; gap:6px;
+    padding:5px 10px;
+    background:rgba(255,255,255,.85);
+    border-radius:20px;
+    z-index:2;
   }
   .qty-btn {
-    width:22px; height:22px;
+    width:24px; height:24px;
     display:flex; align-items:center; justify-content:center;
     font-size:16px; color:var(--ink); cursor:pointer;
+    border-radius:50%;
+    background:rgba(0,0,0,.06);
   }
-  .qty-value { min-width:20px; text-align:center; font-size:14px; font-weight:600; }
+  .qty-btn:active { background:rgba(0,0,0,.12); }
+  .qty-value { min-width:18px; text-align:center; font-size:14px; font-weight:600; }
+  /* 加入购物车 — 占满底部 */
   .detail-add {
-    flex:1; height:40px;
+    flex:1; height:42px;
     display:flex; align-items:center; justify-content:center;
     border-radius:8px;
     background:var(--primary); color:#fff;
-    font-size:14px; font-weight:600; cursor:pointer;
+    font-size:15px; font-weight:600; cursor:pointer;
   }
+  .detail-add:active { opacity:.88; }
 
   /* ── Toast ── */
   .toast {
@@ -385,6 +394,11 @@
   <div class="detail-overlay" id="detailOverlay">
     <div class="detail-image-area">
       <span class="detail-close" onclick="closeDetail()">×</span>
+      <div class="detail-qty">
+        <div class="qty-btn" onclick="changeQty(-1)">−</div>
+        <span class="qty-value" id="detailQty">1</span>
+        <div class="qty-btn" onclick="changeQty(1)">+</div>
+      </div>
       <div class="detail-image" id="detailImage"></div>
     </div>
     <div class="detail-scroll">
@@ -392,30 +406,7 @@
       <div class="detail-desc" id="detailDesc">商品描述</div>
       <div class="detail-price" id="detailPrice">¥28</div>
 
-      <div class="detail-spec-group">
-        <div class="spec-title">规格</div>
-        <div class="spec-options">
-          <span class="spec-option active" data-spec="size" data-value="标准杯">标准杯</span>
-          <span class="spec-option" data-spec="size" data-value="大杯">大杯 +6</span>
-        </div>
-      </div>
-
-      <div class="detail-spec-group">
-        <div class="spec-title">温度</div>
-        <div class="spec-options">
-          <span class="spec-option active" data-spec="temp" data-value="热">热</span>
-          <span class="spec-option" data-spec="temp" data-value="冰">冰</span>
-        </div>
-      </div>
-
-      <div class="detail-spec-group">
-        <div class="spec-title">糖度</div>
-        <div class="spec-options">
-          <span class="spec-option" data-spec="sugar" data-value="无糖">无糖</span>
-          <span class="spec-option active" data-spec="sugar" data-value="标准糖">标准糖</span>
-          <span class="spec-option" data-spec="sugar" data-value="微糖">微糖</span>
-        </div>
-      </div>
+      <div id="specGroups"></div>
 
       <div class="detail-story">
         <div class="spec-title">风味</div>
@@ -424,11 +415,6 @@
     </div>
 
     <div class="detail-bottom">
-      <div class="detail-qty">
-        <div class="qty-btn" onclick="changeQty(-1)">−</div>
-        <span class="qty-value" id="detailQty">1</span>
-        <div class="qty-btn" onclick="changeQty(1)">+</div>
-      </div>
       <div class="detail-add" id="detailAdd" onclick="addToCart()">加入购物车 · ¥28</div>
     </div>
   </div>
@@ -445,31 +431,57 @@
   ];
   const products = {
     espresso: [
-      { name:'浓缩咖啡', desc:'双份浓缩基底', price:18 },
-      { name:'美式咖啡', desc:'浓缩加水，清爽明亮', price:22 }
+      { name:'浓缩咖啡', desc:'双份浓缩基底', price:18,
+        specs:{size:null, temp:null, sugar:null},
+        notes:'醇厚 · 浓郁 · 油脂丰富' },
+      { name:'美式咖啡', desc:'浓缩加水，清爽明亮', price:22,
+        specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['标准糖','微糖','半糖','无糖']},
+        notes:'清爽 · 明亮 · 低酸' }
     ],
     coffee: [
-      { name:'经典手冲', desc:'云南保山 SOE，花香柑橘', price:28 },
-      { name:'云南日晒', desc:'日晒处理，黑糖甜感', price:30 }
+      { name:'经典手冲', desc:'云南保山 SOE，花香柑橘', price:28,
+        specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
+        notes:'花香 · 柑橘 · 蜂蜜 · 茶感' },
+      { name:'云南日晒', desc:'日晒处理，黑糖甜感', price:30,
+        specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
+        notes:'黑糖 · 甜感 · 圆润体脂' }
     ],
     latte: [
-      { name:'Dirty', desc:'浓缩碰撞冰牛奶，渐变层次', price:32 },
-      { name:'海盐焦糖拿铁', desc:'海盐 · 焦糖 · 丝滑', price:34 },
-      { name:'燕麦拿铁', desc:'燕麦奶，谷物香气', price:36 }
+      { name:'Dirty', desc:'浓缩碰撞冰牛奶，渐变层次', price:32,
+        specs:{size:null, temp:null, sugar:null},
+        notes:'奶香 · 浓缩 · 分层渐变' },
+      { name:'海盐焦糖拿铁', desc:'海盐 · 焦糖 · 丝滑', price:34,
+        specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['标准糖','微糖','半糖']},
+        notes:'海盐 · 焦糖 · 丝滑奶泡' },
+      { name:'燕麦拿铁', desc:'燕麦奶，谷物香气', price:36,
+        specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['标准糖','微糖','半糖','无糖']},
+        notes:'谷物 · 坚果 · 植物奶香' }
     ],
     signature: [
-      { name:'荔枝特调', desc:'当季限定，清爽果香', price:38 }
+      { name:'荔枝特调', desc:'当季限定，清爽果香', price:38,
+        specs:{size:['标准杯','大杯'], temp:['冰'], sugar:['标准糖','微糖','半糖']},
+        notes:'荔枝 · 果香 · 夏日限定' }
     ],
     soe: [
-      { name:'埃塞俄比亚 耶加雪菲', desc:'茉莉 · 柠檬 · 茶感', price:42 },
-      { name:'巴拿马 瑰夏', desc:'花香 · 蜂蜜，精致余韵', price:58 }
+      { name:'埃塞俄比亚 耶加雪菲', desc:'茉莉 · 柠檬 · 茶感', price:42,
+        specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
+        notes:'茉莉 · 柠檬 · 茶感 · 明亮酸质' },
+      { name:'巴拿马 瑰夏', desc:'花香 · 蜂蜜，精致余韵', price:58,
+        specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
+        notes:'花香 · 蜂蜜 · 精致余韵' }
     ],
     bakery: [
-      { name:'手工燕麦曲奇', desc:'谷物香，配咖啡刚好', price:15 },
-      { name:'海盐焦糖牛角包', desc:'酥脆外皮，咸甜平衡', price:18 }
+      { name:'手工燕麦曲奇', desc:'谷物香，配咖啡刚好', price:15,
+        specs:{size:null, temp:null, sugar:null},
+        notes:'谷物 · 酥脆 · 低糖' },
+      { name:'海盐焦糖牛角包', desc:'酥脆外皮，咸甜平衡', price:18,
+        specs:{size:null, temp:null, sugar:null},
+        notes:'酥脆 · 咸甜 · 黄油香' }
     ],
     other: [
-      { name:'热可可', desc:'浓郁可可，冬日暖意', price:26 }
+      { name:'热可可', desc:'浓郁可可，冬日暖意', price:26,
+        specs:{size:['标准杯','大杯'], temp:['热'], sugar:['标准糖','微糖','半糖','无糖']},
+        notes:'可可 · 奶香 · 冬日暖饮' }
     ]
   };
 
@@ -497,7 +509,7 @@
             <span class="product-desc">${p.desc}</span>
             <div class="product-foot">
               <span class="product-price">¥${p.price}</span>
-              <div class="add-btn" onclick="openDetail('${p.name}','${p.desc}',${p.price})">+</div>
+              <div class="add-btn" onclick="openDetail('${p.name}')">+</div>
             </div>
           </div>
         </div>`).join('')}`;
@@ -524,38 +536,106 @@
   }
 
   // ── 商品详情 ──
-  let detailPrice = 0, detailQty = 1;
-  function openDetail(name, desc, price) {
-    detailPrice = price; detailQty = 1;
-    document.getElementById('detailName').textContent = name;
-    document.getElementById('detailDesc').textContent = desc;
-    document.getElementById('detailPrice').textContent = '¥' + price;
+  let detailProduct = null, detailPrice = 0, detailQty = 1;
+
+  const SPEC_LABELS = {
+    size: {title:'规格', map:{'标准杯':'标准杯','大杯':'大杯 +6'}},
+    temp: {title:'温度', map:{'热':'热','冰':'冰'}},
+    sugar: {title:'糖度', map:{'标准糖':'标准糖','微糖':'微糖','半糖':'半糖','无糖':'无糖'}}
+  };
+
+  function findProduct(name) {
+    for (const cat of Object.values(products)) {
+      const p = cat.find(x => x.name === name);
+      if (p) return p;
+    }
+    return null;
+  }
+
+  function renderSpecs(prod) {
+    let html = '';
+    const s = prod.specs;
+    if (!s) return;
+    for (const key of ['size','temp','sugar']) {
+      const values = s[key];
+      if (!values || values.length === 0) continue;
+      const cfg = SPEC_LABELS[key];
+      html += `<div class="detail-spec-group"><div class="spec-title">${cfg.title}</div><div class="spec-options">`;
+      values.forEach((v, i) => {
+        html += `<span class="spec-option${i===0?' active':''}" data-spec="${key}" data-value="${v}">${cfg.map[v] || v}</span>`;
+      });
+      html += '</div></div>';
+    }
+    document.getElementById('specGroups').innerHTML = html;
+  }
+
+  function updateDetailPrice() {
+    let base = detailProduct.price;
+    const sizeActive = document.querySelector('.spec-option[data-spec="size"].active');
+    if (sizeActive && sizeActive.dataset.value === '大杯') base += 6;
+    detailPrice = base;
+    document.getElementById('detailPrice').textContent = '¥' + base;
+    updateAddBtn();
+  }
+
+  function updateAddBtn() {
+    const total = (detailPrice * detailQty).toFixed(2);
+    document.getElementById('detailAdd').textContent = `加入购物车 · ¥${total}`;
+  }
+
+  function openDetail(name) {
+    const prod = findProduct(name);
+    if (!prod) return;
+
+    detailProduct = prod;
+    detailPrice = prod.price;
+    detailQty = 1;
+
+    document.getElementById('detailName').textContent = prod.name;
+    document.getElementById('detailDesc').textContent = prod.desc;
+    document.getElementById('detailPrice').textContent = '¥' + prod.price;
     document.getElementById('detailQty').textContent = '1';
-    document.getElementById('detailAdd').textContent = `加入购物车 · ¥${price}`;
-    document.getElementById('detailNotes').textContent = desc;
+    document.getElementById('detailNotes').textContent = prod.notes || prod.desc;
+    document.getElementById('detailImage').style.background =
+      prod.specs && (prod.specs.size || prod.specs.temp || prod.specs.sugar)
+        ? 'linear-gradient(135deg, #6B4A2E, #3D2A1E)'
+        : 'linear-gradient(135deg, #E8DDD2, #D8C8B4)';
+    updateAddBtn();
+    renderSpecs(prod);
     document.getElementById('detailOverlay').classList.add('open');
   }
+
   function closeDetail() {
     document.getElementById('detailOverlay').classList.remove('open');
+    detailProduct = null;
   }
+
   function changeQty(d) {
     detailQty += d;
     if (detailQty < 1) detailQty = 1;
     document.getElementById('detailQty').textContent = detailQty;
-    const total = (detailPrice * detailQty).toFixed(2);
-    document.getElementById('detailAdd').textContent = `加入购物车 · ¥${total}`;
+    updateAddBtn();
   }
+
+  // 规格选择 — 事件委托
   document.getElementById('detailOverlay').addEventListener('click', e => {
     if (e.target.classList.contains('spec-option')) {
       const opt = e.target;
-      const spec = opt.dataset.spec;
-      document.querySelectorAll(`.spec-option[data-spec="${spec}"]`).forEach(o => o.classList.remove('active'));
+      const specKey = opt.dataset.spec;
+      document.querySelectorAll(`.spec-option[data-spec="${specKey}"]`).forEach(o => o.classList.remove('active'));
       opt.classList.add('active');
+      updateDetailPrice();
     }
   });
+
   function addToCart() {
+    const name = detailProduct ? detailProduct.name : '商品';
+    const specs = [];
+    document.querySelectorAll('.spec-option.active').forEach(o => {
+      specs.push(o.dataset.value);
+    });
     closeDetail();
-    toast(`已加入购物车 · 数量 ${detailQty}`);
+    toast(`已加入购物车 · ${name}${specs.length ? ' (' + specs.join('·') + ')' : ''}  ×${detailQty}`);
   }
 
   function toast(msg) {
