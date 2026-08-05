@@ -84,10 +84,7 @@
   .product-scroll::-webkit-scrollbar { display:none; }
   .group-heading { padding:20px 16px 8px; }
   .group-title {
-    display:block; font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink);
-  }
-  .group-desc {
-    display:block; margin-top:4px; font-size:11px; color:var(--muted);
+    display:block; font-family:var(--serif); font-size:15px; font-weight:600; color:var(--ink);
   }
   .product-item {
     display:flex; gap:12px; padding:14px 16px;
@@ -486,43 +483,74 @@
   };
 
   let currentCat = 0;
+  let scrollSpyLock = false; // 防止程序化滚动触发互抢
 
   function renderSidebar() {
     document.getElementById('categorySidebar').innerHTML = categories.map((c,i) =>
       `<div class="category-item ${i === currentCat ? 'active' : ''}" onclick="selectCategory(${i})">${c.name}</div>`
     ).join('');
+    // sidebar active item 滚动到可见
+    const activeItem = document.querySelector('.category-item.active');
+    if (activeItem) activeItem.scrollIntoView({block:'nearest', behavior:'smooth'});
   }
 
-  function renderProducts() {
-    const cat = categories[currentCat];
-    const list = products[cat.id] || [];
-    document.getElementById('productScroll').innerHTML = `
-      <div class="group-heading">
-        <span class="group-title">${cat.name}</span>
-        <span class="group-desc">${cat.desc}</span>
-      </div>
-      ${list.map(p => `
-        <div class="product-item">
-          <div class="product-image"></div>
-          <div class="product-info">
-            <span class="product-name">${p.name}</span>
-            <span class="product-desc">${p.desc}</span>
-            <div class="product-foot">
-              <span class="product-price">¥${p.price}</span>
-              <div class="add-btn" onclick="openDetail('${p.name}')">+</div>
-            </div>
+  function renderAllProducts() {
+    document.getElementById('productScroll').innerHTML = categories.map((cat,i) => {
+      const list = products[cat.id] || [];
+      return `
+        <div class="category-section" data-cat-index="${i}">
+          <div class="group-heading">
+            <span class="group-title">${cat.name}</span>
           </div>
-        </div>`).join('')}`;
+          ${list.map(p => `
+            <div class="product-item">
+              <div class="product-image"></div>
+              <div class="product-info">
+                <span class="product-name">${p.name}</span>
+                <span class="product-desc">${p.desc}</span>
+                <div class="product-foot">
+                  <span class="product-price">¥${p.price}</span>
+                  <div class="add-btn" onclick="openDetail('${p.name}')">+</div>
+                </div>
+              </div>
+            </div>`).join('')}
+        </div>`;
+    }).join('');
   }
 
   function selectCategory(i) {
     currentCat = i;
     renderSidebar();
-    renderProducts();
+    scrollSpyLock = true;
+    const section = document.querySelector(`.category-section[data-cat-index="${i}"]`);
+    if (section) {
+      section.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+    setTimeout(() => { scrollSpyLock = false; }, 600);
   }
 
+  // scroll-spy
+  const productScroll = document.getElementById('productScroll');
+  productScroll.addEventListener('scroll', () => {
+    if (scrollSpyLock) return;
+    const containerTop = productScroll.getBoundingClientRect().top;
+    const sections = productScroll.querySelectorAll('.category-section');
+    let nearestIdx = 0, nearestDist = Infinity;
+    sections.forEach((sec, i) => {
+      const top = sec.getBoundingClientRect().top - containerTop;
+      if (top <= 80 && Math.abs(top) < nearestDist) {
+        nearestDist = Math.abs(top);
+        nearestIdx = i;
+      }
+    });
+    if (nearestIdx !== currentCat) {
+      currentCat = nearestIdx;
+      renderSidebar();
+    }
+  });
+
   renderSidebar();
-  renderProducts();
+  renderAllProducts();
 
   function goTab(href) {
     location.href = href;
