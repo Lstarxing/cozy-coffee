@@ -55,47 +55,80 @@
     margin-top:20px; padding:28px 24px;
     border-radius:14px; background:var(--card);
   }
-  .checkin-header {
-    display:flex; justify-content:space-between; align-items:baseline;
-    margin-bottom:22px;
+  .checkin-head {
+    display:flex; justify-content:space-between; align-items:flex-end;
+    margin-bottom:26px;
   }
   .checkin-title {
+    display:block;
     font-family:var(--serif); font-size:19px; font-weight:600; color:var(--ink);
   }
-  .checkin-streak {
+  .checkin-sub {
+    display:block; margin-top:4px;
     font-size:12px; color:var(--muted);
-    letter-spacing:.04em;
   }
-  .checkin-streak em {
-    font-style:normal; font-weight:700; color:var(--primary);
-  }
-
-  .strip-days {
-    display:flex; gap:8px;
-  }
-  .strip-day {
-    flex:1;
-    display:flex; flex-direction:column; align-items:center; gap:10px;
-  }
-  .day-bar {
-    width:100%; height:5px;
-    border-radius:3px;
-    background:var(--border);
+  .checkin-btn {
+    border:none; padding:9px 20px;
+    border-radius:999px;
+    background:var(--primary); color:#fff;
+    font-size:13px; font-weight:600; cursor:pointer;
+    font-family:inherit;
     transition:background .25s;
   }
-  .day-bar.today { height:7px; background:var(--primary); }
-  .day-bar.signed { background:var(--accent); }
-  .day-bar.gift { background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 8px); }
-  .day-bar.gift.signed,
-  .day-bar.gift.today { background:var(--accent); }
-  .day-label {
-    font-family:var(--serif); font-size:14px; font-weight:500;
-    color:var(--muted);
+  .checkin-btn:active { background:#5E2E1A; }
+  .checkin-btn.done { background:var(--border); color:var(--muted); cursor:default; }
+
+  /* 咖啡豆轨迹 */
+  .bean-track { position:relative; padding:22px 0 6px; }
+  .track-line {
+    position:absolute; top:34px; left:16px; right:16px;
+    height:3px; border-radius:2px;
+    background:var(--border);
+    transform:translateY(-50%);
   }
-  .day-label.signed { color:var(--ink); }
-  .day-label.today { color:var(--primary); font-weight:600; }
-  .day-pts { font-size:10px; color:var(--muted); }
-  .day-pts.signed { color:var(--muted); }
+  .track-line-fill {
+    height:100%; border-radius:2px;
+    background:var(--primary);
+    transition:width .5s ease;
+  }
+  .bean-steps {
+    display:flex; justify-content:space-between;
+    position:relative; z-index:2;
+  }
+  .bean-step {
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    width:36px;
+  }
+  .bean-icon {
+    width:32px; height:32px; border-radius:50%;
+    background:var(--surface); color:var(--muted);
+    border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    transition:all .3s;
+  }
+  .bean-icon.signed { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .bean-icon.today {
+    background:var(--primary); color:#fff; border-color:var(--primary);
+    box-shadow:0 0 0 4px rgba(117,58,34,.12);
+  }
+  .bean-icon.is-gift { border-radius:12px; }
+  .bean-svg { width:16px; height:16px; }
+  .bean-label { font-size:11px; color:var(--muted); }
+  .bean-step.signed .bean-label { color:var(--ink); font-weight:600; }
+  .bean-step.today .bean-label { color:var(--primary); font-weight:700; }
+
+  .checkin-foot {
+    margin-top:18px; padding:12px 16px;
+    border-radius:8px;
+    background:var(--surface);
+    font-size:13px; color:var(--muted);
+  }
+  .checkin-foot em {
+    font-style:normal; color:var(--primary); font-weight:700;
+  }
+  .checkin-foot.success {
+    background:rgba(82,108,67,.08); color:var(--accent);
+  }
 
   /* 签到按钮 */
   .checkin-action { margin-top:24px; text-align:center; }
@@ -206,15 +239,20 @@
 
   <!-- 签到区 -->
   <div class="checkin-section">
-    <div class="checkin-header">
-      <span class="checkin-title">每日签到仪式</span>
-      <span class="checkin-streak">已连续 <em>3</em> 天</span>
+    <div class="checkin-head">
+      <div>
+        <span class="checkin-title">每日签到</span>
+        <span class="checkin-sub">连续签到 7 天可领惊喜礼包</span>
+      </div>
+      <button class="checkin-btn" id="signinBtn" onclick="doSignin()">签到领豆</button>
     </div>
-    <div class="strip-days" id="dayGrid"></div>
-    <div class="checkin-action">
-      <div class="checkin-btn" id="signinBtn" onclick="doSignin()">立即签到</div>
-      <span class="checkin-hint" id="signinHint">今日签到可获得 <em>2</em> 积分</span>
+    <div class="bean-track">
+      <div class="track-line">
+        <div class="track-line-fill" id="trackFill" style="width:33%"></div>
+      </div>
+      <div class="bean-steps" id="dayGrid"></div>
     </div>
+    <div class="checkin-foot" id="signinHint">再签 <em>3</em> 天领满35减10券</div>
   </div>
 
   <!-- 权益说明 -->
@@ -252,44 +290,59 @@
 </div>
 
 <script>
-  const DAY_LABELS = ['一','二','三','四','五','六','日'];
-  const DAY_POINTS = [2,2,2,2,2,2,10];
+  const BEAN_SVG = '<svg class="bean-svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2 C6.5,2 2,6.5 2,12 C2,17.5 6.5,22 12,22 C17.5,22 22,17.5 22,12 C2,6.5 17.5,2 12,2 Z M12.5,5 C12.5,5 14,8 14,12 C14,16 12.5,19 12.5,19 C11,19 8,16 8,12 C8,8 11,5 12.5,5 Z"/></svg>';
+  const GIFT_SVG = '<svg class="bean-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>';
+
   let consecutive = 3; // 已连续签到 3 天
   let signed = false;
 
+  function updateTrackFill() {
+    // 进度线：已签到天数到第7天礼盒
+    const pct = Math.max(0, (consecutive - 1) / 6 * 100);
+    document.getElementById('trackFill').style.width = pct + '%';
+  }
+
   function renderDays() {
     const grid = document.getElementById('dayGrid');
-    grid.innerHTML = DAY_LABELS.map((label, i) => {
-      let barCls = 'day-bar';
-      let labelCls = 'day-label';
-      if (i < consecutive) { barCls += ' signed'; labelCls += ' signed'; }
-      else if (i === consecutive) { barCls += ' today'; labelCls += ' today'; }
-      if (i === 6) barCls += ' gift';
+    grid.innerHTML = Array.from({length: 7}, (_, i) => {
+      let cls = 'bean-icon';
+      if (i < consecutive) cls += ' signed';
+      else if (i === consecutive) cls += ' today';
+      if (i === 6) cls += ' is-gift';
+      const icon = i === 6 ? GIFT_SVG : BEAN_SVG;
+      const label = i === 6 ? '礼包' : '+2';
       return `
-        <div class="strip-day">
-          <span class="${barCls}"></span>
-          <span class="${labelCls}">${label}</span>
-          <span class="day-pts">+${DAY_POINTS[i]}</span>
+        <div class="bean-step ${i === 6 ? '' : ''}">
+          <div class="${cls}">${icon}</div>
+          <span class="bean-label">${label}</span>
         </div>`;
     }).join('');
+    updateTrackFill();
   }
   renderDays();
 
   function doSignin() {
     if (signed) return;
     signed = true;
+    consecutive += 1;
+
     const btn = document.getElementById('signinBtn');
-    btn.textContent = '今日已签到';
+    btn.textContent = '今日已签';
     btn.classList.add('done');
-    document.getElementById('signinHint').innerHTML = '明天签到可获得 <em>2</em> 积分';
-    // 今日状态：today → signed
-    const dayCell = document.querySelectorAll('.strip-day')[consecutive];
-    const bar = dayCell.querySelector('.day-bar');
-    bar.classList.remove('today');
-    bar.classList.add('signed');
-    const lbl = dayCell.querySelector('.day-label');
-    lbl.classList.remove('today');
-    lbl.classList.add('signed');
+
+    // 今日 bean：today → signed
+    const dayCells = document.querySelectorAll('.bean-icon');
+    dayCells[consecutive - 1].classList.remove('today');
+    dayCells[consecutive - 1].classList.add('signed');
+    updateTrackFill();
+
+    const hint = document.getElementById('signinHint');
+    if (consecutive >= 7) {
+      hint.className = 'checkin-foot success';
+      hint.innerHTML = '🎁 连续签到 7 天！礼包已到账';
+    } else {
+      hint.innerHTML = `再签 <em>${7 - consecutive}</em> 天领满35减10券`;
+    }
 
     document.getElementById('successModal').classList.add('open');
   }
