@@ -74,35 +74,28 @@
     display:flex; gap:8px;
   }
   .strip-day {
-    flex:1; aspect-ratio:3/4;
-    border-radius:10px;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
-    font-size:13px; font-weight:600; color:var(--muted);
-    background:var(--surface);
-    transition:background .25s, color .25s;
+    flex:1;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
   }
-  .strip-day .day-label { font-size:11px; font-weight:500; }
-  .strip-day .day-pts { font-size:10px; font-weight:400; opacity:.6; }
-
-  .strip-day.signed {
-    background:var(--accent); color:#fff;
+  .day-bar {
+    width:100%; height:5px;
+    border-radius:3px;
+    background:var(--border);
+    transition:background .25s;
   }
-  .strip-day.signed .day-pts { opacity:.8; }
-  .strip-day.today {
-    background:var(--primary); color:#fff;
-    box-shadow:0 0 0 3px rgba(117,58,34,.12);
-  }
-  .strip-day.today .day-pts { opacity:.8; }
-  .strip-day.gift {
-    background:var(--surface);
-    border:1px dashed var(--border);
+  .day-bar.today { height:7px; background:var(--primary); }
+  .day-bar.signed { background:var(--accent); }
+  .day-bar.gift { background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 8px); }
+  .day-bar.gift.signed,
+  .day-bar.gift.today { background:var(--accent); }
+  .day-label {
+    font-family:var(--serif); font-size:14px; font-weight:500;
     color:var(--muted);
   }
-  .strip-day.gift.signed,
-  .strip-day.gift.today {
-    background:var(--accent); color:#fff; border-color:var(--accent);
-    border-style:solid;
-  }
+  .day-label.signed { color:var(--ink); }
+  .day-label.today { color:var(--primary); font-weight:600; }
+  .day-pts { font-size:10px; color:var(--muted); }
+  .day-pts.signed { color:var(--muted); }
 
   /* 签到按钮 */
   .checkin-action { margin-top:24px; text-align:center; }
@@ -267,13 +260,15 @@
   function renderDays() {
     const grid = document.getElementById('dayGrid');
     grid.innerHTML = DAY_LABELS.map((label, i) => {
-      let cls = 'strip-day';
-      if (i < consecutive) cls += ' signed';
-      else if (i === consecutive) cls += ' today';
-      if (i === 6) cls += ' gift';
+      let barCls = 'day-bar';
+      let labelCls = 'day-label';
+      if (i < consecutive) { barCls += ' signed'; labelCls += ' signed'; }
+      else if (i === consecutive) { barCls += ' today'; labelCls += ' today'; }
+      if (i === 6) barCls += ' gift';
       return `
-        <div class="${cls}">
-          <span class="day-label">${label}</span>
+        <div class="strip-day">
+          <span class="${barCls}"></span>
+          <span class="${labelCls}">${label}</span>
           <span class="day-pts">+${DAY_POINTS[i]}</span>
         </div>`;
     }).join('');
@@ -287,10 +282,14 @@
     btn.textContent = '今日已签到';
     btn.classList.add('done');
     document.getElementById('signinHint').innerHTML = '明天签到可获得 <em>2</em> 积分';
-    // update strip: mark today as signed
-    const days = document.querySelectorAll('.strip-day');
-    days[consecutive].classList.remove('today');
-    days[consecutive].classList.add('signed');
+    // 今日状态：today → signed
+    const dayCell = document.querySelectorAll('.strip-day')[consecutive];
+    const bar = dayCell.querySelector('.day-bar');
+    bar.classList.remove('today');
+    bar.classList.add('signed');
+    const lbl = dayCell.querySelector('.day-label');
+    lbl.classList.remove('today');
+    lbl.classList.add('signed');
 
     document.getElementById('successModal').classList.add('open');
   }
