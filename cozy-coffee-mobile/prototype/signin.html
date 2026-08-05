@@ -19,6 +19,20 @@
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
 
+
+  .back-btn {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:36px; height:36px;
+    margin-bottom:14px;
+    font-size:26px; line-height:1;
+    color:var(--ink);
+    text-decoration:none; cursor:pointer;
+    border-radius:50%;
+    background:rgba(255,255,255,.6);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  }
+  .back-btn:active { opacity:.55; }
+
   .page { padding:20px 20px 120px; }
 
   /* ── 积分卡片 ── */
@@ -143,6 +157,8 @@
 <body>
 
   <div class="page">
+
+    <a class="back-btn" href="index.html">‹</a>
 
     <!-- 积分卡片 -->
     <div class="points-card">
