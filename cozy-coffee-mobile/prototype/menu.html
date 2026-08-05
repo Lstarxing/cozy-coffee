@@ -697,9 +697,6 @@
       const list = products[cat.id] || [];
       return `
         <div class="category-section" data-cat-index="${i}">
-          <div class="group-heading">
-            <span class="group-title">${cat.name}</span>
-          </div>
           ${list.map(p => `
             <div class="product-item">
               <div class="product-image"></div>
