@@ -35,50 +35,19 @@
 
   .page { padding:20px 20px 120px; }
 
-  /* ── 会员区 ── */
-  .member-hero {
-    padding:32px 24px 28px;
-    border-radius:14px;
-    background:var(--cask);
-    color:#fff;
+  /* ── 积分头 ── */
+  .points-header {
+    padding:24px 8px 16px;
+    background:var(--surface);
   }
-  .member-badge {
-    display:inline-block; padding:4px 12px;
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,.28);
-    font-size:10px; font-weight:700; letter-spacing:.12em;
-    color:rgba(255,255,255,.75);
+  .points-label {
+    display:block;
+    font-size:13px; color:var(--muted); letter-spacing:.04em;
   }
-  .member-greeting {
-    display:block; margin-top:20px;
-    font-family:var(--serif); font-size:24px; font-weight:500;
-    letter-spacing:.04em;
-  }
-  .points-display { margin-top:18px; display:flex; align-items:baseline; gap:8px; }
-  .points-number {
-    font-size:40px; font-weight:700; line-height:1;
-  }
-  .points-unit {
-    font-size:15px; color:rgba(255,255,255,.6);
-    letter-spacing:.06em;
-  }
-
-  /* 进度条 */
-  .level-progress { margin-top:24px; }
-  .progress-bar {
-    height:3px; border-radius:2px;
-    background:rgba(255,255,255,.14);
-    overflow:hidden;
-  }
-  .progress-fill {
-    height:100%; border-radius:2px;
-    background:rgba(255,255,255,.6);
-    transition:width .6s ease;
-  }
-  .progress-text {
-    display:block; margin-top:10px;
-    font-size:12px; color:rgba(255,255,255,.55);
-    letter-spacing:.04em;
+  .points-value {
+    display:block; margin-top:8px;
+    font-family:var(--serif); font-size:46px; font-weight:600;
+    color:var(--ink); line-height:1;
   }
 
   /* ── 签到区 ── */
@@ -236,20 +205,10 @@
 
   <a class="back-btn" href="index.html">‹</a>
 
-  <!-- 会员区 -->
-  <div class="member-hero">
-    <span class="member-badge">SILVER</span>
-    <span class="member-greeting">下午好，咖啡爱好者</span>
-    <div class="points-display">
-      <span class="points-number">3,280</span>
-      <span class="points-unit">积分</span>
-    </div>
-    <div class="level-progress">
-      <div class="progress-bar">
-        <div class="progress-fill" style="width:62%"></div>
-      </div>
-      <span class="progress-text">距离黄金会员还需 380 EXP</span>
-    </div>
+  <!-- 积分头 -->
+  <div class="points-header">
+    <span class="points-label">当前可用积分</span>
+    <span class="points-value">3,280</span>
   </div>
 
   <!-- 签到区 -->
