@@ -14,10 +14,16 @@
     max-width:390px; margin:0 auto; min-height:100vh;
   }
   :root {
-    --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
-    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
+    --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
+    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
+    --cask-brown:#2C1E18;
+    --roastery-ink:#2B1E16; --quiet-ink:#756A63;
+    --placeholder:#9E948E; --hairline:#E3DED8;
+    /* aliases */
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
-    --cask:#3D2A20;
   }
 
   .back-btn {
@@ -68,15 +74,16 @@
     font-size:12px; color:var(--muted);
   }
   .checkin-btn {
-    border:none; padding:9px 20px;
-    border-radius:999px;
-    background:var(--primary); color:#fff;
-    font-size:13px; font-weight:600; cursor:pointer;
+    border:none; padding:0 22px; height:44px;
+    border-radius:6px;
+    background:var(--roast-brown); color:#fff;
+    font-size:14px; font-weight:650; cursor:pointer;
     font-family:inherit;
     transition:background .25s;
   }
-  .checkin-btn:active { background:#5E2E1A; }
-  .checkin-btn.done { background:var(--border); color:var(--muted); cursor:default; }
+  .checkin-btn:active { background:var(--roast-brown-deep); }
+  .checkin-btn.done { background:var(--hairline); color:var(--quiet-ink); cursor:default; }
+  .checkin-btn.done:active { background:var(--hairline); }
 
   /* 咖啡豆轨迹 */
   .bean-track { position:relative; padding:22px 0 6px; }
@@ -101,21 +108,23 @@
   }
   .bean-icon {
     width:32px; height:32px; border-radius:50%;
-    background:var(--surface); color:var(--muted);
-    border:1px solid var(--border);
+    background:var(--porcelain-muted); color:var(--placeholder);
+    border:1px solid var(--hairline);
     display:flex; align-items:center; justify-content:center;
     transition:all .3s;
   }
-  .bean-icon.signed { background:var(--accent); color:#fff; border-color:var(--accent); }
-  .bean-icon.today {
-    background:var(--primary); color:#fff; border-color:var(--primary);
-    box-shadow:0 0 0 4px rgba(117,58,34,.12);
+  .bean-icon.active {
+    background:var(--roast-brown); color:#F2EDE8;
+    border-color:var(--roast-brown);
+  }
+  .bean-icon.active.today {
+    box-shadow:0 0 0 4px rgba(198,156,109,.35);
   }
   .bean-icon.is-gift { border-radius:12px; }
   .bean-svg { width:16px; height:16px; }
-  .bean-label { font-size:11px; color:var(--muted); }
-  .bean-step.signed .bean-label { color:var(--ink); font-weight:600; }
-  .bean-step.today .bean-label { color:var(--primary); font-weight:700; }
+  .bean-label { font-size:11px; color:var(--placeholder); }
+  .bean-step.active .bean-label { color:var(--roastery-ink); font-weight:600; }
+  .bean-step.active.today .bean-label { color:var(--roast-brown); font-weight:700; }
 
   .checkin-foot {
     margin-top:18px; padding:12px 16px;
@@ -127,7 +136,7 @@
     font-style:normal; color:var(--primary); font-weight:700;
   }
   .checkin-foot.success {
-    background:rgba(82,108,67,.08); color:var(--accent);
+    background:var(--porcelain-muted); color:var(--roast-brown);
   }
 
   /* 签到按钮 */
@@ -192,7 +201,7 @@
   .success-icon {
     width:56px; height:56px; margin:0 auto;
     display:flex; align-items:center; justify-content:center;
-    border-radius:12px; background:var(--accent); color:#fff;
+    border-radius:12px; background:var(--roast-brown); color:#fff;
     font-size:26px;
   }
   .success-title {
@@ -305,15 +314,16 @@
   function renderDays() {
     const grid = document.getElementById('dayGrid');
     grid.innerHTML = Array.from({length: 7}, (_, i) => {
-      let cls = 'bean-icon';
-      if (i < consecutive) cls += ' signed';
-      else if (i === consecutive) cls += ' today';
-      if (i === 6) cls += ' is-gift';
+      const stepCls = i < consecutive ? 'active' : (i === consecutive ? 'active today' : '');
+      let iconCls = 'bean-icon';
+      if (i <= consecutive) iconCls += ' active';
+      if (i === consecutive) iconCls += ' today';
+      if (i === 6) iconCls += ' is-gift';
       const icon = i === 6 ? GIFT_SVG : BEAN_SVG;
       const label = i === 6 ? '礼包' : '+2';
       return `
-        <div class="bean-step ${i === 6 ? '' : ''}">
-          <div class="${cls}">${icon}</div>
+        <div class="bean-step ${stepCls}">
+          <div class="${iconCls}">${icon}</div>
           <span class="bean-label">${label}</span>
         </div>`;
     }).join('');
@@ -330,16 +340,15 @@
     btn.textContent = '今日已签';
     btn.classList.add('done');
 
-    // 今日 bean：today → signed
-    const dayCells = document.querySelectorAll('.bean-icon');
-    dayCells[consecutive - 1].classList.remove('today');
-    dayCells[consecutive - 1].classList.add('signed');
+    // 今日 bean-step：active today → active
+    const stepCells = document.querySelectorAll('.bean-step');
+    stepCells[consecutive - 1].classList.remove('today');
     updateTrackFill();
 
     const hint = document.getElementById('signinHint');
     if (consecutive >= 7) {
       hint.className = 'checkin-foot success';
-      hint.innerHTML = '🎁 连续签到 7 天！礼包已到账';
+      hint.innerHTML = '连续签到 7 天！礼包已到账';
     } else {
       hint.innerHTML = `再签 <em>${7 - consecutive}</em> 天领满35减10券`;
     }
