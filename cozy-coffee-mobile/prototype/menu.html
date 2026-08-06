@@ -501,24 +501,26 @@
     background:var(--roast-brown); border-color:var(--roast-brown); color:#fff;
   }
 
-  /* 底部固定加购栏 */
+  /* 底部固定加购栏：两行（价格+数量 / 加购按钮） */
   .detail-bottom {
     flex:none;
-    display:flex; align-items:center; gap:12px;
-    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
     background:var(--porcelain);
     border-top:1px solid var(--hairline);
   }
+  .detail-bottom-top {
+    display:flex; align-items:center; gap:12px;
+    margin-bottom:12px;
+  }
   .detail-price-col { flex:1; min-width:0; }
   .detail-bottom-price {
-    font-size:24px; font-weight:700; color:var(--roast-brown);
+    font-size:22px; font-weight:700; color:var(--roast-brown);
     line-height:1.1;
   }
   .detail-selected {
-    display:block; margin-top:3px;
+    display:block; margin-top:4px;
     font-size:11px; color:var(--quiet-ink);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
   }
   .detail-qty {
     display:flex; align-items:center; gap:10px;
@@ -533,7 +535,7 @@
   .qty-btn:active { opacity:.5; }
   .qty-value { min-width:18px; text-align:center; font-size:14px; font-weight:600; }
   .detail-add {
-    flex:1; height:44px;
+    width:100%; height:46px;
     display:flex; align-items:center; justify-content:center;
     border-radius:6px;
     background:var(--roast-brown); color:#fff;
@@ -720,14 +722,16 @@
 
     <!-- 底部固定加购栏 -->
     <div class="detail-bottom">
-      <div class="detail-price-col">
-        <span class="detail-bottom-price" id="detailPrice">¥28</span>
-        <span class="detail-selected" id="detailSelected">标准糖 · 大杯 · 热</span>
-      </div>
-      <div class="detail-qty">
-        <div class="qty-btn" onclick="changeQty(-1)">−</div>
-        <span class="qty-value" id="detailQty">1</span>
-        <div class="qty-btn" onclick="changeQty(1)">+</div>
+      <div class="detail-bottom-top">
+        <div class="detail-price-col">
+          <span class="detail-bottom-price" id="detailPrice">¥28</span>
+          <span class="detail-selected" id="detailSelected">标准糖 · 大杯 · 热</span>
+        </div>
+        <div class="detail-qty">
+          <div class="qty-btn" onclick="changeQty(-1)">−</div>
+          <span class="qty-value" id="detailQty">1</span>
+          <div class="qty-btn" onclick="changeQty(1)">+</div>
+        </div>
       </div>
       <div class="detail-add" id="detailAdd" onclick="addToCart()">加入购物车</div>
     </div>
@@ -997,8 +1001,7 @@
   }
 
   function updateAddBtn() {
-    const total = (detailPrice * detailQty).toFixed(2);
-    document.getElementById('detailAdd').textContent = `加入购物车 · ¥${total}`;
+    document.getElementById('detailAdd').textContent = '加入购物车';
     document.getElementById('detailSelected').textContent = selectedSpecsText();
   }
 
