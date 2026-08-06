@@ -768,32 +768,32 @@
   let isClickScrolling = false;
   let clickTimeout;
 
+  // 吸顶判定：哪个分类标题最接近容器顶部（吸顶位置 top:0），它即当前分类
+  // 只在标题真正吸附/顶替时切换，避免提前点亮下一分类
+  function pickActive() {
+    if (isClickScrolling) return;
+    const scrollEl = document.getElementById('productScroll');
+    const containerTop = scrollEl.getBoundingClientRect().top;
+    let best = activeIdx, bestAbs = Infinity;
+    document.querySelectorAll('.group-heading').forEach(h => {
+      const abs = Math.abs(h.getBoundingClientRect().top - containerTop);
+      if (abs < bestAbs) {
+        bestAbs = abs;
+        best = parseInt(h.closest('.category-section').dataset.catIndex);
+      }
+    });
+    setActiveCategory(best);
+  }
+
   function mountScrollSpy() {
     const scrollEl = document.getElementById('productScroll');
-
-    // 吸顶判定：哪个分类标题最接近容器顶部（吸顶位置 top:0），它即当前分类
-    // 只在标题真正吸附/顶替时切换，避免提前点亮下一分类
-    const pickActive = () => {
-      if (isClickScrolling) return;
-      const containerTop = scrollEl.getBoundingClientRect().top;
-      let best = activeIdx, bestAbs = Infinity;
-      document.querySelectorAll('.group-heading').forEach(h => {
-        const abs = Math.abs(h.getBoundingClientRect().top - containerTop);
-        if (abs < bestAbs) {
-          bestAbs = abs;
-          best = parseInt(h.closest('.category-section').dataset.catIndex);
-        }
-      });
-      setActiveCategory(best);
-    };
-
     const observer = new IntersectionObserver(pickActive, {
       root: scrollEl,
       threshold: 0
     });
     document.querySelectorAll('.group-heading').forEach(h => observer.observe(h));
 
-    // 兜底：滚到底刷新一次吸顶判定（不再强制最后分类）
+    // 兜底：滚到底刷新一次吸顶判定
     scrollEl.addEventListener('scroll', () => {
       if (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 2) {
         pickActive();
@@ -805,7 +805,11 @@
     setActiveCategory(i);
     isClickScrolling = true;
     clearTimeout(clickTimeout);
-    clickTimeout = setTimeout(() => { isClickScrolling = false; }, 900);
+    clickTimeout = setTimeout(() => {
+      isClickScrolling = false;
+      // 锁释放后同步一次到滚动落点，避免动画期间 observer 被抑制导致不同步
+      pickActive();
+    }, 800);
 
     const scrollEl = document.getElementById('productScroll');
     const section = document.querySelector(`.category-section[data-cat-index="${i}"]`);
