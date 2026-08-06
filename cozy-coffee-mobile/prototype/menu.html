@@ -14,8 +14,15 @@
     max-width:390px; margin:0 auto; min-height:100vh;
   }
   :root {
-    --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
-    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
+    --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
+    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
+    --cask-brown:#2C1E18;
+    --roastery-ink:#2B1E16; --quiet-ink:#756A63;
+    --placeholder:#9E948E; --hairline:#E3DED8;
+    /* aliases */
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
 
@@ -375,97 +382,133 @@
   .tabbar-item.active { color:var(--ink); }
   .tabbar-icon { font-size:16px; line-height:1; }
 
-  /* ── 商品详情覆盖层 ── */
+  /* ── 商品详情：沉浸式滚动页 + 底部固定加购栏 ── */
   .detail-overlay {
     position:fixed; top:0; left:50%; transform:translateX(-50%);
     width:100%; max-width:390px; height:100vh;
-    background:var(--surface); z-index:25;
+    background:var(--porcelain); z-index:25;
     display:none; flex-direction:column;
   }
   .detail-overlay.open { display:flex; }
-  .detail-image-area {
-    position:relative;
-    height:40vh; min-height:280px;
-    overflow:hidden;
+
+  /* 滚动区：Hero + 介绍 + 规格 */
+  .detail-scroll {
+    flex:1; min-height:0; overflow-y:auto;
+    background:var(--porcelain);
   }
+  .detail-scroll::-webkit-scrollbar { display:none; }
+
+  /* Product Hero（随内容滚动离开） */
+  .detail-hero { position:relative; }
   .detail-image {
-    width:100%; height:100%;
+    width:100%; height:380px;
     background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
   }
   .detail-close {
     position:absolute; top:16px; left:16px;
-    width:32px; height:32px; border-radius:50%;
-    background:rgba(255,255,255,.85);
+    width:34px; height:34px; border-radius:50%;
+    background:rgba(255,255,255,.9);
     display:flex; align-items:center; justify-content:center;
-    font-size:20px; color:var(--ink); cursor:pointer;
+    font-size:22px; color:var(--roastery-ink); cursor:pointer;
     z-index:2;
   }
-  .detail-scroll {
-    flex:1; overflow-y:auto;
-    padding:20px 24px 0;
-    background:var(--card);
+  .detail-fav {
+    position:absolute; top:16px; right:16px;
+    width:34px; height:34px; border-radius:50%;
+    background:rgba(255,255,255,.9);
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px; color:var(--roastery-ink); cursor:pointer;
+    z-index:2;
   }
-  .detail-name {
-    font-family:var(--serif); font-size:22px; font-weight:600; color:var(--ink);
+  .detail-hero-info { padding:28px 24px 8px; }
+  .detail-origin {
+    display:block;
+    font-family:var(--serif); font-size:28px; font-weight:600;
+    color:var(--roastery-ink); line-height:1.2;
   }
-  .detail-desc {
-    margin-top:8px; font-size:12px; line-height:1.6; color:var(--muted);
+  .detail-sub {
+    display:block; margin-top:8px;
+    font-size:12px; font-weight:700; letter-spacing:.16em;
+    color:var(--roast-brown);
   }
-  .detail-price {
-    margin-top:14px; font-size:24px; font-weight:700; color:var(--primary);
+  .detail-notes {
+    display:block; margin-top:16px;
+    font-size:15px; color:var(--quiet-ink); letter-spacing:.02em;
+  }
+
+  /* 商品介绍 */
+  .detail-story {
+    margin-top:28px; padding:28px 24px;
+    border-top:1px solid var(--hairline);
+  }
+  .story-title {
+    display:block;
+    font-size:13px; font-weight:700; letter-spacing:.14em;
+    color:var(--quiet-ink);
+  }
+  .story-desc {
+    display:block; margin-top:12px;
+    font-size:14px; line-height:1.8; color:var(--muted);
+  }
+
+  /* 规格选择 */
+  .detail-spec-section {
+    padding:8px 24px 32px;
+  }
+  .spec-section-title {
+    display:block; margin-bottom:20px;
+    font-family:var(--serif); font-size:19px; font-weight:600;
+    color:var(--roastery-ink);
   }
   .detail-spec-group { margin-top:20px; }
   .spec-title {
-    font-size:13px; font-weight:600; color:var(--ink);
+    font-size:13px; font-weight:600; color:var(--roastery-ink);
     margin-bottom:10px;
   }
   .spec-options { display:flex; flex-wrap:wrap; gap:8px; }
   .spec-option {
-    padding:7px 14px;
-    font-size:12px; color:var(--ink);
-    border-radius:999px;
-    border:1px solid var(--border); background:var(--surface);
+    padding:9px 16px;
+    font-size:13px; color:var(--roastery-ink);
+    border-radius:6px;
+    border:1px solid var(--hairline); background:var(--porcelain-muted);
     cursor:pointer;
+    transition:all .2s;
   }
   .spec-option.active {
-    background:var(--primary); border-color:var(--primary); color:#fff;
+    background:var(--roast-brown); border-color:var(--roast-brown); color:#fff;
   }
-  .detail-story { margin-top:20px; padding-bottom:24px; }
-  .detail-notes {
-    font-size:12px; line-height:1.7; color:var(--muted);
-  }
+
+  /* 底部固定加购栏 */
   .detail-bottom {
-    height:60px; display:flex; align-items:center;
-    padding:0 20px;
-    background:var(--surface); border-top:1px solid var(--border);
+    flex:none;
+    display:flex; align-items:center; gap:12px;
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+    background:var(--porcelain);
+    border-top:1px solid var(--hairline);
   }
-  /* 数量加减 — 商品图右上角 */
+  .detail-bottom-price {
+    font-size:24px; font-weight:700; color:var(--roast-brown);
+  }
   .detail-qty {
-    position:absolute; top:16px; right:16px;
-    display:flex; align-items:center; gap:6px;
-    padding:5px 10px;
-    background:rgba(255,255,255,.85);
-    border-radius:20px;
-    z-index:2;
+    display:flex; align-items:center; gap:10px;
+    border:1px solid var(--hairline); border-radius:6px;
+    padding:4px 10px;
   }
   .qty-btn {
     width:24px; height:24px;
     display:flex; align-items:center; justify-content:center;
-    font-size:16px; color:var(--ink); cursor:pointer;
-    border-radius:50%;
-    background:rgba(0,0,0,.06);
+    font-size:16px; color:var(--roastery-ink); cursor:pointer;
   }
-  .qty-btn:active { background:rgba(0,0,0,.12); }
+  .qty-btn:active { opacity:.5; }
   .qty-value { min-width:18px; text-align:center; font-size:14px; font-weight:600; }
-  /* 加入购物车 — 占满底部 */
   .detail-add {
-    flex:1; height:42px;
+    flex:1; height:44px;
     display:flex; align-items:center; justify-content:center;
-    border-radius:8px;
-    background:var(--primary); color:#fff;
-    font-size:15px; font-weight:600; cursor:pointer;
+    border-radius:6px;
+    background:var(--roast-brown); color:#fff;
+    font-size:15px; font-weight:650; cursor:pointer;
   }
-  .detail-add:active { opacity:.88; }
+  .detail-add:active { background:var(--roast-brown-deep); }
 
   /* ── Toast ── */
   .toast {
@@ -598,30 +641,41 @@
 
   <!-- 商品详情覆盖层 -->
   <div class="detail-overlay" id="detailOverlay">
-    <div class="detail-image-area">
-      <span class="detail-close" onclick="closeDetail()">×</span>
+    <div class="detail-scroll">
+      <!-- Product Hero（随滚动离开） -->
+      <div class="detail-hero">
+        <span class="detail-close" onclick="closeDetail()">×</span>
+        <span class="detail-fav" onclick="toast('已收藏')">♡</span>
+        <div class="detail-image" id="detailImage"></div>
+        <div class="detail-hero-info">
+          <span class="detail-origin" id="detailOrigin">云南 保山</span>
+          <span class="detail-sub" id="detailSub">HAND BREW</span>
+          <span class="detail-notes" id="detailNotes">花香 · 柑橘 · 蜂蜜</span>
+        </div>
+      </div>
+
+      <!-- 商品介绍 -->
+      <div class="detail-story">
+        <span class="story-title">风味</span>
+        <span class="story-desc" id="detailDesc">商品描述</span>
+      </div>
+
+      <!-- 规格选择 -->
+      <div class="detail-spec-section">
+        <span class="spec-section-title">选择你的偏好</span>
+        <div id="specGroups"></div>
+      </div>
+    </div>
+
+    <!-- 底部固定加购栏 -->
+    <div class="detail-bottom">
+      <span class="detail-bottom-price" id="detailPrice">¥28</span>
       <div class="detail-qty">
         <div class="qty-btn" onclick="changeQty(-1)">−</div>
         <span class="qty-value" id="detailQty">1</span>
         <div class="qty-btn" onclick="changeQty(1)">+</div>
       </div>
-      <div class="detail-image" id="detailImage"></div>
-    </div>
-    <div class="detail-scroll">
-      <div class="detail-name" id="detailName">商品名称</div>
-      <div class="detail-desc" id="detailDesc">商品描述</div>
-      <div class="detail-price" id="detailPrice">¥28</div>
-
-      <div id="specGroups"></div>
-
-      <div class="detail-story">
-        <div class="spec-title">风味</div>
-        <div class="detail-notes" id="detailNotes">花香 · 柑橘 · 蜂蜜</div>
-      </div>
-    </div>
-
-    <div class="detail-bottom">
-      <div class="detail-add" id="detailAdd" onclick="addToCart()">加入购物车 · ¥28</div>
+      <div class="detail-add" id="detailAdd" onclick="addToCart()">加入购物车</div>
     </div>
   </div>
 
@@ -637,64 +691,64 @@
   ];
   const products = {
     espresso: [
-      { name:'浓缩咖啡', desc:'双份浓缩基底', price:18, sold:320, praise:99,
+      { name:'浓缩咖啡', desc:'双份浓缩基底', price:18, sold:320, praise:99, origin:\'杭州 烘焙中心\',
         specs:{size:null, temp:null, sugar:null},
         notes:'醇厚 · 浓郁 · 油脂丰富' },
-      { name:'美式咖啡', desc:'浓缩加水，清爽明亮', price:22, sold:268, praise:97,
+      { name:'美式咖啡', desc:'浓缩加水，清爽明亮', price:22, sold:268, praise:97, origin:\'杭州 烘焙中心\',
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['标准糖','微糖','半糖','无糖']},
         notes:'清爽 · 明亮 · 低酸' }
     ],
     coffee: [
-      { name:'经典手冲', desc:'云南保山 SOE，花香柑橘', price:28, sold:185, praise:99,
+      { name:'经典手冲', desc:'云南保山 SOE，花香柑橘', price:28, sold:185, praise:99, origin:\'云南 保山\',
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
         notes:'花香 · 柑橘 · 蜂蜜 · 茶感' },
-      { name:'云南日晒', desc:'日晒处理，黑糖甜感', price:30, sold:96, praise:98,
+      { name:'云南日晒', desc:'日晒处理，黑糖甜感', price:30, sold:96, praise:98, origin:\'云南 保山\',
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
         notes:'黑糖 · 甜感 · 圆润体脂' }
     ],
     latte: [
-      { name:'Dirty', desc:'浓缩碰撞冰牛奶，渐变层次', price:32, sold:342, praise:99,
+      { name:'Dirty', desc:'浓缩碰撞冰牛奶，渐变层次', price:32, sold:342, praise:99, origin:\'杭州 烘焙中心\',
         specs:{size:null, temp:null, sugar:null},
         notes:'奶香 · 浓缩 · 分层渐变' },
-      { name:'海盐焦糖拿铁', desc:'海盐 · 焦糖 · 丝滑', price:34, sold:410, praise:98,
+      { name:'海盐焦糖拿铁', desc:'海盐 · 焦糖 · 丝滑', price:34, sold:410, praise:98, origin:\'杭州 烘焙中心\',
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['标准糖','微糖','半糖']},
         notes:'海盐 · 焦糖 · 丝滑奶泡' },
-      { name:'燕麦拿铁', desc:'燕麦奶，谷物香气', price:36, sold:236, praise:97,
+      { name:'燕麦拿铁', desc:'燕麦奶，谷物香气', price:36, sold:236, praise:97, origin:\'杭州 烘焙中心\',
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['标准糖','微糖','半糖','无糖']},
         notes:'谷物 · 坚果 · 植物奶香' }
     ],
     signature: [
-      { name:'荔枝特调', desc:'当季限定，清爽果香', price:38, sold:88, praise:96,
+      { name:'荔枝特调', desc:'当季限定，清爽果香', price:38, sold:88, praise:96, origin:\'广州 当季限定\',
         specs:{size:['标准杯','大杯'], temp:['冰'], sugar:['标准糖','微糖','半糖']},
         notes:'荔枝 · 果香 · 夏日限定' }
     ],
     soe: [
-      { name:'埃塞俄比亚 耶加雪菲', desc:'茉莉 · 柠檬 · 茶感', price:42, sold:152, praise:99,
+      { name:'埃塞俄比亚 耶加雪菲', desc:'茉莉 · 柠檬 · 茶感', price:42, sold:152, praise:99, origin:\'埃塞俄比亚 耶加雪菲\',
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
         notes:'茉莉 · 柠檬 · 茶感 · 明亮酸质' },
-      { name:'巴拿马 瑰夏', desc:'花香 · 蜂蜜，精致余韵', price:58, sold:74, praise:99,
+      { name:'巴拿马 瑰夏', desc:'花香 · 蜂蜜，精致余韵', price:58, sold:74, praise:99, origin:\'巴拿马 博奎特\',
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
         notes:'花香 · 蜂蜜 · 精致余韵' }
     ],
     bakery: [
-      { name:'手工燕麦曲奇', desc:'谷物香，配咖啡刚好', price:15, sold:120, praise:97,
+      { name:'手工燕麦曲奇', desc:'谷物香，配咖啡刚好', price:15, sold:120, praise:97, origin:\'杭州 烘焙中心\',
         specs:{size:null, temp:null, sugar:null},
         notes:'谷物 · 酥脆 · 低糖' },
-      { name:'海盐焦糖牛角包', desc:'酥脆外皮，咸甜平衡', price:18, sold:156, praise:96,
+      { name:'海盐焦糖牛角包', desc:'酥脆外皮，咸甜平衡', price:18, sold:156, praise:96, origin:\'杭州 烘焙中心\',
         specs:{size:null, temp:null, sugar:null},
         notes:'酥脆 · 咸甜 · 黄油香' }
     ],
     other: [
-      { name:'热可可', desc:'浓郁可可，冬日暖意', price:26, sold:64, praise:95,
+      { name:'热可可', desc:'浓郁可可，冬日暖意', price:26, sold:64, praise:95, origin:\'杭州 烘焙中心\',
         specs:{size:['标准杯','大杯'], temp:['热'], sugar:['标准糖','微糖','半糖','无糖']},
         notes:'可可 · 奶香 · 冬日暖饮' },
-      { name:'瓶装冷萃', desc:'慢萃 12 小时，瓶装便携', price:28, sold:58, praise:97,
+      { name:'瓶装冷萃', desc:'慢萃 12 小时，瓶装便携', price:28, sold:58, praise:97, origin:\'云南 保山\',
         specs:{size:null, temp:null, sugar:null},
         notes:'冷萃 · 顺滑 · 便携瓶装' },
-      { name:'西柚茉莉冰茶', desc:'西柚 · 茉莉 · 清爽果茶', price:24, sold:45, praise:96,
+      { name:'西柚茉莉冰茶', desc:'西柚 · 茉莉 · 清爽果茶', price:24, sold:45, praise:96, origin:\'广州 当季限定\',
         specs:{size:null, temp:['冰'], sugar:['标准糖','微糖']},
         notes:'西柚 · 茉莉 · 清爽微甜' },
-      { name:'矿泉水', desc:'天然弱碱性饮用水', price:8, sold:76, praise:98,
+      { name:'矿泉水', desc:'天然弱碱性饮用水', price:8, sold:76, praise:98, origin:\'杭州 烘焙中心\',
         specs:{size:null, temp:null, sugar:null},
         notes:'天然 · 弱碱 · 纯净' }
     ]
@@ -895,11 +949,13 @@
     detailPrice = prod.price;
     detailQty = 1;
 
-    document.getElementById('detailName').textContent = prod.name;
+    const catIdx = findCategoryIdx(name);
+    document.getElementById('detailOrigin').textContent = prod.origin || 'CozyCoffee 烘焙中心';
+    document.getElementById('detailSub').textContent = (catIdx >= 0 ? categories[catIdx].en : 'COZY COFFEE');
+    document.getElementById('detailNotes').textContent = prod.notes || prod.desc;
     document.getElementById('detailDesc').textContent = prod.desc;
     document.getElementById('detailPrice').textContent = '¥' + prod.price;
     document.getElementById('detailQty').textContent = '1';
-    document.getElementById('detailNotes').textContent = prod.notes || prod.desc;
     document.getElementById('detailImage').style.background =
       prod.specs && (prod.specs.size || prod.specs.temp || prod.specs.sugar)
         ? 'linear-gradient(135deg, #6B4A2E, #3D2A1E)'
