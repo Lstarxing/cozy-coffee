@@ -990,8 +990,13 @@
     const sizeActive = document.querySelector('.spec-option[data-spec="size"].active');
     if (sizeActive && sizeActive.dataset.value === '大杯') base += 6;
     detailPrice = base;
-    document.getElementById('detailPrice').textContent = '¥' + base;
+    updatePriceDisplay();
     updateAddBtn();
+  }
+
+  // 左上角金额 = 单价 × 数量（数量加减时实时更新）
+  function updatePriceDisplay() {
+    document.getElementById('detailPrice').textContent = '¥' + (detailPrice * detailQty).toFixed(2);
   }
 
   function selectedSpecsText() {
@@ -1046,6 +1051,7 @@
     detailQty += d;
     if (detailQty < 1) detailQty = 1;
     document.getElementById('detailQty').textContent = detailQty;
+    updatePriceDisplay();
     updateAddBtn();
   }
 
