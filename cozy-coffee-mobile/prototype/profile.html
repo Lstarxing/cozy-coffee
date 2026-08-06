@@ -202,57 +202,31 @@
   /* ═══════════════════════════════════════
      图标入口（白卡 · 小图标 · 无色块）
      ═══════════════════════════════════════ */
+  /* ═══════════════════════════════════════
+     快捷入口（一个 div · icon + 名称宫格）
+     ═══════════════════════════════════════ */
   .entry-card {
     margin-top:26px;
     border-radius:14px; background:var(--card);
     overflow:hidden;
   }
-  .entry-row {
-    display:flex; align-items:center; gap:14px;
-    padding:16px 18px;
-    border-bottom:1px solid var(--border);
-    cursor:pointer;
-  }
-  .entry-row:last-child { border-bottom:0; }
-  .entry-ic {
-    flex:none; width:34px; height:34px; border-radius:8px;
-    display:flex; align-items:center; justify-content:center;
-    background:var(--surface); color:var(--quiet-ink);
-  }
-  .entry-ic svg { width:18px; height:18px; }
-  .entry-copy { flex:1; min-width:0; }
-  .entry-name {
-    display:block;
-    font-size:14px; font-weight:600; color:var(--ink);
-  }
-  .entry-note {
-    display:block; margin-top:3px;
-    font-size:11px; color:var(--muted);
-  }
-  .entry-count {
-    flex:none; min-width:22px; height:22px; padding:0 7px;
-    display:inline-flex; align-items:center; justify-content:center;
-    border-radius:999px;
-    background:var(--surface); color:var(--muted);
-    font-size:11px; font-weight:700;
-  }
-  .entry-arrow { flex:none; font-size:18px; color:var(--placeholder); line-height:1; }
-
-  /* ── 功能图标网格 ── */
   .grid-entries {
     display:grid; grid-template-columns:repeat(4,1fr);
-    padding:20px 6px 18px;
+    padding:24px 6px 22px;
+    row-gap:22px; column-gap:4px;
   }
   .grid-item {
     display:flex; flex-direction:column; align-items:center; gap:9px;
     cursor:pointer;
+    transition:opacity .2s;
   }
+  .grid-item:active { opacity:.6; }
   .grid-ic {
-    width:34px; height:34px; border-radius:8px;
+    width:36px; height:36px; border-radius:10px;
     display:flex; align-items:center; justify-content:center;
     background:var(--surface); color:var(--quiet-ink);
   }
-  .grid-ic svg { width:18px; height:18px; }
+  .grid-ic svg { width:19px; height:19px; }
   .grid-label { font-size:11px; color:var(--ink); font-weight:500; }
 
   /* ── Footer ── */
@@ -361,22 +335,13 @@
     <span class="promo-arrow">›</span>
   </div>
 
-  <!-- 我的订单 -->
-  <div class="entry-card">
-    <div class="entry-row" onclick="go('order.html')">
-      <span class="entry-ic" id="icBag"></span>
-      <div class="entry-copy">
-        <span class="entry-name">我的订单</span>
-        <span class="entry-note">查看制作进度与取餐</span>
-      </div>
-      <span class="entry-count">3</span>
-      <span class="entry-arrow">›</span>
-    </div>
-  </div>
-
-  <!-- 功能图标入口 -->
+  <!-- 快捷入口（一个 div · icon + 名称） -->
   <div class="entry-card">
     <div class="grid-entries">
+      <div class="grid-item" onclick="go('order.html')">
+        <span class="grid-ic" id="icBag"></span>
+        <span class="grid-label">我的订单</span>
+      </div>
       <div class="grid-item" onclick="go('mall.html')">
         <span class="grid-ic" id="icMall"></span>
         <span class="grid-label">积分商城</span>
@@ -393,42 +358,26 @@
         <span class="grid-ic" id="icRedeem"></span>
         <span class="grid-label">兑换订单</span>
       </div>
-    </div>
-  </div>
-
-  <!-- 账户 -->
-  <div class="entry-card">
-    <div class="entry-row" onclick="toast('收货地址')">
-      <span class="entry-ic" id="icPin"></span>
-      <div class="entry-copy">
-        <span class="entry-name">收货地址</span>
-        <span class="entry-note">管理配送地址</span>
+      <div class="grid-item" onclick="toast('我的券包')">
+        <span class="grid-ic" id="icCoupon"></span>
+        <span class="grid-label">优惠券</span>
       </div>
-      <span class="entry-arrow">›</span>
-    </div>
-    <div class="entry-row" onclick="toast('联系客服')">
-      <span class="entry-ic" id="icSupport"></span>
-      <div class="entry-copy">
-        <span class="entry-name">联系客服</span>
-        <span class="entry-note">在线咨询与反馈</span>
+      <div class="grid-item" onclick="toast('收货地址')">
+        <span class="grid-ic" id="icPin"></span>
+        <span class="grid-label">收货地址</span>
       </div>
-      <span class="entry-arrow">›</span>
-    </div>
-    <div class="entry-row" onclick="toast('账户设置')">
-      <span class="entry-ic" id="icGear"></span>
-      <div class="entry-copy">
-        <span class="entry-name">账户设置</span>
-        <span class="entry-note">安全、隐私与退出登录</span>
+      <div class="grid-item" onclick="toast('联系客服')">
+        <span class="grid-ic" id="icSupport"></span>
+        <span class="grid-label">联系客服</span>
       </div>
-      <span class="entry-arrow">›</span>
-    </div>
-    <div class="entry-row" onclick="go('about.html')">
-      <span class="entry-ic" id="icInfo"></span>
-      <div class="entry-copy">
-        <span class="entry-name">关于我们</span>
-        <span class="entry-note">品牌故事与咖啡旅程</span>
+      <div class="grid-item" onclick="toast('账户设置')">
+        <span class="grid-ic" id="icGear"></span>
+        <span class="grid-label">账户设置</span>
       </div>
-      <span class="entry-arrow">›</span>
+      <div class="grid-item" onclick="go('about.html')">
+        <span class="grid-ic" id="icInfo"></span>
+        <span class="grid-label">关于我们</span>
+      </div>
     </div>
   </div>
 
@@ -483,6 +432,7 @@
     calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 9.5h17"/><path d="M8 3v4M16 3v4"/><path d="M9 15l2 2 4-4"/></svg>',
     shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.5V11c0 4.5-3 8.2-7 9.5-4-1.3-7-5-7-9.5V5.5z"/></svg>',
     swap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M14 4l4 4-4 4"/><path d="M20 16H7M10 12l-4 4 4 4"/></svg>',
+    coupon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v4a2.2 2.2 0 0 0 0 4.4V19H4v-3.6a2.2 2.2 0 0 0 0-4.4z"/><circle cx="9" cy="12" r=".8" fill="currentColor" stroke="none"/></svg>',
     pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-11a6 6 0 0 1 12 0c0 5.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>',
     headset: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="13" width="4" height="7" rx="1.5"/><rect x="17" y="13" width="4" height="7" rx="1.5"/><path d="M20 20a4 4 0 0 1-4 3h-3"/></svg>',
     gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5l1.6 2.3 2.8-.4 1 2.6 2.7.9-.6 2.8 2 2.1-1.9 2.1.6 2.8-2.7.9-1 2.6-2.8-.4L12 21.5l-1.6-2.3-2.8.4-1-2.6-2.7-.9.6-2.8-2-2.1 1.9-2.1-.6-2.8 2.7-.9 1-2.6 2.8.4z"/></svg>',
@@ -540,7 +490,7 @@
   function switchLevel(level) { currentLevel = level; applyTheme(level); }
 
   function mountIcons() {
-    const map = { icBag:'bag', icMall:'gift', icSignin:'calendar', icBenefits:'shield', icRedeem:'swap', icPin:'pin', icSupport:'headset', icGear:'gear', icInfo:'info' };
+    const map = { icBag:'bag', icMall:'gift', icSignin:'calendar', icBenefits:'shield', icRedeem:'swap', icCoupon:'coupon', icPin:'pin', icSupport:'headset', icGear:'gear', icInfo:'info' };
     Object.keys(map).forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = ICONS[map[id]];
