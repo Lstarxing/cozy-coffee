@@ -200,30 +200,20 @@
   .promo-arrow { flex:none; font-size:18px; color:var(--roast-brown); line-height:1; }
 
   /* ═══════════════════════════════════════
-     快捷入口分组（icon + 名称，无容器）
+     快捷入口（3×3 宫格 · icon + 名称）
      ═══════════════════════════════════════ */
-  .group-card {
-    border-radius:14px; background:var(--card);
+  .entry-card {
     margin-top:26px;
+    border-radius:14px; background:var(--card);
+    overflow:hidden;
   }
-  .group-card + .group-card { margin-top:14px; }
-  .group-head {
-    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
-    padding:22px 22px 0;
-  }
-  .group-title {
-    font-family:var(--serif); font-size:17px; font-weight:600; color:var(--ink);
-  }
-  .group-en {
-    font-size:9px; font-weight:700; letter-spacing:.2em; color:var(--placeholder);
-  }
-  .group-grid {
+  .grid3 {
     display:grid; grid-template-columns:repeat(3,1fr);
-    padding:26px 8px 28px;
-    row-gap:26px;
+    padding:30px 8px 30px;
+    row-gap:30px;
   }
   .g-item {
-    display:flex; flex-direction:column; align-items:center; gap:10px;
+    display:flex; flex-direction:column; align-items:center; gap:11px;
     cursor:pointer;
     transition:opacity .2s;
   }
@@ -359,13 +349,9 @@
     <span class="promo-arrow">›</span>
   </div>
 
-  <!-- 我的咖啡 -->
-  <div class="group-card">
-    <div class="group-head">
-      <span class="group-title">我的咖啡</span>
-      <span class="group-en">MY COFFEE</span>
-    </div>
-    <div class="group-grid">
+  <!-- 快捷入口（3×3 宫格） -->
+  <div class="entry-card">
+    <div class="grid3">
       <div class="g-item" onclick="go('order.html')">
         <span class="g-icon" id="icOrder"></span>
         <span class="g-label">订单</span>
@@ -378,16 +364,6 @@
         <span class="g-icon" id="icMall"></span>
         <span class="g-label">积分</span>
       </div>
-    </div>
-  </div>
-
-  <!-- 会员成长 -->
-  <div class="group-card">
-    <div class="group-head">
-      <span class="group-title">会员成长</span>
-      <span class="group-en">MEMBERSHIP</span>
-    </div>
-    <div class="group-grid">
       <div class="g-item" onclick="go('signin.html')">
         <span class="g-icon" id="icSignin"></span>
         <span class="g-label">签到</span>
@@ -400,16 +376,6 @@
         <span class="g-icon" id="icLevel"></span>
         <span class="g-label">等级</span>
       </div>
-    </div>
-  </div>
-
-  <!-- 服务 -->
-  <div class="group-card">
-    <div class="group-head">
-      <span class="group-title">服务</span>
-      <span class="group-en">SERVICE</span>
-    </div>
-    <div class="group-grid">
       <div class="g-item" onclick="toast('收货地址')">
         <span class="g-icon" id="icPin"></span>
         <span class="g-label">地址</span>
