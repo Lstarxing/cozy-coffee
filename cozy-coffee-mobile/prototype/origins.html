@@ -123,7 +123,7 @@
 <body>
 
 <div class="page">
-  <a class="back-btn" href="index.html">‹</a>
+  <a class="back-btn" onclick="goBack('index.html')">‹</a>
 
   <!-- 世界产区地图 -->
   <div class="map-section">
@@ -232,6 +232,10 @@
         <div class="card-roastery">${hangzhou.steps.map(s => `<span class="roastery-step">${s}</span>`).join('')}</div>
       </div>
     `;
+  function goBack(fallback) {
+    if (document.referrer && window.history.length > 1) { history.back(); }
+    else { location.href = fallback; }
+  }
 </script>
 </body>
 </html>

@@ -155,7 +155,7 @@
 
 <div class="page">
 
-  <a class="back-btn" href="mall.html">‹</a>
+  <a class="back-btn" onclick="goBack('mall.html')">‹</a>
 
   <!-- 页头 -->
   <div class="page-head">
@@ -350,5 +350,11 @@
   </div>
 
 </div>
+<script>
+  function goBack(fallback) {
+    if (document.referrer && window.history.length > 1) { history.back(); }
+    else { location.href = fallback; }
+  }
+</script>
 </body>
 </html>

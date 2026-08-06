@@ -228,7 +228,7 @@
 
 <div class="page">
 
-  <a class="back-btn" href="index.html">‹</a>
+  <a class="back-btn" onclick="goBack('index.html')">‹</a>
 
   <!-- 积分头 -->
   <div class="points-header">
@@ -368,6 +368,10 @@
     t.style.opacity = '1';
     clearTimeout(t._timer);
     t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
+  }
+  function goBack(fallback) {
+    if (document.referrer && window.history.length > 1) { history.back(); }
+    else { location.href = fallback; }
   }
 </script>
 </body>
