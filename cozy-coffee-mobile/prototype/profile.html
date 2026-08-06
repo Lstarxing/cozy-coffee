@@ -14,104 +14,283 @@
     max-width:390px; margin:0 auto; min-height:100vh;
   }
   :root {
-    --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
-    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
+    --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
+    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
+    --cask-brown:#2C1E18;
+    --roastery-ink:#2B1E16; --quiet-ink:#756A63;
+    --placeholder:#9E948E; --hairline:#E3DED8;
+    /* aliases */
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
 
-  .page { padding:24px 20px 120px; }
+  .page { padding:20px 20px 110px; }
 
-  /* ── 会员头 ── */
-  .member-header {
-    padding:32px 24px;
-    border-radius:12px;
-    background:linear-gradient(135deg,#2C1E18,#3D2A20);
-    color:#fff;
-    display:flex; align-items:center; gap:16px;
+  /* ═══════════════════════════════════════
+     会员卡片（等级主题 + 多层质感）
+     ═══════════════════════════════════════ */
+  .member-card {
+    position:relative; overflow:hidden;
+    padding:24px 24px 22px;
+    border-radius:16px;
+    box-shadow:0 10px 30px rgba(43,30,22,.10);
+    transition:background .35s ease, color .35s ease;
+  }
+  .member-card > * { position:relative; z-index:1; }
+
+  .layer-texture {
+    position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.22;
+    background-image:radial-gradient(currentColor 1px, transparent 1px);
+    background-size:14px 14px;
+  }
+  .layer-shine {
+    position:absolute; inset:0; z-index:0; pointer-events:none;
+    background:linear-gradient(160deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,.05) 40%, transparent 70%);
+  }
+  .member-card.is-dark .layer-shine {
+    background:linear-gradient(160deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.02) 45%, transparent 70%);
+  }
+  .member-card.is-dark .layer-sheen {
+    position:absolute; inset:0; z-index:0; pointer-events:none;
+    background:radial-gradient(120% 90% at 80% 0%, rgba(230,201,122,.16) 0%, transparent 55%);
+  }
+
+  .card-top {
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .brand-row { display:flex; align-items:center; gap:9px; }
+  .brand-emblem {
+    width:26px; height:26px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .brand-emblem svg { width:100%; height:100%; }
+  .brand-text {
+    font-size:11px; font-weight:800; letter-spacing:.24em;
+    opacity:.84;
+  }
+  .card-settings {
+    font-size:11px; font-weight:600; letter-spacing:.06em;
+    padding:5px 11px; border-radius:6px;
+    border:1px solid currentColor; opacity:.8; cursor:pointer;
+  }
+  .card-settings:active { opacity:.5; }
+  .card-caption {
+    display:block; margin-top:7px;
+    font-size:11px; opacity:.68; letter-spacing:.02em;
+  }
+
+  .identity {
+    display:flex; align-items:center; gap:13px;
+    margin-top:20px; cursor:pointer;
   }
   .avatar {
-    flex:none; width:60px; height:60px; border-radius:50%;
-    background:rgba(255,255,255,.12);
+    flex:none; width:46px; height:46px; border-radius:50%;
     display:flex; align-items:center; justify-content:center;
-    font-size:22px;
+    font-size:19px;
+    background:rgba(255,255,255,.55);
+    border:1px solid rgba(60,40,30,.14);
   }
-  .member-info { flex:1; min-width:0; }
-  .member-name {
-    display:block; font-family:var(--serif); font-size:22px; font-weight:600;
+  .member-card.is-dark .avatar {
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.26);
   }
-  .member-level {
-    display:inline-block; margin-top:8px; padding:4px 12px;
-    font-size:10px; font-weight:700; letter-spacing:.06em;
-    border-radius:999px; background:rgba(255,255,255,.14); color:rgba(255,255,255,.85);
+  .identity-copy { flex:1; min-width:0; }
+  .user-name {
+    display:block;
+    font-family:var(--serif); font-size:22px; font-weight:600;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
-  .member-edit {
-    flex:none; font-size:12px; color:rgba(255,255,255,.55);
-    cursor:pointer; white-space:nowrap;
+  .user-level {
+    display:inline-flex; align-items:center; gap:6px;
+    margin-top:7px;
+    font-size:10px; font-weight:650; letter-spacing:.12em;
+    opacity:.8;
+  }
+  .user-level::before {
+    content:''; width:5px; height:5px; border-radius:50%;
+    background:var(--accent, currentColor); opacity:.85;
+  }
+  .identity-action {
+    flex:none;
+    font-size:11px; font-weight:650; opacity:.86;
   }
 
-  /* ── 等级进度 ── */
-  .level-progress {
-    margin-top:12px; padding:0 24px;
-    border-radius:0 0 12px 12px;
+  .ledger {
+    display:grid; grid-template-columns:1.35fr 1fr 1fr;
+    margin-top:22px; padding-top:18px;
+    border-top:1px solid var(--line, currentColor);
   }
-  .progress-bar {
-    height:3px; border-radius:2px; background:rgba(255,255,255,.14);
+  .ledger-cell { padding-left:22px; border-left:1px solid var(--line, currentColor); }
+  .ledger-cell:first-child { padding-left:0; border-left:0; }
+  .ledger-value {
+    display:block;
+    font-family:var(--serif); font-size:30px; font-weight:700; line-height:1;
+    letter-spacing:-.01em;
+  }
+  .ledger-value.small { font-size:23px; }
+  .ledger-label {
+    display:block; margin-top:7px;
+    font-size:10px; letter-spacing:.08em; opacity:.72;
+  }
+
+  .level-progress { margin-top:20px; }
+  .progress-track {
+    height:4px; border-radius:2px;
+    background:var(--track, rgba(60,40,30,.12));
     overflow:hidden;
   }
-  .progress-fill { height:100%; border-radius:2px; background:rgba(255,255,255,.65); }
-  .progress-text {
-    display:block; margin-top:8px; padding-bottom:20px;
-    font-size:11px; text-align:center; color:rgba(255,255,255,.6);
+  .progress-fill {
+    height:100%; border-radius:2px;
+    background:var(--accent, currentColor);
+    transition:width .4s ease;
+  }
+  .progress-copy {
+    display:block; margin-top:8px;
+    font-size:11px; opacity:.74;
   }
 
-  /* ── 积分账本 ── */
-  .ledger {
-    margin-top:16px; padding:4px 20px;
-    border-radius:12px; background:var(--card);
-    display:flex;
+  /* ═══════════════════════════════════════
+     等级预览（原型工具）
+     ═══════════════════════════════════════ */
+  .level-preview {
+    display:flex; align-items:center; gap:8px;
+    margin-top:14px;
   }
-  .ledger-cell {
-    flex:1; padding:18px 0; text-align:center; cursor:pointer;
-    border-right:1px solid var(--border);
+  .preview-label {
+    flex:none;
+    font-size:10px; font-weight:700; letter-spacing:.14em;
+    color:var(--placeholder);
   }
-  .ledger-cell:last-child { border-right:0; }
-  .ledger-value { display:block; font-size:22px; font-weight:700; color:var(--ink); }
-  .ledger-label { display:block; margin-top:4px; font-size:11px; color:var(--muted); }
+  .preview-chips { display:flex; gap:7px; flex-wrap:wrap; }
+  .preview-chip {
+    display:flex; align-items:center; gap:6px;
+    padding:6px 10px; border-radius:6px;
+    border:1px solid var(--hairline);
+    background:var(--card); color:var(--muted);
+    font-size:11px; font-weight:600; cursor:pointer;
+    transition:all .2s;
+  }
+  .preview-chip .chip-emblem { width:14px; height:14px; display:flex; }
+  .preview-chip .chip-emblem svg { width:100%; height:100%; }
+  .preview-chip.active {
+    border-color:var(--roast-brown); color:var(--roast-brown);
+    background:var(--porcelain-muted);
+  }
+  .preview-chip:active { opacity:.6; }
 
-  /* ── 功能宫格 ── */
+  /* ═══════════════════════════════════════
+     区块
+     ═══════════════════════════════════════ */
+  .section { margin-top:30px; }
+  .section-head {
+    display:flex; align-items:flex-end; justify-content:space-between; gap:18px;
+    padding-bottom:14px;
+    border-bottom:1px solid var(--border);
+  }
+  .section-title {
+    display:block;
+    font-family:var(--serif); font-size:19px; font-weight:600; color:var(--ink);
+  }
+  .section-note {
+    display:block; margin-top:4px;
+    font-size:12px; color:var(--muted);
+  }
+
+  /* ── 订单双入口 ── */
+  .order-duo { display:flex; gap:14px; margin-top:16px; }
+  .order-card {
+    flex:1;
+    padding:20px 18px 18px;
+    border-radius:14px;
+    cursor:pointer;
+    transition:transform .2s, box-shadow .2s;
+  }
+  .order-card:active { transform:scale(.98); }
+  .order-card.coffee {
+    background:linear-gradient(135deg, #FFFFFF, var(--porcelain-muted));
+    border:1px solid var(--hairline);
+  }
+  .order-card.redeem {
+    background:linear-gradient(135deg, #FFFFFF, var(--glaze-green-soft));
+    border:1px solid #DCE6D8;
+  }
+  .order-card-head { display:flex; align-items:center; justify-content:space-between; }
+  .order-card-mark {
+    width:40px; height:40px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--roast-brown); color:#fff;
+    font-family:var(--serif); font-size:17px; font-weight:600;
+  }
+  .order-card.redeem .order-card-mark { background:var(--glaze-green); }
+  .order-card-count {
+    min-width:22px; height:22px; padding:0 7px;
+    display:inline-flex; align-items:center; justify-content:center;
+    border-radius:999px;
+    background:var(--surface); color:var(--muted);
+    font-size:11px; font-weight:700;
+  }
+  .order-card-name {
+    display:block; margin-top:16px;
+    font-family:var(--serif); font-size:17px; font-weight:600; color:var(--ink);
+  }
+  .order-card-note {
+    display:block; margin-top:5px;
+    font-size:11px; color:var(--muted);
+  }
+
+  /* ── 功能金刚区 ── */
   .feature-grid {
-    margin-top:16px; padding:20px 12px 16px;
-    border-radius:12px; background:var(--card);
-    display:grid; grid-template-columns:repeat(4,1fr); gap:20px 8px;
+    margin-top:16px; padding:20px 8px 6px;
+    border-radius:14px; background:var(--card);
+    display:grid; grid-template-columns:repeat(4,1fr); gap:18px 6px;
   }
   .feature-item {
-    display:flex; flex-direction:column; align-items:center; gap:10px;
+    display:flex; flex-direction:column; align-items:center; gap:9px;
     cursor:pointer;
   }
   .feature-icon {
-    width:44px; height:44px; border-radius:12px;
-    background:var(--surface);
+    width:46px; height:46px; border-radius:12px;
     display:flex; align-items:center; justify-content:center;
-    font-size:18px; color:var(--primary);
+    background:var(--surface); color:var(--primary);
+    font-family:var(--serif); font-size:17px; font-weight:600;
   }
+  .feature-icon.primary { background:var(--primary); color:#fff; }
+  .feature-icon.accent { background:var(--glaze-green-soft); color:var(--glaze-green); }
   .feature-name { font-size:11px; color:var(--ink); font-weight:500; }
 
   /* ── 账户链接 ── */
   .account-links {
-    margin-top:16px; padding:4px 20px;
-    border-radius:12px; background:var(--card);
+    margin-top:30px;
+    border:1px solid var(--border); border-radius:14px;
+    background:var(--card); overflow:hidden;
   }
   .account-row {
     min-height:50px;
     display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:0 18px;
     border-bottom:1px solid var(--border); cursor:pointer;
   }
   .account-row:last-child { border-bottom:0; }
   .account-name { font-size:14px; color:var(--ink); }
   .account-note { flex:1; text-align:right; font-size:11px; color:var(--muted); }
-  .account-arrow { font-size:16px; color:var(--muted); }
+  .account-arrow { font-size:16px; color:var(--placeholder); }
 
-  /* ── 底部 TabBar ── */
+  /* ── Footer ── */
+  .profile-footer { padding:44px 0 8px; text-align:center; }
+  .footer-brand {
+    display:block;
+    font-size:11px; font-weight:800; letter-spacing:.24em; color:var(--ink);
+  }
+  .footer-copy {
+    display:block; margin-top:7px;
+    font-size:9px; letter-spacing:.16em; color:var(--placeholder);
+  }
+
+  /* ═══════════════════════════════════════
+     底部 TabBar
+     ═══════════════════════════════════════ */
   .tabbar {
     position:fixed; bottom:0; left:50%; transform:translateX(-50%);
     width:100%; max-width:390px; height:54px;
@@ -141,101 +320,236 @@
 </head>
 <body>
 
-  <div class="page">
+<div class="page">
 
-    <!-- 会员头 -->
-    <div class="member-header">
+  <!-- 会员卡片 -->
+  <div class="member-card" id="memberCard">
+    <div class="layer-texture"></div>
+    <div class="layer-shine"></div>
+
+    <div class="card-top">
+      <div class="brand-row">
+        <span class="brand-emblem" id="brandEmblem"></span>
+        <span class="brand-text">COZY MEMBER</span>
+      </div>
+      <span class="card-settings" onclick="toast('账户设置')">设置</span>
+    </div>
+    <span class="card-caption">Coffee, points and daily rituals.</span>
+
+    <div class="identity" onclick="toast('编辑资料')">
       <div class="avatar">☕</div>
-      <div class="member-info">
-        <span class="member-name">Cozy 咖啡爱好者</span>
-        <span class="member-level">SILVER · 白银会员</span>
+      <div class="identity-copy">
+        <span class="user-name">Cozy 咖啡爱好者</span>
+        <span class="user-level" id="userLevel">白银会员 · SILVER</span>
       </div>
-      <span class="member-edit" onclick="toast('编辑资料')">编辑 ›</span>
-    </div>
-    <div class="member-header level-progress">
-      <div style="width:100%;">
-        <div class="progress-bar">
-          <div class="progress-fill" style="width:62%;"></div>
-        </div>
-        <span class="progress-text">距离黄金会员还需 380 EXP</span>
-      </div>
+      <span class="identity-action">账户 →</span>
     </div>
 
-    <!-- 积分账本 -->
     <div class="ledger">
-      <div class="ledger-cell" onclick="goPage('signin.html')">
-        <span class="ledger-value">3,280</span>
-        <span class="ledger-label">积分</span>
+      <div class="ledger-cell" onclick="go('points-history.html')">
+        <span class="ledger-value" id="ledPoints">1,200</span>
+        <span class="ledger-label">当前积分</span>
       </div>
       <div class="ledger-cell" onclick="toast('我的券包')">
-        <span class="ledger-value">2</span>
+        <span class="ledger-value small" id="ledExchange">1</span>
+        <span class="ledger-label">兑换券</span>
+      </div>
+      <div class="ledger-cell" onclick="toast('我的券包')">
+        <span class="ledger-value small" id="ledCoupons">2</span>
         <span class="ledger-label">优惠券</span>
       </div>
-      <div class="ledger-cell" onclick="toast('收货地址')">
-        <span class="ledger-value">1</span>
-        <span class="ledger-label">地址</span>
-      </div>
     </div>
 
-    <!-- 功能宫格 -->
-    <div class="feature-grid">
-      <div class="feature-item" onclick="goPage('mall.html')">
-        <div class="feature-icon">◇</div>
-        <span class="feature-name">积分商城</span>
+    <div class="level-progress">
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
       </div>
-      <div class="feature-item" onclick="goPage('benefits.html')">
-        <div class="feature-icon">◉</div>
-        <span class="feature-name">会员权益</span>
-      </div>
-      <div class="feature-item" onclick="goPage('signin.html')">
-        <div class="feature-icon">☀</div>
-        <span class="feature-name">每日签到</span>
-      </div>
-      <div class="feature-item" onclick="toast('个人资料')">
-        <div class="feature-icon">◎</div>
-        <span class="feature-name">个人资料</span>
+      <span class="progress-copy" id="progressCopy"></span>
+    </div>
+  </div>
+
+  <!-- 等级预览（原型工具） -->
+  <div class="level-preview">
+    <span class="preview-label">预览</span>
+    <div class="preview-chips" id="previewChips"></div>
+  </div>
+
+  <!-- 我的订单 -->
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <span class="section-title">我的订单</span>
+        <span class="section-note">咖啡订单进度与积分兑换记录</span>
       </div>
     </div>
-
-    <!-- 账户链接 -->
-    <div class="account-links">
-      <div class="account-row" onclick="goPage('store.html')">
-        <span class="account-name">自提门店</span>
-        <span class="account-note">CozyCoffee 中心店</span>
-        <span class="account-arrow">›</span>
+    <div class="order-duo">
+      <div class="order-card coffee" onclick="go('order.html')">
+        <div class="order-card-head">
+          <span class="order-card-mark">杯</span>
+          <span class="order-card-count">3</span>
+        </div>
+        <span class="order-card-name">咖啡订单</span>
+        <span class="order-card-note">查看制作进度与取餐</span>
       </div>
-      <div class="account-row" onclick="toast('账户设置')">
-        <span class="account-name">账户设置</span>
-        <span class="account-note">安全、隐私与退出登录</span>
-        <span class="account-arrow">›</span>
-      </div>
-      <div class="account-row" onclick="goPage('about.html')">
-        <span class="account-name">关于我们</span>
-        <span class="account-note">品牌故事与咖啡旅程</span>
-        <span class="account-arrow">›</span>
+      <div class="order-card redeem" onclick="go('points-redemptions.html')">
+        <div class="order-card-head">
+          <span class="order-card-mark">礼</span>
+          <span class="order-card-count">6</span>
+        </div>
+        <span class="order-card-name">兑换订单</span>
+        <span class="order-card-note">积分兑换商品记录</span>
       </div>
     </div>
   </div>
 
-  <!-- 底部 TabBar -->
-  <nav class="tabbar">
-    <div class="tabbar-item" onclick="goTab('index.html')">
-      <span class="tabbar-icon">⌂</span><span>首页</span>
+  <!-- 会员与功能 -->
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <span class="section-title">会员与功能</span>
+        <span class="section-note">把每次消费变成可见回馈</span>
+      </div>
     </div>
-    <div class="tabbar-item" onclick="goTab('menu.html')">
-      <span class="tabbar-icon">☰</span><span>菜单</span>
+    <div class="feature-grid">
+      <div class="feature-item" onclick="go('mall.html')">
+        <div class="feature-icon primary">积</div>
+        <span class="feature-name">积分商城</span>
+      </div>
+      <div class="feature-item" onclick="go('benefits.html')">
+        <div class="feature-icon accent">享</div>
+        <span class="feature-name">会员权益</span>
+      </div>
+      <div class="feature-item" onclick="go('signin.html')">
+        <div class="feature-icon">签</div>
+        <span class="feature-name">每日签到</span>
+      </div>
+      <div class="feature-item" onclick="toast('编辑资料')">
+        <div class="feature-icon">我</div>
+        <span class="feature-name">个人资料</span>
+      </div>
     </div>
-    <div class="tabbar-item" onclick="goTab('order.html')">
-      <span class="tabbar-icon">⊞</span><span>订单</span>
+  </div>
+
+  <!-- 账户 -->
+  <div class="account-links">
+    <div class="account-row" onclick="go('store.html')">
+      <span class="account-name">自提门店</span>
+      <span class="account-note">CozyCoffee 中心店</span>
+      <span class="account-arrow">›</span>
     </div>
-    <div class="tabbar-item active" onclick="goTab('profile.html')">
-      <span class="tabbar-icon">◎</span><span>我的</span>
+    <div class="account-row" onclick="toast('收货地址')">
+      <span class="account-name">收货地址</span>
+      <span class="account-note">管理配送地址</span>
+      <span class="account-arrow">›</span>
     </div>
-  </nav>
+    <div class="account-row" onclick="toast('账户设置')">
+      <span class="account-name">账户设置</span>
+      <span class="account-note">安全、隐私与退出登录</span>
+      <span class="account-arrow">›</span>
+    </div>
+    <div class="account-row" onclick="go('about.html')">
+      <span class="account-name">关于我们</span>
+      <span class="account-note">品牌故事与咖啡旅程</span>
+      <span class="account-arrow">›</span>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="profile-footer">
+    <span class="footer-brand">COZY COFFEE</span>
+    <span class="footer-copy">ROASTED IN HANGZHOU</span>
+  </div>
+</div>
+
+<!-- 底部 TabBar -->
+<nav class="tabbar">
+  <div class="tabbar-item" onclick="go('index.html')">
+    <span class="tabbar-icon">⌂</span><span>首页</span>
+  </div>
+  <div class="tabbar-item" onclick="go('menu.html')">
+    <span class="tabbar-icon">☰</span><span>菜单</span>
+  </div>
+  <div class="tabbar-item" onclick="go('order.html')">
+    <span class="tabbar-icon">⊞</span><span>订单</span>
+  </div>
+  <div class="tabbar-item active" onclick="go('profile.html')">
+    <span class="tabbar-icon">◎</span><span>我的</span>
+  </div>
+</nav>
 
 <script>
-  function goTab(href) { location.href = href; }
-  function goPage(href) { location.href = href; }
+  // 等级主题映射 —— 与 constants/member.js MEMBER_LEVEL_THEMES 保持一致
+  const THEMES = {
+    basic:   { name:'基础会员', en:'BASIC',   surface:'#F7F5F3', text:'#2B1E16', accent:'#8D6E63', isDark:false, exp:100,   points:'50',    exchange:0, coupons:0 },
+    silver:  { name:'白银会员', en:'SILVER',  surface:'linear-gradient(135deg,#ECE8E4,#D6D0CA)', text:'#3E342E', accent:'#8C7B70', isDark:false, exp:800,   points:'1,200', exchange:1, coupons:2 },
+    gold:    { name:'黄金会员', en:'GOLD',    surface:'linear-gradient(135deg,#E8D7A5,#C9A45C)', text:'#3B2920', accent:'#B8862D', isDark:false, exp:2000,  points:'3,600', exchange:2, coupons:3 },
+    diamond: { name:'钻石会员', en:'DIAMOND', surface:'linear-gradient(135deg,#DCE4E6,#B8C6CA)', text:'#263238', accent:'#546E7A', isDark:false, exp:4500,  points:'8,888', exchange:3, coupons:5 },
+    black:   { name:'黑金会员', en:'BLACK',   surface:'#171411', text:'#E6C97A', accent:'#C9A227', isDark:true,  exp:9500,  points:'18,888', exchange:5, coupons:8 }
+  };
+  const THRESHOLDS = { basic:0, silver:500, gold:1500, diamond:4000, black:9000 };
+  const ORDER = ['basic','silver','gold','diamond','black'];
+
+  // 等级徽章 —— 与 LevelBadge.vue 对应（咖啡豆/勋章/星/钻石/王冠）
+  const EMBLEMS = {
+    basic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><ellipse cx="12" cy="12" rx="6.4" ry="8.6" transform="rotate(32 12 12)"/><path d="M12 4.6c2.6 2.4 2.6 12.4 0 14.8"/></svg>',
+    silver: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.2"/><path d="M12 3.8V8M12 16v4.2M3.8 12H8M16 12h4.2"/></svg>',
+    gold: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.3 5.4 5.9.5-4.5 3.9 1.4 5.7L12 14.8l-5.1 3.1 1.4-5.7-4.5-3.9 5.9-.5z"/></svg>',
+    diamond: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2L20.4 7 12 21.8 3.6 7z"/><path d="M3.6 7h16.8" stroke="rgba(0,0,0,.12)"/></svg>',
+    black: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.6 17l2.1-8.4 3 3.2 4.3-9.4 4.3 9.4 3-3.2L21.4 17z"/></svg>'
+  };
+
+  let currentLevel = 'silver';
+
+  function applyTheme(level) {
+    const t = THEMES[level];
+    const card = document.getElementById('memberCard');
+    card.style.background = t.surface;
+    card.style.color = t.text;
+    card.style.setProperty('--accent', t.accent);
+    card.style.setProperty('--line', t.isDark ? 'rgba(255,255,255,.18)' : 'rgba(60,40,30,.14)');
+    card.style.setProperty('--track', t.isDark ? 'rgba(255,255,255,.18)' : 'rgba(60,40,30,.10)');
+    card.classList.toggle('is-dark', t.isDark);
+
+    document.getElementById('brandEmblem').innerHTML = EMBLEMS[level];
+    document.getElementById('userLevel').textContent = t.name + ' · ' + t.en;
+    document.getElementById('ledPoints').textContent = t.points;
+    document.getElementById('ledExchange').textContent = t.exchange;
+    document.getElementById('ledCoupons').textContent = t.coupons;
+
+    // 等级进度
+    const idx = ORDER.indexOf(level);
+    const isMax = idx >= ORDER.length - 1;
+    let pct = 100, copy = '已达到当前最高等级 · ' + t.name;
+    if (!isMax) {
+      const cur = THRESHOLDS[level], next = THRESHOLDS[ORDER[idx + 1]];
+      pct = Math.max(0, Math.min(100, Math.round(((t.exp - cur) / (next - cur)) * 100)));
+      const remain = Math.max(0, next - t.exp);
+      copy = '距离' + THEMES[ORDER[idx + 1]].name + '还需 ' + remain.toLocaleString() + ' EXP';
+    }
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressCopy').textContent = copy;
+
+    // 预览 chips
+    document.querySelectorAll('.preview-chip').forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.level === level);
+    });
+  }
+
+  function renderChips() {
+    const box = document.getElementById('previewChips');
+    box.innerHTML = ORDER.map(level => {
+      const t = THEMES[level];
+      return `
+        <div class="preview-chip ${level === currentLevel ? 'active' : ''}" data-level="${level}" onclick="switchLevel('${level}')">
+          <span class="chip-emblem">${EMBLEMS[level]}</span>
+          <span>${t.name.slice(0, 2)}</span>
+        </div>`;
+    }).join('');
+  }
+
+  function switchLevel(level) { currentLevel = level; applyTheme(level); }
+
+  function go(href) { location.href = href; }
   function toast(msg) {
     let t = document.querySelector('.toast');
     if (!t) {
@@ -248,6 +562,9 @@
     clearTimeout(t._timer);
     t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
   }
+
+  renderChips();
+  applyTheme('silver');
 </script>
 </body>
 </html>
