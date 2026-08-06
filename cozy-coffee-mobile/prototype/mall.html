@@ -49,6 +49,7 @@
     flex:1; text-align:center;
     font-size:13px; color:var(--ink); cursor:pointer;
     letter-spacing:.04em;
+    text-decoration:none; display:block;
   }
   .quick-link:active { opacity:.6; }
   .quick-divider {
@@ -234,11 +235,11 @@
 
   <!-- 文字快捷链接 -->
   <div class="quick-links">
-    <span class="quick-link" onclick="toast('积分明细')">积分明细</span>
+    <a class="quick-link" href="points-history.html">积分明细</a>
     <span class="quick-divider"></span>
-    <span class="quick-link" onclick="toast('兑换记录')">兑换记录</span>
+    <a class="quick-link" href="points-redemptions.html">兑换记录</a>
     <span class="quick-divider"></span>
-    <span class="quick-link" onclick="toast('积分规则')">积分规则</span>
+    <a class="quick-link" href="points-rules.html">积分规则</a>
   </div>
 
   <!-- 分类 Tab -->

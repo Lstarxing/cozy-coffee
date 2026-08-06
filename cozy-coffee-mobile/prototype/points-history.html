@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>积分明细 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
+    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
+    --cask-brown:#2C1E18;
+    --roastery-ink:#2B1E16; --quiet-ink:#756A63;
+    --placeholder:#9E948E; --hairline:#E3DED8;
+    /* aliases */
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  .back-btn {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:36px; height:36px;
+    margin-bottom:14px;
+    font-size:26px; line-height:1;
+    color:var(--ink);
+    text-decoration:none; cursor:pointer;
+    border-radius:50%;
+    background:rgba(255,255,255,.6);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  }
+  .back-btn:active { opacity:.55; }
+
+  .page { padding:20px 20px 120px; }
+
+  /* ── 积分概览 ── */
+  .overview {
+    display:flex; align-items:stretch;
+    padding:26px 8px 22px;
+  }
+  .overview-col {
+    flex:1; text-align:center;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .overview-label {
+    display:block;
+    font-size:12px; color:var(--muted); letter-spacing:.06em;
+  }
+  .overview-value {
+    display:block; margin-top:10px;
+    font-family:var(--serif); font-size:38px; font-weight:600;
+    color:var(--ink); line-height:1;
+  }
+  .overview-col:last-child .overview-value { color:var(--quiet-ink); font-size:30px; margin-top:14px; }
+  .overview-divider {
+    width:1px; align-self:center;
+    background:var(--muted); opacity:.18;
+    height:46px;
+  }
+
+  /* ── 筛选 ── */
+  .filter-tabs {
+    display:flex;
+    margin:14px 0 0; padding:0 4px;
+    border-bottom:1px solid var(--border);
+  }
+  .filter-tab {
+    flex:1; padding:13px 0;
+    text-align:center;
+    font-size:14px; color:var(--muted);
+    cursor:pointer; position:relative;
+    transition:color .25s;
+  }
+  .filter-tab.active { color:var(--ink); font-weight:600; }
+  .filter-tab.active::after {
+    content:''; position:absolute;
+    left:50%; bottom:-1px; transform:translateX(-50%);
+    width:22px; height:2px;
+    background:var(--ink);
+  }
+
+  /* ── 流水列表 ── */
+  .history-card {
+    margin-top:18px;
+    border-radius:14px; background:var(--card);
+    padding:4px 20px;
+  }
+  .history-item {
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:18px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .history-item:last-child { border-bottom:0; }
+  .item-left { min-width:0; flex:1; }
+  .item-desc {
+    display:block;
+    font-size:14px; font-weight:500; color:var(--ink);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .item-time {
+    display:block; margin-top:6px;
+    font-size:11px; color:var(--placeholder); letter-spacing:.03em;
+  }
+  .item-right { text-align:right; flex:none; }
+  .item-amount {
+    display:block;
+    font-family:var(--serif); font-size:18px; font-weight:700; line-height:1;
+  }
+  .item-amount.earn { color:var(--roast-brown); }
+  .item-amount.spend { color:var(--ink); }
+  .item-balance {
+    display:block; margin-top:6px;
+    font-size:11px; color:var(--placeholder);
+  }
+
+  /* ── 空状态 ── */
+  .empty-state {
+    display:flex; flex-direction:column; align-items:center;
+    padding:64px 0 56px;
+  }
+  .empty-mark {
+    width:64px; height:64px; border-radius:50%;
+    background:var(--surface);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--serif); font-size:14px; font-weight:700; letter-spacing:.08em;
+    color:var(--primary);
+  }
+  .empty-text { margin-top:16px; font-size:14px; font-weight:600; color:var(--ink); }
+  .empty-hint { margin-top:8px; font-size:12px; color:var(--muted); }
+
+  /* ── 底部说明 ── */
+  .history-foot {
+    margin-top:28px; text-align:center;
+  }
+  .foot-link {
+    font-size:13px; font-weight:650;
+    color:var(--primary); text-decoration:none; cursor:pointer;
+    letter-spacing:.03em;
+  }
+  .foot-link:active { opacity:.6; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <a class="back-btn" href="mall.html">‹</a>
+
+  <!-- 积分概览 -->
+  <div class="overview">
+    <div class="overview-col">
+      <span class="overview-label">当前可用积分</span>
+      <span class="overview-value">53</span>
+    </div>
+    <div class="overview-divider"></div>
+    <div class="overview-col">
+      <span class="overview-label">累计获得</span>
+      <span class="overview-value">1,286</span>
+    </div>
+  </div>
+
+  <!-- 筛选 -->
+  <div class="filter-tabs">
+    <div class="filter-tab active" data-f="all" onclick="switchFilter(this)">全部</div>
+    <div class="filter-tab" data-f="earn" onclick="switchFilter(this)">收入</div>
+    <div class="filter-tab" data-f="spend" onclick="switchFilter(this)">支出</div>
+  </div>
+
+  <!-- 流水列表 -->
+  <div class="history-card" id="historyCard"></div>
+
+  <!-- 底部 -->
+  <div class="history-foot">
+    <a class="foot-link" href="points-rules.html">查看积分规则 →</a>
+  </div>
+
+</div>
+
+<script>
+  // 对齐后端 /member/points/transactions (PointsTransactionDTO)
+  // 字段: sourceType / description / changeAmount / balanceAfter / createdAt
+  // sourceType: signin | order | profile | monthly_task | mall_redeem | refund
+  const transactions = [
+    { sourceType:'signin',       desc:'每日签到（连续 5 天）',            time:'2026-08-06 09:02', amount:   2,  balance: 53,   kind:'earn' },
+    { sourceType:'monthly_task', desc:'月度挑战 · 打卡达人完成',          time:'2026-08-04 18:40', amount:  40,  balance: 51,   kind:'earn' },
+    { sourceType:'mall_redeem',  desc:'积分兑换扣减：5 元代金券 ×1',      time:'2026-08-03 12:15', amount: -150, balance: 11,   kind:'spend' },
+    { sourceType:'refund',       desc:'订单取消退还：加浓缩 (Shot) 券 ×1',time:'2026-08-02 20:33', amount:  80,  balance: 161,  kind:'earn' },
+    { sourceType:'order',        desc:'消费赚积分：拿铁金 · 桂花特调 1.0×',time:'2026-08-01 08:58', amount: 38,  balance: 81,   kind:'earn' },
+    { sourceType:'signin',       desc:'每日签到',                         time:'2026-07-31 09:01', amount:   2,  balance: 43,   kind:'earn' },
+    { sourceType:'profile',      desc:'完善资料奖励：绑定手机号',         time:'2026-07-30 15:20', amount:  20,  balance: 41,   kind:'earn' },
+    { sourceType:'mall_redeem',  desc:'积分兑换扣减：Cozy 贴纸包 ×1',     time:'2026-07-28 11:05', amount:-100, balance: 21,   kind:'spend' },
+    { sourceType:'order',        desc:'消费赚积分：经典拿铁 1.0×',        time:'2026-07-27 10:40', amount:  28,  balance: 121,  kind:'earn' },
+    { sourceType:'signin',       desc:'每日签到',                         time:'2026-07-26 09:03', amount:   2,  balance: 93,   kind:'earn' }
+  ];
+
+  function render(list) {
+    const card = document.getElementById('historyCard');
+    if (!list.length) {
+      card.innerHTML = `
+        <div class="empty-state">
+          <span class="empty-mark">PTS</span>
+          <span class="empty-text">暂无积分记录</span>
+          <span class="empty-hint">完成门店消费或每日签到后会显示在这里</span>
+        </div>`;
+      return;
+    }
+    card.innerHTML = list.map(t => {
+      const sign = t.amount > 0 ? '+' : '';
+      return `
+        <div class="history-item">
+          <div class="item-left">
+            <span class="item-desc">${t.desc}</span>
+            <span class="item-time">${t.time}</span>
+          </div>
+          <div class="item-right">
+            <span class="item-amount ${t.kind}">${sign}${t.amount.toLocaleString()}</span>
+            <span class="item-balance">余额 ${t.balance.toLocaleString()}</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function switchFilter(el) {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    const f = el.dataset.f;
+    render(f === 'all' ? transactions : transactions.filter(t => t.kind === f));
+  }
+
+  render(transactions);
+</script>
+</body>
+</html>

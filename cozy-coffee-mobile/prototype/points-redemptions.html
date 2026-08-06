@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>兑换记录 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
+    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
+    --cask-brown:#2C1E18;
+    --roastery-ink:#2B1E16; --quiet-ink:#756A63;
+    --placeholder:#9E948E; --hairline:#E3DED8;
+    /* aliases */
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  .back-btn {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:36px; height:36px;
+    margin-bottom:14px;
+    font-size:26px; line-height:1;
+    color:var(--ink);
+    text-decoration:none; cursor:pointer;
+    border-radius:50%;
+    background:rgba(255,255,255,.6);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  }
+  .back-btn:active { opacity:.55; }
+
+  .page { padding:20px 20px 120px; }
+
+  /* ── 页头 ── */
+  .page-head { padding:8px 8px 18px; }
+  .page-title {
+    display:block;
+    font-family:var(--serif); font-size:22px; font-weight:600;
+    color:var(--ink); line-height:1.2;
+  }
+  .page-sub {
+    display:block; margin-top:6px;
+    font-size:12px; color:var(--muted);
+  }
+
+  /* ── 状态筛选 ── */
+  .filter-tabs {
+    display:flex;
+    margin:0; padding:0 4px;
+    border-bottom:1px solid var(--border);
+  }
+  .filter-tab {
+    flex:1; padding:13px 0;
+    text-align:center;
+    font-size:14px; color:var(--muted);
+    cursor:pointer; position:relative;
+    transition:color .25s;
+  }
+  .filter-tab.active { color:var(--ink); font-weight:600; }
+  .filter-tab.active::after {
+    content:''; position:absolute;
+    left:50%; bottom:-1px; transform:translateX(-50%);
+    width:22px; height:2px;
+    background:var(--ink);
+  }
+
+  /* ── 订单列表 ── */
+  .order-list {
+    display:flex; flex-direction:column; gap:14px;
+    margin-top:18px;
+  }
+  .order-card {
+    border-radius:14px; background:var(--card);
+    padding:18px;
+    cursor:pointer;
+    transition:opacity .2s;
+  }
+  .order-card:active { opacity:.8; }
+  .order-head {
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .order-no {
+    font-size:11px; color:var(--placeholder); letter-spacing:.04em;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .status-chip {
+    flex:none;
+    padding:3px 10px; border-radius:4px;
+    font-size:11px; font-weight:650; letter-spacing:.02em;
+  }
+  .status-chip.pending     { background:var(--hairline); color:var(--quiet-ink); }
+  .status-chip.processing  { background:#F3E7D8; color:#8B5E2E; }
+  .status-chip.shipped     { background:#F1E4DA; color:var(--roast-brown); }
+  .status-chip.completed   { background:var(--glaze-green-soft); color:var(--glaze-green); }
+  .status-chip.cancelled   { background:var(--hairline); color:var(--placeholder); }
+
+  .order-product {
+    display:flex; align-items:center; gap:14px;
+    margin-top:14px;
+  }
+  .order-thumb {
+    flex:none; width:52px; height:52px; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .order-thumb svg { width:58%; height:58%; color:rgba(255,255,255,.92); }
+  .order-copy { min-width:0; flex:1; }
+  .order-name {
+    display:block;
+    font-family:var(--serif); font-size:15px; font-weight:600; color:var(--ink);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .order-meta {
+    display:block; margin-top:6px;
+    font-size:12px; color:var(--muted);
+  }
+  .order-points {
+    flex:none;
+    font-size:14px; font-weight:700; color:var(--primary);
+  }
+
+  .order-foot {
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    margin-top:14px; padding-top:12px;
+    border-top:1px solid var(--border);
+  }
+  .order-fulfill {
+    font-size:12px; color:var(--muted);
+  }
+  .order-fulfill code {
+    display:block; margin-top:3px;
+    font-family:'Inter',monospace; font-size:11px; color:var(--primary);
+    letter-spacing:.05em;
+  }
+  .order-actions { display:flex; gap:8px; flex:none; }
+  .mini-btn {
+    padding:7px 14px; border-radius:6px;
+    font-size:12px; font-weight:600; cursor:pointer;
+    border:1px solid var(--hairline); background:var(--card); color:var(--ink);
+    transition:background .2s;
+  }
+  .mini-btn:active { background:var(--surface); }
+  .mini-btn.primary {
+    border-color:var(--roast-brown); background:var(--roast-brown); color:#fff;
+  }
+  .mini-btn.primary:active { background:var(--roast-brown-deep); }
+
+  /* ── 空状态 ── */
+  .empty-state {
+    display:flex; flex-direction:column; align-items:center;
+    padding:72px 0 56px;
+  }
+  .empty-mark {
+    width:64px; height:64px; border-radius:50%;
+    background:var(--surface);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--serif); font-size:14px; font-weight:700; letter-spacing:.08em;
+    color:var(--primary);
+  }
+  .empty-text { margin-top:16px; font-size:14px; font-weight:600; color:var(--ink); }
+  .empty-hint { margin-top:8px; font-size:12px; color:var(--muted); }
+
+  /* ── 详情覆盖层 ── */
+  .detail-page {
+    position:fixed; inset:0;
+    background:var(--porcelain); z-index:50;
+    overflow-y:auto;
+    transform:translateX(100%);
+    transition:transform .35s cubic-bezier(.32,.72,.32,1);
+  }
+  .detail-page.open { transform:translateX(0); }
+  .detail-back {
+    position:fixed; top:14px; left:14px;
+    width:36px; height:36px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:28px; line-height:1;
+    color:var(--ink); cursor:pointer;
+    z-index:2;
+  }
+  .detail-wrap { padding:64px 20px 40px; }
+  .detail-head {
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .detail-order-no {
+    font-size:11px; color:var(--placeholder); letter-spacing:.04em;
+  }
+  .detail-product {
+    display:flex; align-items:center; gap:14px;
+    margin-top:20px;
+  }
+  .detail-thumb {
+    flex:none; width:64px; height:64px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .detail-thumb svg { width:56%; height:56%; color:rgba(255,255,255,.92); }
+  .detail-name {
+    display:block;
+    font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink);
+  }
+  .detail-sub {
+    display:block; margin-top:6px;
+    font-size:12px; color:var(--muted);
+  }
+  .detail-sections { margin-top:24px; }
+  .detail-row {
+    display:flex; justify-content:space-between; align-items:flex-start; gap:18px;
+    padding:15px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .detail-row:last-child { border-bottom:0; }
+  .detail-label {
+    flex:none; font-size:13px; color:var(--placeholder);
+  }
+  .detail-value {
+    flex:1; text-align:right;
+    font-size:13px; color:var(--ink); line-height:1.55;
+    word-break:break-all;
+  }
+  .detail-value code {
+    font-family:'Inter',monospace; letter-spacing:.05em;
+    color:var(--primary); font-weight:650;
+  }
+  .detail-value strong { font-weight:700; }
+  .detail-cta {
+    margin-top:28px;
+    display:flex; gap:10px;
+  }
+  .detail-cta .mini-btn { flex:1; height:46px; display:flex; align-items:center; justify-content:center; font-size:14px; }
+
+  /* ── 确认弹层 ── */
+  .modal-mask {
+    position:fixed; inset:0; z-index:60;
+    background:rgba(44,39,35,.4);
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none;
+    transition:opacity .25s;
+  }
+  .modal-mask.open { opacity:1; pointer-events:auto; }
+  .modal-card {
+    width:78%; max-width:300px;
+    border-radius:14px; background:var(--card);
+    padding:26px 22px 20px;
+    text-align:center;
+  }
+  .modal-title {
+    display:block;
+    font-family:var(--serif); font-size:18px; font-weight:600; color:var(--ink);
+  }
+  .modal-content {
+    display:block; margin-top:12px;
+    font-size:13px; line-height:1.7; color:var(--muted);
+  }
+  .modal-actions {
+    display:flex; gap:10px; margin-top:24px;
+  }
+  .modal-btn {
+    flex:1; height:44px; border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:600; cursor:pointer;
+  }
+  .modal-btn.ghost { background:var(--surface); color:var(--ink); }
+  .modal-btn.solid { background:var(--roast-brown); color:#fff; }
+  .modal-btn:active { opacity:.85; }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <a class="back-btn" href="mall.html">‹</a>
+
+  <!-- 页头 -->
+  <div class="page-head">
+    <span class="page-title">兑换记录</span>
+    <span class="page-sub">用积分换来的每一份心意</span>
+  </div>
+
+  <!-- 状态筛选 -->
+  <div class="filter-tabs">
+    <div class="filter-tab active" data-f="all" onclick="switchFilter(this)">全部</div>
+    <div class="filter-tab" data-f="active" onclick="switchFilter(this)">进行中</div>
+    <div class="filter-tab" data-f="completed" onclick="switchFilter(this)">已完成</div>
+    <div class="filter-tab" data-f="cancelled" onclick="switchFilter(this)">已取消</div>
+  </div>
+
+  <!-- 订单列表 -->
+  <div class="order-list" id="orderList"></div>
+
+</div>
+
+<!-- 详情覆盖层 -->
+<div class="detail-page" id="detailPage">
+  <span class="detail-back" onclick="closeDetail()">‹</span>
+  <div class="detail-wrap">
+    <div class="detail-head">
+      <span class="detail-order-no" id="dNo"></span>
+      <span class="status-chip" id="dStatus"></span>
+    </div>
+    <div class="detail-product">
+      <div class="detail-thumb" id="dThumb"></div>
+      <div>
+        <span class="detail-name" id="dName"></span>
+        <span class="detail-sub" id="dSub"></span>
+      </div>
+    </div>
+    <div class="detail-sections" id="dSections"></div>
+    <div class="detail-cta" id="dCta"></div>
+  </div>
+</div>
+
+<!-- 确认弹层 -->
+<div class="modal-mask" id="confirmMask">
+  <div class="modal-card">
+    <span class="modal-title" id="cTitle">确认操作</span>
+    <span class="modal-content" id="cContent"></span>
+    <div class="modal-actions">
+      <div class="modal-btn ghost" onclick="closeConfirm()">再想想</div>
+      <div class="modal-btn solid" onclick="doConfirm()">确认</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 对齐后端 /member/mall/orders (PointsOrderDTO)
+  // status: pending待处理 / processing处理中 / shipped已发货 / completed已完成 / cancelled已取消
+  // fulfillmentType: VIRTUAL自动发放 / PICKUP门店自提 / DELIVERY快递配送
+  // 与 mall.html 商品图标/渐变保持一致
+  const ICONS = {
+    shot: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 14h20l-3 36a4 4 0 0 1-4 4h-6a4 4 0 0 1-4-4z"/><path d="M18 22h28"/><path d="M26 32h12"/></svg>',
+    delivery: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 38h6l4-8h28l4 8h6"/><circle cx="18" cy="46" r="4"/><circle cx="46" cy="46" r="4"/><path d="M14 38V22h18v16"/></svg>',
+    coupon5: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 18h34v10a4 4 0 0 0 0 8v10H10V36a4 4 0 0 0 0-8z"/><circle cx="20" cy="32" r="1.2" fill="currentColor"/><circle cx="34" cy="32" r="1.2" fill="currentColor"/><text x="32" y="38" text-anchor="middle" font-family="serif" font-size="14" font-weight="600" fill="currentColor" stroke="none">¥5</text></svg>',
+    bogo: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14h14l-3 36h-8z"/><path d="M36 14h14l-3 36h-8z"/><path d="M16 26h10M38 26h10"/></svg>',
+    star: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M32 8l6 14 16 2-12 11 3 16-13-8-13 8 3-16-12-11 16-2z"/></svg>',
+    sticker: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="12" y="14" width="40" height="36" rx="3"/><circle cx="22" cy="26" r="3"/><circle cx="36" cy="24" r="2.5"/><circle cx="44" cy="32" r="3"/><circle cx="28" cy="38" r="2.5"/><circle cx="40" cy="42" r="3"/></svg>',
+    spoon: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="14" rx="10" ry="6"/><path d="M32 20v36"/><path d="M28 56h8"/></svg>',
+    mug: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 22h32v22a8 8 0 0 1-8 8H22a8 8 0 0 1-8-8z"/><path d="M46 28h6a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4h-6"/><path d="M20 14c0 2 2 2 2 4s-2 2-2 4M28 14c0 2 2 2 2 4s-2 2-2 4M36 14c0 2 2 2 2 4s-2 2-2 4"/></svg>',
+    tote: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 22h32l-3 30H19z"/><path d="M24 22v-4a8 8 0 0 1 16 0v4"/></svg>',
+    tshirt: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12l-10 6 4 10 6-3v25h20V25l6 3 4-10-10-6-3 4a6 6 0 0 1-8 0z"/></svg>',
+    giftbox: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="22" width="44" height="30" rx="2"/><path d="M10 30h44"/><path d="M32 22v30"/><path d="M22 22a6 6 0 0 1 10-4 6 6 0 0 1 10 4"/></svg>'
+  };
+  const GRADIENTS = {
+    shot: 'linear-gradient(135deg, #6B4A2E, #3D2A1E)',
+    delivery: 'linear-gradient(135deg, #7A8580, #4A5650)',
+    coupon5: 'linear-gradient(135deg, #C9A876, #8B6F47)',
+    bogo: 'linear-gradient(135deg, #B88859, #6E4E33)',
+    star: 'linear-gradient(135deg, #C69C6D, #8B6E45)',
+    sticker: 'linear-gradient(135deg, #E8DDD2, #B8A998)',
+    spoon: 'linear-gradient(135deg, #D4B58A, #8E6E45)',
+    mug: 'linear-gradient(135deg, #F0E8DA, #B8A988)',
+    tote: 'linear-gradient(135deg, #EDE5D0, #B4A088)',
+    tshirt: 'linear-gradient(135deg, #2C2723, #4A423C)',
+    giftbox: 'linear-gradient(135deg, #B88859, #5E3F26)'
+  };
+
+  const STATUS_TEXT = { pending:'待处理', processing:'处理中', shipped:'已发货', completed:'已完成', cancelled:'已取消' };
+  const FULFILL_TEXT = { VIRTUAL:'自动发放', PICKUP:'门店自提', DELIVERY:'快递配送' };
+  const TYPE_TEXT = { VIRTUAL:'优惠券', PHYSICAL:'实物礼品' };
+
+  let orders = [
+    {
+      id:1, orderNo:'RD202608030001', icon:'coupon5', productName:'5 元代金券', quantity:1,
+      pointsCost:150, createdAt:'2026-08-03 12:15', productType:'VIRTUAL', fulfillmentType:'VIRTUAL',
+      status:'completed', virtualCode:'V-20260803-88421', remark:'全场通用，无门槛抵用'
+    },
+    {
+      id:2, orderNo:'RD202607280002', icon:'sticker', productName:'Cozy 品牌贴纸包', quantity:1,
+      pointsCost:100, createdAt:'2026-07-28 11:05', productType:'PHYSICAL', fulfillmentType:'PICKUP',
+      status:'completed', pickupCode:'P72811', storeName:'杭州中心店', remark:'到店自提，3 张原创贴纸'
+    },
+    {
+      id:3, orderNo:'RD202607200003', icon:'tote', productName:'Cozy 经典帆布包', quantity:1,
+      pointsCost:1600, createdAt:'2026-07-20 16:42', productType:'PHYSICAL', fulfillmentType:'DELIVERY',
+      status:'shipped', shippingCompany:'顺丰速运', trackingNumber:'SF1068192001',
+      receiver:{ name:'张*宁', phone:'138****0421', address:'浙江省杭州市西湖区文三路 128 号' },
+      remark:'12 oz 帆布 · 米白底烫金 logo'
+    },
+    {
+      id:4, orderNo:'RD202607120004', icon:'giftbox', productName:'挂耳咖啡精选礼盒', quantity:1,
+      pointsCost:3500, createdAt:'2026-07-12 09:30', productType:'PHYSICAL', fulfillmentType:'DELIVERY',
+      status:'processing',
+      receiver:{ name:'张*宁', phone:'138****0421', address:'浙江省杭州市西湖区文三路 128 号' },
+      remark:'10 包挂耳 · 4 种产地 · 礼盒装'
+    },
+    {
+      id:5, orderNo:'RD202607050005', icon:'spoon', productName:'定制拿铁金搅拌勺', quantity:1,
+      pointsCost:600, createdAt:'2026-07-05 14:18', productType:'PHYSICAL', fulfillmentType:'DELIVERY',
+      status:'pending',
+      receiver:{ name:'张*宁', phone:'138****0421', address:'浙江省杭州市西湖区文三路 128 号' },
+      remark:'金属搅拌勺 · 拿铁金（PVD）涂层'
+    },
+    {
+      id:6, orderNo:'RD202606300006', icon:'mug', productName:'拿铁金定制马克杯', quantity:1,
+      pointsCost:1200, createdAt:'2026-06-30 19:05', productType:'PHYSICAL', fulfillmentType:'DELIVERY',
+      status:'cancelled',
+      receiver:{ name:'张*宁', phone:'138****0421', address:'浙江省杭州市西湖区文三路 128 号' },
+      remark:'已取消并退还 1,200 积分'
+    }
+  ];
+
+  let activeFilter = 'all';
+  let pendingAction = null; // { type, orderId }
+
+  function render() {
+    const list = document.getElementById('orderList');
+    let shown = orders;
+    if (activeFilter === 'active') shown = orders.filter(o => ['pending','processing','shipped'].includes(o.status));
+    else if (activeFilter === 'completed') shown = orders.filter(o => o.status === 'completed');
+    else if (activeFilter === 'cancelled') shown = orders.filter(o => o.status === 'cancelled');
+
+    if (!shown.length) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <span class="empty-mark">RDM</span>
+          <span class="empty-text">暂无相关记录</span>
+          <span class="empty-hint">去积分商城兑换你的第一份心意</span>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = shown.map(o => `
+      <div class="order-card" onclick="openDetail(${o.id})">
+        <div class="order-head">
+          <span class="order-no">${o.orderNo}</span>
+          <span class="status-chip ${o.status}">${STATUS_TEXT[o.status]}</span>
+        </div>
+        <div class="order-product">
+          <div class="order-thumb" style="background:${GRADIENTS[o.icon]};">${ICONS[o.icon]}</div>
+          <div class="order-copy">
+            <span class="order-name">${o.productName}</span>
+            <span class="order-meta">数量 ×${o.quantity} · ${formatTime(o.createdAt)}</span>
+          </div>
+          <span class="order-points">${o.pointsCost.toLocaleString()}</span>
+        </div>
+        <div class="order-foot">
+          <span class="order-fulfill">${FULFILL_TEXT[o.fulfillmentType]}${o.virtualCode ? '<code>权益码 ' + o.virtualCode + '</code>' : ''}${o.pickupCode ? '<code>取货码 ' + o.pickupCode + '</code>' : ''}</span>
+          <div class="order-actions" onclick="event.stopPropagation()">
+            ${canCancel(o) ? '<button class="mini-btn" onclick="askCancel(' + o.id + ')">取消兑换</button>' : ''}
+            ${canConfirm(o) ? '<button class="mini-btn primary" onclick="askConfirm(' + o.id + ')">确认收货</button>' : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function canCancel(o) { return ['pending','processing'].includes(o.status); }
+  function canConfirm(o) { return o.status === 'shipped' && o.fulfillmentType === 'DELIVERY'; }
+
+  function formatTime(v) { return String(v).replace('T',' ').slice(0,16); }
+
+  function switchFilter(el) {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    activeFilter = el.dataset.f;
+    render();
+  }
+
+  // ── 详情 ──
+  function row(label, value, isCode) {
+    return `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value">${isCode ? '<code>' + value + '</code>' : value}</span></div>`;
+  }
+
+  function openDetail(id) {
+    const o = orders.find(x => x.id === id);
+    if (!o) return;
+    document.getElementById('dNo').textContent = o.orderNo;
+    const st = document.getElementById('dStatus');
+    st.className = 'status-chip ' + o.status;
+    st.textContent = STATUS_TEXT[o.status];
+    document.getElementById('dThumb').innerHTML = ICONS[o.icon];
+    document.getElementById('dThumb').style.background = GRADIENTS[o.icon];
+    document.getElementById('dName').textContent = o.productName;
+    document.getElementById('dSub').textContent = `数量 ×${o.quantity} · ${o.pointsCost.toLocaleString()} 积分 · ${formatTime(o.createdAt)}`;
+
+    let html = '';
+    html += row('兑换时间', formatTime(o.createdAt));
+    html += row('消耗积分', o.pointsCost.toLocaleString() + ' 积分');
+    html += row('商品类型', TYPE_TEXT[o.productType] || o.productType);
+    html += row('交付方式', FULFILL_TEXT[o.fulfillmentType] || o.fulfillmentType);
+    if (o.fulfillmentType === 'PICKUP') html += row('门店', o.storeName || '杭州中心店');
+    if (o.virtualCode) html += row('权益码', o.virtualCode, true);
+    if (o.pickupCode) html += row('取货码', o.pickupCode, true);
+    if (o.fulfillmentType === 'DELIVERY' && o.receiver) {
+      html += row('收货人', o.receiver.name + ' · ' + o.receiver.phone);
+      html += row('收货地址', o.receiver.address);
+    }
+    if (o.shippingCompany) html += row('物流信息', o.shippingCompany + ' · ' + o.trackingNumber);
+    if (o.remark) html += row('备注', o.remark);
+    document.getElementById('dSections').innerHTML = html;
+
+    let cta = '';
+    if (canCancel(o)) cta += `<div class="mini-btn" onclick="askCancel(${o.id})">取消兑换</div>`;
+    if (canConfirm(o)) cta += `<div class="mini-btn primary" onclick="askConfirm(${o.id})">确认收货</div>`;
+    document.getElementById('dCta').innerHTML = cta;
+
+    document.getElementById('detailPage').classList.add('open');
+  }
+  function closeDetail() { document.getElementById('detailPage').classList.remove('open'); }
+
+  // ── 确认弹层 ──
+  function openConfirm(title, content, action) {
+    document.getElementById('cTitle').textContent = title;
+    document.getElementById('cContent').textContent = content;
+    pendingAction = action;
+    document.getElementById('confirmMask').classList.add('open');
+  }
+  function closeConfirm() {
+    pendingAction = null;
+    document.getElementById('confirmMask').classList.remove('open');
+  }
+  function doConfirm() {
+    if (!pendingAction) return;
+    const o = orders.find(x => x.id === pendingAction.orderId);
+    if (pendingAction.type === 'cancel' && o) {
+      o.status = 'cancelled';
+      o.remark = '已取消并退还 ' + o.pointsCost.toLocaleString() + ' 积分';
+      toast(`已取消，退还 ${o.pointsCost} 积分`);
+    } else if (pendingAction.type === 'confirm' && o) {
+      o.status = 'completed';
+      toast('已确认收货，感谢支持');
+    }
+    closeConfirm();
+    closeDetail();
+    render();
+  }
+  function askCancel(id) {
+    const o = orders.find(x => x.id === id);
+    openConfirm('取消兑换', `取消后将退还 ${o.pointsCost} 积分，优惠券/礼品将同时失效，是否继续？`, { type:'cancel', orderId:id });
+  }
+  function askConfirm(id) {
+    openConfirm('确认收货', '请确认已收到商品。确认后订单将标记为已完成。', { type:'confirm', orderId:id });
+  }
+
+  // ── Toast ──
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1400);
+  }
+
+  render();
+</script>
+</body>
+</html>

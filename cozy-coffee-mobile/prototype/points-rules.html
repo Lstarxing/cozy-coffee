@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>积分规则 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
+    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
+    --cask-brown:#2C1E18;
+    --roastery-ink:#2B1E16; --quiet-ink:#756A63;
+    --placeholder:#9E948E; --hairline:#E3DED8;
+    /* aliases */
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  .back-btn {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:36px; height:36px;
+    margin-bottom:14px;
+    font-size:26px; line-height:1;
+    color:var(--ink);
+    text-decoration:none; cursor:pointer;
+    border-radius:50%;
+    background:rgba(255,255,255,.6);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  }
+  .back-btn:active { opacity:.55; }
+
+  .page { padding:20px 20px 120px; }
+
+  /* ── 页头 ── */
+  .page-head { padding:8px 8px 10px; }
+  .page-kicker {
+    display:block;
+    font-size:11px; font-weight:700; letter-spacing:.16em; color:var(--muted);
+  }
+  .page-title {
+    display:block; margin-top:10px;
+    font-family:var(--serif); font-size:26px; font-weight:600;
+    color:var(--ink); line-height:1.2;
+  }
+  .page-sub {
+    display:block; margin-top:8px;
+    font-size:13px; color:var(--muted); line-height:1.6;
+  }
+
+  /* ── 规则卡片 ── */
+  .rules-section {
+    margin-top:18px; padding:26px 24px;
+    border-radius:14px; background:var(--card);
+  }
+  .rules-kicker {
+    display:block;
+    font-size:10px; font-weight:700; letter-spacing:.16em; color:var(--roast-brown);
+  }
+  .rules-title {
+    display:block; margin-top:8px;
+    font-family:var(--serif); font-size:19px; font-weight:600; color:var(--ink);
+  }
+  .rules-desc {
+    display:block; margin-top:8px;
+    font-size:13px; line-height:1.7; color:var(--muted);
+  }
+  .rule-card {
+    padding:16px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .rule-card:last-child { border-bottom:0; padding-bottom:0; }
+  .rule-head {
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+  }
+  .rule-name {
+    font-size:14px; font-weight:600; color:var(--ink);
+    letter-spacing:.03em;
+  }
+  .rule-pts {
+    flex:none;
+    font-family:var(--serif); font-size:15px; font-weight:700; color:var(--primary);
+  }
+  .rule-desc {
+    display:block; margin-top:7px;
+    font-size:12.5px; line-height:1.7; color:var(--muted);
+  }
+
+  /* ── 倍率表 ── */
+  .rate-table {
+    width:100%; margin-top:18px;
+    border-collapse:collapse;
+    font-size:12px;
+  }
+  .rate-table th {
+    padding:9px 6px;
+    font-size:10px; font-weight:700; letter-spacing:.1em;
+    color:var(--placeholder);
+    border-bottom:1px solid var(--hairline);
+    text-align:left;
+  }
+  .rate-table th:last-child, .rate-table td:last-child { text-align:right; }
+  .rate-table td {
+    padding:11px 6px;
+    color:var(--ink);
+    border-bottom:1px solid var(--border);
+    vertical-align:middle;
+  }
+  .rate-table tr:last-child td { border-bottom:0; }
+  .rate-lv { font-weight:650; }
+  .rate-lv em {
+    display:block; font-style:normal;
+    font-size:10px; font-weight:500; color:var(--placeholder);
+    margin-top:2px; letter-spacing:.06em;
+  }
+  .rate-val { font-family:var(--serif); font-size:15px; font-weight:700; color:var(--roast-brown); }
+  .rate-val .x { font-size:11px; }
+
+  /* ── 提示条 ── */
+  .note-strip {
+    margin-top:18px; padding:14px 18px;
+    border-radius:10px;
+    background:var(--surface);
+    font-size:12.5px; line-height:1.75; color:var(--muted);
+  }
+  .note-strip strong { color:var(--ink); font-weight:650; }
+  .note-strip em { font-style:normal; color:var(--roast-brown); font-weight:700; }
+
+  /* ── 底部 CTA ── */
+  .rules-foot { margin-top:30px; text-align:center; }
+  .rules-cta {
+    display:block; height:48px; line-height:48px;
+    border-radius:10px;
+    background:var(--roast-brown); color:#fff;
+    font-size:15px; font-weight:600; text-decoration:none; cursor:pointer;
+    transition:background .25s;
+  }
+  .rules-cta:active { background:var(--roast-brown-deep); }
+  .rules-disclaimer {
+    display:block; margin-top:16px;
+    font-size:11px; color:var(--placeholder); line-height:1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <a class="back-btn" href="mall.html">‹</a>
+
+  <!-- 页头 -->
+  <div class="page-head">
+    <span class="page-kicker">POINTS & RULES</span>
+    <span class="page-title">积分规则</span>
+    <span class="page-sub">积分是 Cozy Coffee 对每一杯咖啡的感谢。按以下方式获得、使用与守护你的每一分。</span>
+  </div>
+
+  <!-- 积分价值 -->
+  <div class="rules-section">
+    <span class="rules-kicker">VALUE</span>
+    <span class="rules-title">积分价值</span>
+    <span class="rules-desc">每 <em>30 积分 ≈ 1 元</em>（约 3.3% 消费返还）。消费越多、等级越高，积分回馈越丰。</span>
+  </div>
+
+  <!-- 如何获得 -->
+  <div class="rules-section">
+    <span class="rules-kicker">EARN</span>
+    <span class="rules-title">如何获得积分</span>
+
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">消费赚积分</span>
+        <span class="rule-pts">1 元 = 1 积分</span>
+      </div>
+      <span class="rule-desc">每笔实付 1 元获得 1 积分，并按会员等级倍率加成（基础 1.0× 至黑金 1.5×）。</span>
+    </div>
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">每日签到</span>
+        <span class="rule-pts">+2 / 天</span>
+      </div>
+      <span class="rule-desc">每日固定获得 2 积分；连续签到 7 天额外赠送「满 35 减 10 元券」，有效期 3 天。</span>
+    </div>
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">完善资料</span>
+        <span class="rule-pts">+20</span>
+      </div>
+      <span class="rule-desc">绑定手机号、生日等信息，一次性获得 20 积分。</span>
+    </div>
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">邀请好友</span>
+        <span class="rule-pts">买一赠一券</span>
+      </div>
+      <span class="rule-desc">成功邀请好友下单，赠送邀请人「买一赠一券」。</span>
+    </div>
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">会员日 Cozy Day</span>
+        <span class="rule-pts">积分翻倍</span>
+      </div>
+      <span class="rule-desc">每周五下单积分翻倍（会员日倍率 = 等级倍率 + 0.5）；积分商城限量推出「100 积分兑 10 元券」。</span>
+    </div>
+  </div>
+
+  <!-- 等级倍率 -->
+  <div class="rules-section">
+    <span class="rules-kicker">LEVEL</span>
+    <span class="rules-title">等级与消费倍率</span>
+    <span class="rules-desc">成长值（EXP）按 1 元实付 = 1 EXP 累计，达到门槛自动晋升。</span>
+
+    <table class="rate-table">
+      <tr><th>等级</th><th>成长值门槛</th><th>积分倍率</th></tr>
+      <tr>
+        <td class="rate-lv">基础 Classic<em>0 EXP</em></td>
+        <td>注册即达</td><td class="rate-val">1.0<span class="x">×</span></td>
+      </tr>
+      <tr>
+        <td class="rate-lv">白银 Silver<em>500 EXP</em></td>
+        <td>约 15–20 杯</td><td class="rate-val">1.1<span class="x">×</span></td>
+      </tr>
+      <tr>
+        <td class="rate-lv">黄金 Gold<em>1,500 EXP</em></td>
+        <td>约 40–60 杯</td><td class="rate-val">1.2<span class="x">×</span></td>
+      </tr>
+      <tr>
+        <td class="rate-lv">钻石 Diamond<em>4,000 EXP</em></td>
+        <td>约 120 杯+</td><td class="rate-val">1.3<span class="x">×</span></td>
+      </tr>
+      <tr>
+        <td class="rate-lv">黑金 Black Gold<em>9,000 EXP</em></td>
+        <td>深度爱好者</td><td class="rate-val">1.5<span class="x">×</span></td>
+      </tr>
+    </table>
+
+    <div class="note-strip"><strong>黑金加速包：</strong>每月前 300 元消费享受 <em>1.7×</em> 高额倍率，超出部分回归 1.5×。</div>
+  </div>
+
+  <!-- 月度挑战 -->
+  <div class="rules-section">
+    <span class="rules-kicker">CHALLENGE</span>
+    <span class="rules-title">月度挑战任务</span>
+
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">打卡达人</span>
+        <span class="rule-pts">+40</span>
+      </div>
+      <span class="rule-desc">当月累计下单 4 次。</span>
+    </div>
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">晨间唤醒</span>
+        <span class="rule-pts">+60</span>
+      </div>
+      <span class="rule-desc">10:00 前下单累计 3 次。</span>
+    </div>
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">外卖尝鲜</span>
+        <span class="rule-pts">+50</span>
+      </div>
+      <span class="rule-desc">当月完成 2 笔外卖订单。</span>
+    </div>
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">新品猎人</span>
+        <span class="rule-pts">+80</span>
+      </div>
+      <span class="rule-desc">尝试 3 款限定新品。</span>
+    </div>
+  </div>
+
+  <!-- 如何使用 -->
+  <div class="rules-section">
+    <span class="rules-kicker">REDEEM</span>
+    <span class="rules-title">如何使用积分</span>
+
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">积分商城兑换</span>
+        <span class="rule-pts">优惠券 · 周边</span>
+      </div>
+      <span class="rule-desc">用积分兑换优惠券（加浓缩券、配送券、代金券、买一赠一券、任选通兑券）与限量周边礼品。</span>
+    </div>
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">等级兑换折扣</span>
+        <span class="rule-pts">最高 8.5 折</span>
+      </div>
+      <span class="rule-desc">白银及以上会员在积分商城兑换享等级折扣：白银 9.8 折 / 黄金 9.5 折 / 钻石 9.0 折 / 黑金 8.5 折，结算积分按后端规则向上取整。</span>
+    </div>
+    <div class="note-strip">优惠券的具体适用范围（杯型、品类、加料、金额封顶）以券面说明为准，具体券种规则优先于通用规则。</div>
+  </div>
+
+  <!-- 有效期 -->
+  <div class="rules-section">
+    <span class="rules-kicker">VALIDITY</span>
+    <span class="rules-title">有效期与扣减</span>
+
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">有效期</span>
+        <span class="rule-pts">365 天</span>
+      </div>
+      <span class="rule-desc">积分自获得之日起 365 天内有效，到期自动作废，请在有效期内使用。</span>
+    </div>
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">扣减顺序</span>
+        <span class="rule-pts">先到期先用</span>
+      </div>
+      <span class="rule-desc">使用积分时优先消耗最早获得的积分（FIFO），帮你把每一分都花在刀刃上。</span>
+    </div>
+  </div>
+
+  <!-- 通用说明 -->
+  <div class="rules-section">
+    <span class="rules-kicker">NOTICE</span>
+    <span class="rules-title">通用说明</span>
+
+    <div class="rule-card">
+      <span class="rule-name">积分不可提现、不可转让，不能兑换现金。</span>
+    </div>
+    <div class="rule-card">
+      <span class="rule-name">积分余额与变动以系统流水记录为准。</span>
+    </div>
+    <div class="rule-card">
+      <span class="rule-name">已兑换订单如需取消，可在兑换记录中操作，积分将原路退还。</span>
+    </div>
+    <div class="rule-card">
+      <span class="rule-name">本规则由 Cozy Coffee 制定并保留最终解释权，如有调整将提前公示。</span>
+    </div>
+  </div>
+
+  <!-- 底部 CTA -->
+  <div class="rules-foot">
+    <a class="rules-cta" href="mall.html">去积分商城兑换 →</a>
+    <span class="rules-disclaimer">以上规则依据《Cozy Coffee 会员积分体系白皮书 v6.0》与系统实际实现整理。</span>
+  </div>
+
+</div>
+</body>
+</html>
