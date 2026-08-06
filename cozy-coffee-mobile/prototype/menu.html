@@ -84,6 +84,14 @@
     left:0; top:0; bottom:0; width:3px;
     background:var(--roast-brown);
   }
+  .cat-count {
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    min-width:18px; height:18px; padding:0 4px;
+    border-radius:9px;
+    background:var(--roast-brown); color:#fff;
+    font-size:10px; font-weight:600;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
 
   .product-scroll {
     flex:1; min-width:0; height:100%; overflow-y:auto;
@@ -114,6 +122,10 @@
   }
   .product-desc {
     margin-top:4px; font-size:12px; line-height:1.5; color:var(--muted);
+  }
+  .product-extra {
+    display:flex; gap:12px; margin-top:6px;
+    font-size:11px; color:var(--placeholder);
   }
   .product-foot {
     margin-top:auto; display:flex; justify-content:space-between; align-items:center;
@@ -624,55 +636,55 @@
   ];
   const products = {
     espresso: [
-      { name:'浓缩咖啡', desc:'双份浓缩基底', price:18,
+      { name:'浓缩咖啡', desc:'双份浓缩基底', price:18, sold:320, praise:99,
         specs:{size:null, temp:null, sugar:null},
         notes:'醇厚 · 浓郁 · 油脂丰富' },
-      { name:'美式咖啡', desc:'浓缩加水，清爽明亮', price:22,
+      { name:'美式咖啡', desc:'浓缩加水，清爽明亮', price:22, sold:268, praise:97,
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['标准糖','微糖','半糖','无糖']},
         notes:'清爽 · 明亮 · 低酸' }
     ],
     coffee: [
-      { name:'经典手冲', desc:'云南保山 SOE，花香柑橘', price:28,
+      { name:'经典手冲', desc:'云南保山 SOE，花香柑橘', price:28, sold:185, praise:99,
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
         notes:'花香 · 柑橘 · 蜂蜜 · 茶感' },
-      { name:'云南日晒', desc:'日晒处理，黑糖甜感', price:30,
+      { name:'云南日晒', desc:'日晒处理，黑糖甜感', price:30, sold:96, praise:98,
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
         notes:'黑糖 · 甜感 · 圆润体脂' }
     ],
     latte: [
-      { name:'Dirty', desc:'浓缩碰撞冰牛奶，渐变层次', price:32,
+      { name:'Dirty', desc:'浓缩碰撞冰牛奶，渐变层次', price:32, sold:342, praise:99,
         specs:{size:null, temp:null, sugar:null},
         notes:'奶香 · 浓缩 · 分层渐变' },
-      { name:'海盐焦糖拿铁', desc:'海盐 · 焦糖 · 丝滑', price:34,
+      { name:'海盐焦糖拿铁', desc:'海盐 · 焦糖 · 丝滑', price:34, sold:410, praise:98,
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['标准糖','微糖','半糖']},
         notes:'海盐 · 焦糖 · 丝滑奶泡' },
-      { name:'燕麦拿铁', desc:'燕麦奶，谷物香气', price:36,
+      { name:'燕麦拿铁', desc:'燕麦奶，谷物香气', price:36, sold:236, praise:97,
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['标准糖','微糖','半糖','无糖']},
         notes:'谷物 · 坚果 · 植物奶香' }
     ],
     signature: [
-      { name:'荔枝特调', desc:'当季限定，清爽果香', price:38,
+      { name:'荔枝特调', desc:'当季限定，清爽果香', price:38, sold:88, praise:96,
         specs:{size:['标准杯','大杯'], temp:['冰'], sugar:['标准糖','微糖','半糖']},
         notes:'荔枝 · 果香 · 夏日限定' }
     ],
     soe: [
-      { name:'埃塞俄比亚 耶加雪菲', desc:'茉莉 · 柠檬 · 茶感', price:42,
+      { name:'埃塞俄比亚 耶加雪菲', desc:'茉莉 · 柠檬 · 茶感', price:42, sold:152, praise:99,
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
         notes:'茉莉 · 柠檬 · 茶感 · 明亮酸质' },
-      { name:'巴拿马 瑰夏', desc:'花香 · 蜂蜜，精致余韵', price:58,
+      { name:'巴拿马 瑰夏', desc:'花香 · 蜂蜜，精致余韵', price:58, sold:74, praise:99,
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
         notes:'花香 · 蜂蜜 · 精致余韵' }
     ],
     bakery: [
-      { name:'手工燕麦曲奇', desc:'谷物香，配咖啡刚好', price:15,
+      { name:'手工燕麦曲奇', desc:'谷物香，配咖啡刚好', price:15, sold:120, praise:97,
         specs:{size:null, temp:null, sugar:null},
         notes:'谷物 · 酥脆 · 低糖' },
-      { name:'海盐焦糖牛角包', desc:'酥脆外皮，咸甜平衡', price:18,
+      { name:'海盐焦糖牛角包', desc:'酥脆外皮，咸甜平衡', price:18, sold:156, praise:96,
         specs:{size:null, temp:null, sugar:null},
         notes:'酥脆 · 咸甜 · 黄油香' }
     ],
     other: [
-      { name:'热可可', desc:'浓郁可可，冬日暖意', price:26,
+      { name:'热可可', desc:'浓郁可可，冬日暖意', price:26, sold:64, praise:95,
         specs:{size:['标准杯','大杯'], temp:['热'], sugar:['标准糖','微糖','半糖','无糖']},
         notes:'可可 · 奶香 · 冬日暖饮' }
     ]
@@ -680,10 +692,26 @@
 
   let activeIdx = 0;
 
+  // 商品名 → 分类 index
+  function findCategoryIdx(name) {
+    for (let i = 0; i < categories.length; i++) {
+      const cat = categories[i];
+      const list = products[cat.id] || [];
+      if (list.some(p => p.name === name)) return i;
+    }
+    return -1;
+  }
+
   function renderSidebar() {
-    document.getElementById('categorySidebar').innerHTML = categories.map((c, i) =>
-      `<div class="category-item ${i === activeIdx ? 'active' : ''}" onclick="selectCategory(${i})">${c.name}</div>`
-    ).join('');
+    document.getElementById('categorySidebar').innerHTML = categories.map((c, i) => {
+      const count = cart.filter(item => findCategoryIdx(item.name) === i)
+        .reduce((s, item) => s + item.qty, 0);
+      return `
+        <div class="category-item ${i === activeIdx ? 'active' : ''}" onclick="selectCategory(${i})">
+          <span>${c.name}</span>
+          ${count > 0 ? `<span class="cat-count">${count}</span>` : ''}
+        </div>`;
+    }).join('');
     const activeItem = document.querySelector('.category-item.active');
     if (activeItem) activeItem.scrollIntoView({ block:'nearest', behavior:'smooth' });
   }
@@ -703,6 +731,10 @@
               <div class="product-info">
                 <span class="product-name">${p.name}</span>
                 <span class="product-desc">${p.desc}</span>
+                <span class="product-extra">
+                  <span>月售 ${p.sold}</span>
+                  <span>好评 ${p.praise}%</span>
+                </span>
                 <div class="product-foot">
                   <span class="product-price">¥${p.price}</span>
                   <div class="add-btn" onclick="openDetail('${p.name}')">+</div>
@@ -761,7 +793,6 @@
     }
   }
 
-  renderSidebar();
   renderAllProducts();
 
   function goTab(href) {
@@ -908,6 +939,9 @@
   function updateCartUI() {
     const total = cartTotal();
     const count = cartCount();
+
+    // 左侧分类角标
+    renderSidebar();
 
     // 底部购物车条
     document.getElementById('cartTotalPrice').textContent = total.toFixed(2);
