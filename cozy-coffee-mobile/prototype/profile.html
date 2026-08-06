@@ -29,19 +29,18 @@
   .page { padding:20px 20px 110px; }
 
   /* ═══════════════════════════════════════
-     会员卡片（等级主题 + 多层质感）
+     会员卡片（紧凑 · 等级主题）
      ═══════════════════════════════════════ */
   .member-card {
     position:relative; overflow:hidden;
-    padding:24px 24px 22px;
-    border-radius:16px;
-    box-shadow:0 10px 30px rgba(43,30,22,.10);
+    padding:18px 20px 18px;
+    border-radius:14px;
+    box-shadow:0 6px 20px rgba(43,30,22,.08);
     transition:background .35s ease, color .35s ease;
   }
   .member-card > * { position:relative; z-index:1; }
-
   .layer-texture {
-    position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.22;
+    position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.2;
     background-image:radial-gradient(currentColor 1px, transparent 1px);
     background-size:14px 14px;
   }
@@ -52,43 +51,29 @@
   .member-card.is-dark .layer-shine {
     background:linear-gradient(160deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.02) 45%, transparent 70%);
   }
-  .member-card.is-dark .layer-sheen {
-    position:absolute; inset:0; z-index:0; pointer-events:none;
-    background:radial-gradient(120% 90% at 80% 0%, rgba(230,201,122,.16) 0%, transparent 55%);
-  }
 
   .card-top {
     display:flex; align-items:center; justify-content:space-between; gap:12px;
   }
-  .brand-row { display:flex; align-items:center; gap:9px; }
-  .brand-emblem {
-    width:26px; height:26px;
-    display:flex; align-items:center; justify-content:center;
-  }
+  .brand-row { display:flex; align-items:center; gap:7px; }
+  .brand-emblem { width:20px; height:20px; display:flex; align-items:center; justify-content:center; }
   .brand-emblem svg { width:100%; height:100%; }
-  .brand-text {
-    font-size:11px; font-weight:800; letter-spacing:.24em;
-    opacity:.84;
-  }
+  .brand-text { font-size:10px; font-weight:800; letter-spacing:.24em; opacity:.84; }
   .card-settings {
-    font-size:11px; font-weight:600; letter-spacing:.06em;
-    padding:5px 11px; border-radius:6px;
+    font-size:10px; font-weight:600; letter-spacing:.06em;
+    padding:4px 9px; border-radius:6px;
     border:1px solid currentColor; opacity:.8; cursor:pointer;
   }
   .card-settings:active { opacity:.5; }
-  .card-caption {
-    display:block; margin-top:7px;
-    font-size:11px; opacity:.68; letter-spacing:.02em;
-  }
 
   .identity {
-    display:flex; align-items:center; gap:13px;
-    margin-top:20px; cursor:pointer;
+    display:flex; align-items:center; gap:11px;
+    margin-top:14px; cursor:pointer;
   }
   .avatar {
-    flex:none; width:46px; height:46px; border-radius:50%;
+    flex:none; width:40px; height:40px; border-radius:50%;
     display:flex; align-items:center; justify-content:center;
-    font-size:19px;
+    font-size:16px;
     background:rgba(255,255,255,.55);
     border:1px solid rgba(60,40,30,.14);
   }
@@ -99,68 +84,52 @@
   .identity-copy { flex:1; min-width:0; }
   .user-name {
     display:block;
-    font-family:var(--serif); font-size:22px; font-weight:600;
+    font-family:var(--serif); font-size:18px; font-weight:600;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
-  .user-level {
-    display:inline-flex; align-items:center; gap:6px;
-    margin-top:7px;
-    font-size:10px; font-weight:650; letter-spacing:.12em;
-    opacity:.8;
+  .level-chip {
+    display:inline-flex; align-items:center; gap:5px;
+    margin-top:7px; padding:3px 9px; border-radius:6px;
+    font-size:10px; font-weight:650; letter-spacing:.1em;
+    background:rgba(60,40,30,.07);
+    border:1px solid rgba(60,40,30,.16);
+    color:inherit;
   }
-  .user-level::before {
+  .member-card.is-dark .level-chip {
+    background:rgba(230,201,122,.12);
+    border:1px solid rgba(230,201,122,.32);
+    color:#E6C97A;
+  }
+  .level-chip::before {
     content:''; width:5px; height:5px; border-radius:50%;
     background:var(--accent, currentColor); opacity:.85;
   }
   .identity-action {
     flex:none;
-    font-size:11px; font-weight:650; opacity:.86;
-  }
-
-  /* ── 权益标签 ── */
-  .benefit-chips {
-    display:flex; flex-wrap:wrap; gap:6px;
-    margin-top:16px;
-  }
-  .benefit-chip {
-    padding:4px 10px; border-radius:6px;
-    font-size:10px; font-weight:650; letter-spacing:.04em;
-    background:rgba(60,40,30,.07);
-    border:1px solid rgba(60,40,30,.16);
-    color:inherit;
-  }
-  .member-card.is-dark .benefit-chip {
-    background:rgba(230,201,122,.10);
-    border:1px solid rgba(230,201,122,.32);
-    color:#E6C97A;
-  }
-  .card-memberno {
-    display:block; margin-top:16px;
-    font-size:9px; font-weight:600; letter-spacing:.2em;
-    opacity:.5; text-align:right;
+    font-size:10px; font-weight:650; opacity:.85;
   }
 
   .ledger {
-    display:grid; grid-template-columns:1.35fr 1fr 1fr;
-    margin-top:22px; padding-top:18px;
+    display:grid; grid-template-columns:1.3fr 1fr 1fr;
+    margin-top:16px; padding-top:14px;
     border-top:1px solid var(--line, currentColor);
   }
-  .ledger-cell { padding-left:22px; border-left:1px solid var(--line, currentColor); }
+  .ledger-cell { padding-left:18px; border-left:1px solid var(--line, currentColor); }
   .ledger-cell:first-child { padding-left:0; border-left:0; }
   .ledger-value {
     display:block;
-    font-family:var(--serif); font-size:30px; font-weight:700; line-height:1;
+    font-family:var(--serif); font-size:24px; font-weight:700; line-height:1;
     letter-spacing:-.01em;
   }
-  .ledger-value.small { font-size:23px; }
+  .ledger-value.small { font-size:19px; }
   .ledger-label {
-    display:block; margin-top:7px;
+    display:block; margin-top:6px;
     font-size:10px; letter-spacing:.08em; opacity:.72;
   }
 
-  .level-progress { margin-top:20px; }
+  .level-progress { margin-top:16px; }
   .progress-track {
-    height:4px; border-radius:2px;
+    height:3px; border-radius:2px;
     background:var(--track, rgba(60,40,30,.12));
     overflow:hidden;
   }
@@ -170,32 +139,32 @@
     transition:width .4s ease;
   }
   .progress-copy {
-    display:block; margin-top:8px;
+    display:block; margin-top:7px;
     font-size:11px; opacity:.74;
   }
 
   /* ═══════════════════════════════════════
-     等级预览（原型工具）
+     等级预览（原型工具 · 紧凑）
      ═══════════════════════════════════════ */
   .level-preview {
     display:flex; align-items:center; gap:8px;
-    margin-top:14px;
+    margin-top:12px;
   }
   .preview-label {
     flex:none;
-    font-size:10px; font-weight:700; letter-spacing:.14em;
+    font-size:9px; font-weight:700; letter-spacing:.14em;
     color:var(--placeholder);
   }
-  .preview-chips { display:flex; gap:7px; flex-wrap:wrap; }
+  .preview-chips { display:flex; gap:6px; flex-wrap:wrap; }
   .preview-chip {
-    display:flex; align-items:center; gap:6px;
-    padding:6px 10px; border-radius:6px;
+    display:flex; align-items:center; gap:5px;
+    padding:4px 9px; border-radius:6px;
     border:1px solid var(--hairline);
     background:var(--card); color:var(--muted);
-    font-size:11px; font-weight:600; cursor:pointer;
+    font-size:10px; font-weight:600; cursor:pointer;
     transition:all .2s;
   }
-  .preview-chip .chip-emblem { width:14px; height:14px; display:flex; }
+  .preview-chip .chip-emblem { width:12px; height:12px; display:flex; }
   .preview-chip .chip-emblem svg { width:100%; height:100%; }
   .preview-chip.active {
     border-color:var(--roast-brown); color:var(--roast-brown);
@@ -203,10 +172,12 @@
   }
   .preview-chip:active { opacity:.6; }
 
-  /* ── 会员日运营条 ── */
+  /* ═══════════════════════════════════════
+     会员日运营条
+     ═══════════════════════════════════════ */
   .promo-strip {
     display:flex; align-items:center; justify-content:space-between; gap:14px;
-    margin-top:16px; padding:15px 17px;
+    margin-top:12px; padding:13px 16px;
     border-radius:12px;
     background:linear-gradient(135deg, #F1E4DA, #EAD6C2);
     border:1px solid #E3CDB6;
@@ -219,114 +190,73 @@
     font-size:9px; font-weight:700; letter-spacing:.18em; color:var(--roast-brown);
   }
   .promo-title {
-    display:block; margin-top:5px;
-    font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink);
+    display:block; margin-top:4px;
+    font-family:var(--serif); font-size:15px; font-weight:600; color:var(--ink);
   }
   .promo-sub {
-    display:block; margin-top:4px;
+    display:block; margin-top:3px;
     font-size:11px; color:var(--muted);
   }
-  .promo-arrow { flex:none; font-size:20px; color:var(--roast-brown); line-height:1; }
+  .promo-arrow { flex:none; font-size:18px; color:var(--roast-brown); line-height:1; }
 
   /* ═══════════════════════════════════════
-     区块
+     图标入口（白卡 · 小图标 · 无色块）
      ═══════════════════════════════════════ */
-  .section { margin-top:30px; }
-  .section-head {
-    display:flex; align-items:flex-end; justify-content:space-between; gap:18px;
-    padding-bottom:14px;
+  .entry-card {
+    margin-top:26px;
+    border-radius:14px; background:var(--card);
+    overflow:hidden;
+  }
+  .entry-row {
+    display:flex; align-items:center; gap:14px;
+    padding:16px 18px;
     border-bottom:1px solid var(--border);
-  }
-  .section-title {
-    display:block;
-    font-family:var(--serif); font-size:19px; font-weight:600; color:var(--ink);
-  }
-  .section-note {
-    display:block; margin-top:4px;
-    font-size:12px; color:var(--muted);
-  }
-
-  /* ── 订单双入口 ── */
-  .order-duo { display:flex; gap:14px; margin-top:16px; }
-  .order-card {
-    flex:1;
-    padding:20px 18px 18px;
-    border-radius:14px;
     cursor:pointer;
-    transition:transform .2s, box-shadow .2s;
   }
-  .order-card:active { transform:scale(.98); }
-  .order-card.coffee {
-    background:linear-gradient(135deg, #FFFFFF, var(--porcelain-muted));
-    border:1px solid var(--hairline);
-  }
-  .order-card.redeem {
-    background:linear-gradient(135deg, #FFFFFF, var(--glaze-green-soft));
-    border:1px solid #DCE6D8;
-  }
-  .order-card-head { display:flex; align-items:center; justify-content:space-between; }
-  .order-card-mark {
-    width:40px; height:40px; border-radius:50%;
+  .entry-row:last-child { border-bottom:0; }
+  .entry-ic {
+    flex:none; width:34px; height:34px; border-radius:8px;
     display:flex; align-items:center; justify-content:center;
-    background:var(--roast-brown); color:#fff;
-    font-family:var(--serif); font-size:17px; font-weight:600;
+    background:var(--surface); color:var(--quiet-ink);
   }
-  .order-card.redeem .order-card-mark { background:var(--glaze-green); }
-  .order-card-count {
-    min-width:22px; height:22px; padding:0 7px;
+  .entry-ic svg { width:18px; height:18px; }
+  .entry-copy { flex:1; min-width:0; }
+  .entry-name {
+    display:block;
+    font-size:14px; font-weight:600; color:var(--ink);
+  }
+  .entry-note {
+    display:block; margin-top:3px;
+    font-size:11px; color:var(--muted);
+  }
+  .entry-count {
+    flex:none; min-width:22px; height:22px; padding:0 7px;
     display:inline-flex; align-items:center; justify-content:center;
     border-radius:999px;
     background:var(--surface); color:var(--muted);
     font-size:11px; font-weight:700;
   }
-  .order-card-name {
-    display:block; margin-top:16px;
-    font-family:var(--serif); font-size:17px; font-weight:600; color:var(--ink);
-  }
-  .order-card-note {
-    display:block; margin-top:5px;
-    font-size:11px; color:var(--muted);
-  }
+  .entry-arrow { flex:none; font-size:18px; color:var(--placeholder); line-height:1; }
 
-  /* ── 功能金刚区 ── */
-  .feature-grid {
-    margin-top:16px; padding:20px 8px 6px;
-    border-radius:14px; background:var(--card);
-    display:grid; grid-template-columns:repeat(4,1fr); gap:18px 6px;
+  /* ── 功能图标网格 ── */
+  .grid-entries {
+    display:grid; grid-template-columns:repeat(4,1fr);
+    padding:20px 6px 18px;
   }
-  .feature-item {
+  .grid-item {
     display:flex; flex-direction:column; align-items:center; gap:9px;
     cursor:pointer;
   }
-  .feature-icon {
-    width:46px; height:46px; border-radius:12px;
+  .grid-ic {
+    width:34px; height:34px; border-radius:8px;
     display:flex; align-items:center; justify-content:center;
-    background:var(--surface); color:var(--primary);
-    font-family:var(--serif); font-size:17px; font-weight:600;
+    background:var(--surface); color:var(--quiet-ink);
   }
-  .feature-icon.primary { background:var(--primary); color:#fff; }
-  .feature-icon.accent { background:var(--glaze-green-soft); color:var(--glaze-green); }
-  .feature-name { font-size:11px; color:var(--ink); font-weight:500; }
-
-  /* ── 账户链接 ── */
-  .account-links {
-    margin-top:30px;
-    border:1px solid var(--border); border-radius:14px;
-    background:var(--card); overflow:hidden;
-  }
-  .account-row {
-    min-height:50px;
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-    padding:0 18px;
-    border-bottom:1px solid var(--border); cursor:pointer;
-  }
-  .account-row:last-child { border-bottom:0; }
-  .account-name { font-size:14px; color:var(--ink); }
-  .account-note { flex:1; text-align:right; font-size:11px; color:var(--muted); }
-  .account-arrow { font-size:16px; color:var(--placeholder); }
+  .grid-ic svg { width:18px; height:18px; }
+  .grid-label { font-size:11px; color:var(--ink); font-weight:500; }
 
   /* ── Footer ── */
-  .profile-footer { padding:44px 0 8px; text-align:center; }
+  .profile-footer { padding:40px 0 8px; text-align:center; }
   .footer-brand {
     display:block;
     font-size:11px; font-weight:800; letter-spacing:.24em; color:var(--ink);
@@ -370,7 +300,7 @@
 
 <div class="page">
 
-  <!-- 会员卡片 -->
+  <!-- 会员卡片（紧凑） -->
   <div class="member-card" id="memberCard">
     <div class="layer-texture"></div>
     <div class="layer-shine"></div>
@@ -382,18 +312,15 @@
       </div>
       <span class="card-settings" onclick="toast('账户设置')">设置</span>
     </div>
-    <span class="card-caption">Coffee, points and daily rituals.</span>
 
     <div class="identity" onclick="toast('编辑资料')">
       <div class="avatar">☕</div>
       <div class="identity-copy">
         <span class="user-name">Cozy 咖啡爱好者</span>
-        <span class="user-level" id="userLevel">白银会员 · SILVER</span>
+        <span class="level-chip" id="levelChip">白银会员</span>
       </div>
       <span class="identity-action">账户 →</span>
     </div>
-
-    <div class="benefit-chips" id="benefitChips"></div>
 
     <div class="ledger">
       <div class="ledger-cell" onclick="go('points-history.html')">
@@ -416,8 +343,6 @@
       </div>
       <span class="progress-copy" id="progressCopy"></span>
     </div>
-
-    <span class="card-memberno" id="memberNo">MEMBER NO · COZY 0246</span>
   </div>
 
   <!-- 等级预览（原型工具） -->
@@ -431,93 +356,79 @@
     <div>
       <span class="promo-kicker">COZY DAY · 会员日</span>
       <span class="promo-title">周五会员日，下单积分翻倍</span>
-      <span class="promo-sub">会员日倍率 = 等级倍率 + 0.5 · 100 积分兑 10 元券</span>
+      <span class="promo-sub">会员日倍率 = 等级倍率 + 0.5</span>
     </div>
     <span class="promo-arrow">›</span>
   </div>
 
   <!-- 我的订单 -->
-  <div class="section">
-    <div class="section-head">
-      <div>
-        <span class="section-title">我的订单</span>
-        <span class="section-note">咖啡订单进度与积分兑换记录</span>
+  <div class="entry-card">
+    <div class="entry-row" onclick="go('order.html')">
+      <span class="entry-ic" id="icBag"></span>
+      <div class="entry-copy">
+        <span class="entry-name">我的订单</span>
+        <span class="entry-note">查看制作进度与取餐</span>
       </div>
-    </div>
-    <div class="order-duo">
-      <div class="order-card coffee" onclick="go('order.html')">
-        <div class="order-card-head">
-          <span class="order-card-mark">杯</span>
-          <span class="order-card-count">3</span>
-        </div>
-        <span class="order-card-name">咖啡订单</span>
-        <span class="order-card-note">查看制作进度与取餐</span>
-      </div>
-      <div class="order-card redeem" onclick="go('points-redemptions.html')">
-        <div class="order-card-head">
-          <span class="order-card-mark">礼</span>
-          <span class="order-card-count">6</span>
-        </div>
-        <span class="order-card-name">兑换订单</span>
-        <span class="order-card-note">积分兑换商品记录</span>
-      </div>
+      <span class="entry-count">3</span>
+      <span class="entry-arrow">›</span>
     </div>
   </div>
 
-  <!-- 会员与功能 -->
-  <div class="section">
-    <div class="section-head">
-      <div>
-        <span class="section-title">会员与功能</span>
-        <span class="section-note">把每次消费变成可见回馈</span>
+  <!-- 功能图标入口 -->
+  <div class="entry-card">
+    <div class="grid-entries">
+      <div class="grid-item" onclick="go('mall.html')">
+        <span class="grid-ic" id="icMall"></span>
+        <span class="grid-label">积分商城</span>
       </div>
-    </div>
-    <div class="feature-grid">
-      <div class="feature-item" onclick="go('mall.html')">
-        <div class="feature-icon primary">积</div>
-        <span class="feature-name">积分商城</span>
+      <div class="grid-item" onclick="go('signin.html')">
+        <span class="grid-ic" id="icSignin"></span>
+        <span class="grid-label">每日签到</span>
       </div>
-      <div class="feature-item" onclick="go('benefits.html')">
-        <div class="feature-icon accent">享</div>
-        <span class="feature-name">会员权益</span>
+      <div class="grid-item" onclick="go('benefits.html')">
+        <span class="grid-ic" id="icBenefits"></span>
+        <span class="grid-label">会员权益</span>
       </div>
-      <div class="feature-item" onclick="go('signin.html')">
-        <div class="feature-icon">签</div>
-        <span class="feature-name">每日签到</span>
-      </div>
-      <div class="feature-item" onclick="toast('编辑资料')">
-        <div class="feature-icon">我</div>
-        <span class="feature-name">个人资料</span>
+      <div class="grid-item" onclick="go('points-redemptions.html')">
+        <span class="grid-ic" id="icRedeem"></span>
+        <span class="grid-label">兑换订单</span>
       </div>
     </div>
   </div>
 
   <!-- 账户 -->
-  <div class="account-links">
-    <div class="account-row" onclick="go('store.html')">
-      <span class="account-name">自提门店</span>
-      <span class="account-note">CozyCoffee 中心店</span>
-      <span class="account-arrow">›</span>
+  <div class="entry-card">
+    <div class="entry-row" onclick="toast('收货地址')">
+      <span class="entry-ic" id="icPin"></span>
+      <div class="entry-copy">
+        <span class="entry-name">收货地址</span>
+        <span class="entry-note">管理配送地址</span>
+      </div>
+      <span class="entry-arrow">›</span>
     </div>
-    <div class="account-row" onclick="toast('收货地址')">
-      <span class="account-name">收货地址</span>
-      <span class="account-note">管理配送地址</span>
-      <span class="account-arrow">›</span>
+    <div class="entry-row" onclick="toast('联系客服')">
+      <span class="entry-ic" id="icSupport"></span>
+      <div class="entry-copy">
+        <span class="entry-name">联系客服</span>
+        <span class="entry-note">在线咨询与反馈</span>
+      </div>
+      <span class="entry-arrow">›</span>
     </div>
-    <div class="account-row" onclick="toast('联系客服')">
-      <span class="account-name">联系客服</span>
-      <span class="account-note">在线咨询与反馈</span>
-      <span class="account-arrow">›</span>
+    <div class="entry-row" onclick="toast('账户设置')">
+      <span class="entry-ic" id="icGear"></span>
+      <div class="entry-copy">
+        <span class="entry-name">账户设置</span>
+        <span class="entry-note">安全、隐私与退出登录</span>
+      </div>
+      <span class="entry-arrow">›</span>
     </div>
-    <div class="account-row" onclick="toast('账户设置')">
-      <span class="account-name">账户设置</span>
-      <span class="account-note">安全、隐私与退出登录</span>
-      <span class="account-arrow">›</span>
-    </div>
-    <div class="account-row" onclick="go('about.html')">
-      <span class="account-name">关于我们</span>
-      <span class="account-note">品牌故事与咖啡旅程</span>
-      <span class="account-arrow">›</span>
+    <div class="entry-row" onclick="go('about.html')">
+      <span class="entry-ic" id="icInfo"></span>
+      <div class="entry-copy">
+        <span class="entry-name">关于我们</span>
+        <span class="entry-note">品牌故事与咖啡旅程</span>
+      </div>
+      <span class="entry-arrow">›</span>
     </div>
   </div>
 
@@ -547,11 +458,11 @@
 <script>
   // 等级主题映射 —— 与 constants/member.js MEMBER_LEVEL_THEMES 保持一致
   const THEMES = {
-    basic:   { name:'基础会员', en:'BASIC',   surface:'#F7F5F3', text:'#2B1E16', accent:'#8D6E63', isDark:false, exp:100,   points:'50',    exchange:0, coupons:0, memberNo:'COZY 1001', benefits:['1.0× 积分','每日签到','月度权益'] },
-    silver:  { name:'白银会员', en:'SILVER',  surface:'linear-gradient(135deg,#ECE8E4,#D6D0CA)', text:'#3E342E', accent:'#8C7B70', isDark:false, exp:800,   points:'1,200', exchange:1, coupons:2, memberNo:'COZY 0246', benefits:['1.1× 积分','9.8 折兑换','生日礼遇'] },
-    gold:    { name:'黄金会员', en:'GOLD',    surface:'linear-gradient(135deg,#E8D7A5,#C9A45C)', text:'#3B2920', accent:'#B8862D', isDark:false, exp:2000,  points:'3,600', exchange:2, coupons:3, memberNo:'COZY 0088', benefits:['1.2× 积分','9.5 折兑换','Cozy Day'] },
-    diamond: { name:'钻石会员', en:'DIAMOND', surface:'linear-gradient(135deg,#DCE4E6,#B8C6CA)', text:'#263238', accent:'#546E7A', isDark:false, exp:4500,  points:'8,888', exchange:3, coupons:5, memberNo:'COZY 0005', benefits:['1.3× 积分','9.0 折兑换','每月免配送'] },
-    black:   { name:'黑金会员', en:'BLACK',   surface:'#171411', text:'#E6C97A', accent:'#C9A227', isDark:true,  exp:9500,  points:'18,888', exchange:5, coupons:8, memberNo:'COZY 0001', benefits:['1.7× 加速包','8.5 折兑换','无限免配送'] }
+    basic:   { name:'基础会员', en:'BASIC',   surface:'#F7F5F3', text:'#2B1E16', accent:'#8D6E63', isDark:false, exp:100,   points:'50',    exchange:0, coupons:0 },
+    silver:  { name:'白银会员', en:'SILVER',  surface:'linear-gradient(135deg,#ECE8E4,#D6D0CA)', text:'#3E342E', accent:'#8C7B70', isDark:false, exp:800,   points:'1,200', exchange:1, coupons:2 },
+    gold:    { name:'黄金会员', en:'GOLD',    surface:'linear-gradient(135deg,#E8D7A5,#C9A45C)', text:'#3B2920', accent:'#B8862D', isDark:false, exp:2000,  points:'3,600', exchange:2, coupons:3 },
+    diamond: { name:'钻石会员', en:'DIAMOND', surface:'linear-gradient(135deg,#DCE4E6,#B8C6CA)', text:'#263238', accent:'#546E7A', isDark:false, exp:4500,  points:'8,888', exchange:3, coupons:5 },
+    black:   { name:'黑金会员', en:'BLACK',   surface:'#171411', text:'#E6C97A', accent:'#C9A227', isDark:true,  exp:9500,  points:'18,888', exchange:5, coupons:8 }
   };
   const THRESHOLDS = { basic:0, silver:500, gold:1500, diamond:4000, black:9000 };
   const ORDER = ['basic','silver','gold','diamond','black'];
@@ -559,10 +470,23 @@
   // 等级徽章 —— 与 LevelBadge.vue 对应（咖啡豆/勋章/星/钻石/王冠）
   const EMBLEMS = {
     basic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><ellipse cx="12" cy="12" rx="6.4" ry="8.6" transform="rotate(32 12 12)"/><path d="M12 4.6c2.6 2.4 2.6 12.4 0 14.8"/></svg>',
-    silver: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.2"/><path d="M12 3.8V8M12 16v4.2M3.8 12H8M16 12h4.2"/></svg>',
+    silver: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.2"/></svg>',
     gold: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.3 5.4 5.9.5-4.5 3.9 1.4 5.7L12 14.8l-5.1 3.1 1.4-5.7-4.5-3.9 5.9-.5z"/></svg>',
-    diamond: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2L20.4 7 12 21.8 3.6 7z"/><path d="M3.6 7h16.8" stroke="rgba(0,0,0,.12)"/></svg>',
+    diamond: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2L20.4 7 12 21.8 3.6 7z"/></svg>',
     black: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.6 17l2.1-8.4 3 3.2 4.3-9.4 4.3 9.4 3-3.2L21.4 17z"/></svg>'
+  };
+
+  // 图标入口 —— 细线图标（stroke 1.6），与参考小程序一致的小图标 + 文字
+  const ICONS = {
+    bag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 13H6.2z"/><path d="M8.5 8V6a3.5 3.5 0 0 1 7 0v2"/></svg>',
+    gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="17" height="12" rx="1.5"/><path d="M3.5 13h17"/><path d="M12 8v12"/><path d="M12 8c-3.5 0-6-1.8-6-3.5S8.5 2.5 10 4c1 1 1 4 2 4z"/><path d="M12 8c3.5 0 6-1.8 6-3.5S15.5 2.5 14 4c-1 1-1 4-2 4z"/></svg>',
+    calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 9.5h17"/><path d="M8 3v4M16 3v4"/><path d="M9 15l2 2 4-4"/></svg>',
+    shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.5V11c0 4.5-3 8.2-7 9.5-4-1.3-7-5-7-9.5V5.5z"/></svg>',
+    swap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M14 4l4 4-4 4"/><path d="M20 16H7M10 12l-4 4 4 4"/></svg>',
+    pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-11a6 6 0 0 1 12 0c0 5.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>',
+    headset: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="13" width="4" height="7" rx="1.5"/><rect x="17" y="13" width="4" height="7" rx="1.5"/><path d="M20 20a4 4 0 0 1-4 3h-3"/></svg>',
+    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5l1.6 2.3 2.8-.4 1 2.6 2.7.9-.6 2.8 2 2.1-1.9 2.1.6 2.8-2.7.9-1 2.6-2.8-.4L12 21.5l-1.6-2.3-2.8.4-1-2.6-2.7-.9.6-2.8-2-2.1 1.9-2.1-.6-2.8 2.7-.9 1-2.6 2.8.4z"/></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5"/><path d="M12 8v.01"/></svg>'
   };
 
   let currentLevel = 'silver';
@@ -578,13 +502,10 @@
     card.classList.toggle('is-dark', t.isDark);
 
     document.getElementById('brandEmblem').innerHTML = EMBLEMS[level];
-    document.getElementById('userLevel').textContent = t.name + ' · ' + t.en;
+    document.getElementById('levelChip').textContent = t.name;
     document.getElementById('ledPoints').textContent = t.points;
     document.getElementById('ledExchange').textContent = t.exchange;
     document.getElementById('ledCoupons').textContent = t.coupons;
-    document.getElementById('memberNo').textContent = 'MEMBER NO · ' + t.memberNo;
-    document.getElementById('benefitChips').innerHTML =
-      t.benefits.map(b => `<span class="benefit-chip">${b}</span>`).join('');
 
     // 等级进度
     const idx = ORDER.indexOf(level);
@@ -593,8 +514,7 @@
     if (!isMax) {
       const cur = THRESHOLDS[level], next = THRESHOLDS[ORDER[idx + 1]];
       pct = Math.max(0, Math.min(100, Math.round(((t.exp - cur) / (next - cur)) * 100)));
-      const remain = Math.max(0, next - t.exp);
-      copy = '距离' + THEMES[ORDER[idx + 1]].name + '还需 ' + remain.toLocaleString() + ' EXP';
+      copy = '距离' + THEMES[ORDER[idx + 1]].name + '还需 ' + Math.max(0, next - t.exp).toLocaleString() + ' EXP';
     }
     document.getElementById('progressFill').style.width = pct + '%';
     document.getElementById('progressCopy').textContent = copy;
@@ -619,6 +539,14 @@
 
   function switchLevel(level) { currentLevel = level; applyTheme(level); }
 
+  function mountIcons() {
+    const map = { icBag:'bag', icMall:'gift', icSignin:'calendar', icBenefits:'shield', icRedeem:'swap', icPin:'pin', icSupport:'headset', icGear:'gear', icInfo:'info' };
+    Object.keys(map).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = ICONS[map[id]];
+    });
+  }
+
   function go(href) { location.href = href; }
   function toast(msg) {
     let t = document.querySelector('.toast');
@@ -633,6 +561,7 @@
     t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
   }
 
+  mountIcons();
   renderChips();
   applyTheme('silver');
 </script>
