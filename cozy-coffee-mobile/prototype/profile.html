@@ -200,45 +200,69 @@
   .promo-arrow { flex:none; font-size:18px; color:var(--roast-brown); line-height:1; }
 
   /* ═══════════════════════════════════════
-     图标入口（白卡 · 小图标 · 无色块）
+     快捷入口分组（icon + 名称，无容器）
      ═══════════════════════════════════════ */
-  /* ═══════════════════════════════════════
-     快捷入口（一个 div · icon + 名称宫格）
-     ═══════════════════════════════════════ */
-  .entry-card {
-    margin-top:26px;
+  .group-card {
     border-radius:14px; background:var(--card);
-    overflow:hidden;
+    margin-top:26px;
   }
-  .grid-entries {
-    display:grid; grid-template-columns:repeat(4,1fr);
-    padding:24px 6px 22px;
-    row-gap:22px; column-gap:4px;
+  .group-card + .group-card { margin-top:14px; }
+  .group-head {
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    padding:22px 22px 0;
   }
-  .grid-item {
-    display:flex; flex-direction:column; align-items:center; gap:9px;
+  .group-title {
+    font-family:var(--serif); font-size:17px; font-weight:600; color:var(--ink);
+  }
+  .group-en {
+    font-size:9px; font-weight:700; letter-spacing:.2em; color:var(--placeholder);
+  }
+  .group-grid {
+    display:grid; grid-template-columns:repeat(3,1fr);
+    padding:26px 8px 28px;
+    row-gap:26px;
+  }
+  .g-item {
+    display:flex; flex-direction:column; align-items:center; gap:10px;
     cursor:pointer;
     transition:opacity .2s;
   }
-  .grid-item:active { opacity:.6; }
-  .grid-ic {
-    width:36px; height:36px; border-radius:10px;
+  .g-item:active { opacity:.55; }
+  .g-icon {
+    width:28px; height:28px;
     display:flex; align-items:center; justify-content:center;
-    background:var(--surface); color:var(--quiet-ink);
+    color:var(--quiet-ink);
   }
-  .grid-ic svg { width:19px; height:19px; }
-  .grid-label { font-size:11px; color:var(--ink); font-weight:500; }
+  .g-icon svg { width:26px; height:26px; }
+  .g-label {
+    font-size:12px; color:var(--ink); font-weight:500;
+    letter-spacing:.02em;
+  }
 
-  /* ── Footer ── */
-  .profile-footer { padding:40px 0 8px; text-align:center; }
-  .footer-brand {
+  /* ═══════════════════════════════════════
+     底部品牌区域
+     ═══════════════════════════════════════ */
+  .profile-footer { padding:46px 0 10px; text-align:center; }
+  .footer-kicker {
     display:block;
-    font-size:11px; font-weight:800; letter-spacing:.24em; color:var(--ink);
+    font-size:9px; font-weight:700; letter-spacing:.26em; color:var(--placeholder);
   }
-  .footer-copy {
-    display:block; margin-top:7px;
-    font-size:9px; letter-spacing:.16em; color:var(--placeholder);
+  .footer-brand {
+    display:block; margin-top:14px;
+    font-family:var(--serif); font-size:18px; font-weight:700;
+    letter-spacing:.3em; color:var(--ink);
   }
+  .footer-tag {
+    display:block; margin-top:10px;
+    font-size:11px; letter-spacing:.08em; color:var(--muted);
+  }
+  .footer-about {
+    display:inline-block; margin-top:18px;
+    font-size:11px; letter-spacing:.08em;
+    color:var(--placeholder); cursor:pointer;
+    text-decoration:none;
+  }
+  .footer-about:active { opacity:.6; }
 
   /* ═══════════════════════════════════════
      底部 TabBar
@@ -335,56 +359,78 @@
     <span class="promo-arrow">›</span>
   </div>
 
-  <!-- 快捷入口（一个 div · icon + 名称） -->
-  <div class="entry-card">
-    <div class="grid-entries">
-      <div class="grid-item" onclick="go('order.html')">
-        <span class="grid-ic" id="icBag"></span>
-        <span class="grid-label">我的订单</span>
+  <!-- 我的咖啡 -->
+  <div class="group-card">
+    <div class="group-head">
+      <span class="group-title">我的咖啡</span>
+      <span class="group-en">MY COFFEE</span>
+    </div>
+    <div class="group-grid">
+      <div class="g-item" onclick="go('order.html')">
+        <span class="g-icon" id="icOrder"></span>
+        <span class="g-label">订单</span>
       </div>
-      <div class="grid-item" onclick="go('mall.html')">
-        <span class="grid-ic" id="icMall"></span>
-        <span class="grid-label">积分商城</span>
+      <div class="g-item" onclick="toast('我的券包')">
+        <span class="g-icon" id="icCoupon"></span>
+        <span class="g-label">优惠券</span>
       </div>
-      <div class="grid-item" onclick="go('signin.html')">
-        <span class="grid-ic" id="icSignin"></span>
-        <span class="grid-label">每日签到</span>
-      </div>
-      <div class="grid-item" onclick="go('benefits.html')">
-        <span class="grid-ic" id="icBenefits"></span>
-        <span class="grid-label">会员权益</span>
-      </div>
-      <div class="grid-item" onclick="go('points-redemptions.html')">
-        <span class="grid-ic" id="icRedeem"></span>
-        <span class="grid-label">兑换订单</span>
-      </div>
-      <div class="grid-item" onclick="toast('我的券包')">
-        <span class="grid-ic" id="icCoupon"></span>
-        <span class="grid-label">优惠券</span>
-      </div>
-      <div class="grid-item" onclick="toast('收货地址')">
-        <span class="grid-ic" id="icPin"></span>
-        <span class="grid-label">收货地址</span>
-      </div>
-      <div class="grid-item" onclick="toast('联系客服')">
-        <span class="grid-ic" id="icSupport"></span>
-        <span class="grid-label">联系客服</span>
-      </div>
-      <div class="grid-item" onclick="toast('账户设置')">
-        <span class="grid-ic" id="icGear"></span>
-        <span class="grid-label">账户设置</span>
-      </div>
-      <div class="grid-item" onclick="go('about.html')">
-        <span class="grid-ic" id="icInfo"></span>
-        <span class="grid-label">关于我们</span>
+      <div class="g-item" onclick="go('mall.html')">
+        <span class="g-icon" id="icMall"></span>
+        <span class="g-label">积分</span>
       </div>
     </div>
   </div>
 
-  <!-- Footer -->
+  <!-- 会员成长 -->
+  <div class="group-card">
+    <div class="group-head">
+      <span class="group-title">会员成长</span>
+      <span class="group-en">MEMBERSHIP</span>
+    </div>
+    <div class="group-grid">
+      <div class="g-item" onclick="go('signin.html')">
+        <span class="g-icon" id="icSignin"></span>
+        <span class="g-label">签到</span>
+      </div>
+      <div class="g-item" onclick="go('benefits.html')">
+        <span class="g-icon" id="icBenefits"></span>
+        <span class="g-label">权益</span>
+      </div>
+      <div class="g-item" onclick="go('points-rules.html')">
+        <span class="g-icon" id="icLevel"></span>
+        <span class="g-label">等级</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 服务 -->
+  <div class="group-card">
+    <div class="group-head">
+      <span class="group-title">服务</span>
+      <span class="group-en">SERVICE</span>
+    </div>
+    <div class="group-grid">
+      <div class="g-item" onclick="toast('收货地址')">
+        <span class="g-icon" id="icPin"></span>
+        <span class="g-label">地址</span>
+      </div>
+      <div class="g-item" onclick="toast('联系客服')">
+        <span class="g-icon" id="icSupport"></span>
+        <span class="g-label">客服</span>
+      </div>
+      <div class="g-item" onclick="toast('账户设置')">
+        <span class="g-icon" id="icGear"></span>
+        <span class="g-label">设置</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 品牌收尾 -->
   <div class="profile-footer">
+    <span class="footer-kicker">CRAFTED WITH CARE · SINCE 2026</span>
     <span class="footer-brand">COZY COFFEE</span>
-    <span class="footer-copy">ROASTED IN HANGZHOU</span>
+    <span class="footer-tag">Roasted in Hangzhou · Origin · Craft · Warmth</span>
+    <a class="footer-about" onclick="go('about.html')">关于我们 · 帮助与反馈</a>
   </div>
 </div>
 
@@ -425,18 +471,17 @@
     black: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.6 17l2.1-8.4 3 3.2 4.3-9.4 4.3 9.4 3-3.2L21.4 17z"/></svg>'
   };
 
-  // 图标入口 —— 细线图标（stroke 1.6），与参考小程序一致的小图标 + 文字
+  // 快捷入口图标 —— 细线、去容器、更轻（stroke 1.6）
   const ICONS = {
     bag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 13H6.2z"/><path d="M8.5 8V6a3.5 3.5 0 0 1 7 0v2"/></svg>',
+    coupon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v4a2.2 2.2 0 0 0 0 4.4V19H4v-3.6a2.2 2.2 0 0 0 0-4.4z"/><circle cx="9" cy="12" r=".8" fill="currentColor" stroke="none"/></svg>',
     gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="17" height="12" rx="1.5"/><path d="M3.5 13h17"/><path d="M12 8v12"/><path d="M12 8c-3.5 0-6-1.8-6-3.5S8.5 2.5 10 4c1 1 1 4 2 4z"/><path d="M12 8c3.5 0 6-1.8 6-3.5S15.5 2.5 14 4c-1 1-1 4-2 4z"/></svg>',
     calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 9.5h17"/><path d="M8 3v4M16 3v4"/><path d="M9 15l2 2 4-4"/></svg>',
     shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.5V11c0 4.5-3 8.2-7 9.5-4-1.3-7-5-7-9.5V5.5z"/></svg>',
-    swap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M14 4l4 4-4 4"/><path d="M20 16H7M10 12l-4 4 4 4"/></svg>',
-    coupon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v4a2.2 2.2 0 0 0 0 4.4V19H4v-3.6a2.2 2.2 0 0 0 0-4.4z"/><circle cx="9" cy="12" r=".8" fill="currentColor" stroke="none"/></svg>',
+    level: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 20h16"/><path d="M6 20v-6M12 20v-11M18 20V5"/></svg>',
     pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-11a6 6 0 0 1 12 0c0 5.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>',
     headset: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="13" width="4" height="7" rx="1.5"/><rect x="17" y="13" width="4" height="7" rx="1.5"/><path d="M20 20a4 4 0 0 1-4 3h-3"/></svg>',
-    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5l1.6 2.3 2.8-.4 1 2.6 2.7.9-.6 2.8 2 2.1-1.9 2.1.6 2.8-2.7.9-1 2.6-2.8-.4L12 21.5l-1.6-2.3-2.8.4-1-2.6-2.7-.9.6-2.8-2-2.1 1.9-2.1-.6-2.8 2.7-.9 1-2.6 2.8.4z"/></svg>',
-    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5"/><path d="M12 8v.01"/></svg>'
+    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5l1.6 2.3 2.8-.4 1 2.6 2.7.9-.6 2.8 2 2.1-1.9 2.1.6 2.8-2.7.9-1 2.6-2.8-.4L12 21.5l-1.6-2.3-2.8.4-1-2.6-2.7-.9.6-2.8-2-2.1 1.9-2.1-.6-2.8 2.7-.9 1-2.6 2.8.4z"/></svg>'
   };
 
   let currentLevel = 'silver';
@@ -490,7 +535,7 @@
   function switchLevel(level) { currentLevel = level; applyTheme(level); }
 
   function mountIcons() {
-    const map = { icBag:'bag', icMall:'gift', icSignin:'calendar', icBenefits:'shield', icRedeem:'swap', icCoupon:'coupon', icPin:'pin', icSupport:'headset', icGear:'gear', icInfo:'info' };
+    const map = { icOrder:'bag', icCoupon:'coupon', icMall:'gift', icSignin:'calendar', icBenefits:'shield', icLevel:'level', icPin:'pin', icSupport:'headset', icGear:'gear' };
     Object.keys(map).forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = ICONS[map[id]];
