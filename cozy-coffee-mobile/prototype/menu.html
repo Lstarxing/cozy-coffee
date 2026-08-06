@@ -426,25 +426,26 @@
     z-index:2;
   }
   .detail-hero-info { padding:28px 24px 8px; }
-  .detail-name {
-    display:block;
-    font-family:var(--serif); font-size:28px; font-weight:600;
-    color:var(--roastery-ink); line-height:1.2;
-  }
   .detail-tag {
-    display:inline-block; margin-bottom:10px;
+    display:inline-block; margin-bottom:12px;
     padding:3px 9px; border-radius:4px;
     background:var(--roast-brown); color:#fff;
     font-size:11px; font-weight:700; letter-spacing:.06em;
   }
-  .detail-sub {
-    display:block; margin-top:8px;
-    font-size:12px; font-weight:700; letter-spacing:.16em;
-    color:var(--roast-brown);
+  .detail-eyebrow {
+    display:block;
+    font-size:10px; font-weight:700; letter-spacing:.24em;
+    color:var(--quiet-ink); opacity:.72;
+  }
+  .detail-name {
+    display:block; margin-top:9px;
+    font-family:var(--serif); font-size:28px; font-weight:600;
+    color:var(--roastery-ink); line-height:1.2;
   }
   .detail-notes {
-    display:block; margin-top:16px;
-    font-size:15px; color:var(--quiet-ink); letter-spacing:.02em;
+    display:block; margin-top:12px;
+    font-family:var(--serif); font-size:14px;
+    color:var(--quiet-ink); letter-spacing:.02em;
   }
 
   /* 规格选择（紧跟 hero，优先决策） */
@@ -468,9 +469,10 @@
   }
   .spec-options { display:flex; flex-wrap:wrap; gap:8px; }
   .spec-option {
-    padding:9px 16px;
+    height:36px; padding:0 18px;
+    display:flex; align-items:center; justify-content:center;
     font-size:13px; color:var(--roastery-ink);
-    border-radius:6px;
+    border-radius:5px;
     border:1px solid var(--hairline); background:var(--porcelain);
     cursor:pointer;
     transition:all .2s;
@@ -703,8 +705,8 @@
         <div class="detail-image" id="detailImage"></div>
         <div class="detail-hero-info">
           <span class="detail-tag" id="detailTag"></span>
+          <span class="detail-eyebrow" id="detailEyebrow">HAND BREW</span>
           <span class="detail-name" id="detailName">巴拿马 瑰夏</span>
-          <span class="detail-sub" id="detailSub">HAND BREW</span>
           <span class="detail-notes" id="detailNotes">花香 · 蜂蜜 · 精致余韵</span>
         </div>
       </div>
@@ -714,16 +716,24 @@
         <div id="specGroups"></div>
       </div>
 
-      <!-- 商品详情（合并：配料 / 产地） -->
+      <!-- 商品详情（产地 / 处理法 / 风味 / 烘焙度） -->
       <div class="detail-card">
         <span class="detail-card-title">商品详情</span>
         <div class="detail-row">
-          <span class="detail-row-label">配料</span>
-          <span class="detail-row-value" id="detailIngredients">巴拿马瑰夏 · 水洗</span>
+          <span class="detail-row-label">产地</span>
+          <span class="detail-row-value" id="detailOrigin">Boquete, Panama · 巴拿马 博奎特</span>
         </div>
         <div class="detail-row">
-          <span class="detail-row-label">产地</span>
-          <span class="detail-row-value" id="detailOrigin">巴拿马 博奎特</span>
+          <span class="detail-row-label">处理法</span>
+          <span class="detail-row-value" id="detailProcess">Washed · 水洗</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-row-label">风味</span>
+          <span class="detail-row-value" id="detailFlavor">花香 · 蜂蜜 · 精致余韵</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-row-label">烘焙度</span>
+          <span class="detail-row-value" id="detailRoast">浅烘焙 · Light</span>
         </div>
       </div>
 
@@ -760,64 +770,64 @@
   ];
   const products = {
     espresso: [
-      { name:'浓缩咖啡', desc:'双份浓缩基底', price:18, sold:320, praise:99, origin:'杭州 烘焙中心', ingredients:'精选意式拼配豆 · 双份浓缩',
+      { name:'浓缩咖啡', desc:'双份浓缩基底', price:18, sold:320, praise:99, origin:'杭州 烘焙中心', process:'意式拼配 · Blend', roast:'中深烘焙 · Medium Dark',
         specs:{size:null, temp:null, sugar:null},
         notes:'醇厚 · 浓郁 · 油脂丰富' },
-      { name:'美式咖啡', desc:'浓缩加水，清爽明亮', price:22, sold:268, praise:97, origin:'杭州 烘焙中心', ingredients:'浓缩 · 过滤水',
-        specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['标准糖','微糖','半糖','无糖']},
+      { name:'美式咖啡', desc:'浓缩加水，清爽明亮', price:22, sold:268, praise:97, origin:'杭州 烘焙中心', process:'意式拼配 · Blend', roast:'中深烘焙 · Medium Dark',
+        specs:{size:['标准杯','大杯'], temp:['热','冰'], strength:['标准','加强'], sugar:['标准糖','微糖','半糖','无糖']},
         notes:'清爽 · 明亮 · 低酸' }
     ],
     coffee: [
-      { name:'经典手冲', desc:'云南保山 SOE，花香柑橘', price:28, sold:185, praise:99, origin:'云南 保山', ingredients:'云南保山 SOE · 水洗',
+      { name:'经典手冲', desc:'云南保山 SOE，花香柑橘', price:28, sold:185, praise:99, origin:'云南 保山', process:'水洗 · Washed', roast:'浅烘焙 · Light',
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
         notes:'花香 · 柑橘 · 蜂蜜 · 茶感' },
-      { name:'云南日晒', desc:'日晒处理，黑糖甜感', price:30, sold:96, praise:98, origin:'云南 保山', ingredients:'云南保山 · 日晒',
+      { name:'云南日晒', desc:'日晒处理，黑糖甜感', price:30, sold:96, praise:98, origin:'云南 保山', process:'日晒 · Natural', roast:'浅烘焙 · Light',
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
         notes:'黑糖 · 甜感 · 圆润体脂' }
     ],
     latte: [
-      { name:'Dirty', desc:'浓缩碰撞冰牛奶，渐变层次', price:32, sold:342, praise:99, origin:'杭州 烘焙中心', ingredients:'浓缩 · 冰博克牛奶',
+      { name:'Dirty', desc:'浓缩碰撞冰牛奶，渐变层次', price:32, sold:342, praise:99, origin:'杭州 烘焙中心', process:'意式拼配 · Blend', roast:'中深烘焙 · Medium Dark',
         specs:{size:null, temp:null, sugar:null},
         notes:'奶香 · 浓缩 · 分层渐变' },
-      { name:'海盐焦糖拿铁', desc:'海盐 · 焦糖 · 丝滑', price:34, sold:410, praise:98, origin:'杭州 烘焙中心', ingredients:'浓缩 · 牛奶 · 海盐焦糖酱',
-        specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['标准糖','微糖','半糖']},
+      { name:'海盐焦糖拿铁', desc:'海盐 · 焦糖 · 丝滑', price:34, sold:410, praise:98, origin:'杭州 烘焙中心', process:'意式拼配 · Blend', roast:'中深烘焙 · Medium Dark',
+        specs:{size:['标准杯','大杯'], temp:['热','冰'], strength:['标准','加强'], milk:['鲜奶','燕麦奶'], sugar:['标准糖','微糖','半糖']},
         notes:'海盐 · 焦糖 · 丝滑奶泡' },
-      { name:'燕麦拿铁', desc:'燕麦奶，谷物香气', price:36, sold:236, praise:97, origin:'杭州 烘焙中心', ingredients:'浓缩 · 燕麦奶',
-        specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['标准糖','微糖','半糖','无糖']},
+      { name:'燕麦拿铁', desc:'燕麦奶，谷物香气', price:36, sold:236, praise:97, origin:'杭州 烘焙中心', process:'意式拼配 · Blend', roast:'中深烘焙 · Medium Dark',
+        specs:{size:['标准杯','大杯'], temp:['热','冰'], strength:['标准','加强'], sugar:['标准糖','微糖','半糖','无糖']},
         notes:'谷物 · 坚果 · 植物奶香' }
     ],
     signature: [
-      { name:'荔枝特调', desc:'当季限定，清爽果香', price:38, sold:88, praise:96, origin:'广州 当季限定', ingredients:'荔枝汁 · 浓缩 · 气泡水', tag:'限定',
+      { name:'荔枝特调', desc:'当季限定，清爽果香', price:38, sold:88, praise:96, origin:'广州 当季限定', process:'现制特调 · Signature', roast:'中深烘焙 · Medium Dark', ingredients:'荔枝汁 · 浓缩 · 气泡水', tag:'限定',
         specs:{size:['标准杯','大杯'], temp:['冰'], sugar:['标准糖','微糖','半糖']},
         notes:'荔枝 · 果香 · 夏日限定' }
     ],
     soe: [
-      { name:'埃塞俄比亚 耶加雪菲', desc:'茉莉 · 柠檬 · 茶感', price:42, sold:152, praise:99, origin:'埃塞俄比亚 耶加雪菲', ingredients:'耶加雪菲 SOE · 水洗',
+      { name:'埃塞俄比亚 耶加雪菲', desc:'茉莉 · 柠檬 · 茶感', price:42, sold:152, praise:99, origin:'埃塞俄比亚 耶加雪菲', originEn:'Yirgacheffe, Ethiopia', process:'水洗 · Washed', roast:'浅烘焙 · Light',
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
         notes:'茉莉 · 柠檬 · 茶感 · 明亮酸质' },
-      { name:'巴拿马 瑰夏', desc:'花香 · 蜂蜜，精致余韵', price:58, sold:74, praise:99, origin:'巴拿马 博奎特', ingredients:'巴拿马瑰夏 · 水洗', tag:'新品',
+      { name:'巴拿马 瑰夏', desc:'花香 · 蜂蜜，精致余韵', price:58, sold:74, praise:99, origin:'巴拿马 博奎特', originEn:'Boquete, Panama', process:'水洗 · Washed', roast:'浅烘焙 · Light', tag:'新品',
         specs:{size:['标准杯','大杯'], temp:['热','冰'], sugar:['无糖']},
         notes:'花香 · 蜂蜜 · 精致余韵' }
     ],
     bakery: [
-      { name:'手工燕麦曲奇', desc:'谷物香，配咖啡刚好', price:15, sold:120, praise:97, origin:'杭州 烘焙中心', ingredients:'燕麦 · 黄油 · 黑糖',
+      { name:'手工燕麦曲奇', desc:'谷物香，配咖啡刚好', price:15, sold:120, praise:97, origin:'杭州 烘焙中心', process:'烘焙 · Baked', roast:'—',
         specs:{size:null, temp:null, sugar:null},
         notes:'谷物 · 酥脆 · 低糖' },
-      { name:'海盐焦糖牛角包', desc:'酥脆外皮，咸甜平衡', price:18, sold:156, praise:96, origin:'杭州 烘焙中心', ingredients:'高筋粉 · 黄油 · 海盐',
+      { name:'海盐焦糖牛角包', desc:'酥脆外皮，咸甜平衡', price:18, sold:156, praise:96, origin:'杭州 烘焙中心', process:'烘焙 · Baked', roast:'—',
         specs:{size:null, temp:null, sugar:null},
         notes:'酥脆 · 咸甜 · 黄油香' }
     ],
     other: [
-      { name:'热可可', desc:'浓郁可可，冬日暖意', price:26, sold:64, praise:95, origin:'杭州 烘焙中心', ingredients:'可可粉 · 牛奶 · 黑糖',
+      { name:'热可可', desc:'浓郁可可，冬日暖意', price:26, sold:64, praise:95, origin:'杭州 烘焙中心', process:'现制 · Fresh', roast:'—',
         specs:{size:['标准杯','大杯'], temp:['热'], sugar:['标准糖','微糖','半糖','无糖']},
         notes:'可可 · 奶香 · 冬日暖饮' },
-      { name:'瓶装冷萃', desc:'慢萃 12 小时，瓶装便携', price:28, sold:58, praise:97, origin:'云南 保山', ingredients:'云南保山冷萃 12 小时', tag:'新品',
+      { name:'瓶装冷萃', desc:'慢萃 12 小时，瓶装便携', price:28, sold:58, praise:97, origin:'云南 保山', process:'冷萃 12 小时 · Cold Brew', roast:'中深烘焙 · Medium Dark', tag:'新品',
         specs:{size:null, temp:null, sugar:null},
         notes:'冷萃 · 顺滑 · 便携瓶装' },
-      { name:'西柚茉莉冰茶', desc:'西柚 · 茉莉 · 清爽果茶', price:24, sold:45, praise:96, origin:'广州 当季限定', ingredients:'西柚 · 茉莉茶 · 蜂蜜', tag:'限定',
+      { name:'西柚茉莉冰茶', desc:'西柚 · 茉莉 · 清爽果茶', price:24, sold:45, praise:96, origin:'广州 当季限定', process:'现制 · Fresh', roast:'—', tag:'限定',
         specs:{size:null, temp:['冰'], sugar:['标准糖','微糖']},
         notes:'西柚 · 茉莉 · 清爽微甜' },
-      { name:'矿泉水', desc:'天然弱碱性饮用水', price:8, sold:76, praise:98, origin:'杭州 烘焙中心', ingredients:'天然弱碱性水',
+      { name:'矿泉水', desc:'天然弱碱性饮用水', price:8, sold:76, praise:98, origin:'杭州 烘焙中心', process:'天然 · Natural', roast:'—',
         specs:{size:null, temp:null, sugar:null},
         notes:'天然 · 弱碱 · 纯净' }
     ]
@@ -979,9 +989,11 @@
   let detailProduct = null, detailPrice = 0, detailQty = 1;
 
   const SPEC_LABELS = {
-    size: {title:'规格', map:{'标准杯':'标准杯','大杯':'大杯 +6'}},
-    temp: {title:'温度', map:{'热':'热','冰':'冰'}},
-    sugar: {title:'糖度', map:{'标准糖':'标准糖','微糖':'微糖','半糖':'半糖','无糖':'无糖'}}
+    size: {title:'杯型', map:{'标准杯':'标准杯','大杯':'大杯 +6'}},
+    temp: {title:'温度', map:{'热':'热饮','冰':'冰饮'}},
+    strength: {title:'浓度', map:{'标准':'标准','加强':'加强 +5'}},
+    milk: {title:'奶基', map:{'鲜奶':'鲜奶','燕麦奶':'燕麦奶 +6'}},
+    sugar: {title:'甜度', map:{'标准糖':'标准糖','微糖':'微糖','半糖':'半糖','无糖':'无糖'}}
   };
 
   function findProduct(name) {
@@ -996,7 +1008,7 @@
     let html = '';
     const s = prod.specs;
     if (!s) return;
-    for (const key of ['size','temp','sugar']) {
+    for (const key of ['size','temp','strength','milk','sugar']) {
       const values = s[key];
       if (!values || values.length === 0) continue;
       const cfg = SPEC_LABELS[key];
@@ -1013,6 +1025,10 @@
     let base = detailProduct.price;
     const sizeActive = document.querySelector('.spec-option[data-spec="size"].active');
     if (sizeActive && sizeActive.dataset.value === '大杯') base += 6;
+    const strengthActive = document.querySelector('.spec-option[data-spec="strength"].active');
+    if (strengthActive && strengthActive.dataset.value === '加强') base += 5;
+    const milkActive = document.querySelector('.spec-option[data-spec="milk"].active');
+    if (milkActive && milkActive.dataset.value === '燕麦奶') base += 6;
     detailPrice = base;
     updatePriceDisplay();
     updateAddBtn();
@@ -1045,11 +1061,13 @@
     const catIdx = findCategoryIdx(name);
 
     document.getElementById('detailTag').textContent = prod.tag || '';
+    document.getElementById('detailEyebrow').textContent = (catIdx >= 0 ? categories[catIdx].en : 'COZY COFFEE');
     document.getElementById('detailName').textContent = prod.name;
-    document.getElementById('detailSub').textContent = (catIdx >= 0 ? categories[catIdx].en : 'COZY COFFEE');
     document.getElementById('detailNotes').textContent = prod.notes || prod.desc;
-    document.getElementById('detailIngredients').textContent = prod.ingredients || prod.desc;
-    document.getElementById('detailOrigin').textContent = prod.origin || 'CozyCoffee 烘焙中心';
+    document.getElementById('detailOrigin').textContent = (prod.originEn ? prod.originEn + ' · ' : '') + (prod.origin || 'CozyCoffee 烘焙中心');
+    document.getElementById('detailProcess').textContent = prod.process || '—';
+    document.getElementById('detailFlavor').textContent = prod.notes || '—';
+    document.getElementById('detailRoast').textContent = prod.roast || '—';
 
     document.getElementById('detailPrice').textContent = '¥' + prod.price;
     document.getElementById('detailQty').textContent = '1';
