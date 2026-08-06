@@ -99,7 +99,11 @@
   }
   .product-scroll::-webkit-scrollbar { display:none; }
 
-  .group-heading { padding:36px 16px 20px; }
+  .group-heading {
+    position:sticky; top:0; z-index:2;
+    background:var(--card);
+    padding:36px 16px 20px;
+  }
   .group-sub {
     display:block;
     font-size:10px; font-weight:700; letter-spacing:.18em;
@@ -748,7 +752,7 @@
     mountScrollSpy();
   }
 
-  const NAV_HEIGHT = 36; // section 标题顶部偏移参考
+  const NAV_HEIGHT = 0; // 吸顶标题从 top:0 开始，无额外偏移
 
   function setActiveCategory(idx) {
     if (idx === activeIdx) return;
@@ -770,7 +774,8 @@
       });
     }, {
       root: scrollEl,
-      rootMargin: '-36px 0px -70% 0px',
+      // 顶部 8% 窄检测带：section 标题滑到顶部吸住时切换 active
+      rootMargin: '0px 0px -92% 0px',
       threshold: 0
     });
 
