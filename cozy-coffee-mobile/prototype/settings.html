@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>账户设置 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
+    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
+    --cask-brown:#2C1E18;
+    --roastery-ink:#2B1E16; --quiet-ink:#756A63;
+    --placeholder:#9E948E; --hairline:#E3DED8;
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  .back-btn {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:36px; height:36px;
+    margin-bottom:14px;
+    font-size:26px; line-height:1;
+    color:var(--ink);
+    text-decoration:none; cursor:pointer;
+    border-radius:50%;
+    background:rgba(255,255,255,.6);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  }
+  .back-btn:active { opacity:.55; }
+
+  .page { padding:20px 20px 110px; }
+
+  /* ── 页头 ── */
+  .settings-intro {
+    padding:10px 8px 20px;
+  }
+  .intro-kicker {
+    display:block;
+    font-size:10px; font-weight:700; letter-spacing:.2em; color:var(--muted);
+  }
+  .intro-title {
+    display:block; margin-top:8px;
+    font-family:var(--serif); font-size:24px; font-weight:600; color:var(--ink);
+  }
+  .intro-copy {
+    display:block; margin-top:8px;
+    font-size:12px; color:var(--muted);
+  }
+
+  /* ── 分组卡 ── */
+  .settings-card {
+    margin-top:16px;
+    border-radius:14px; background:var(--card);
+    overflow:hidden;
+  }
+  .card-heading {
+    padding:20px 20px 4px;
+  }
+  .card-title {
+    display:block;
+    font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink);
+  }
+  .card-note {
+    display:block; margin-top:3px;
+    font-size:11px; color:var(--muted);
+  }
+  .settings-row {
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    min-height:56px;
+    padding:0 20px;
+    border-bottom:1px solid var(--border); cursor:pointer;
+  }
+  .settings-row:last-child { border-bottom:0; }
+  .row-copy { min-width:0; flex:1; padding:14px 0; }
+  .row-label {
+    display:block;
+    font-size:14px; font-weight:600; color:var(--ink);
+  }
+  .row-desc {
+    display:block; margin-top:3px;
+    font-size:11px; line-height:1.45; color:var(--muted);
+  }
+  .row-right { flex:none; display:flex; align-items:center; gap:10px; }
+  .row-value {
+    font-size:13px; color:var(--muted);
+  }
+  .row-value.quiet { color:var(--placeholder); }
+  .row-arrow { font-size:16px; color:var(--placeholder); }
+
+  /* 开关 */
+  .switch {
+    position:relative; width:44px; height:26px; flex:none;
+    border-radius:13px;
+    background:var(--hairline);
+    transition:background .25s; cursor:pointer;
+  }
+  .switch.on { background:var(--roast-brown); }
+  .switch::after {
+    content:''; position:absolute; top:3px; left:3px;
+    width:20px; height:20px; border-radius:50%;
+    background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2);
+    transition:left .25s;
+  }
+  .switch.on::after { left:21px; }
+
+  /* ── 退出登录 ── */
+  .logout-btn {
+    margin-top:20px; height:48px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:10px;
+    border:1px solid rgba(180,60,48,.3);
+    background:rgba(180,60,48,.06);
+    color:#B03A2E;
+    font-size:14px; font-weight:650; cursor:pointer;
+  }
+  .logout-btn:active { opacity:.8; }
+
+  /* ── Footer ── */
+  .page-signoff {
+    display:block; margin-top:26px;
+    font-size:9px; font-weight:650; letter-spacing:.16em; color:var(--placeholder);
+    text-align:center;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <a class="back-btn" onclick="goBack('profile.html')">‹</a>
+
+  <!-- 页头 -->
+  <div class="settings-intro">
+    <span class="intro-kicker">COZY SETTINGS</span>
+    <span class="intro-title">账户设置</span>
+    <span class="intro-copy">管理登录方式、必要提醒与本机数据。</span>
+  </div>
+
+  <!-- 账号与安全 -->
+  <div class="settings-card">
+    <div class="card-heading">
+      <span class="card-title">账号与安全</span>
+      <span class="card-note">登录信息与密码维护</span>
+    </div>
+    <div class="settings-row" onclick="toast('绑定手机')">
+      <div class="row-copy">
+        <span class="row-label">绑定手机</span>
+        <span class="row-desc">用于登录与接收必要的订单提醒</span>
+      </div>
+      <div class="row-right">
+        <span class="row-value">138****0421</span>
+        <span class="row-arrow">›</span>
+      </div>
+    </div>
+    <div class="settings-row" onclick="toast('修改密码')">
+      <div class="row-copy">
+        <span class="row-label">修改密码</span>
+        <span class="row-desc">开发环境账号可在此重置密码</span>
+      </div>
+      <div class="row-right"><span class="row-arrow">›</span></div>
+    </div>
+  </div>
+
+  <!-- 消息提醒 -->
+  <div class="settings-card">
+    <div class="card-heading">
+      <span class="card-title">消息提醒</span>
+      <span class="card-note">仅保留与当前体验相关的通知</span>
+    </div>
+    <div class="settings-row">
+      <div class="row-copy">
+        <span class="row-label">订单状态</span>
+        <span class="row-desc">门店接单、制作与取餐状态</span>
+      </div>
+      <div class="switch on" onclick="toggle(this)"></div>
+    </div>
+    <div class="settings-row">
+      <div class="row-copy">
+        <span class="row-label">会员活动</span>
+        <span class="row-desc">签到、券包与会员权益更新</span>
+      </div>
+      <div class="switch on" onclick="toggle(this)"></div>
+    </div>
+    <div class="settings-row">
+      <div class="row-copy">
+        <span class="row-label">积分变动</span>
+        <span class="row-desc">积分获得、使用与到期提示</span>
+      </div>
+      <div class="switch on" onclick="toggle(this)"></div>
+    </div>
+  </div>
+
+  <!-- 本机与版本 -->
+  <div class="settings-card">
+    <div class="card-heading">
+      <span class="card-title">本机与版本</span>
+      <span class="card-note">当前设备上的应用信息</span>
+    </div>
+    <div class="settings-row" onclick="toast('清除缓存')">
+      <div class="row-copy">
+        <span class="row-label">清除缓存</span>
+        <span class="row-desc">不会删除账户、订单或积分记录</span>
+      </div>
+      <div class="row-right">
+        <span class="row-value">12.5MB</span>
+        <span class="row-arrow">›</span>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div class="row-copy">
+        <span class="row-label">当前版本</span>
+        <span class="row-desc">CozyCoffee 小程序</span>
+      </div>
+      <div class="row-right"><span class="row-value">v1.0.0</span></div>
+    </div>
+  </div>
+
+  <!-- 关于与支持 -->
+  <div class="settings-card">
+    <div class="card-heading">
+      <span class="card-title">关于与支持</span>
+      <span class="card-note">正式内容上线后可在此查看</span>
+    </div>
+    <div class="settings-row" onclick="toast('用户协议')">
+      <div class="row-copy"><span class="row-label">用户协议</span></div>
+      <div class="row-right"><span class="row-value quiet">待开放</span></div>
+    </div>
+    <div class="settings-row" onclick="toast('隐私政策')">
+      <div class="row-copy"><span class="row-label">隐私政策</span></div>
+      <div class="row-right"><span class="row-value quiet">待开放</span></div>
+    </div>
+    <div class="settings-row" onclick="toast('意见反馈')">
+      <div class="row-copy"><span class="row-label">意见反馈</span></div>
+      <div class="row-right"><span class="row-value quiet">待开放</span></div>
+    </div>
+  </div>
+
+  <!-- 退出登录 -->
+  <div class="logout-btn" onclick="logout()">退出登录</div>
+
+  <span class="page-signoff">COZY COFFEE · ROASTED IN HANGZHOU</span>
+
+</div>
+
+<script>
+  function toggle(el) { el.classList.toggle('on'); }
+
+  function logout() {
+    if (confirm('确定要退出登录吗？')) {
+      toast('已退出登录');
+      setTimeout(() => { location.href = 'index.html'; }, 900);
+    }
+  }
+
+  function goBack(fallback) {
+    if (document.referrer && window.history.length > 1) { history.back(); }
+    else { location.href = fallback; }
+  }
+  function go(href) { location.href = href; }
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
+  }
+</script>
+</body>
+</html>

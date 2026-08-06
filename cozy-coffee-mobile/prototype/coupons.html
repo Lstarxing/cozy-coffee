@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>我的券包 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
+    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
+    --cask-brown:#2C1E18;
+    --roastery-ink:#2B1E16; --quiet-ink:#756A63;
+    --placeholder:#9E948E; --hairline:#E3DED8;
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  .back-btn {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:36px; height:36px;
+    margin-bottom:14px;
+    font-size:26px; line-height:1;
+    color:var(--ink);
+    text-decoration:none; cursor:pointer;
+    border-radius:50%;
+    background:rgba(255,255,255,.6);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  }
+  .back-btn:active { opacity:.55; }
+
+  .page { padding:20px 20px 110px; }
+
+  .page-head { padding:8px 8px 18px; }
+  .page-kicker {
+    display:block;
+    font-size:10px; font-weight:700; letter-spacing:.18em; color:var(--muted);
+  }
+  .page-title {
+    display:block; margin-top:8px;
+    font-family:var(--serif); font-size:24px; font-weight:600; color:var(--ink);
+  }
+
+  /* ── 状态筛选 ── */
+  .filter-tabs {
+    display:flex;
+    margin:0; padding:0 4px;
+    border-bottom:1px solid var(--border);
+  }
+  .filter-tab {
+    flex:1; padding:13px 0;
+    text-align:center;
+    font-size:14px; color:var(--muted);
+    cursor:pointer; position:relative;
+    transition:color .25s;
+  }
+  .filter-tab.active { color:var(--ink); font-weight:600; }
+  .filter-tab.active::after {
+    content:''; position:absolute;
+    left:50%; bottom:-1px; transform:translateX(-50%);
+    width:22px; height:2px;
+    background:var(--ink);
+  }
+
+  /* ── 券列表 ── */
+  .coupon-list {
+    display:flex; flex-direction:column; gap:12px;
+    margin-top:16px;
+  }
+  .coupon-card {
+    display:flex; align-items:stretch;
+    border-radius:14px; background:var(--card);
+    border:1px solid var(--hairline);
+    overflow:hidden;
+  }
+  .coupon-card:not(.disabled) { border-color:#E3CDB6; }
+  .coupon-left {
+    width:104px; flex:none;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+    padding:18px 6px;
+    border-right:1px dashed var(--hairline);
+  }
+  .coupon-value {
+    font-family:var(--serif); font-size:22px; font-weight:700;
+    color:var(--roast-brown); line-height:1;
+    text-align:center;
+  }
+  .coupon-condition {
+    font-size:10px; color:var(--quiet-ink); text-align:center; line-height:1.4;
+  }
+  .coupon-right {
+    flex:1; min-width:0;
+    padding:16px 14px;
+  }
+  .coupon-name {
+    display:block;
+    font-size:14px; font-weight:600; color:var(--ink);
+  }
+  .coupon-scope {
+    display:block; margin-top:5px;
+    font-size:11px; color:var(--muted);
+  }
+  .coupon-expire {
+    display:block; margin-top:4px;
+    font-size:11px; color:var(--placeholder);
+  }
+  .coupon-action {
+    flex:none; width:74px;
+    display:flex; align-items:center; justify-content:center;
+    padding:0 10px;
+  }
+  .use-btn {
+    width:100%; height:34px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:6px;
+    background:var(--roast-brown); color:#fff;
+    font-size:12px; font-weight:600; cursor:pointer;
+  }
+  .use-btn:active { background:var(--roast-brown-deep); }
+  .status-tag {
+    font-size:12px; font-weight:600; color:var(--placeholder);
+  }
+
+  /* 已使用 / 已过期 */
+  .coupon-card.used, .coupon-card.expired { background:var(--porcelain-muted); border-color:var(--hairline); }
+  .coupon-card.used .coupon-value,
+  .coupon-card.expired .coupon-value { color:var(--placeholder); }
+  .coupon-card.used .coupon-name,
+  .coupon-card.expired .coupon-name { color:var(--quiet-ink); }
+
+  /* ── 空状态 ── */
+  .empty-state {
+    display:flex; flex-direction:column; align-items:center;
+    padding:72px 0 56px;
+  }
+  .empty-mark {
+    width:64px; height:64px; border-radius:50%;
+    background:var(--surface);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--serif); font-size:16px; font-weight:700; letter-spacing:.08em;
+    color:var(--primary);
+  }
+  .empty-text { margin-top:16px; font-size:14px; font-weight:600; color:var(--ink); }
+  .empty-hint { margin-top:8px; font-size:12px; color:var(--muted); }
+
+  /* ── 兑换入口 ── */
+  .mall-entry {
+    margin-top:22px; text-align:center;
+    font-size:13px; font-weight:650; color:var(--primary);
+    cursor:pointer;
+  }
+  .mall-entry:active { opacity:.6; }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <a class="back-btn" onclick="goBack('profile.html')">‹</a>
+
+  <div class="page-head">
+    <span class="page-kicker">MY COUPONS</span>
+    <span class="page-title">我的券包</span>
+  </div>
+
+  <div class="filter-tabs">
+    <div class="filter-tab active" data-f="available" onclick="switchTab(this)">可使用</div>
+    <div class="filter-tab" data-f="used" onclick="switchTab(this)">已使用</div>
+    <div class="filter-tab" data-f="expired" onclick="switchTab(this)">已过期</div>
+  </div>
+
+  <div class="coupon-list" id="couponList"></div>
+
+  <div class="mall-entry" onclick="go('mall.html')">去积分商城兑换更多优惠券 →</div>
+
+</div>
+
+<script>
+  // 券字段对齐 UserCouponDTO：couponType / value / minAmount / status / expiresAt
+  // couponType: EXCHANGE通兑 / DISCOUNT折扣 / FULL_REDUCE满减 / 附加券(加浓缩/配送)
+  const coupons = [
+    { id:1, status:'available', value:'¥5',       condition:'无门槛',      name:'5 元代金券',         scope:'全场通用',         expire:'至 08-18 到期' },
+    { id:2, status:'available', value:'¥5',       condition:'加料可用',    name:'加浓缩 (Shot) 券',   scope:'附加券 · 可叠加',  expire:'至 08-13 到期' },
+    { id:3, status:'available', value:'35减10',   condition:'满 ¥35 可用', name:'签到满减券',         scope:'全场通用',         expire:'至 08-09 到期' },
+    { id:4, status:'available', value:'买一送一', condition:'点两杯免低价', name:'买一赠一券',         scope:'现制饮品',         expire:'至 08-21 到期' },
+    { id:5, status:'used',      value:'8.8折',    condition:'全场可用',    name:'全场 8.8 折券',      scope:'全场通用',         expire:'已使用' },
+    { id:6, status:'used',      value:'通兑',     condition:'全场饮品',    name:'任选饮品通兑券',     scope:'最高抵扣 ¥40',     expire:'已使用' },
+    { id:7, status:'expired',   value:'¥5',       condition:'配送费抵扣',  name:'配送费抵扣券',       scope:'仅限外卖配送',     expire:'已过期' },
+    { id:8, status:'expired',   value:'¥5',       condition:'加料可用',    name:'免费加浓缩券',       scope:'附加券',           expire:'已过期' }
+  ];
+
+  const STATUS_TEXT = { available:'可使用', used:'已使用', expired:'已过期' };
+
+  function render(filter) {
+    const list = document.getElementById('couponList');
+    const shown = coupons.filter(c => c.status === filter);
+    if (!shown.length) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <span class="empty-mark">券</span>
+          <span class="empty-text">暂无${STATUS_TEXT[filter]}的优惠券</span>
+          <span class="empty-hint">去积分商城兑换更多优惠券</span>
+        </div>`;
+      return;
+    }
+    list.innerHTML = shown.map(c => `
+      <div class="coupon-card ${c.status === 'available' ? '' : c.status}">
+        <div class="coupon-left">
+          <span class="coupon-value">${c.value}</span>
+          <span class="coupon-condition">${c.condition}</span>
+        </div>
+        <div class="coupon-right">
+          <span class="coupon-name">${c.name}</span>
+          <span class="coupon-scope">${c.scope}</span>
+          <span class="coupon-expire">${c.expire}</span>
+        </div>
+        <div class="coupon-action">
+          ${c.status === 'available'
+            ? '<div class="use-btn" onclick="toast(\'去使用\')">去使用</div>'
+            : `<span class="status-tag">${STATUS_TEXT[c.status]}</span>`}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function switchTab(el) {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    render(el.dataset.f);
+  }
+
+  function goBack(fallback) {
+    if (document.referrer && window.history.length > 1) { history.back(); }
+    else { location.href = fallback; }
+  }
+  function go(href) { location.href = href; }
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
+  }
+
+  render('available');
+</script>
+</body>
+</html>
