@@ -173,33 +173,6 @@
   .preview-chip:active { opacity:.6; }
 
   /* ═══════════════════════════════════════
-     会员日运营条
-     ═══════════════════════════════════════ */
-  .promo-strip {
-    display:flex; align-items:center; justify-content:space-between; gap:14px;
-    margin-top:12px; padding:13px 16px;
-    border-radius:12px;
-    background:linear-gradient(135deg, #F1E4DA, #EAD6C2);
-    border:1px solid #E3CDB6;
-    cursor:pointer;
-    transition:opacity .2s;
-  }
-  .promo-strip:active { opacity:.8; }
-  .promo-kicker {
-    display:block;
-    font-size:9px; font-weight:700; letter-spacing:.18em; color:var(--roast-brown);
-  }
-  .promo-title {
-    display:block; margin-top:4px;
-    font-family:var(--serif); font-size:15px; font-weight:600; color:var(--ink);
-  }
-  .promo-sub {
-    display:block; margin-top:3px;
-    font-size:11px; color:var(--muted);
-  }
-  .promo-arrow { flex:none; font-size:18px; color:var(--roast-brown); line-height:1; }
-
-  /* ═══════════════════════════════════════
      卡片容器
      ═══════════════════════════════════════ */
   .entry-card {
@@ -377,16 +350,6 @@
   <div class="level-preview">
     <span class="preview-label">预览</span>
     <div class="preview-chips" id="previewChips"></div>
-  </div>
-
-  <!-- 会员日运营条 -->
-  <div class="promo-strip" onclick="go('points-rules.html')">
-    <div>
-      <span class="promo-kicker">COZY DAY · 会员日</span>
-      <span class="promo-title">周五会员日，下单积分翻倍</span>
-      <span class="promo-sub">会员日倍率 = 等级倍率 + 0.5</span>
-    </div>
-    <span class="promo-arrow">›</span>
   </div>
 
   <!-- 我的订单 -->

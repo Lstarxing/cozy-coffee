@@ -153,8 +153,9 @@
   .sheet-content {
     position:absolute; bottom:0; left:50%; transform:translateX(-50%);
     width:100%; max-width:390px;
+    height:66.67vh; overflow-y:auto;
     background:var(--card); border-radius:16px 16px 0 0;
-    padding:0 20px 24px;
+    padding:0 20px 28px;
     animation:sheet-up .35s ease both;
   }
   @keyframes sheet-up {
@@ -186,6 +187,35 @@
     flex:1; font-size:13px; color:var(--ink); line-height:1.4;
   }
   .sheet-icon { flex:none; font-size:16px; color:var(--muted); }
+
+  /* ── 抽屉内 Cozy Day（周五会员日）── */
+  .sheet-cozyday {
+    margin-top:20px;
+    padding:16px 18px;
+    border-radius:12px;
+    background:linear-gradient(135deg,#F1E4DA,#EAD6C2);
+    border:1px solid #E3CDB6;
+    transition:background .3s, border-color .3s;
+  }
+  .sheet-cozyday.today {
+    background:linear-gradient(135deg,#753A22,#5E2E1B);
+    border-color:#5E2E1B;
+  }
+  .cozyday-kicker {
+    display:block;
+    font-size:9px; font-weight:700; letter-spacing:.18em; color:var(--roast-brown);
+  }
+  .sheet-cozyday.today .cozyday-kicker { color:rgba(255,255,255,.72); }
+  .cozyday-title {
+    display:block; margin-top:6px;
+    font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink);
+  }
+  .sheet-cozyday.today .cozyday-title { color:#fff; }
+  .cozyday-desc {
+    display:block; margin-top:4px;
+    font-size:11px; line-height:1.6; color:var(--muted);
+  }
+  .sheet-cozyday.today .cozyday-desc { color:rgba(255,255,255,.7); }
 
   /* ── 底部购物车条 ── */
   /* ── Cart bar ── */
@@ -578,7 +608,7 @@
     </div>
     <div class="store-meta">距离您 1.2km</div>
     <div class="store-foot">
-      <span>☼ 精品咖啡每日新鲜烘焙</span>
+      <span id="topMsg">☼ 精品咖啡每日新鲜烘焙</span>
       <span class="store-more" onclick="openStoreDetail()">详情 ›</span>
     </div>
   </div>
@@ -608,6 +638,13 @@
       <div class="sheet-row">
         <span class="sheet-label">取餐方式</span>
         <span class="sheet-value">到店自提 · 约 15 分钟</span>
+      </div>
+
+      <!-- Cozy Day（周五会员日） -->
+      <div class="sheet-cozyday" id="sheetCozyday">
+        <span class="cozyday-kicker">COZY DAY · 每周五</span>
+        <span class="cozyday-title" id="cozydayTitle">每周五会员日，下单积分翻倍</span>
+        <span class="cozyday-desc">会员日倍率 = 等级倍率 + 0.5 · 100 积分兑 10 元券</span>
       </div>
     </div>
   </div>
@@ -950,6 +987,20 @@
   function closeStoreDetail() {
     document.getElementById('storeSheet').classList.remove('open');
   }
+
+  // ── Cozy Day（每周五会员日）──
+  function isCozyDay() { return new Date().getDay() === 5; }
+  function applyCozyDay() {
+    const cozy = isCozyDay();
+    const top = document.getElementById('topMsg');
+    if (top) top.textContent = cozy ? '☼ 今天会员日 · 下单积分翻倍' : '☼ 精品咖啡每日新鲜烘焙';
+    const sheet = document.getElementById('sheetCozyday');
+    if (sheet) {
+      sheet.classList.toggle('today', cozy);
+      document.getElementById('cozydayTitle').textContent = cozy ? '今天会员日，下单积分翻倍' : '每周五会员日，下单积分翻倍';
+    }
+  }
+  applyCozyDay();
 
   // ── 商品详情 ──
   let detailProduct = null, detailPrice = 0, detailQty = 1;
