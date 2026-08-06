@@ -57,43 +57,65 @@
   .address-card {
     border-radius:14px; background:var(--card);
     border:1px solid var(--hairline);
-    padding:16px 18px;
+    padding:16px 18px 14px;
   }
   .address-card.default { border-color:#E3CDB6; }
-  .address-head {
-    display:flex; align-items:center; gap:10px;
+
+  .addr-main {
+    display:flex; align-items:flex-start; gap:12px;
   }
-  .address-name {
-    font-size:15px; font-weight:650; color:var(--ink);
+  .addr-pin {
+    flex:none; width:26px; height:26px;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--roast-brown); margin-top:1px;
   }
-  .address-phone {
-    font-size:12px; color:var(--muted);
+  .addr-pin svg { width:22px; height:22px; }
+  .addr-copy { flex:1; min-width:0; }
+  .addr-region {
+    display:block;
+    font-size:15px; font-weight:600; color:var(--ink);
+    line-height:1.4;
+  }
+  .addr-detail {
+    display:block; margin-top:4px;
+    font-size:12px; color:var(--quiet-ink);
+    line-height:1.5;
   }
   .default-badge {
-    margin-left:auto;
-    padding:3px 9px; border-radius:6px;
+    flex:none;
+    margin-left:8px; padding:3px 9px; border-radius:6px;
     background:var(--glaze-green-soft); color:var(--glaze-green);
     font-size:10px; font-weight:700; letter-spacing:.04em;
   }
-  .address-region {
-    display:block; margin-top:10px;
-    font-size:13px; line-height:1.6; color:var(--roastery-ink);
-  }
-  .address-actions {
-    display:flex; align-items:center; gap:8px;
-    margin-top:14px; padding-top:12px;
+
+  .addr-receiver {
+    display:flex; align-items:center; gap:10px;
+    margin-top:12px; padding-top:12px;
     border-top:1px solid var(--border);
   }
-  .addr-action {
-    padding:6px 12px; border-radius:6px;
-    font-size:12px; font-weight:600; cursor:pointer;
-    border:1px solid var(--hairline); background:var(--card); color:var(--ink);
+  .receiver-name {
+    font-size:13px; font-weight:600; color:var(--roastery-ink);
   }
-  .addr-action:active { background:var(--surface); }
-  .addr-action.primary {
-    border-color:var(--roast-brown); background:var(--roast-brown); color:#fff;
+  .receiver-phone {
+    font-size:12px; color:var(--quiet-ink);
   }
-  .addr-action.primary:active { background:var(--roast-brown-deep); }
+
+  /* 操作：icon 按钮（无色块） */
+  .addr-actions {
+    display:flex; align-items:center; gap:6px;
+    margin-top:12px; padding-top:10px;
+    border-top:1px solid var(--border);
+    justify-content:flex-end;
+  }
+  .act {
+    width:34px; height:34px;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--quiet-ink); cursor:pointer;
+    transition:color .2s;
+  }
+  .act svg { width:19px; height:19px; }
+  .act:active { opacity:.5; }
+  .act.default.on { color:var(--roast-brown); }
 
   /* ── 空状态 ── */
   .empty-state {
@@ -104,81 +126,32 @@
     width:64px; height:64px; border-radius:50%;
     background:var(--surface);
     display:flex; align-items:center; justify-content:center;
-    font-family:var(--serif); font-size:16px; font-weight:700; letter-spacing:.08em;
     color:var(--primary);
   }
+  .empty-mark svg { width:28px; height:28px; }
   .empty-text { margin-top:16px; font-size:14px; font-weight:600; color:var(--ink); }
   .empty-hint { margin-top:8px; font-size:12px; color:var(--muted); }
 
-  /* ── 新增按钮 ── */
-  .add-btn {
-    margin-top:22px;
-    height:48px;
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    border-radius:10px;
-    background:var(--roast-brown); color:#fff;
-    font-size:15px; font-weight:600; cursor:pointer;
-    transition:background .25s;
-  }
-  .add-btn:active { background:var(--roast-brown-deep); }
-  .add-btn .plus { font-size:18px; font-weight:400; }
-
-  /* ── 编辑弹层 ── */
-  .modal-mask {
-    position:fixed; inset:0; z-index:60;
-    background:rgba(44,39,35,.4);
-    display:flex; align-items:center; justify-content:center;
-    opacity:0; pointer-events:none;
-    transition:opacity .25s;
-  }
-  .modal-mask.open { opacity:1; pointer-events:auto; }
-  .modal-card {
-    width:86%; max-width:320px;
+  /* ── 新增地址入口（icon 行，非色块）── */
+  .add-entry {
+    display:flex; align-items:center; gap:10px;
+    margin-top:18px;
+    padding:16px 18px;
     border-radius:14px; background:var(--card);
-    padding:24px 22px 20px;
+    border:1px solid var(--hairline);
+    cursor:pointer;
   }
-  .modal-title {
-    display:block;
-    font-family:var(--serif); font-size:18px; font-weight:600; color:var(--ink);
-    margin-bottom:16px;
-  }
-  .field { margin-bottom:12px; }
-  .field-label {
-    display:block; margin-bottom:6px;
-    font-size:11px; color:var(--muted);
-  }
-  .field-input {
-    width:100%; height:42px;
-    padding:0 12px;
-    border:1px solid var(--border); border-radius:6px;
-    font-size:14px; color:var(--ink);
-    font-family:inherit;
-    background:var(--porcelain);
-  }
-  .field-input:focus { outline:none; border-color:var(--roast-brown); }
-  .field-default {
-    display:flex; align-items:center; gap:8px;
-    margin-top:4px; cursor:pointer;
-    font-size:13px; color:var(--ink);
-  }
-  .field-check {
-    width:18px; height:18px; border-radius:4px;
-    border:1px solid var(--hairline); background:var(--porcelain);
+  .add-entry:active { opacity:.75; }
+  .add-plus {
+    width:26px; height:26px;
     display:flex; align-items:center; justify-content:center;
-    font-size:12px; color:#fff;
+    color:var(--roast-brown);
   }
-  .field-check.on { background:var(--roast-brown); border-color:var(--roast-brown); }
-  .modal-actions {
-    display:flex; gap:10px; margin-top:20px;
+  .add-plus svg { width:20px; height:20px; }
+  .add-text {
+    flex:1; font-size:14px; font-weight:600; color:var(--ink);
   }
-  .modal-btn {
-    flex:1; height:44px; border-radius:6px;
-    display:flex; align-items:center; justify-content:center;
-    font-size:14px; font-weight:600; cursor:pointer;
-  }
-  .modal-btn.ghost { background:var(--surface); color:var(--ink); }
-  .modal-btn.solid { background:var(--roast-brown); color:#fff; }
-  .modal-btn:active { opacity:.85; }
+  .add-arrow { font-size:18px; color:var(--placeholder); line-height:1; }
 
   /* ── Toast ── */
   .toast {
@@ -203,144 +176,84 @@
 
   <div class="address-list" id="addressList"></div>
 
-  <div class="add-btn" onclick="openModal()">
-    <span class="plus">+</span><span>新增收货地址</span>
+  <div class="add-entry" onclick="go('address-edit.html')">
+    <span class="add-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    <span class="add-text">新增收货地址</span>
+    <span class="add-arrow">›</span>
   </div>
 
-</div>
-
-<!-- 编辑弹层 -->
-<div class="modal-mask" id="addrMask">
-  <div class="modal-card">
-    <span class="modal-title" id="addrModalTitle">新增收货地址</span>
-    <div class="field">
-      <span class="field-label">收货人</span>
-      <input class="field-input" id="fName" placeholder="请输入姓名">
-    </div>
-    <div class="field">
-      <span class="field-label">手机号</span>
-      <input class="field-input" id="fPhone" placeholder="请输入手机号">
-    </div>
-    <div class="field">
-      <span class="field-label">地区</span>
-      <input class="field-input" id="fRegion" placeholder="省 / 市 / 区">
-    </div>
-    <div class="field">
-      <span class="field-label">详细地址</span>
-      <input class="field-input" id="fDetail" placeholder="街道、门牌号等">
-    </div>
-    <div class="field-default" onclick="toggleDefault()">
-      <span class="field-check" id="fDefault"></span>
-      <span>设为默认收货地址</span>
-    </div>
-    <div class="modal-actions">
-      <div class="modal-btn ghost" onclick="closeModal()">取消</div>
-      <div class="modal-btn solid" onclick="saveAddress()">保存</div>
-    </div>
-  </div>
 </div>
 
 <script>
-  // 地址字段对齐 AddressDTO：receiverName / receiverPhone / province+city+district / detailAddress / isDefault
-  let addresses = [
-    { id:1, name:'张*宁', phone:'138****0421', region:'浙江省 杭州市 西湖区', detail:'文三路 128 号 CozyCoffee 大厦', isDefault:true },
-    { id:2, name:'李*',   phone:'136****9872', region:'浙江省 杭州市 滨江区', detail:'江南大道 588 号 3 幢 1 单元', isDefault:false }
+  const ICONS = {
+    pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-11a6 6 0 0 1 12 0c0 5.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>',
+    star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l2.3 5.4 5.9.5-4.5 3.9 1.4 5.7L12 14.8l-5.1 3.1 1.4-5.7-4.5-3.9 5.9-.5z"/></svg>',
+    starFilled: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l2.3 5.4 5.9.5-4.5 3.9 1.4 5.7L12 14.8l-5.1 3.1 1.4-5.7-4.5-3.9 5.9-.5z"/></svg>',
+    pencil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/><path d="M14 6l4 4"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M18 7l-1 13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L6 7"/><path d="M10 11v6M14 11v6"/></svg>'
+  };
+
+  const DEFAULT_ADDRESSES = [
+    { id:1, name:'张苏宁', phone:'13811110421', gender:'男', region:'浙江省 杭州市 西湖区', detail:'文三路 128 号 CozyCoffee 大厦', isDefault:true },
+    { id:2, name:'李雨', phone:'13655559872', gender:'女', region:'浙江省 杭州市 滨江区', detail:'江南大道 588 号 3 幢 1 单元', isDefault:false }
   ];
 
+  function getAddresses() { try { return JSON.parse(localStorage.getItem('cozy_addresses')) || []; } catch (e) { return []; } }
+  function persist(list) { localStorage.setItem('cozy_addresses', JSON.stringify(list)); }
+
+  function maskName(n) { return n.length > 1 ? n[0] + '*' + n.slice(-1) : n; }
+  function maskPhone(p) { return String(p).replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'); }
+
   function render() {
-    const list = document.getElementById('addressList');
-    if (!addresses.length) {
-      list.innerHTML = `
+    let list = getAddresses();
+    if (!list.length) { persist(DEFAULT_ADDRESSES.slice()); list = DEFAULT_ADDRESSES; }
+    const box = document.getElementById('addressList');
+
+    if (!list.length) {
+      box.innerHTML = `
         <div class="empty-state">
-          <span class="empty-mark">址</span>
+          <span class="empty-mark">${ICONS.pin}</span>
           <span class="empty-text">暂无收货地址</span>
           <span class="empty-hint">添加地址后，兑换实物礼品可配送上门</span>
         </div>`;
       return;
     }
-    list.innerHTML = addresses.map(a => `
+
+    box.innerHTML = list.map(a => `
       <div class="address-card ${a.isDefault ? 'default' : ''}">
-        <div class="address-head">
-          <span class="address-name">${a.name}</span>
-          <span class="address-phone">${a.phone}</span>
+        <div class="addr-main">
+          <span class="addr-pin">${ICONS.pin}</span>
+          <div class="addr-copy">
+            <span class="addr-region">${a.region}</span>
+            <span class="addr-detail">${a.detail}</span>
+          </div>
           ${a.isDefault ? '<span class="default-badge">默认</span>' : ''}
         </div>
-        <span class="address-region">${a.region} ${a.detail}</span>
-        <div class="address-actions">
-          ${a.isDefault ? '' : `<div class="addr-action primary" onclick="setDefault(${a.id})">设为默认</div>`}
-          <div class="addr-action" onclick="openModal(${a.id})">编辑</div>
-          <div class="addr-action" onclick="removeAddress(${a.id})">删除</div>
+        <div class="addr-receiver">
+          <span class="receiver-name">${maskName(a.name)} ${a.gender || ''}</span>
+          <span class="receiver-phone">${maskPhone(a.phone)}</span>
+        </div>
+        <div class="addr-actions">
+          <div class="act default ${a.isDefault ? 'on' : ''}" onclick="setDefault(${a.id})" title="${a.isDefault ? '已是默认' : '设为默认'}">${a.isDefault ? ICONS.starFilled : ICONS.star}</div>
+          <div class="act" onclick="go('address-edit.html?id=' + ${a.id})" title="编辑">${ICONS.pencil}</div>
+          <div class="act" onclick="removeAddress(${a.id})" title="删除">${ICONS.trash}</div>
         </div>
       </div>
     `).join('');
   }
 
-  let editingId = null;
-
-  function openModal(id) {
-    editingId = id || null;
-    document.getElementById('addrModalTitle').textContent = id ? '编辑收货地址' : '新增收货地址';
-    if (id) {
-      const a = addresses.find(x => x.id === id);
-      document.getElementById('fName').value = a.name.replace('*', '');
-      document.getElementById('fPhone').value = a.phone.replace(/[*]/g, '');
-      document.getElementById('fRegion').value = a.region;
-      document.getElementById('fDetail').value = a.detail;
-      syncDefaultCheck(a.isDefault);
-    } else {
-      document.getElementById('fName').value = '';
-      document.getElementById('fPhone').value = '';
-      document.getElementById('fRegion').value = '';
-      document.getElementById('fDetail').value = '';
-      syncDefaultCheck(false);
-    }
-    document.getElementById('addrMask').classList.add('open');
-  }
-  function closeModal() {
-    editingId = null;
-    document.getElementById('addrMask').classList.remove('open');
-  }
-
-  let wantDefault = false;
-  function syncDefaultCheck(v) { wantDefault = v; const el = document.getElementById('fDefault'); el.classList.toggle('on', v); el.textContent = v ? '✓' : ''; }
-  function toggleDefault() { syncDefaultCheck(!wantDefault); }
-
-  function saveAddress() {
-    const name = document.getElementById('fName').value.trim();
-    const phone = document.getElementById('fPhone').value.trim();
-    const region = document.getElementById('fRegion').value.trim();
-    const detail = document.getElementById('fDetail').value.trim();
-    if (!name || !phone || !region || !detail) { toast('请填写完整信息'); return; }
-
-    if (editingId) {
-      const a = addresses.find(x => x.id === editingId);
-      a.name = name.slice(0,1) + '*' + (name.length > 2 ? name.slice(2) : '');
-      a.phone = phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
-      a.region = region;
-      a.detail = detail;
-      if (wantDefault) makeDefault(a.id);
-    } else {
-      const id = addresses.length ? Math.max(...addresses.map(a => a.id)) + 1 : 1;
-      const na = { id, name: name.slice(0,1) + '*' + (name.length > 2 ? name.slice(2) : ''), phone: phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'), region, detail, isDefault: wantDefault };
-      if (wantDefault) addresses.forEach(a => a.isDefault = false);
-      addresses.push(na);
-    }
-    closeModal();
-    render();
-    toast('保存成功');
-  }
-
-  function makeDefault(id) {
-    addresses.forEach(a => a.isDefault = (a.id === id));
-  }
   function setDefault(id) {
-    makeDefault(id);
+    const list = getAddresses();
+    list.forEach(a => a.isDefault = (a.id === id));
+    persist(list);
     render();
     toast('已设为默认');
   }
+
   function removeAddress(id) {
     if (confirm('确定删除这个地址吗？')) {
-      addresses = addresses.filter(a => a.id !== id);
+      const list = getAddresses().filter(a => a.id !== id);
+      persist(list);
       render();
       toast('已删除');
     }

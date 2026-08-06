@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>收货地址 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
+    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
+    --cask-brown:#2C1E18;
+    --roastery-ink:#2B1E16; --quiet-ink:#756A63;
+    --placeholder:#9E948E; --hairline:#E3DED8;
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  .back-btn {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:36px; height:36px;
+    margin-bottom:14px;
+    font-size:26px; line-height:1;
+    color:var(--ink);
+    text-decoration:none; cursor:pointer;
+    border-radius:50%;
+    background:rgba(255,255,255,.6);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  }
+  .back-btn:active { opacity:.55; }
+
+  .page { padding:20px 20px 110px; }
+
+  .page-head { padding:8px 8px 18px; }
+  .page-kicker {
+    display:block;
+    font-size:10px; font-weight:700; letter-spacing:.18em; color:var(--muted);
+  }
+  .page-title {
+    display:block; margin-top:8px;
+    font-family:var(--serif); font-size:24px; font-weight:600; color:var(--ink);
+  }
+
+  /* ── 表单卡 ── */
+  .form-card {
+    border-radius:14px; background:var(--card);
+    border:1px solid var(--hairline);
+    padding:8px 20px;
+  }
+  .field {
+    padding:16px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .field:last-child { border-bottom:0; }
+  .field-label {
+    display:block; margin-bottom:10px;
+    font-size:13px; font-weight:600; color:var(--ink);
+  }
+  .field-input {
+    width:100%; height:46px;
+    padding:0 14px;
+    border:1px solid var(--hairline); border-radius:6px;
+    background:var(--porcelain-muted);
+    font-size:14px; color:var(--roastery-ink); font-family:inherit;
+  }
+  .field-input::placeholder { color:var(--placeholder); }
+  .field-input:focus { outline:none; border-color:var(--roast-brown); }
+
+  /* 性别分段 */
+  .gender-group { display:flex; gap:10px; }
+  .gender-opt {
+    height:40px; padding:0 28px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; color:var(--roastery-ink);
+    border-radius:6px;
+    border:1px solid var(--hairline); background:var(--porcelain);
+    cursor:pointer;
+    transition:all .2s;
+  }
+  .gender-opt.active {
+    background:#F1E4DA; border-color:var(--roast-brown); color:var(--roast-brown);
+    font-weight:600;
+  }
+
+  /* 收货地址选择行 */
+  .region-row {
+    height:46px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 14px;
+    border:1px solid var(--hairline); border-radius:6px;
+    background:var(--porcelain-muted);
+    cursor:pointer;
+  }
+  .region-value { font-size:14px; color:var(--placeholder); }
+  .region-value.filled { color:var(--roastery-ink); }
+  .region-arrow { font-size:16px; color:var(--placeholder); }
+
+  /* 设为默认 */
+  .field-default {
+    display:flex; align-items:center; gap:10px;
+    padding:16px 0;
+    cursor:pointer;
+    font-size:14px; color:var(--ink);
+  }
+  .field-check {
+    width:20px; height:20px; border-radius:4px;
+    border:1px solid var(--hairline); background:var(--porcelain);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; color:#fff;
+  }
+  .field-check.on { background:var(--roast-brown); border-color:var(--roast-brown); }
+
+  /* 保存 */
+  .save-btn {
+    margin-top:22px; height:48px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:10px;
+    background:var(--roast-brown); color:#fff;
+    font-size:15px; font-weight:600; cursor:pointer;
+    transition:background .25s;
+  }
+  .save-btn:active { background:var(--roast-brown-deep); }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <a class="back-btn" onclick="goBack('address.html')">‹</a>
+
+  <div class="page-head">
+    <span class="page-kicker">ADDRESS</span>
+    <span class="page-title" id="pageTitle">添加地址</span>
+  </div>
+
+  <div class="form-card">
+    <div class="field">
+      <span class="field-label">联系人</span>
+      <input class="field-input" id="fName" placeholder="请填写收货人姓名">
+    </div>
+    <div class="field">
+      <span class="field-label">性别</span>
+      <div class="gender-group">
+        <div class="gender-opt active" data-g="男" onclick="pickGender(this)">男</div>
+        <div class="gender-opt" data-g="女" onclick="pickGender(this)">女</div>
+      </div>
+    </div>
+    <div class="field">
+      <span class="field-label">手机号</span>
+      <input class="field-input" id="fPhone" type="tel" placeholder="请填写收货手机号">
+    </div>
+    <div class="field">
+      <span class="field-label">收货地址</span>
+      <div class="region-row" onclick="cycleRegion()">
+        <span class="region-value" id="fRegion">点击选择</span>
+        <span class="region-arrow">›</span>
+      </div>
+    </div>
+    <div class="field">
+      <span class="field-label">门牌号</span>
+      <input class="field-input" id="fDetail" placeholder="例：A座8102室">
+    </div>
+    <div class="field-default" onclick="toggleDefault()">
+      <span class="field-check" id="fDefault"></span>
+      <span>设为默认收货地址</span>
+    </div>
+  </div>
+
+  <div class="save-btn" onclick="save()">保存</div>
+
+</div>
+
+<script>
+  const REGIONS = ['浙江省 杭州市 西湖区', '浙江省 杭州市 滨江区', '浙江省 湖州市 安吉县'];
+
+  let regionIdx = -1;
+  let isDefault = false;
+  let editingId = null;
+
+  function getAddresses() { try { return JSON.parse(localStorage.getItem('cozy_addresses')) || []; } catch (e) { return []; } }
+  function persist(list) { localStorage.setItem('cozy_addresses', JSON.stringify(list)); }
+
+  // 若来自编辑链接，预填表单
+  (function init() {
+    const id = new URLSearchParams(location.search).get('id');
+    if (id) {
+      const a = getAddresses().find(x => x.id === Number(id));
+      if (a) {
+        editingId = a.id;
+        document.getElementById('pageTitle').textContent = '编辑地址';
+        document.getElementById('fName').value = a.name;
+        document.getElementById('fPhone').value = a.phone;
+        pickGender(document.querySelector('.gender-opt[data-g="' + (a.gender || '男') + '"]'));
+        regionIdx = REGIONS.indexOf(a.region);
+        const r = document.getElementById('fRegion');
+        r.textContent = a.region;
+        r.classList.add('filled');
+        document.getElementById('fDetail').value = a.detail;
+        syncDefault(a.isDefault);
+      }
+    }
+  })();
+
+  function pickGender(el) {
+    document.querySelectorAll('.gender-opt').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+  }
+  function cycleRegion() {
+    regionIdx = (regionIdx + 1) % REGIONS.length;
+    const r = document.getElementById('fRegion');
+    r.textContent = REGIONS[regionIdx];
+    r.classList.add('filled');
+  }
+  function toggleDefault() { syncDefault(!isDefault); }
+  function syncDefault(v) {
+    isDefault = v;
+    const el = document.getElementById('fDefault');
+    el.classList.toggle('on', v);
+    el.textContent = v ? '✓' : '';
+  }
+
+  function save() {
+    const name = document.getElementById('fName').value.trim();
+    const phone = document.getElementById('fPhone').value.trim();
+    const detail = document.getElementById('fDetail').value.trim();
+    const region = regionIdx >= 0 ? REGIONS[regionIdx] : '';
+    if (!name || !phone || !region || !detail) { toast('请填写完整信息'); return; }
+
+    const gender = document.querySelector('.gender-opt.active').dataset.g;
+    const list = getAddresses();
+    if (isDefault) list.forEach(a => a.isDefault = false);
+
+    if (editingId) {
+      const a = list.find(x => x.id === editingId);
+      if (a) { a.name = name; a.phone = phone; a.gender = gender; a.region = region; a.detail = detail; a.isDefault = isDefault; }
+    } else {
+      const id = list.length ? Math.max(...list.map(a => a.id)) + 1 : 1;
+      list.push({ id, name, phone, gender, region, detail, isDefault });
+    }
+    persist(list);
+    toast('已保存');
+    setTimeout(() => { location.href = 'address.html?ts=' + Date.now(); }, 700);
+  }
+
+  function goBack(fallback) {
+    if (document.referrer && window.history.length > 1) { history.back(); }
+    else { location.href = fallback; }
+  }
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
+  }
+</script>
+</body>
+</html>
