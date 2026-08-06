@@ -793,11 +793,16 @@
     });
     document.querySelectorAll('.group-heading').forEach(h => observer.observe(h));
 
-    // 兜底：滚到底刷新一次吸顶判定
+    // rAF 节流的滚动监听：吸附瞬间立即更新左侧
+    // （observer threshold:0 只在标题进出容器时触发，吸附瞬间不触发 → 有延迟）
+    let ticking = false;
     scrollEl.addEventListener('scroll', () => {
-      if (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 2) {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
         pickActive();
-      }
+        ticking = false;
+      });
     });
   }
 
