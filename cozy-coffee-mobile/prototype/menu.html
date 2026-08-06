@@ -189,33 +189,13 @@
   .sheet-icon { flex:none; font-size:16px; color:var(--muted); }
 
   /* ── 抽屉内 Cozy Day（周五会员日）── */
-  .sheet-cozyday {
-    margin-top:20px;
-    padding:16px 18px;
-    border-radius:12px;
-    background:linear-gradient(135deg,#F1E4DA,#EAD6C2);
-    border:1px solid #E3CDB6;
-    transition:background .3s, border-color .3s;
+  .cozyday-sub {
+    display:block; margin-top:3px;
+    font-size:11px; color:var(--muted);
   }
-  .sheet-cozyday.today {
-    background:linear-gradient(135deg,#753A22,#5E2E1B);
-    border-color:#5E2E1B;
+  .sheet-row .sheet-value.cozy-today {
+    color:var(--roast-brown); font-weight:600;
   }
-  .cozyday-kicker {
-    display:block;
-    font-size:9px; font-weight:700; letter-spacing:.18em; color:var(--roast-brown);
-  }
-  .sheet-cozyday.today .cozyday-kicker { color:rgba(255,255,255,.72); }
-  .cozyday-title {
-    display:block; margin-top:6px;
-    font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink);
-  }
-  .sheet-cozyday.today .cozyday-title { color:#fff; }
-  .cozyday-desc {
-    display:block; margin-top:4px;
-    font-size:11px; line-height:1.6; color:var(--muted);
-  }
-  .sheet-cozyday.today .cozyday-desc { color:rgba(255,255,255,.7); }
 
   /* ── 底部购物车条 ── */
   /* ── Cart bar ── */
@@ -641,10 +621,12 @@
       </div>
 
       <!-- Cozy Day（周五会员日） -->
-      <div class="sheet-cozyday" id="sheetCozyday">
-        <span class="cozyday-kicker">COZY DAY · 每周五</span>
-        <span class="cozyday-title" id="cozydayTitle">每周五会员日，下单积分翻倍</span>
-        <span class="cozyday-desc">会员日倍率 = 等级倍率 + 0.5 · 100 积分兑 10 元券</span>
+      <div class="sheet-row">
+        <span class="sheet-label">会员日</span>
+        <span class="sheet-value" id="cozydayValue">
+          <span id="cozydayMain">每周五会员日 · 下单积分翻倍</span>
+          <span class="cozyday-sub">倍率 +0.5 · 100 积分兑 10 元券</span>
+        </span>
       </div>
     </div>
   </div>
@@ -994,11 +976,10 @@
     const cozy = isCozyDay();
     const top = document.getElementById('topMsg');
     if (top) top.textContent = cozy ? '☼ 今天会员日 · 下单积分翻倍' : '☼ 精品咖啡每日新鲜烘焙';
-    const sheet = document.getElementById('sheetCozyday');
-    if (sheet) {
-      sheet.classList.toggle('today', cozy);
-      document.getElementById('cozydayTitle').textContent = cozy ? '今天会员日，下单积分翻倍' : '每周五会员日，下单积分翻倍';
-    }
+    const main = document.getElementById('cozydayMain');
+    if (main) main.textContent = cozy ? '今天会员日 · 下单积分翻倍' : '每周五会员日 · 下单积分翻倍';
+    const value = document.getElementById('cozydayValue');
+    if (value) value.classList.toggle('cozy-today', cozy);
   }
   applyCozyDay();
 
