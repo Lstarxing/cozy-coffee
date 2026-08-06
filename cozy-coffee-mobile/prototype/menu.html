@@ -95,7 +95,7 @@
 
   .product-scroll {
     flex:1; min-width:0; height:100%; overflow-y:auto;
-    background:var(--card); padding-bottom:110px;
+    background:var(--card); padding-bottom:240px;
   }
   .product-scroll::-webkit-scrollbar { display:none; }
 
@@ -780,6 +780,14 @@
     });
 
     document.querySelectorAll('.category-section').forEach(s => observer.observe(s));
+
+    // 滚动到底：最后分类「其他」内容短，顶部够不到检测带
+    // 到底时强制高亮最后分类，避免左侧停在上一分类
+    scrollEl.addEventListener('scroll', () => {
+      if (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 12) {
+        setActiveCategory(categories.length - 1);
+      }
+    });
   }
 
   function selectCategory(i) {
