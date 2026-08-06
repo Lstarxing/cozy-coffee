@@ -117,6 +117,29 @@
     font-size:11px; font-weight:650; opacity:.86;
   }
 
+  /* ── 权益标签 ── */
+  .benefit-chips {
+    display:flex; flex-wrap:wrap; gap:6px;
+    margin-top:16px;
+  }
+  .benefit-chip {
+    padding:4px 10px; border-radius:6px;
+    font-size:10px; font-weight:650; letter-spacing:.04em;
+    background:rgba(60,40,30,.07);
+    border:1px solid rgba(60,40,30,.16);
+    color:inherit;
+  }
+  .member-card.is-dark .benefit-chip {
+    background:rgba(230,201,122,.10);
+    border:1px solid rgba(230,201,122,.32);
+    color:#E6C97A;
+  }
+  .card-memberno {
+    display:block; margin-top:16px;
+    font-size:9px; font-weight:600; letter-spacing:.2em;
+    opacity:.5; text-align:right;
+  }
+
   .ledger {
     display:grid; grid-template-columns:1.35fr 1fr 1fr;
     margin-top:22px; padding-top:18px;
@@ -179,6 +202,31 @@
     background:var(--porcelain-muted);
   }
   .preview-chip:active { opacity:.6; }
+
+  /* ── 会员日运营条 ── */
+  .promo-strip {
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    margin-top:16px; padding:15px 17px;
+    border-radius:12px;
+    background:linear-gradient(135deg, #F1E4DA, #EAD6C2);
+    border:1px solid #E3CDB6;
+    cursor:pointer;
+    transition:opacity .2s;
+  }
+  .promo-strip:active { opacity:.8; }
+  .promo-kicker {
+    display:block;
+    font-size:9px; font-weight:700; letter-spacing:.18em; color:var(--roast-brown);
+  }
+  .promo-title {
+    display:block; margin-top:5px;
+    font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink);
+  }
+  .promo-sub {
+    display:block; margin-top:4px;
+    font-size:11px; color:var(--muted);
+  }
+  .promo-arrow { flex:none; font-size:20px; color:var(--roast-brown); line-height:1; }
 
   /* ═══════════════════════════════════════
      区块
@@ -345,6 +393,8 @@
       <span class="identity-action">账户 →</span>
     </div>
 
+    <div class="benefit-chips" id="benefitChips"></div>
+
     <div class="ledger">
       <div class="ledger-cell" onclick="go('points-history.html')">
         <span class="ledger-value" id="ledPoints">1,200</span>
@@ -366,12 +416,24 @@
       </div>
       <span class="progress-copy" id="progressCopy"></span>
     </div>
+
+    <span class="card-memberno" id="memberNo">MEMBER NO · COZY 0246</span>
   </div>
 
   <!-- 等级预览（原型工具） -->
   <div class="level-preview">
     <span class="preview-label">预览</span>
     <div class="preview-chips" id="previewChips"></div>
+  </div>
+
+  <!-- 会员日运营条 -->
+  <div class="promo-strip" onclick="go('points-rules.html')">
+    <div>
+      <span class="promo-kicker">COZY DAY · 会员日</span>
+      <span class="promo-title">周五会员日，下单积分翻倍</span>
+      <span class="promo-sub">会员日倍率 = 等级倍率 + 0.5 · 100 积分兑 10 元券</span>
+    </div>
+    <span class="promo-arrow">›</span>
   </div>
 
   <!-- 我的订单 -->
@@ -442,6 +504,11 @@
       <span class="account-note">管理配送地址</span>
       <span class="account-arrow">›</span>
     </div>
+    <div class="account-row" onclick="toast('联系客服')">
+      <span class="account-name">联系客服</span>
+      <span class="account-note">在线咨询与反馈</span>
+      <span class="account-arrow">›</span>
+    </div>
     <div class="account-row" onclick="toast('账户设置')">
       <span class="account-name">账户设置</span>
       <span class="account-note">安全、隐私与退出登录</span>
@@ -480,11 +547,11 @@
 <script>
   // 等级主题映射 —— 与 constants/member.js MEMBER_LEVEL_THEMES 保持一致
   const THEMES = {
-    basic:   { name:'基础会员', en:'BASIC',   surface:'#F7F5F3', text:'#2B1E16', accent:'#8D6E63', isDark:false, exp:100,   points:'50',    exchange:0, coupons:0 },
-    silver:  { name:'白银会员', en:'SILVER',  surface:'linear-gradient(135deg,#ECE8E4,#D6D0CA)', text:'#3E342E', accent:'#8C7B70', isDark:false, exp:800,   points:'1,200', exchange:1, coupons:2 },
-    gold:    { name:'黄金会员', en:'GOLD',    surface:'linear-gradient(135deg,#E8D7A5,#C9A45C)', text:'#3B2920', accent:'#B8862D', isDark:false, exp:2000,  points:'3,600', exchange:2, coupons:3 },
-    diamond: { name:'钻石会员', en:'DIAMOND', surface:'linear-gradient(135deg,#DCE4E6,#B8C6CA)', text:'#263238', accent:'#546E7A', isDark:false, exp:4500,  points:'8,888', exchange:3, coupons:5 },
-    black:   { name:'黑金会员', en:'BLACK',   surface:'#171411', text:'#E6C97A', accent:'#C9A227', isDark:true,  exp:9500,  points:'18,888', exchange:5, coupons:8 }
+    basic:   { name:'基础会员', en:'BASIC',   surface:'#F7F5F3', text:'#2B1E16', accent:'#8D6E63', isDark:false, exp:100,   points:'50',    exchange:0, coupons:0, memberNo:'COZY 1001', benefits:['1.0× 积分','每日签到','月度权益'] },
+    silver:  { name:'白银会员', en:'SILVER',  surface:'linear-gradient(135deg,#ECE8E4,#D6D0CA)', text:'#3E342E', accent:'#8C7B70', isDark:false, exp:800,   points:'1,200', exchange:1, coupons:2, memberNo:'COZY 0246', benefits:['1.1× 积分','9.8 折兑换','生日礼遇'] },
+    gold:    { name:'黄金会员', en:'GOLD',    surface:'linear-gradient(135deg,#E8D7A5,#C9A45C)', text:'#3B2920', accent:'#B8862D', isDark:false, exp:2000,  points:'3,600', exchange:2, coupons:3, memberNo:'COZY 0088', benefits:['1.2× 积分','9.5 折兑换','Cozy Day'] },
+    diamond: { name:'钻石会员', en:'DIAMOND', surface:'linear-gradient(135deg,#DCE4E6,#B8C6CA)', text:'#263238', accent:'#546E7A', isDark:false, exp:4500,  points:'8,888', exchange:3, coupons:5, memberNo:'COZY 0005', benefits:['1.3× 积分','9.0 折兑换','每月免配送'] },
+    black:   { name:'黑金会员', en:'BLACK',   surface:'#171411', text:'#E6C97A', accent:'#C9A227', isDark:true,  exp:9500,  points:'18,888', exchange:5, coupons:8, memberNo:'COZY 0001', benefits:['1.7× 加速包','8.5 折兑换','无限免配送'] }
   };
   const THRESHOLDS = { basic:0, silver:500, gold:1500, diamond:4000, black:9000 };
   const ORDER = ['basic','silver','gold','diamond','black'];
@@ -515,6 +582,9 @@
     document.getElementById('ledPoints').textContent = t.points;
     document.getElementById('ledExchange').textContent = t.exchange;
     document.getElementById('ledCoupons').textContent = t.coupons;
+    document.getElementById('memberNo').textContent = 'MEMBER NO · ' + t.memberNo;
+    document.getElementById('benefitChips').innerHTML =
+      t.benefits.map(b => `<span class="benefit-chip">${b}</span>`).join('');
 
     // 等级进度
     const idx = ORDER.indexOf(level);
