@@ -687,7 +687,16 @@
     other: [
       { name:'热可可', desc:'浓郁可可，冬日暖意', price:26, sold:64, praise:95,
         specs:{size:['标准杯','大杯'], temp:['热'], sugar:['标准糖','微糖','半糖','无糖']},
-        notes:'可可 · 奶香 · 冬日暖饮' }
+        notes:'可可 · 奶香 · 冬日暖饮' },
+      { name:'瓶装冷萃', desc:'慢萃 12 小时，瓶装便携', price:28, sold:58, praise:97,
+        specs:{size:null, temp:null, sugar:null},
+        notes:'冷萃 · 顺滑 · 便携瓶装' },
+      { name:'西柚茉莉冰茶', desc:'西柚 · 茉莉 · 清爽果茶', price:24, sold:45, praise:96,
+        specs:{size:null, temp:['冰'], sugar:['标准糖','微糖']},
+        notes:'西柚 · 茉莉 · 清爽微甜' },
+      { name:'矿泉水', desc:'天然弱碱性饮用水', price:8, sold:76, praise:98,
+        specs:{size:null, temp:null, sugar:null},
+        notes:'天然 · 弱碱 · 纯净' }
     ]
   };
 
@@ -761,27 +770,33 @@
 
   function mountScrollSpy() {
     const scrollEl = document.getElementById('productScroll');
-    const observer = new IntersectionObserver((entries) => {
+
+    // 吸顶判定：哪个分类标题最接近容器顶部（吸顶位置 top:0），它即当前分类
+    // 只在标题真正吸附/顶替时切换，避免提前点亮下一分类
+    const pickActive = () => {
       if (isClickScrolling) return;
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          setActiveCategory(parseInt(entry.target.dataset.catIndex));
+      const containerTop = scrollEl.getBoundingClientRect().top;
+      let best = activeIdx, bestAbs = Infinity;
+      document.querySelectorAll('.group-heading').forEach(h => {
+        const abs = Math.abs(h.getBoundingClientRect().top - containerTop);
+        if (abs < bestAbs) {
+          bestAbs = abs;
+          best = parseInt(h.closest('.category-section').dataset.catIndex);
         }
       });
-    }, {
+      setActiveCategory(best);
+    };
+
+    const observer = new IntersectionObserver(pickActive, {
       root: scrollEl,
-      // 顶部 8% 窄检测带：section 标题滑到顶部吸住时切换 active
-      rootMargin: '0px 0px -92% 0px',
       threshold: 0
     });
+    document.querySelectorAll('.group-heading').forEach(h => observer.observe(h));
 
-    document.querySelectorAll('.category-section').forEach(s => observer.observe(s));
-
-    // 滚动到底：最后分类「其他」内容短，顶部够不到检测带
-    // 到底时强制高亮最后分类，避免左侧停在上一分类
+    // 兜底：滚到底刷新一次吸顶判定（不再强制最后分类）
     scrollEl.addEventListener('scroll', () => {
-      if (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 12) {
-        setActiveCategory(categories.length - 1);
+      if (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 2) {
+        pickActive();
       }
     });
   }
