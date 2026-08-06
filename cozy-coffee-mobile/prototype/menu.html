@@ -447,51 +447,18 @@
     font-size:15px; color:var(--quiet-ink); letter-spacing:.02em;
   }
 
-  /* 信息分区：配料 / 风味 / 产地 */
-  .detail-section {
-    padding:24px;
-    border-top:1px solid var(--hairline);
-  }
-  .section-eyebrow {
-    display:block;
-    font-size:11px; font-weight:700; letter-spacing:.16em;
-    color:var(--quiet-ink);
-  }
-  .section-desc {
-    display:block; margin-top:10px;
-    font-size:14px; line-height:1.8; color:var(--roastery-ink);
-  }
-  /* 风味金字塔 */
-  .flavor-pyramid { margin-top:14px; }
-  .pyramid-row {
-    display:flex; align-items:baseline; gap:16px;
-    padding:7px 0;
-  }
-  .pyramid-label {
-    flex:none; width:56px;
-    font-size:10px; font-weight:700; letter-spacing:.14em;
-    color:var(--placeholder);
-  }
-  .pyramid-value { font-size:14px; color:var(--roastery-ink); }
-  /* 说明 */
-  .detail-disclaimer {
-    padding:4px 24px 20px;
-    font-size:12px; line-height:1.7; color:var(--placeholder);
-  }
-
-  /* 规格选择 */
+  /* 规格选择（紧跟 hero，优先决策） */
   .detail-spec-section {
-    padding:8px 24px 32px;
+    margin:10px 16px 0;
+    padding:22px 18px 24px;
+    border-radius:14px;
+    background:var(--porcelain-muted);
   }
-  .spec-section-title {
-    display:block; margin-bottom:20px;
-    font-family:var(--serif); font-size:19px; font-weight:600;
-    color:var(--roastery-ink);
-  }
-  .detail-spec-group { margin-top:20px; }
+  .detail-spec-group { margin-top:18px; }
+  .detail-spec-group:first-child { margin-top:0; }
   .spec-title-row {
     display:flex; justify-content:space-between; align-items:baseline;
-    margin-bottom:10px;
+    margin-bottom:11px;
   }
   .spec-title {
     font-size:13px; font-weight:600; color:var(--roastery-ink);
@@ -504,12 +471,43 @@
     padding:9px 16px;
     font-size:13px; color:var(--roastery-ink);
     border-radius:6px;
-    border:1px solid var(--hairline); background:var(--porcelain-muted);
+    border:1px solid var(--hairline); background:var(--porcelain);
     cursor:pointer;
     transition:all .2s;
   }
   .spec-option.active {
     background:var(--roast-brown); border-color:var(--roast-brown); color:#fff;
+  }
+
+  /* 商品详情（合并：配料 / 产地） */
+  .detail-card {
+    margin:12px 16px 0;
+    padding:20px 18px 14px;
+    border-radius:14px;
+    background:var(--porcelain-muted);
+  }
+  .detail-card-title {
+    display:block; margin-bottom:12px;
+    font-family:var(--serif); font-size:16px; font-weight:600;
+    color:var(--roastery-ink);
+  }
+  .detail-row {
+    display:flex; align-items:flex-start; gap:14px;
+    padding:9px 0;
+  }
+  .detail-row-label {
+    flex:none; width:44px;
+    font-size:11px; font-weight:700; letter-spacing:.1em;
+    color:var(--quiet-ink);
+  }
+  .detail-row-value {
+    flex:1; font-size:13px; line-height:1.6; color:var(--roastery-ink);
+  }
+
+  /* 说明 */
+  .detail-disclaimer {
+    padding:16px 24px 20px;
+    font-size:12px; line-height:1.7; color:var(--placeholder);
   }
 
   /* 底部固定加购栏：两行（价格+数量 / 加购按钮） */
@@ -711,36 +709,26 @@
         </div>
       </div>
 
-      <!-- 配料 -->
-      <div class="detail-section">
-        <span class="section-eyebrow">配料 · INGREDIENTS</span>
-        <span class="section-desc" id="detailIngredients">巴拿马瑰夏 · 水洗</span>
+      <!-- 规格选择（紧跟 hero，优先决策） -->
+      <div class="detail-spec-section">
+        <div id="specGroups"></div>
       </div>
 
-      <!-- 风味金字塔 -->
-      <div class="detail-section">
-        <span class="section-eyebrow">风味 · FLAVOR</span>
-        <div class="flavor-pyramid">
-          <div class="pyramid-row"><span class="pyramid-label">TOP</span><span class="pyramid-value" id="flavorTop">花香</span></div>
-          <div class="pyramid-row"><span class="pyramid-label">MIDDLE</span><span class="pyramid-value" id="flavorMid">柑橘</span></div>
-          <div class="pyramid-row"><span class="pyramid-label">BASE</span><span class="pyramid-value" id="flavorBase">蜂蜜</span></div>
+      <!-- 商品详情（合并：配料 / 产地） -->
+      <div class="detail-card">
+        <span class="detail-card-title">商品详情</span>
+        <div class="detail-row">
+          <span class="detail-row-label">配料</span>
+          <span class="detail-row-value" id="detailIngredients">巴拿马瑰夏 · 水洗</span>
         </div>
-      </div>
-
-      <!-- 产地 -->
-      <div class="detail-section">
-        <span class="section-eyebrow">产地 · ORIGIN</span>
-        <span class="section-desc" id="detailOrigin">巴拿马 博奎特</span>
+        <div class="detail-row">
+          <span class="detail-row-label">产地</span>
+          <span class="detail-row-value" id="detailOrigin">巴拿马 博奎特</span>
+        </div>
       </div>
 
       <!-- 说明 -->
       <div class="detail-disclaimer" id="detailDisclaimer">本商品按所选规格现制，出品以门店实物为准。</div>
-
-      <!-- 规格选择 -->
-      <div class="detail-spec-section">
-        <span class="spec-section-title">选择你的偏好</span>
-        <div id="specGroups"></div>
-      </div>
     </div>
 
     <!-- 底部固定加购栏 -->
@@ -1055,7 +1043,6 @@
     detailQty = 1;
 
     const catIdx = findCategoryIdx(name);
-    const notes = (prod.notes || '').split(' · ').filter(Boolean);
 
     document.getElementById('detailTag').textContent = prod.tag || '';
     document.getElementById('detailName').textContent = prod.name;
@@ -1063,9 +1050,6 @@
     document.getElementById('detailNotes').textContent = prod.notes || prod.desc;
     document.getElementById('detailIngredients').textContent = prod.ingredients || prod.desc;
     document.getElementById('detailOrigin').textContent = prod.origin || 'CozyCoffee 烘焙中心';
-    document.getElementById('flavorTop').textContent = notes[0] || '';
-    document.getElementById('flavorMid').textContent = notes[1] || '';
-    document.getElementById('flavorBase').textContent = notes[2] || '';
 
     document.getElementById('detailPrice').textContent = '¥' + prod.price;
     document.getElementById('detailQty').textContent = '1';
