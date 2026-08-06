@@ -194,10 +194,6 @@
   .sheet-icon { flex:none; font-size:16px; color:var(--muted); }
 
   /* ── 抽屉内 Cozy Day（周五会员日）── */
-  .cozyday-sub {
-    display:block; margin-top:3px;
-    font-size:11px; color:var(--muted);
-  }
   .sheet-row .sheet-value.cozy-today {
     color:var(--roast-brown); font-weight:600;
   }
@@ -611,8 +607,7 @@
       <div class="sheet-row plain">
         <span class="sheet-label">会员日</span>
         <span class="sheet-value" id="cozydayValue">
-          <span id="cozydayMain">每周五会员日 · 下单积分翻倍</span>
-          <span class="cozyday-sub">倍率 +0.5 · 100 积分兑 10 元券</span>
+          <span id="cozydayMain">每周五会员日·下单积分翻倍（倍率+0.5）</span>
         </span>
       </div>
 
@@ -986,7 +981,7 @@
     const top = document.getElementById('topMsg');
     if (top) top.textContent = cozy ? '☼ 今天会员日 · 下单积分翻倍' : '☼ 精品咖啡每日新鲜烘焙';
     const main = document.getElementById('cozydayMain');
-    if (main) main.textContent = cozy ? '今天会员日 · 下单积分翻倍' : '每周五会员日 · 下单积分翻倍';
+    if (main) main.textContent = cozy ? '今天会员日·下单积分翻倍（倍率+0.5）' : '每周五会员日·下单积分翻倍（倍率+0.5）';
     const value = document.getElementById('cozydayValue');
     if (value) value.classList.toggle('cozy-today', cozy);
   }
