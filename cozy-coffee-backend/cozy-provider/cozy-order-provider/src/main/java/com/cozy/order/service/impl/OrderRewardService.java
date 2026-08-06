@@ -32,7 +32,7 @@ public class OrderRewardService {
             default -> BigDecimal.ONE;
         };
 
-        // v6.1 会员日: 周五积分翻倍 (+0.5x)
+        // v6.1 会员日: 周五积分倍率 +0.5x
         if (isCozyDay()) {
             baseRate = baseRate.add(new BigDecimal("0.5"));
             log.debug("会员日加成生效: 原倍率+0.5, 当前等级={}", level);

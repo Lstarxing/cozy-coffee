@@ -68,7 +68,7 @@ const router = useRouter()
 const monthlyChallengePanelRef = ref(null)
 
 // Shared computed
-const isCozyDay = computed(() => new Date().getDay() === 3)
+const isCozyDay = computed(() => new Date().getDay() === 5)
 
 const isSignedToday = computed(() => {
   const d = new Date()

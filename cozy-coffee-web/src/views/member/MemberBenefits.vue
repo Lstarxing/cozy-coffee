@@ -215,28 +215,28 @@ function getLevelBenefits(lvl) {
     { icon: markRaw(CalendarCheck), text: '每日签到 +2 积分，连续 7 天送优惠券' },
     { icon: markRaw(Coffee), text: '每月可领：免费加浓缩券 x1' },
     { icon: markRaw(Gift), text: '生日：单饮品 5 折券' },
-    { icon: markRaw(Zap), text: '周三会员日 1.5x 积分' }
+    { icon: markRaw(Zap), text: '周五会员日 1.5x 积分' }
   ]
   if (lvl === 'silver') return [
     { icon: markRaw(Coins), text: '消费 1元 = 1.1 积分' },
     { icon: markRaw(Ticket), text: '积分兑换 9.8 折' },
     { icon: markRaw(Truck), text: '每月可领：配送费抵扣券x1 + 加浓缩券x2' },
     { icon: markRaw(Gift), text: '生日：买一赠一券 x1' },
-    { icon: markRaw(Zap), text: '周三会员日 1.6x 积分' }
+    { icon: markRaw(Zap), text: '周五会员日 1.6x 积分' }
   ]
   if (lvl === 'gold') return [
     { icon: markRaw(Coins), text: '消费 1元 = 1.2 积分' },
     { icon: markRaw(Ticket), text: '积分兑换 9.5 折' },
     { icon: markRaw(Gift), text: '每月可领：买一赠一券x1 + 8.8折券x2 + 配送费抵扣x2' },
     { icon: markRaw(Gift), text: '生日：标准饮品免单券' },
-    { icon: markRaw(Zap), text: '周三会员日 1.7x 积分' }
+    { icon: markRaw(Zap), text: '周五会员日 1.7x 积分' }
   ]
   if (lvl === 'diamond') return [
     { icon: markRaw(Coins), text: '消费 1元 = 1.3 积分' },
     { icon: markRaw(Ticket), text: '积分兑换 9.0 折' },
     { icon: markRaw(Gift), text: '每月可领：优选饮品免单券x1 + 买一赠一券x2 + 配送费抵扣券x5 + 新品5折券' },
     { icon: markRaw(Gift), text: '生日：优选饮品免单券 + 烘培甜品 5 折券' },
-    { icon: markRaw(Zap), text: '周三会员日 1.8x 积分' }
+    { icon: markRaw(Zap), text: '周五会员日 1.8x 积分' }
   ]
   return []
 }

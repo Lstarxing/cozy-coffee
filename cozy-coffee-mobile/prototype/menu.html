@@ -607,7 +607,7 @@
       <div class="sheet-row plain">
         <span class="sheet-label">会员日</span>
         <span class="sheet-value" id="cozydayValue">
-          <span id="cozydayMain">每周五会员日·下单积分翻倍（倍率+0.5）</span>
+          <span id="cozydayMain">每周五会员日·积分倍率提升0.5</span>
         </span>
       </div>
 
@@ -979,9 +979,9 @@
   function applyCozyDay() {
     const cozy = isCozyDay();
     const top = document.getElementById('topMsg');
-    if (top) top.textContent = cozy ? '☼ 今天会员日 · 下单积分翻倍' : '☼ 精品咖啡每日新鲜烘焙';
+    if (top) top.textContent = cozy ? '☼ 今天会员日 · 积分倍率提升0.5' : '☼ 精品咖啡每日新鲜烘焙';
     const main = document.getElementById('cozydayMain');
-    if (main) main.textContent = cozy ? '今天会员日·下单积分翻倍（倍率+0.5）' : '每周五会员日·下单积分翻倍（倍率+0.5）';
+    if (main) main.textContent = cozy ? '今天会员日·积分倍率提升0.5' : '每周五会员日·积分倍率提升0.5';
     const value = document.getElementById('cozydayValue');
     if (value) value.classList.toggle('cozy-today', cozy);
   }
