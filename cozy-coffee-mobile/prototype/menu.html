@@ -102,19 +102,16 @@
   .group-heading {
     position:sticky; top:0; z-index:2;
     background:var(--card);
-    padding:36px 16px 20px;
-  }
-  .group-sub {
-    display:block;
-    font-size:10px; font-weight:700; letter-spacing:.18em;
-    color:var(--quiet-ink);
+    padding:14px 16px 12px;
+    border-bottom:1px solid var(--hairline);
   }
   .group-title {
-    display:block; margin-top:6px;
-    font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink);
+    display:block;
+    font-size:14px; font-weight:600; color:var(--ink);
+    letter-spacing:.02em;
   }
   .product-item {
-    display:flex; gap:14px; padding:20px 16px;
+    display:flex; gap:14px; padding:16px 16px;
   }
   .product-image {
     flex:none; width:96px; height:96px; border-radius:10px;
@@ -726,7 +723,6 @@
       return `
         <div class="category-section" data-cat-index="${i}">
           <div class="group-heading">
-            <span class="group-sub">${cat.en}</span>
             <span class="group-title">${cat.name}</span>
           </div>
           ${list.map(p => `
