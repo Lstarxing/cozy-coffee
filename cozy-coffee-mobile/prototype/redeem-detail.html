@@ -42,55 +42,65 @@
 
   .page { padding:0 20px 110px; }
 
-  /* ── 状态面板 ── */
-  .status-panel {
-    margin-top:6px; padding:22px 24px 20px;
+  /* ── 状态区（品牌色，紧凑） ── */
+  .pickup-panel {
+    margin-top:6px;
+    padding:18px 24px 16px;
     border-radius:14px;
     text-align:center;
+    color:#fff;
   }
-  .status-panel.completed { background:var(--glaze-green-soft); color:var(--glaze-green); }
-  .status-label { display:block; font-size:13px; font-weight:700; letter-spacing:.08em; }
+  .pickup-panel.completed { background:var(--glaze-green); }
+  .pickup-eyebrow { display:block; font-size:10px; font-weight:700; letter-spacing:.24em; opacity:.8; }
   .delivery-code {
-    display:block; margin-top:12px;
+    display:block; margin-top:8px;
     font-family:var(--serif); font-size:30px; font-weight:800; letter-spacing:.06em; line-height:1;
   }
-  .code-caption { display:block; margin-top:8px; font-size:10px; letter-spacing:.16em; opacity:.7; }
-  .delivery-hint { display:block; margin-top:10px; font-size:12px; opacity:.75; }
+  .code-caption { display:block; margin-top:8px; font-size:10px; letter-spacing:.16em; opacity:.75; }
+  .pickup-status { display:block; margin-top:8px; font-size:12px; opacity:.85; }
 
-  /* ── 综合单据卡 ── */
-  .card-block {
-    margin-top:14px; border-radius:14px; background:var(--card);
-    padding:2px 18px 4px; overflow:hidden;
+  /* ── 商品（缩略图） ── */
+  .products { padding:6px 2px; }
+  .product-row {
+    display:flex; align-items:center; gap:14px;
+    padding:16px 0;
+    border-bottom:1px solid var(--border);
   }
-  .divider { height:1px; background:var(--border); }
-
-  .item-row {
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-    padding:15px 0 13px;
+  .product-row:last-child { border-bottom:0; }
+  .product-img {
+    flex:none; width:64px; height:64px; border-radius:12px;
+    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
   }
-  .item-main { flex:1; min-width:0; }
-  .item-name { display:block; font-size:14px; font-weight:650; color:var(--ink); }
-  .item-spec { display:block; margin-top:4px; font-size:11px; color:var(--muted); }
-  .item-right { flex:none; text-align:right; }
-  .item-points { display:block; font-size:14px; font-weight:700; color:var(--primary); }
+  .product-main { flex:1; min-width:0; }
+  .product-name { display:block; font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink); }
+  .product-spec { display:block; margin-top:5px; font-size:12px; color:var(--muted); line-height:1.5; }
+  .product-right { flex:none; text-align:right; }
+  .product-points { display:block; font-size:15px; font-weight:700; color:var(--primary); }
 
-  .price-row {
+  /* ── 积分明细 ── */
+  .amount-block { padding:6px 2px 10px; }
+  .amount-row {
     display:flex; align-items:baseline; justify-content:space-between; gap:12px;
-    padding:11px 0; font-size:13px; color:var(--ink);
+    padding:9px 0; font-size:13px; color:var(--ink);
   }
-  .price-row.total { padding-top:13px; font-weight:700; }
-  .price-row.total .val { color:var(--primary); font-size:16px; font-weight:750; }
+  .amount-divider { height:1px; background:var(--border); margin:8px 0 4px; }
+  .amount-row.total { padding-top:12px; font-weight:700; }
+  .amount-row.total span:last-child { color:var(--primary); font-size:20px; font-weight:750; }
 
-  .info-row {
-    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
-    padding:11px 0; font-size:13px; color:var(--muted);
+  /* ── 订单信息（低权重，底部） ── */
+  .meta-block {
+    padding:14px 2px 4px;
+    border-top:1px solid var(--border);
   }
-  .info-row span:last-child { color:var(--ink); text-align:right; }
-  .info-row:last-child { padding-bottom:15px; }
+  .meta-row {
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    padding:8px 0; font-size:12px; color:var(--muted);
+  }
+  .meta-row span:last-child { color:var(--quiet-ink); text-align:right; }
   .copy-btn {
     display:inline-block; margin-left:6px;
-    padding:1px 8px; border-radius:6px;
-    border:1px solid var(--primary); color:var(--primary);
+    padding:0 7px; border-radius:6px;
+    border:1px solid var(--border); color:var(--quiet-ink);
     font-size:11px; font-weight:600; cursor:pointer;
   }
   .copy-btn:active { opacity:.6; }
@@ -135,25 +145,26 @@
     <span class="nav-right"></span>
   </div>
 
-  <!-- 状态面板 -->
-  <div class="status-panel completed" id="statusPanel">
-    <span class="status-label" id="statusLabel">已完成 · 权益已发放</span>
+  <!-- 状态区 -->
+  <div class="pickup-panel completed" id="pickupPanel">
+    <span class="pickup-eyebrow">COZY MALL</span>
     <span class="delivery-code" id="deliveryCode">RZ78921</span>
     <span class="code-caption" id="codeCaption">权益码</span>
-    <span class="delivery-hint" id="deliveryHint">权益已发放至「我的券包」</span>
+    <span class="pickup-status" id="pickupStatus">已完成 · 权益已发放</span>
   </div>
 
-  <!-- 综合单据卡 -->
-  <div class="card-block">
-    <div id="itemList"></div>
-    <div class="divider"></div>
-    <div id="priceList"></div>
-    <div class="divider"></div>
-    <div class="info-row"><span>兑换时间</span><span id="orderTime">07-30 14:22:18</span></div>
-    <div class="info-row"><span>交付方式</span><span id="deliveryMethod">权益码 · 券包</span></div>
-    <div class="info-row"><span>权益码</span><span id="orderCode">RZ78921</span></div>
-    <div class="info-row"><span>订单编号</span><span><span id="orderNo">COZ2026073000</span><em class="copy-btn" onclick="copyOrderNo()">复制</em></span></div>
-    <div class="info-row"><span>备注</span><span id="orderRemark">—</span></div>
+  <!-- 商品 -->
+  <div class="products" id="itemList"></div>
+
+  <!-- 积分明细 -->
+  <div class="amount-block" id="priceList"></div>
+
+  <!-- 订单信息（低权重） -->
+  <div class="meta-block">
+    <div class="meta-row"><span>兑换时间</span><span id="orderTime">07-30 14:22:18</span></div>
+    <div class="meta-row"><span>交付方式</span><span id="deliveryMethod">权益码 · 券包</span></div>
+    <div class="meta-row"><span>权益码</span><span id="orderCode">RZ78921</span></div>
+    <div class="meta-row"><span>订单编号</span><span><span id="orderNo">COZ2026073000</span><em class="copy-btn" onclick="copyOrderNo()">复制</em></span></div>
   </div>
 
 </div>
@@ -167,21 +178,21 @@
   const ORDERS = {
     coz2026073000: {
       statusText: '已完成 · 权益已发放', code: 'RZ78921', codeCaption: '权益码',
-      hint: '权益已发放至「我的券包」', deliveryMethod: '权益码 · 券包',
+      deliveryMethod: '权益码 · 券包',
       items: [
         { name:'云南保山 SOE 咖啡豆', productName:'云南保山 SOE 咖啡豆', spec:'数量 × 1', points:'1,200 积分' }
       ],
       consumePoints: '1,200', remainingPoints: '2,080',
-      time: '07-30 14:22:18', orderNo: 'COZ2026073000', remark: '—'
+      time: '07-30 14:22:18', orderNo: 'COZ2026073000'
     },
     coz2026072700: {
       statusText: '已完成 · 快递配送', code: 'SF1234567890', codeCaption: '物流单号',
-      hint: '商品已签收，感谢你的兑换', deliveryMethod: '快递配送',
+      deliveryMethod: '快递配送',
       items: [
         { name:'拿铁金定制马克杯', productName:'拿铁金定制马克杯', spec:'数量 × 1', points:'1,200 积分' }
       ],
       consumePoints: '1,200', remainingPoints: '2,080',
-      time: '07-27 16:05:33', orderNo: 'COZ2026072700', remark: '—'
+      time: '07-27 16:05:33', orderNo: 'COZ2026072700'
     }
   };
 
@@ -192,32 +203,32 @@
     const o = ORDERS[id] || ORDERS.coz2026073000;
     currentProductName = o.items[0].productName;
 
-    document.getElementById('statusLabel').textContent = o.statusText;
     document.getElementById('deliveryCode').textContent = o.code;
     document.getElementById('codeCaption').textContent = o.codeCaption;
-    document.getElementById('deliveryHint').textContent = o.hint;
+    document.getElementById('pickupStatus').textContent = o.statusText;
 
     document.getElementById('itemList').innerHTML = o.items.map(it => `
-      <div class="item-row">
-        <div class="item-main">
-          <span class="item-name">${it.name}</span>
-          <span class="item-spec">${it.spec}</span>
+      <div class="product-row">
+        <div class="product-img"></div>
+        <div class="product-main">
+          <span class="product-name">${it.name}</span>
+          <span class="product-spec">${it.spec}</span>
         </div>
-        <div class="item-right">
-          <span class="item-points">${it.points}</span>
+        <div class="product-right">
+          <span class="product-points">${it.points}</span>
         </div>
       </div>`).join('');
 
     document.getElementById('priceList').innerHTML = `
-      <div class="price-row"><span>消耗积分</span><span>${o.consumePoints} 积分</span></div>
-      <div class="price-row"><span>兑换后剩余</span><span>${o.remainingPoints} 积分</span></div>
-      <div class="price-row total"><span>实付</span><span class="val">${o.consumePoints} 积分</span></div>`;
+      <div class="amount-row"><span>消耗积分</span><span>${o.consumePoints} 积分</span></div>
+      <div class="amount-row"><span>兑换后剩余</span><span>${o.remainingPoints} 积分</span></div>
+      <div class="amount-divider"></div>
+      <div class="amount-row total"><span>实付</span><span>${o.consumePoints} 积分</span></div>`;
 
     document.getElementById('orderTime').textContent = o.time;
     document.getElementById('deliveryMethod').textContent = o.deliveryMethod;
     document.getElementById('orderCode').textContent = o.code;
     document.getElementById('orderNo').textContent = o.orderNo;
-    document.getElementById('orderRemark').textContent = o.remark;
   })();
 
   function copyOrderNo() {

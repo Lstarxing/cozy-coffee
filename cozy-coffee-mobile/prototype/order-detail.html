@@ -21,20 +21,17 @@
     --roastery-ink:#2B1E16; --quiet-ink:#756A63;
     --placeholder:#9E948E; --hairline:#E3DED8;
     --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
-    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
+    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
 
-  /* ── 顶部原生式导航：返回 + 居中标题 ── */
+  /* ── 顶部原生式导航 ── */
   .top-nav {
     position:relative;
     display:flex; align-items:center; justify-content:space-between;
     padding:12px 16px;
   }
-  .nav-back {
-    font-size:26px; line-height:1; color:var(--ink);
-    cursor:pointer; padding:6px 4px; width:32px;
-  }
+  .nav-back { font-size:26px; line-height:1; color:var(--ink); cursor:pointer; padding:6px 4px; width:32px; }
   .nav-back:active { opacity:.5; }
   .nav-title {
     position:absolute; left:50%; transform:translateX(-50%);
@@ -45,63 +42,87 @@
 
   .page { padding:0 20px 110px; }
 
-  /* ── 状态面板 ── */
-  .status-panel {
-    margin-top:6px; padding:22px 24px 20px;
+  /* ── 状态区（品牌色，紧凑） ── */
+  .pickup-panel {
+    margin-top:6px;
+    padding:18px 24px 16px;
     border-radius:14px;
     text-align:center;
+    color:#fff;
   }
-  .status-panel.processing { background:#EAF0F2; color:#285B70; }
-  .status-panel.completed { background:var(--glaze-green-soft); color:var(--glaze-green); }
-  .status-label { display:block; font-size:13px; font-weight:700; letter-spacing:.08em; }
+  .pickup-panel.processing { background:var(--roast-brown); }
+  .pickup-panel.completed { background:var(--glaze-green); }
+  .pickup-eyebrow { display:block; font-size:10px; font-weight:700; letter-spacing:.24em; opacity:.8; }
   .pickup-code {
-    display:block; margin-top:12px;
-    font-family:var(--serif); font-size:40px; font-weight:800; letter-spacing:.1em; line-height:1;
+    display:block; margin-top:8px;
+    font-family:var(--serif); font-size:42px; font-weight:800; letter-spacing:.1em; line-height:1;
   }
-  .pickup-hint { display:block; margin-top:10px; font-size:12px; opacity:.75; }
+  .pickup-status { display:block; margin-top:8px; font-size:12px; opacity:.85; }
 
-  /* ── 综合单据卡 ── */
-  .card-block {
-    margin-top:14px; border-radius:14px; background:var(--card);
-    padding:2px 18px 4px; overflow:hidden;
+  /* ── 门店（第一主体） ── */
+  .store-block {
+    display:flex; align-items:center; gap:12px;
+    padding:22px 2px 18px;
+    border-bottom:1px solid var(--border);
   }
-  .divider { height:1px; background:var(--border); }
-
-  .store-row { padding:15px 0 13px; }
-  .store-name { display:block; font-size:15px; font-weight:650; color:var(--ink); }
-  .store-meta { display:block; margin-top:3px; font-size:12px; color:var(--muted); }
-
-  .item-row {
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-    padding:13px 0;
+  .store-copy { flex:1; min-width:0; }
+  .store-name { display:block; font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink); }
+  .store-addr { display:block; margin-top:5px; font-size:12px; color:var(--muted); }
+  .store-actions { flex:none; display:flex; gap:8px; }
+  .store-act {
+    width:36px; height:36px; border-radius:50%;
+    border:1px solid var(--border); background:var(--card);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--primary); cursor:pointer;
   }
-  .item-row + .item-row { border-top:1px solid var(--border); }
-  .item-main { flex:1; min-width:0; }
-  .item-name { display:block; font-size:14px; font-weight:650; color:var(--ink); }
-  .item-spec { display:block; margin-top:4px; font-size:11px; color:var(--muted); line-height:1.5; }
-  .item-right { flex:none; text-align:right; }
-  .item-price { display:block; font-size:14px; font-weight:650; color:var(--ink); }
-  .item-qty { display:block; margin-top:4px; font-size:11px; color:var(--muted); }
+  .store-act svg { width:17px; height:17px; }
+  .store-act:active { opacity:.6; }
 
-  .price-row {
+  /* ── 商品（缩略图 + 规格） ── */
+  .products { padding:4px 2px; }
+  .product-row {
+    display:flex; align-items:center; gap:14px;
+    padding:16px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .product-row:last-child { border-bottom:0; }
+  .product-img {
+    flex:none; width:64px; height:64px; border-radius:12px;
+    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
+  }
+  .product-main { flex:1; min-width:0; }
+  .product-name { display:block; font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink); }
+  .product-spec { display:block; margin-top:5px; font-size:12px; color:var(--muted); line-height:1.5; }
+  .product-right { flex:none; text-align:right; }
+  .product-price { display:block; font-size:15px; font-weight:650; color:var(--ink); }
+  .product-qty { display:block; margin-top:4px; font-size:11px; color:var(--muted); }
+
+  /* ── 金额（优惠总结） ── */
+  .amount-block { padding:6px 2px 10px; }
+  .amount-row {
     display:flex; align-items:baseline; justify-content:space-between; gap:12px;
-    padding:11px 0; font-size:13px; color:var(--ink);
+    padding:9px 0; font-size:13px; color:var(--ink);
   }
-  .price-row .coupon-tag { font-size:10px; color:var(--muted); }
-  .price-row.discount { color:var(--roast-brown); }
-  .price-row.total { padding-top:13px; font-weight:700; }
-  .price-row.total .val { color:var(--primary); font-size:16px; font-weight:750; }
+  .amount-row .coupon-tag { font-size:10px; color:var(--muted); }
+  .amount-row.discount { color:var(--roast-brown); }
+  .amount-divider { height:1px; background:var(--border); margin:8px 0 4px; }
+  .amount-row.total { padding-top:12px; font-weight:700; }
+  .amount-row.total span:last-child { color:var(--primary); font-size:20px; font-weight:750; }
 
-  .info-row {
-    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
-    padding:11px 0; font-size:13px; color:var(--muted);
+  /* ── 订单信息（低权重，底部） ── */
+  .meta-block {
+    padding:14px 2px 4px;
+    border-top:1px solid var(--border);
   }
-  .info-row span:last-child { color:var(--ink); text-align:right; }
-  .info-row:last-child { padding-bottom:15px; }
+  .meta-row {
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    padding:8px 0; font-size:12px; color:var(--muted);
+  }
+  .meta-row span:last-child { color:var(--quiet-ink); text-align:right; }
   .copy-btn {
     display:inline-block; margin-left:6px;
-    padding:1px 8px; border-radius:6px;
-    border:1px solid var(--primary); color:var(--primary);
+    padding:0 7px; border-radius:6px;
+    border:1px solid var(--border); color:var(--quiet-ink);
     font-size:11px; font-weight:600; cursor:pointer;
   }
   .copy-btn:active { opacity:.6; }
@@ -146,28 +167,40 @@
     <span class="nav-right"></span>
   </div>
 
-  <!-- 状态面板 -->
-  <div class="status-panel processing" id="statusPanel">
-    <span class="status-label" id="statusLabel">咖啡制作中</span>
+  <!-- 状态区 -->
+  <div class="pickup-panel processing" id="pickupPanel">
+    <span class="pickup-eyebrow" id="pickupEyebrow">COZY PICKUP</span>
     <span class="pickup-code" id="pickupCode">A021</span>
-    <span class="pickup-hint" id="pickupHint">预计 15:32 可取，请留意门店叫号</span>
+    <span class="pickup-status" id="pickupStatus">正在制作 · 预计 15:32 完成</span>
   </div>
 
-  <!-- 综合单据卡 -->
-  <div class="card-block">
-    <div class="store-row">
+  <!-- 门店（第一主体） -->
+  <div class="store-block">
+    <div class="store-copy">
       <span class="store-name" id="storeName">CozyCoffee 中心店</span>
-      <span class="store-meta" id="storeMeta">文三路 128 号 · 到店自提</span>
+      <span class="store-addr" id="storeAddr">杭州 · 文三路 128 号</span>
     </div>
-    <div class="divider"></div>
-    <div id="itemList"></div>
-    <div class="divider"></div>
-    <div id="priceList"></div>
-    <div class="divider"></div>
-    <div class="info-row"><span>下单时间</span><span id="orderTime">07-31 15:28:45</span></div>
-    <div class="info-row"><span>取餐码</span><span id="orderPickup">A021</span></div>
-    <div class="info-row"><span>订单编号</span><span><span id="orderNo">COZ2026073110</span><em class="copy-btn" onclick="copyOrderNo()">复制</em></span></div>
-    <div class="info-row"><span>备注</span><span id="orderRemark">—</span></div>
+    <div class="store-actions">
+      <span class="store-act" onclick="toast('拨打门店电话')" title="电话">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6c0-1.1.9-2 2-2h2l1.5 4.5L7 10a13 13 0 0 0 7 7l1.5-2.5L20 16v2a2 2 0 0 1-2 2A14 14 0 0 1 4 6z"/></svg>
+      </span>
+      <span class="store-act" onclick="toast('打开导航')" title="导航">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-11a6 6 0 0 1 12 0c0 5.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>
+      </span>
+    </div>
+  </div>
+
+  <!-- 商品 -->
+  <div class="products" id="itemList"></div>
+
+  <!-- 金额 -->
+  <div class="amount-block" id="priceList"></div>
+
+  <!-- 订单信息（低权重） -->
+  <div class="meta-block">
+    <div class="meta-row"><span>下单时间</span><span id="orderTime">07-31 15:28:45</span></div>
+    <div class="meta-row"><span>订单编号</span><span><span id="orderNo">COZ2026073110</span><em class="copy-btn" onclick="copyOrderNo()">复制</em></span></div>
+    <div class="meta-row"><span>取餐码</span><span id="orderPickup">A021</span></div>
   </div>
 
 </div>
@@ -180,28 +213,28 @@
 <script>
   const ORDERS = {
     coz2026073110: {
-      status: 'processing', statusText: '咖啡制作中', pickup: 'A021',
-      readyHint: '预计 15:32 可取，请留意门店叫号',
-      store: 'CozyCoffee 中心店', storeMeta: '文三路 128 号 · 到店自提',
+      status: 'processing', eyebrow: 'COZY PICKUP', pickup: 'A021',
+      statusText: '正在制作 · 预计 15:32 完成',
+      store: 'CozyCoffee 中心店', storeAddr: '杭州 · 文三路 128 号',
       items: [
-        { name:'云南保山 SOE', productName:'经典手冲', spec:'热 · 中杯 · 微甜', price:'¥28.00', qty:'× 1' },
-        { name:'Dirty', productName:'Dirty', spec:'冰 · 中杯 · 正常', price:'¥32.00', qty:'× 1' }
+        { name:'云南保山 SOE', productName:'经典手冲', spec:'热 / 中杯 / 默认糖', price:'¥28.00', qty:'× 1' },
+        { name:'Dirty', productName:'Dirty', spec:'冰 / 中杯 / 正常', price:'¥32.00', qty:'× 1' }
       ],
       coupon: { label:'满35减10', discount:'-¥10.00' },
-      goodsAmount: '¥60.00', qtyTotal: '2 件', paid: '¥50.00',
-      time: '07-31 15:28:45', orderNo: 'COZ2026073110', remark: '—'
+      goodsAmount: '¥60.00', paid: '¥50.00',
+      time: '07-31 15:28:45', orderNo: 'COZ2026073110'
     },
     coz2026072907: {
-      status: 'completed', statusText: '订单已完成', pickup: 'B018',
-      readyHint: '取餐完成，感谢你的光临',
-      store: 'CozyCoffee 中心店', storeMeta: '文三路 128 号 · 到店自提',
+      status: 'completed', eyebrow: 'COZY COFFEE', pickup: 'B018',
+      statusText: '订单已完成 · 取餐完成',
+      store: 'CozyCoffee 中心店', storeAddr: '杭州 · 文三路 128 号',
       items: [
-        { name:'冷萃咖啡', productName:'瓶装冷萃', spec:'冰 · 中杯 · 无糖', price:'¥28.00', qty:'× 1' },
-        { name:'冰摇荔枝咖啡', productName:'冰摇荔枝咖啡', spec:'冰 · 大杯 · 微糖', price:'¥38.00', qty:'× 1' }
+        { name:'冷萃咖啡', productName:'瓶装冷萃', spec:'冰 / 中杯 / 无糖', price:'¥28.00', qty:'× 1' },
+        { name:'冰摇荔枝咖啡', productName:'冰摇荔枝咖啡', spec:'冰 / 大杯 / 微糖', price:'¥38.00', qty:'× 1' }
       ],
       coupon: null,
-      goodsAmount: '¥66.00', qtyTotal: '2 件', paid: '¥66.00',
-      time: '07-29 09:12:30', orderNo: 'COZ2026072907', remark: '—'
+      goodsAmount: '¥66.00', paid: '¥66.00',
+      time: '07-29 09:12:30', orderNo: 'COZ2026072907'
     }
   };
 
@@ -209,39 +242,38 @@
     const id = new URLSearchParams(location.search).get('id');
     const o = ORDERS[id] || ORDERS.coz2026073110;
 
-    document.getElementById('statusPanel').className = 'status-panel ' + o.status;
-    document.getElementById('statusLabel').textContent = o.statusText;
+    document.getElementById('pickupPanel').className = 'pickup-panel ' + o.status;
+    document.getElementById('pickupEyebrow').textContent = o.eyebrow;
     document.getElementById('pickupCode').textContent = o.pickup;
-    document.getElementById('pickupHint').textContent = o.readyHint;
+    document.getElementById('pickupStatus').textContent = o.statusText;
 
     document.getElementById('storeName').textContent = o.store;
-    document.getElementById('storeMeta').textContent = o.storeMeta;
+    document.getElementById('storeAddr').textContent = o.storeAddr;
 
     document.getElementById('itemList').innerHTML = o.items.map(it => `
-      <div class="item-row">
-        <div class="item-main">
-          <span class="item-name">${it.name}</span>
-          <span class="item-spec">${it.spec}</span>
+      <div class="product-row">
+        <div class="product-img"></div>
+        <div class="product-main">
+          <span class="product-name">${it.name}</span>
+          <span class="product-spec">${it.spec}</span>
         </div>
-        <div class="item-right">
-          <span class="item-price">${it.price}</span>
-          <span class="item-qty">${it.qty}</span>
+        <div class="product-right">
+          <span class="product-price">${it.price}</span>
+          <span class="product-qty">${it.qty}</span>
         </div>
       </div>`).join('');
 
-    let priceHTML = `
-      <div class="price-row"><span>商品金额</span><span>${o.goodsAmount}</span></div>
-      <div class="price-row"><span>数量</span><span>${o.qtyTotal}</span></div>`;
+    let amountHTML = `<div class="amount-row"><span>商品金额</span><span>${o.goodsAmount}</span></div>`;
     if (o.coupon) {
-      priceHTML += `<div class="price-row discount"><span>优惠合计 <span class="coupon-tag">(${o.coupon.label})</span></span><span>${o.coupon.discount}</span></div>`;
+      amountHTML += `<div class="amount-row discount"><span>优惠券 <span class="coupon-tag">(${o.coupon.label})</span></span><span>${o.coupon.discount}</span></div>`;
     }
-    priceHTML += `<div class="price-row total"><span>共 ${o.qtyTotal}，实付</span><span class="val">${o.paid}</span></div>`;
-    document.getElementById('priceList').innerHTML = priceHTML;
+    amountHTML += `<div class="amount-divider"></div>
+      <div class="amount-row total"><span>实付金额</span><span>${o.paid}</span></div>`;
+    document.getElementById('priceList').innerHTML = amountHTML;
 
     document.getElementById('orderTime').textContent = o.time;
-    document.getElementById('orderPickup').textContent = o.pickup;
     document.getElementById('orderNo').textContent = o.orderNo;
-    document.getElementById('orderRemark').textContent = o.remark;
+    document.getElementById('orderPickup').textContent = o.pickup;
   })();
 
   function copyOrderNo() {
