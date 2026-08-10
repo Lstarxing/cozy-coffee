@@ -161,6 +161,7 @@ public class MenuCacheService {
                 return result;
             }
         } finally {
+            MENU_DB_REBUILD_GUARD.release();
             if (locked) {
                 releaseRebuildLock(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken);
             }
