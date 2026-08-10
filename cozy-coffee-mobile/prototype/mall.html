@@ -221,6 +221,30 @@
     font-size:12px; pointer-events:none; z-index:99;
     opacity:0; transition:opacity .3s ease;
   }
+
+  /* ── 下架商品提示 Modal ── */
+  .off-shelf-mask {
+    position:fixed; inset:0; z-index:80;
+    background:rgba(44,30,24,.42);
+    display:none; align-items:center; justify-content:center;
+    padding:0 36px;
+  }
+  .off-shelf-card {
+    width:100%; max-width:300px;
+    border-radius:14px; background:var(--card);
+    padding:26px 24px 20px;
+    text-align:center;
+  }
+  .off-shelf-title { display:block; font-size:15px; font-weight:700; color:var(--ink); }
+  .off-shelf-list { margin-top:14px; text-align:left; }
+  .off-shelf-line { padding:7px 0; font-size:13px; color:var(--muted); }
+  .off-shelf-btn {
+    margin-top:18px; height:42px; border-radius:9px;
+    background:var(--primary); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:600; cursor:pointer;
+  }
+  .off-shelf-btn:active { background:#5E2E1B; }
 </style>
 </head>
 <body>
@@ -303,6 +327,15 @@
 
   <div class="detail-cta-wrap">
     <div class="detail-cta disabled" id="detailCta" onclick="redeem()">53 积分不足</div>
+  </div>
+</div>
+
+<!-- 下架商品提示 -->
+<div class="off-shelf-mask" id="offShelfMask" onclick="closeOffShelf()">
+  <div class="off-shelf-card" onclick="event.stopPropagation()">
+    <span class="off-shelf-title">无法再次兑换</span>
+    <div class="off-shelf-list" id="offShelfList"></div>
+    <div class="off-shelf-btn" onclick="closeOffShelf()">知道了</div>
   </div>
 </div>
 
@@ -556,6 +589,27 @@
 
   // 初始化
   renderProducts('all');
+
+  // 再次兑换：校验积分商品是否在售
+  (function applyRereedeem() {
+    const raw = localStorage.getItem('cozy_rereedeem');
+    if (!raw) return;
+    localStorage.removeItem('cozy_rereedeem');
+    let p;
+    try { p = JSON.parse(raw); } catch (e) { return; }
+    if (!p || !p.productName) return;
+    const found = products.some(x => x.name === p.productName);
+    if (found) {
+      toast('已为你定位到「' + p.productName + '」，可直接兑换');
+    } else {
+      document.getElementById('offShelfList').innerHTML = '<div class="off-shelf-line">· ' + p.productName + '</div>';
+      document.getElementById('offShelfMask').style.display = 'flex';
+    }
+  })();
+
+  function closeOffShelf() {
+    document.getElementById('offShelfMask').style.display = 'none';
+  }
 </script>
 </body>
 </html>

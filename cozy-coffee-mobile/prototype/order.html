@@ -158,7 +158,7 @@
       咖啡订单<span class="category-count">2</span>
     </div>
     <div class="category-item" onclick="switchCat(this,'兑换订单')">
-      兑换订单<span class="category-count">1</span>
+      兑换订单<span class="category-count">2</span>
     </div>
   </div>
 
@@ -248,11 +248,11 @@
 
     <!-- 兑换订单视图 -->
     <div id="redeemView" style="display:none;">
-      <div class="order-receipt" onclick="toast('兑换详情')">
+      <div class="order-receipt" onclick="go('redeem-detail.html?id=coz2026073000')">
         <div class="receipt-head">
           <div>
             <span class="store-name">积分兑换</span>
-            <span class="order-no">订单 COZ2026073000</span>
+            <span class="order-meta">07-30 14:22:18 · 权益码 <em>RZ78921</em></span>
           </div>
           <span class="order-status completed">已完成</span>
         </div>
@@ -263,17 +263,34 @@
               <span class="item-name">云南保山 SOE 咖啡豆</span>
               <span class="item-spec">数量 × 1</span>
             </div>
-            <div class="item-right">
-              <span class="item-points">1,200 积分</span>
+          </div>
+        </div>
+        <div class="receipt-summary">
+          <span class="summary-label">已发放至券包</span>
+          <span class="order-action" onclick="event.stopPropagation(); rereedeem('coz2026073000')">再次兑换</span>
+        </div>
+      </div>
+
+      <div class="order-receipt" onclick="go('redeem-detail.html?id=coz2026072700')">
+        <div class="receipt-head">
+          <div>
+            <span class="store-name">积分兑换</span>
+            <span class="order-meta">07-27 16:05:33 · 物流 <em>SF1234567890</em></span>
+          </div>
+          <span class="order-status completed">已完成</span>
+        </div>
+        <div class="receipt-items">
+          <div class="order-item">
+            <div class="item-image" style="background:linear-gradient(135deg,#D8CFC4,#C8BCAE);"></div>
+            <div class="item-info">
+              <span class="item-name">拿铁金定制马克杯</span>
+              <span class="item-spec">数量 × 1</span>
             </div>
           </div>
         </div>
         <div class="receipt-summary">
-          <div>
-            <span class="summary-label">2026-07-30 14:22</span>
-            <span class="summary-total">已发放至券包</span>
-          </div>
-          <span class="detail-link">查看详情 →</span>
+          <span class="summary-label">快递配送</span>
+          <span class="order-action" onclick="event.stopPropagation(); rereedeem('coz2026072700')">再次兑换</span>
         </div>
       </div>
     </div>
@@ -327,6 +344,18 @@
     if (!items) return;
     localStorage.setItem('cozy_reorder', JSON.stringify({ items }));
     location.href = 'menu.html';
+  }
+
+  // 再次兑换：跳积分商城，由 mall.html 校验商品是否在售
+  const REREEDEEM = {
+    coz2026073000: { productName:'云南保山 SOE 咖啡豆' },
+    coz2026072700: { productName:'拿铁金定制马克杯' }
+  };
+  function rereedeem(id) {
+    const p = REREEDEEM[id];
+    if (!p) return;
+    localStorage.setItem('cozy_rereedeem', JSON.stringify(p));
+    location.href = 'mall.html';
   }
 
   function switchCat(el, label) {

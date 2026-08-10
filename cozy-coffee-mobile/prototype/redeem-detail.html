@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>兑换详情 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
+    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
+    --cask-brown:#2C1E18;
+    --roastery-ink:#2B1E16; --quiet-ink:#756A63;
+    --placeholder:#9E948E; --hairline:#E3DED8;
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  /* ── 顶部原生式导航 ── */
+  .top-nav {
+    position:relative;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px;
+  }
+  .nav-back { font-size:26px; line-height:1; color:var(--ink); cursor:pointer; padding:6px 4px; width:32px; }
+  .nav-back:active { opacity:.5; }
+  .nav-title {
+    position:absolute; left:50%; transform:translateX(-50%);
+    font-size:16px; font-weight:600; color:var(--ink);
+    white-space:nowrap;
+  }
+  .nav-right { width:32px; }
+
+  .page { padding:0 20px 110px; }
+
+  /* ── 状态面板 ── */
+  .status-panel {
+    margin-top:6px; padding:24px 24px 22px;
+    border-radius:14px;
+    text-align:center;
+  }
+  .status-panel.completed { background:var(--glaze-green-soft); color:var(--glaze-green); }
+  .status-label {
+    display:block; font-size:13px; font-weight:700; letter-spacing:.08em;
+  }
+  .delivery-code {
+    display:block; margin-top:14px;
+    font-family:var(--serif); font-size:34px; font-weight:800; letter-spacing:.06em; line-height:1;
+  }
+  .code-caption { display:block; margin-top:8px; font-size:10px; letter-spacing:.16em; opacity:.7; }
+  .delivery-hint { display:block; margin-top:12px; font-size:12px; opacity:.75; }
+
+  /* ── 卡块 ── */
+  .card-block {
+    margin-top:14px; border-radius:14px; background:var(--card);
+    padding:4px 18px 16px; overflow:hidden;
+  }
+  .block-title {
+    display:block;
+    padding:14px 0 10px;
+    font-size:10px; font-weight:700; letter-spacing:.18em; color:var(--muted);
+  }
+
+  /* 商品行 */
+  .item-row {
+    display:flex; align-items:center; gap:12px;
+    padding:12px 0; border-top:1px solid var(--border);
+  }
+  .item-row:first-child { border-top:0; padding-top:6px; }
+  .item-img {
+    flex:none; width:52px; height:52px; border-radius:8px;
+    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
+  }
+  .item-info { flex:1; min-width:0; }
+  .item-name { display:block; font-size:13px; font-weight:650; color:var(--ink); }
+  .item-spec { display:block; margin-top:3px; font-size:11px; color:var(--muted); }
+  .item-right { flex:none; text-align:right; }
+  .item-points { display:block; font-size:14px; font-weight:700; color:var(--primary); }
+
+  /* 积分行 */
+  .price-row {
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    padding:11px 0; border-top:1px solid var(--border);
+    font-size:13px; color:var(--ink);
+  }
+  .price-row:first-child { border-top:0; }
+  .price-row.total { padding-top:13px; font-weight:700; }
+  .price-row.total .val { color:var(--primary); font-size:18px; font-weight:750; }
+
+  /* 信息行 */
+  .info-row {
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    padding:11px 0; border-top:1px solid var(--border);
+    font-size:13px; color:var(--muted);
+  }
+  .info-row:first-child { border-top:0; }
+  .info-row span:last-child { color:var(--ink); text-align:right; }
+
+  /* ── 底部再次兑换 ── */
+  .detail-footer {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:390px;
+    padding:12px 20px max(12px, env(safe-area-inset-bottom));
+    background:rgba(247,243,238,.94);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-top:1px solid var(--border);
+    z-index:10;
+  }
+  .reorder-btn {
+    height:48px; border-radius:10px;
+    background:var(--roast-brown); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:600; cursor:pointer;
+    transition:background .25s;
+  }
+  .reorder-btn:active { background:var(--roast-brown-deep); }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- 顶部导航 -->
+  <div class="top-nav">
+    <span class="nav-back" onclick="goBack('order.html')">‹</span>
+    <span class="nav-title">兑换详情</span>
+    <span class="nav-right"></span>
+  </div>
+
+  <!-- 状态面板 -->
+  <div class="status-panel completed" id="statusPanel">
+    <span class="status-label" id="statusLabel">已完成 · 权益已发放</span>
+    <span class="delivery-code" id="deliveryCode">RZ78921</span>
+    <span class="code-caption" id="codeCaption">权益码</span>
+    <span class="delivery-hint" id="deliveryHint">权益已发放至「我的券包」</span>
+  </div>
+
+  <!-- 商品明细 -->
+  <div class="card-block">
+    <span class="block-title">商品明细</span>
+    <div id="itemList"></div>
+  </div>
+
+  <!-- 积分明细 -->
+  <div class="card-block">
+    <span class="block-title">积分明细</span>
+    <div id="priceList"></div>
+  </div>
+
+  <!-- 订单信息 -->
+  <div class="card-block">
+    <span class="block-title">订单信息</span>
+    <div class="info-row"><span>兑换时间</span><span id="orderTime">07-30 14:22:18</span></div>
+    <div class="info-row"><span>交付方式</span><span id="deliveryMethod">权益码 · 券包</span></div>
+    <div class="info-row"><span>权益码</span><span id="orderCode">RZ78921</span></div>
+    <div class="info-row"><span>订单号</span><span id="orderNo">COZ2026073000</span></div>
+    <div class="info-row"><span>备注</span><span id="orderRemark">—</span></div>
+  </div>
+
+</div>
+
+<!-- 底部再次兑换 -->
+<div class="detail-footer">
+  <div class="reorder-btn" onclick="rereedeem()">再次兑换</div>
+</div>
+
+<script>
+  const ORDERS = {
+    coz2026073000: {
+      statusText: '已完成 · 权益已发放', code: 'RZ78921', codeCaption: '权益码',
+      hint: '权益已发放至「我的券包」', deliveryMethod: '权益码 · 券包',
+      items: [
+        { name:'云南保山 SOE 咖啡豆', productName:'云南保山 SOE 咖啡豆', spec:'数量 × 1', points:'1,200 积分' }
+      ],
+      consumePoints: '1,200', remainingPoints: '2,080',
+      time: '07-30 14:22:18', orderNo: 'COZ2026073000', remark: '—'
+    },
+    coz2026072700: {
+      statusText: '已完成 · 快递配送', code: 'SF1234567890', codeCaption: '物流单号',
+      hint: '商品已签收，感谢你的兑换', deliveryMethod: '快递配送',
+      items: [
+        { name:'拿铁金定制马克杯', productName:'拿铁金定制马克杯', spec:'数量 × 1', points:'1,200 积分' }
+      ],
+      consumePoints: '1,200', remainingPoints: '2,080',
+      time: '07-27 16:05:33', orderNo: 'COZ2026072700', remark: '—'
+    }
+  };
+
+  (function init() {
+    const id = new URLSearchParams(location.search).get('id');
+    const o = ORDERS[id] || ORDERS.coz2026073000;
+    currentProductName = o.items[0].productName;
+
+    document.getElementById('statusLabel').textContent = o.statusText;
+    document.getElementById('deliveryCode').textContent = o.code;
+    document.getElementById('codeCaption').textContent = o.codeCaption;
+    document.getElementById('deliveryHint').textContent = o.hint;
+
+    document.getElementById('itemList').innerHTML = o.items.map(it => `
+      <div class="item-row">
+        <div class="item-img"></div>
+        <div class="item-info">
+          <span class="item-name">${it.name}</span>
+          <span class="item-spec">${it.spec}</span>
+        </div>
+        <div class="item-right">
+          <span class="item-points">${it.points}</span>
+        </div>
+      </div>`).join('');
+
+    document.getElementById('priceList').innerHTML = `
+      <div class="price-row"><span>消耗积分</span><span>${o.consumePoints} 积分</span></div>
+      <div class="price-row"><span>兑换后剩余</span><span>${o.remainingPoints} 积分</span></div>
+      <div class="price-row total"><span>实付</span><span class="val">${o.consumePoints} 积分</span></div>`;
+
+    document.getElementById('orderTime').textContent = o.time;
+    document.getElementById('deliveryMethod').textContent = o.deliveryMethod;
+    document.getElementById('orderCode').textContent = o.code;
+    document.getElementById('orderNo').textContent = o.orderNo;
+    document.getElementById('orderRemark').textContent = o.remark;
+  })();
+
+  let currentProductName = '';
+
+  function rereedeem() {
+    if (!currentProductName) return;
+    localStorage.setItem('cozy_rereedeem', JSON.stringify({ productName: currentProductName }));
+    location.href = 'mall.html';
+  }
+
+  function goBack(fallback) {
+    if (document.referrer && window.history.length > 1) { history.back(); }
+    else { location.href = fallback; }
+  }
+</script>
+</body>
+</html>
