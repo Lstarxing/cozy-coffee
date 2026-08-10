@@ -39,11 +39,6 @@
     transition:background .35s ease, color .35s ease;
   }
   .member-card > * { position:relative; z-index:1; }
-  .layer-texture {
-    position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.2;
-    background-image:radial-gradient(currentColor 1px, transparent 1px);
-    background-size:14px 14px;
-  }
   .layer-shine {
     position:absolute; inset:0; z-index:0; pointer-events:none;
     background:linear-gradient(160deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,.05) 40%, transparent 70%);
@@ -306,7 +301,6 @@
 
   <!-- 会员卡片（紧凑） -->
   <div class="member-card" id="memberCard">
-    <div class="layer-texture"></div>
     <div class="layer-shine"></div>
 
     <div class="card-top">
