@@ -47,20 +47,35 @@
     background:linear-gradient(160deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.02) 45%, transparent 70%);
   }
 
-  .card-top {
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-  }
+  .card-top { display:flex; align-items:center; }
   .brand-row { display:flex; align-items:center; gap:7px; }
-  .brand-emblem { width:20px; height:20px; display:flex; align-items:center; justify-content:center; }
-  .brand-emblem svg { width:100%; height:100%; }
+  .brand-logo { width:18px; height:18px; display:flex; align-items:center; justify-content:center; }
+  .brand-logo svg { width:100%; height:100%; }
   .brand-text { font-size:10px; font-weight:800; letter-spacing:.24em; opacity:.84; }
-  .card-level { margin-top:22px; }
+
+  .card-identity {
+    display:flex; align-items:center; gap:16px;
+    margin-top:22px;
+  }
+  .level-emblem-wrap {
+    position:relative; width:66px; height:66px; flex:none;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .level-emblem { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+  .level-emblem svg { width:100%; height:100%; filter: drop-shadow(0 8px 14px rgba(0,0,0,.22)); }
+  .emblem-shine {
+    position:absolute; inset:0; pointer-events:none;
+    background: linear-gradient(135deg, rgba(255,255,255,.45) 0%, rgba(255,255,255,.06) 40%, transparent 62%);
+    border-radius:50%;
+    mix-blend-mode:screen;
+  }
+  .identity-copy { flex:1; min-width:0; }
   .level-name {
     display:block;
-    font-family:var(--serif); font-size:36px; font-weight:600; line-height:1.05;
+    font-family:var(--serif); font-size:30px; font-weight:600; line-height:1.1;
   }
   .user-name {
-    display:block; margin-top:10px;
+    display:block; margin-top:6px;
     font-size:13px; opacity:.72;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
@@ -265,14 +280,20 @@
 
     <div class="card-top">
       <div class="brand-row">
-        <span class="brand-emblem" id="brandEmblem"></span>
+        <span class="brand-logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.5,8H19C20.66,8 22,9.34 22,11V13C22,14.66 20.66,16 19,16H18.28C17.76,18.29 15.63,20 13,20H7C4.24,20 2,17.76 2,15V8H18.5ZM19,10H18V14H19C19.55,14 20,13.55 20,13V11C20,10.45 19.55,10 19,10ZM7,3H9V6H7V3ZM11,3H13V6H11V3ZM15,3H17V6H15V3Z"/></svg></span>
         <span class="brand-text">COZY MEMBER</span>
       </div>
     </div>
 
-    <div class="card-level">
-      <span class="level-name" id="levelName">白银会员</span>
-      <span class="user-name">Cozy 咖啡爱好者</span>
+    <div class="card-identity">
+      <div class="level-emblem-wrap">
+        <div class="level-emblem" id="levelEmblem"></div>
+        <span class="emblem-shine"></span>
+      </div>
+      <div class="identity-copy">
+        <span class="level-name" id="levelName">白银会员</span>
+        <span class="user-name">Cozy 咖啡爱好者</span>
+      </div>
     </div>
 
     <div class="points-row" onclick="go('points-history.html')">
@@ -433,7 +454,7 @@
     card.style.setProperty('--track', t.isDark ? 'rgba(255,255,255,.18)' : 'rgba(60,40,30,.10)');
     card.classList.toggle('is-dark', t.isDark);
 
-    document.getElementById('brandEmblem').innerHTML = EMBLEMS[level];
+    document.getElementById('levelEmblem').innerHTML = EMBLEMS[level];
     document.getElementById('levelName').textContent = t.name;
     document.getElementById('ledPoints').textContent = t.points;
 
