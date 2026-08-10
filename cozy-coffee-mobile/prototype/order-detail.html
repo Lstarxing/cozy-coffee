@@ -116,6 +116,25 @@
   .info-row:first-child { border-top:0; }
   .info-row span:last-child { color:var(--ink); text-align:right; }
 
+  /* ── 底部再来一单 ── */
+  .detail-footer {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:390px;
+    padding:12px 20px max(12px, env(safe-area-inset-bottom));
+    background:rgba(247,243,238,.94);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-top:1px solid var(--border);
+    z-index:10;
+  }
+  .reorder-btn {
+    height:48px; border-radius:10px;
+    background:var(--roast-brown); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:600; cursor:pointer;
+    transition:background .25s;
+  }
+  .reorder-btn:active { background:var(--roast-brown-deep); }
+
   /* ── Toast ── */
   .toast {
     position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
@@ -176,6 +195,11 @@
 
 </div>
 
+<!-- 底部再来一单 -->
+<div class="detail-footer">
+  <div class="reorder-btn" onclick="reorder()">再来一单</div>
+</div>
+
 <script>
   const ORDERS = {
     coz2026073110: {
@@ -183,8 +207,8 @@
       readyHint: '预计 15:32 可取，请留意门店叫号',
       store: 'CozyCoffee 中心店', storeMeta: '文三路 128 号 · 到店自提',
       items: [
-        { name:'云南保山 SOE', spec:'热 · 中杯 · 微甜', price:'¥28.00', qty:'× 1' },
-        { name:'Dirty', spec:'冰 · 中杯 · 正常', price:'¥32.00', qty:'× 1' }
+        { name:'云南保山 SOE', productName:'经典手冲', spec:'热 · 中杯 · 微甜', price:'¥28.00', qty:'× 1' },
+        { name:'Dirty', productName:'Dirty', spec:'冰 · 中杯 · 正常', price:'¥32.00', qty:'× 1' }
       ],
       coupon: { label:'满35减10', discount:'-¥10.00' },
       goodsAmount: '¥60.00', qtyTotal: '2 件', paid: '¥50.00',
@@ -195,10 +219,11 @@
       readyHint: '取餐完成，感谢你的光临',
       store: 'CozyCoffee 中心店', storeMeta: '文三路 128 号 · 到店自提',
       items: [
-        { name:'冷萃咖啡', spec:'冰 · 中杯 · 无糖', price:'¥30.00', qty:'× 2' }
+        { name:'冷萃咖啡', productName:'瓶装冷萃', spec:'冰 · 中杯 · 无糖', price:'¥28.00', qty:'× 1' },
+        { name:'冰摇荔枝咖啡', productName:'冰摇荔枝咖啡', spec:'冰 · 大杯 · 微糖', price:'¥38.00', qty:'× 1' }
       ],
       coupon: null,
-      goodsAmount: '¥60.00', qtyTotal: '2 件', paid: '¥60.00',
+      goodsAmount: '¥66.00', qtyTotal: '2 件', paid: '¥66.00',
       time: '07-29 09:12:30', orderNo: 'COZ2026072907', remark: '—'
     }
   };
@@ -246,6 +271,15 @@
   function goBack(fallback) {
     if (document.referrer && window.history.length > 1) { history.back(); }
     else { location.href = fallback; }
+  }
+
+  function reorder() {
+    const id = new URLSearchParams(location.search).get('id');
+    const o = ORDERS[id] || ORDERS.coz2026073110;
+    localStorage.setItem('cozy_reorder', JSON.stringify({
+      items: o.items.map(it => ({ productName: it.productName, name: it.name, spec: it.spec, price: it.price, qty: it.qty }))
+    }));
+    location.href = 'menu.html';
   }
 </script>
 </body>

@@ -390,6 +390,30 @@
   }
   .tabbar-icon svg { width:19px; height:19px; }
 
+  /* ── 下架商品提示 Modal ── */
+  .off-shelf-mask {
+    position:fixed; inset:0; z-index:50;
+    background:rgba(44,30,24,.42);
+    display:none; align-items:center; justify-content:center;
+    padding:0 36px;
+  }
+  .off-shelf-card {
+    width:100%; max-width:300px;
+    border-radius:14px; background:var(--porcelain);
+    padding:26px 24px 20px;
+    text-align:center;
+  }
+  .off-shelf-title { display:block; font-size:15px; font-weight:700; color:var(--roastery-ink); }
+  .off-shelf-list { margin-top:14px; text-align:left; }
+  .off-shelf-line { padding:7px 0; font-size:13px; color:var(--quiet-ink); }
+  .off-shelf-btn {
+    margin-top:18px; height:42px; border-radius:9px;
+    background:var(--roast-brown); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:600; cursor:pointer;
+  }
+  .off-shelf-btn:active { background:var(--roast-brown-deep); }
+
   /* ── 商品详情：沉浸式滚动页 + 底部固定加购栏 ── */
   .detail-overlay {
     position:fixed; top:0; left:50%; transform:translateX(-50%);
@@ -691,6 +715,15 @@
         </div>
         <div class="cart-drawer-checkout disabled" id="cartDrawerCheckout" onclick="checkout()">结算</div>
       </div>
+    </div>
+  </div>
+
+  <!-- 下架商品提示 -->
+  <div class="off-shelf-mask" id="offShelfMask" onclick="closeOffShelf()">
+    <div class="off-shelf-card" onclick="event.stopPropagation()">
+      <span class="off-shelf-title" id="offShelfTitle">部分商品已下架</span>
+      <div class="off-shelf-list" id="offShelfList"></div>
+      <div class="off-shelf-btn" onclick="closeOffShelf()">知道了</div>
     </div>
   </div>
 
@@ -1224,6 +1257,50 @@
 
   // 初始化
   updateCartUI();
+
+  // 再来一单：恢复订单商品到购物车，下架商品提示
+  (function applyReorder() {
+    const raw = localStorage.getItem('cozy_reorder');
+    if (!raw) return;
+    localStorage.removeItem('cozy_reorder');
+    let payload;
+    try { payload = JSON.parse(raw); } catch (e) { return; }
+    const items = payload && Array.isArray(payload.items) ? payload.items : [];
+    if (items.length === 0) return;
+
+    const availNames = new Set();
+    Object.values(products).forEach(list => list.forEach(p => availNames.add(p.name)));
+
+    const offShelf = [];
+    let added = 0;
+    items.forEach(it => {
+      if (!availNames.has(it.productName)) { offShelf.push(it); return; }
+      const specs = (it.spec || '').split(' · ').filter(Boolean);
+      const key = it.productName + '|' + specs.join('·');
+      const existing = cart.find(c => c.key === key);
+      if (existing) existing.qty += it.qty;
+      else cart.push({ key, name: it.productName, specs, price: it.price, qty: it.qty });
+      added += it.qty;
+    });
+    updateCartUI();
+
+    if (offShelf.length > 0) {
+      document.getElementById('offShelfTitle').textContent = added > 0
+        ? `已加入 ${added} 件 · ${offShelf.length} 款商品已下架`
+        : '以下商品已下架';
+      document.getElementById('offShelfList').innerHTML = offShelf.map(o =>
+        `<div class="off-shelf-line">· ${o.name}${o.spec ? '（' + o.spec + '）' : ''}</div>`).join('');
+      document.getElementById('offShelfMask').style.display = 'flex';
+    } else {
+      openCartDrawer();
+      toast('已加入购物车 ' + added + ' 件商品');
+    }
+  })();
+
+  function closeOffShelf() {
+    document.getElementById('offShelfMask').style.display = 'none';
+    if (cartCount() > 0) openCartDrawer();
+  }
 
   function toast(msg) {
     let t = document.querySelector('.toast');

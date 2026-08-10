@@ -203,7 +203,7 @@
         </div>
         <div class="receipt-summary">
           <span class="summary-label">共 2 件 · 到店自提</span>
-          <span class="detail-link">查看详情 →</span>
+          <span class="order-action" onclick="event.stopPropagation(); reorder('coz2026073110')">再来一单</span>
         </div>
       </div>
 
@@ -223,14 +223,25 @@
               <span class="item-spec">冰 · 中杯 · 无糖</span>
             </div>
             <div class="item-right">
-              <span class="item-price">¥30.00</span>
-              <span class="item-qty">× 2</span>
+              <span class="item-price">¥28.00</span>
+              <span class="item-qty">× 1</span>
+            </div>
+          </div>
+          <div class="order-item">
+            <div class="item-image" style="background:linear-gradient(135deg,#E8C9C0,#D8B0A4);"></div>
+            <div class="item-info">
+              <span class="item-name">冰摇荔枝咖啡</span>
+              <span class="item-spec">冰 · 大杯 · 微糖</span>
+            </div>
+            <div class="item-right">
+              <span class="item-price">¥38.00</span>
+              <span class="item-qty">× 1</span>
             </div>
           </div>
         </div>
         <div class="receipt-summary">
           <span class="summary-label">共 2 件 · 到店自提</span>
-          <span class="order-action" onclick="event.stopPropagation(); goTab('menu.html')">再次点单</span>
+          <span class="order-action" onclick="event.stopPropagation(); reorder('coz2026072907')">再来一单</span>
         </div>
       </div>
     </div>
@@ -299,6 +310,24 @@
   }
 
   function go(href) { location.href = href; }
+
+  // 再来一单：订单项 → localStorage → 菜单页恢复购物车
+  const REORDER = {
+    coz2026073110: [
+      { productName:'经典手冲', name:'云南保山 SOE', spec:'热 · 中杯 · 微甜', price:28, qty:1 },
+      { productName:'Dirty', name:'Dirty', spec:'冰 · 中杯 · 正常', price:32, qty:1 }
+    ],
+    coz2026072907: [
+      { productName:'瓶装冷萃', name:'冷萃咖啡', spec:'冰 · 中杯 · 无糖', price:28, qty:1 },
+      { productName:'冰摇荔枝咖啡', name:'冰摇荔枝咖啡', spec:'冰 · 大杯 · 微糖', price:38, qty:1 }
+    ]
+  };
+  function reorder(id) {
+    const items = REORDER[id];
+    if (!items) return;
+    localStorage.setItem('cozy_reorder', JSON.stringify({ items }));
+    location.href = 'menu.html';
+  }
 
   function switchCat(el, label) {
     document.querySelectorAll('.category-item').forEach(t => t.classList.remove('active'));
