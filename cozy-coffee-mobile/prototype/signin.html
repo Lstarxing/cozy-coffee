@@ -73,17 +73,11 @@
     display:block; margin-top:4px;
     font-size:12px; color:var(--muted);
   }
-  .checkin-btn {
-    border:none; padding:0 22px; height:44px;
-    border-radius:6px;
-    background:var(--roast-brown); color:#fff;
-    font-size:14px; font-weight:650; cursor:pointer;
-    font-family:inherit;
-    transition:background .25s;
+  .checkin-streak {
+    flex:none;
+    font-size:12px; color:var(--muted);
+    padding-bottom:2px;
   }
-  .checkin-btn:active { background:var(--roast-brown-deep); }
-  .checkin-btn.done { background:var(--hairline); color:var(--quiet-ink); cursor:default; }
-  .checkin-btn.done:active { background:var(--hairline); }
 
   /* 咖啡豆轨迹 */
   .bean-track { position:relative; padding:22px 0 6px; }
@@ -139,20 +133,16 @@
     background:var(--porcelain-muted); color:var(--roast-brown);
   }
 
-  /* 签到按钮 */
-  .checkin-action { margin-top:24px; text-align:center; }
-  .checkin-btn {
-    height:48px; display:flex; align-items:center; justify-content:center;
-    border-radius:10px;
-    background:var(--primary); color:#fff;
-    font-size:15px; font-weight:600; cursor:pointer;
-    transition:background .25s;
+  /* 今日签到（点击咖啡豆） */
+  .bean-step.today-sign { cursor:pointer; }
+  .bean-step.today-sign .bean-label { color:var(--roast-brown); font-weight:700; }
+  .bean-step.today-sign .bean-icon {
+    animation:today-pulse 1.8s ease-in-out infinite;
   }
-  .checkin-btn:active { background:#5E2E1A; }
-  .checkin-btn.done {
-    background:var(--border); color:var(--muted); cursor:default;
+  @keyframes today-pulse {
+    0%,100% { box-shadow:0 0 0 3px rgba(198,156,109,.30); }
+    50% { box-shadow:0 0 0 7px rgba(198,156,109,.14); }
   }
-  .checkin-btn.done:active { background:var(--border); }
   .checkin-hint {
     display:block; margin-top:12px;
     font-size:12px; color:var(--muted);
@@ -243,7 +233,7 @@
         <span class="checkin-title">每日签到</span>
         <span class="checkin-sub">连续签到 7 天可领惊喜礼包</span>
       </div>
-      <button class="checkin-btn" id="signinBtn" onclick="doSignin()">签到领豆</button>
+      <span class="checkin-streak" id="streakText">已连续 3 天</span>
     </div>
     <div class="bean-track">
       <div class="track-line">
@@ -304,20 +294,22 @@
   function renderDays() {
     const grid = document.getElementById('dayGrid');
     grid.innerHTML = Array.from({length: 7}, (_, i) => {
-      const stepCls = i < consecutive ? 'active' : (i === consecutive ? 'active today' : '');
+      const isToday = (i === consecutive && !signed);
+      const stepCls = (i < consecutive ? 'active' : '') + (isToday ? ' today-sign' : '');
       let iconCls = 'bean-icon';
       if (i <= consecutive) iconCls += ' active';
-      if (i === consecutive) iconCls += ' today';
+      if (isToday) iconCls += ' today';
       if (i === 6) iconCls += ' is-gift';
       const icon = i === 6 ? GIFT_SVG : BEAN_SVG;
-      const label = i === 6 ? '礼包' : '+2';
+      const label = i === 6 ? '礼包' : (isToday ? '今日签到' : '+2');
       return `
-        <div class="bean-step ${stepCls}">
+        <div class="bean-step ${stepCls}" ${isToday ? 'onclick="doSignin()"' : ''}>
           <div class="${iconCls}">${icon}</div>
           <span class="bean-label">${label}</span>
         </div>`;
     }).join('');
     updateTrackFill();
+    document.getElementById('streakText').textContent = '已连续 ' + consecutive + ' 天';
   }
   renderDays();
 
@@ -326,14 +318,13 @@
     signed = true;
     consecutive += 1;
 
-    const btn = document.getElementById('signinBtn');
-    btn.textContent = '今日已签';
-    btn.classList.add('done');
-
-    // 今日 bean-step：active today → active
-    const stepCells = document.querySelectorAll('.bean-step');
-    stepCells[consecutive - 1].classList.remove('today');
+    // 今日 bean-step：可点今日 → 已签
+    const cell = document.querySelectorAll('.bean-step')[consecutive - 1];
+    cell.classList.remove('today-sign');
+    cell.querySelector('.bean-icon').classList.remove('today');
+    if (consecutive - 1 !== 6) cell.querySelector('.bean-label').textContent = '+2';
     updateTrackFill();
+    document.getElementById('streakText').textContent = '已连续 ' + consecutive + ' 天';
 
     const hint = document.getElementById('signinHint');
     if (consecutive >= 7) {
