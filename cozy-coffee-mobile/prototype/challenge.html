@@ -74,37 +74,46 @@
     margin-top:16px; padding:8px 20px 12px;
     border-radius:12px; background:var(--card);
   }
-  .task-card {
-    padding:18px 0;
+  .task-row {
+    display:flex; align-items:center; gap:14px;
+    padding:16px 0;
     border-bottom:1px solid var(--border);
   }
-  .task-card:last-child { border-bottom:0; }
-  .task-topline {
-    display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
+  .task-row:last-child { border-bottom:0; }
+  .task-row.done { opacity:.62; }
+  .task-icon {
+    flex:none; width:44px; height:44px; border-radius:12px;
+    background:var(--surface); color:var(--primary);
+    display:flex; align-items:center; justify-content:center;
   }
-  .task-title { display:block; font-size:14px; font-weight:600; color:var(--ink); }
-  .task-desc { display:block; margin-top:3px; font-size:11px; color:var(--muted); }
-  .task-reward { flex:none; font-size:13px; font-weight:700; color:var(--primary); }
-  .task-progress-track {
-    margin-top:12px; height:4px; border-radius:2px;
+  .task-icon svg { width:22px; height:22px; }
+  .task-main { flex:1; min-width:0; }
+  .task-top {
+    display:flex; justify-content:space-between; align-items:center; gap:12px;
+  }
+  .task-name { font-size:14px; font-weight:600; color:var(--ink); }
+  .task-reward {
+    flex:none; font-size:12px; font-weight:700; color:var(--primary);
+  }
+  .task-reward.claimed {
+    color:var(--accent); font-weight:650;
+  }
+  .task-desc {
+    display:block; margin-top:3px;
+    font-size:11px; color:var(--muted);
+  }
+  .task-progress {
+    margin-top:10px; height:3px; border-radius:2px;
     background:var(--border); overflow:hidden;
   }
   .task-progress-fill {
     height:100%; border-radius:2px;
     background:var(--primary); transition:width .5s ease;
   }
-  .task-bottomline {
-    margin-top:8px; display:flex; justify-content:space-between; align-items:center;
-    font-size:11px; color:var(--muted);
+  .task-status {
+    flex:none; font-size:13px; font-weight:650; color:var(--ink);
   }
-  .task-state { font-weight:600; }
-  .task-state.done { color:var(--accent); }
-  .claim-btn {
-    padding:6px 16px; border-radius:6px;
-    border:1px solid var(--primary); background:var(--card); color:var(--primary);
-    font-size:12px; font-weight:600; cursor:pointer;
-  }
-  .claim-btn:active { background:var(--surface); }
+  .task-status.done { color:var(--accent); }
 
   /* ── Toast ── */
   .toast {
@@ -131,10 +140,10 @@
   <div class="challenge-hero">
     <span class="hero-eyebrow">COZY CHALLENGE</span>
     <span class="hero-title">8 月咖啡挑战</span>
-    <span class="hero-sub">完成挑战任务，赢取额外积分</span>
+    <span class="hero-sub">达标自动发放积分，无需手动领取</span>
     <div class="hero-stats">
       <div class="stat"><span class="stat-val" id="heroDone">1/4</span><span class="stat-lbl">已完成挑战</span></div>
-      <div class="stat"><span class="stat-val" id="heroPoints">+150</span><span class="stat-lbl">本月已获积分</span></div>
+      <div class="stat"><span class="stat-val" id="heroPoints">+40</span><span class="stat-lbl">本月已获积分</span></div>
     </div>
   </div>
 
@@ -144,68 +153,53 @@
 </div>
 
 <script>
-  // state: progress进行中 / claimable可领取 / claimed已领取
+  // 与 web 端 MonthlyChallengePanel 对齐：达标后积分自动发放（claimed），无手动领取
+  const ICONS = {
+    calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 9.5h17"/><path d="M8 3v4M16 3v4"/><path d="M9 15l2 2 4-4"/></svg>',
+    sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>',
+    truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>',
+    bag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 13H6.2z"/><path d="M8.5 8V6a3.5 3.5 0 0 1 7 0v2"/></svg>'
+  };
+
+  // claimed = 已达标并自动发放积分
   const tasks = [
-    { title:'完成 3 次咖啡订单', desc:'到店自提或外送均可', reward:100, cur:2, total:3, state:'progress' },
-    { title:'完成 1 次积分兑换', desc:'积分商城任意商品', reward:150, cur:1, total:1, state:'claimed' },
-    { title:'连续签到 7 天', desc:'每日签到页打卡', reward:200, cur:3, total:7, state:'progress' },
-    { title:'新品尝鲜', desc:'下单含「新品」标签商品', reward:120, cur:1, total:1, state:'claimable' }
+    { name:'打卡达人', desc:'本月完成订单 4 次', reward:40, cur:2, total:4, claimed:false, icon:'calendar' },
+    { name:'晨间唤醒', desc:'10:00 前完成订单 3 次', reward:60, cur:3, total:3, claimed:true, icon:'sun' },
+    { name:'外卖尝鲜', desc:'完成 2 笔外卖订单', reward:50, cur:1, total:2, claimed:false, icon:'truck' },
+    { name:'新品猎人', desc:'尝试 3 款限定新品', reward:80, cur:1, total:3, claimed:false, icon:'bag' }
   ];
 
   function render() {
     const box = document.getElementById('taskList');
-    box.innerHTML = tasks.map((t, i) => {
-      const pct = Math.round(t.cur / t.total * 100);
-      const stateHTML = {
-        progress: '<span class="task-state">进行中</span>',
-        claimable: `<button class="claim-btn" onclick="claimTask(${i})">领取</button>`,
-        claimed: '<span class="task-state done">已完成 · 已领取</span>'
-      }[t.state];
+    box.innerHTML = tasks.map(t => {
+      const done = t.claimed || t.cur >= t.total;
+      const pct = Math.min(100, Math.round(t.cur / t.total * 100));
       return `
-        <div class="task-card">
-          <div class="task-topline">
-            <div>
-              <span class="task-title">${t.title}</span>
-              <span class="task-desc">${t.desc}</span>
+        <div class="task-row ${done ? 'done' : ''}">
+          <span class="task-icon">${ICONS[t.icon]}</span>
+          <div class="task-main">
+            <div class="task-top">
+              <span class="task-name">${t.name}</span>
+              ${done
+                ? '<span class="task-reward claimed">✓ 已发放</span>'
+                : `<span class="task-reward">+${t.reward} 积分</span>`}
             </div>
-            <span class="task-reward">+${t.reward} 积分</span>
+            <span class="task-desc">${t.desc}</span>
+            <div class="task-progress"><div class="task-progress-fill" style="width:${pct}%"></div></div>
           </div>
-          <div class="task-progress-track"><div class="task-progress-fill" style="width:${pct}%"></div></div>
-          <div class="task-bottomline">
-            <span>${t.cur}/${t.total}</span>
-            ${stateHTML}
-          </div>
+          <span class="task-status ${done ? 'done' : ''}">${t.cur}/${t.total}</span>
         </div>`;
     }).join('');
 
-    const done = tasks.filter(t => t.state === 'claimed').length;
-    document.getElementById('heroDone').textContent = done + '/' + tasks.length;
-    document.getElementById('heroPoints').textContent = '+' + tasks
-      .filter(t => t.state === 'claimed').reduce((s, t) => s + t.reward, 0);
-  }
-
-  function claimTask(i) {
-    if (tasks[i].state !== 'claimable') return;
-    tasks[i].state = 'claimed';
-    render();
-    toast('已领取 +' + tasks[i].reward + ' 积分');
+    const doneCount = tasks.filter(t => t.claimed || t.cur >= t.total).length;
+    const earned = tasks.filter(t => t.claimed).reduce((s, t) => s + t.reward, 0);
+    document.getElementById('heroDone').textContent = doneCount + '/' + tasks.length;
+    document.getElementById('heroPoints').textContent = '+' + earned;
   }
 
   function goBack(fallback) {
     if (document.referrer && window.history.length > 1) { history.back(); }
     else { location.href = fallback; }
-  }
-  function toast(msg) {
-    let t = document.querySelector('.toast');
-    if (!t) {
-      t = document.createElement('div');
-      t.className = 'toast';
-      document.body.appendChild(t);
-    }
-    t.textContent = msg;
-    t.style.opacity = '1';
-    clearTimeout(t._timer);
-    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
   }
 
   render();
