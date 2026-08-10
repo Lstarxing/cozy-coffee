@@ -173,10 +173,12 @@ const saveAddress = async () => {
   try {
     const payload = {
       receiverName: newAddress.value.receiverName,
-      phone: newAddress.value.receiverPhone,
+      receiverPhone: newAddress.value.receiverPhone,
       province: provinceName,
       city: cityName,
-      district: districtName
+      district: districtName,
+      detailAddress: newAddress.value.detailAddress,
+      isDefault: newAddress.value.isDefault
     }
 
     if (isEditing.value && props.initialData?.id) {
