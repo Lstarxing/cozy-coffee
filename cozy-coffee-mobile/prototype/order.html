@@ -55,7 +55,8 @@
     border-bottom:1px solid var(--border);
   }
   .store-name { display:block; font-size:14px; font-weight:650; color:var(--ink); }
-  .order-no { display:block; margin-top:3px; font-size:10px; color:var(--muted); }
+  .order-meta { display:block; margin-top:3px; font-size:10px; color:var(--muted); }
+  .order-meta em { font-style:normal; color:var(--primary); font-weight:650; }
   .status-block { flex:none; text-align:right; }
   .order-status {
     display:inline-block; padding:3px 10px; border-radius:999px;
@@ -89,10 +90,10 @@
 
   .receipt-summary {
     padding:12px 14px;
-    display:flex; justify-content:space-between; align-items:flex-end; gap:12px;
+    display:flex; justify-content:space-between; align-items:center; gap:12px;
     background:var(--surface);
   }
-  .summary-label { display:block; font-size:10px; color:var(--muted); }
+  .summary-label { font-size:11px; color:var(--muted); }
   .summary-total { display:block; margin-top:4px; font-size:14px; font-weight:700; color:var(--primary); }
   .summary-total.virtual { color:var(--accent); }
   .order-action {
@@ -165,11 +166,11 @@
 
     <!-- 咖啡订单视图 -->
     <div id="coffeeView">
-      <div class="order-receipt" onclick="toast('订单详情')">
+      <div class="order-receipt" onclick="go('order-detail.html?id=coz2026073110')">
         <div class="receipt-head">
           <div>
             <span class="store-name">CozyCoffee 中心店</span>
-            <span class="order-no">订单 COZ2026073110</span>
+            <span class="order-meta">07-31 15:28:45 · 取餐码 <em>A021</em></span>
           </div>
           <div class="status-block">
             <span class="order-status processing">制作中</span>
@@ -201,19 +202,16 @@
           </div>
         </div>
         <div class="receipt-summary">
-          <div>
-            <span class="summary-label">共 2 件 · 到店自提</span>
-            <span class="summary-total">实付 ¥60.00</span>
-          </div>
+          <span class="summary-label">共 2 件 · 到店自提</span>
           <span class="detail-link">查看详情 →</span>
         </div>
       </div>
 
-      <div class="order-receipt" onclick="toast('订单详情')">
+      <div class="order-receipt" onclick="go('order-detail.html?id=coz2026072907')">
         <div class="receipt-head">
           <div>
             <span class="store-name">CozyCoffee 中心店</span>
-            <span class="order-no">订单 COZ2026072907</span>
+            <span class="order-meta">07-29 09:12:30 · 取餐码 <em>B018</em></span>
           </div>
           <span class="order-status completed">已完成</span>
         </div>
@@ -231,11 +229,8 @@
           </div>
         </div>
         <div class="receipt-summary">
-          <div>
-            <span class="summary-label">共 2 件 · 到店自提</span>
-            <span class="summary-total">实付 ¥60.00</span>
-          </div>
-          <span class="order-action">再次点单</span>
+          <span class="summary-label">共 2 件 · 到店自提</span>
+          <span class="order-action" onclick="event.stopPropagation(); goTab('menu.html')">再次点单</span>
         </div>
       </div>
     </div>
@@ -302,6 +297,8 @@
   function goTab(href) {
     location.href = href;
   }
+
+  function go(href) { location.href = href; }
 
   function switchCat(el, label) {
     document.querySelectorAll('.category-item').forEach(t => t.classList.remove('active'));

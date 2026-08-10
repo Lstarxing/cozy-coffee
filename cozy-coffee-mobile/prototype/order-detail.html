@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>订单详情 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
+    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
+    --cask-brown:#2C1E18;
+    --roastery-ink:#2B1E16; --quiet-ink:#756A63;
+    --placeholder:#9E948E; --hairline:#E3DED8;
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  /* ── 顶部原生式导航：返回 + 居中标题 ── */
+  .top-nav {
+    position:relative;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px;
+  }
+  .nav-back {
+    font-size:26px; line-height:1; color:var(--ink);
+    cursor:pointer; padding:6px 4px; width:32px;
+  }
+  .nav-back:active { opacity:.5; }
+  .nav-title {
+    position:absolute; left:50%; transform:translateX(-50%);
+    font-size:16px; font-weight:600; color:var(--ink);
+    white-space:nowrap;
+  }
+  .nav-right { width:32px; }
+
+  .page { padding:0 20px 110px; }
+
+  /* ── 状态面板 ── */
+  .status-panel {
+    margin-top:6px; padding:24px 24px 22px;
+    border-radius:14px;
+    text-align:center;
+  }
+  .status-panel.processing { background:#EAF0F2; color:#285B70; }
+  .status-panel.completed { background:var(--glaze-green-soft); color:var(--glaze-green); }
+  .status-label {
+    display:block; font-size:13px; font-weight:700; letter-spacing:.08em;
+  }
+  .pickup-code {
+    display:block; margin-top:14px;
+    font-family:var(--serif); font-size:46px; font-weight:800; letter-spacing:.1em; line-height:1;
+  }
+  .pickup-hint { display:block; margin-top:12px; font-size:12px; opacity:.75; }
+
+  /* ── 卡块 ── */
+  .card-block {
+    margin-top:14px; border-radius:14px; background:var(--card);
+    padding:4px 18px 16px; overflow:hidden;
+  }
+  .block-title {
+    display:block;
+    padding:14px 0 10px;
+    font-size:10px; font-weight:700; letter-spacing:.18em; color:var(--muted);
+  }
+
+  /* 门店行 */
+  .store-row { padding:14px 0 16px; }
+  .store-name { display:block; font-size:15px; font-weight:650; color:var(--ink); }
+  .store-meta { display:block; margin-top:4px; font-size:12px; color:var(--muted); }
+
+  /* 商品行 */
+  .item-row {
+    display:flex; align-items:center; gap:12px;
+    padding:12px 0; border-top:1px solid var(--border);
+  }
+  .item-row:first-child { border-top:0; padding-top:6px; }
+  .item-img {
+    flex:none; width:52px; height:52px; border-radius:8px;
+    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
+  }
+  .item-info { flex:1; min-width:0; }
+  .item-name { display:block; font-size:13px; font-weight:650; color:var(--ink); }
+  .item-spec { display:block; margin-top:3px; font-size:11px; color:var(--muted); }
+  .item-right { flex:none; text-align:right; }
+  .item-price { display:block; font-size:13px; font-weight:650; color:var(--ink); }
+  .item-qty { display:block; margin-top:3px; font-size:11px; color:var(--muted); }
+
+  /* 金额行 */
+  .price-row {
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    padding:11px 0; border-top:1px solid var(--border);
+    font-size:13px; color:var(--ink);
+  }
+  .price-row:first-child { border-top:0; }
+  .price-row .coupon-tag { font-size:10px; color:var(--muted); }
+  .price-row.discount { color:var(--roast-brown); }
+  .price-row.total { padding-top:13px; font-weight:700; }
+  .price-row.total .val { color:var(--primary); font-size:18px; font-weight:750; }
+
+  /* 信息行 */
+  .info-row {
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    padding:11px 0; border-top:1px solid var(--border);
+    font-size:13px; color:var(--muted);
+  }
+  .info-row:first-child { border-top:0; }
+  .info-row span:last-child { color:var(--ink); text-align:right; }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- 顶部导航 -->
+  <div class="top-nav">
+    <span class="nav-back" onclick="goBack('order.html')">‹</span>
+    <span class="nav-title">订单详情</span>
+    <span class="nav-right"></span>
+  </div>
+
+  <!-- 状态面板 -->
+  <div class="status-panel processing" id="statusPanel">
+    <span class="status-label" id="statusLabel">咖啡制作中</span>
+    <span class="pickup-code" id="pickupCode">A021</span>
+    <span class="pickup-hint" id="pickupHint">预计 15:32 可取，请留意门店叫号</span>
+  </div>
+
+  <!-- 门店 -->
+  <div class="card-block">
+    <div class="store-row">
+      <span class="store-name" id="storeName">CozyCoffee 中心店</span>
+      <span class="store-meta" id="storeMeta">文三路 128 号 · 到店自提</span>
+    </div>
+  </div>
+
+  <!-- 商品明细 -->
+  <div class="card-block">
+    <span class="block-title">商品明细</span>
+    <div id="itemList"></div>
+  </div>
+
+  <!-- 金额明细 -->
+  <div class="card-block">
+    <span class="block-title">金额明细</span>
+    <div id="priceList"></div>
+  </div>
+
+  <!-- 订单信息 -->
+  <div class="card-block">
+    <span class="block-title">订单信息</span>
+    <div class="info-row"><span>下单时间</span><span id="orderTime">07-31 15:28:45</span></div>
+    <div class="info-row"><span>取餐码</span><span id="orderPickup">A021</span></div>
+    <div class="info-row"><span>取餐方式</span><span>到店自提</span></div>
+    <div class="info-row"><span>订单号</span><span id="orderNo">COZ2026073110</span></div>
+    <div class="info-row"><span>备注</span><span id="orderRemark">—</span></div>
+  </div>
+
+</div>
+
+<script>
+  const ORDERS = {
+    coz2026073110: {
+      status: 'processing', statusText: '咖啡制作中', pickup: 'A021',
+      readyHint: '预计 15:32 可取，请留意门店叫号',
+      store: 'CozyCoffee 中心店', storeMeta: '文三路 128 号 · 到店自提',
+      items: [
+        { name:'云南保山 SOE', spec:'热 · 中杯 · 微甜', price:'¥28.00', qty:'× 1' },
+        { name:'Dirty', spec:'冰 · 中杯 · 正常', price:'¥32.00', qty:'× 1' }
+      ],
+      coupon: { label:'满35减10', discount:'-¥10.00' },
+      goodsAmount: '¥60.00', qtyTotal: '2 件', paid: '¥50.00',
+      time: '07-31 15:28:45', orderNo: 'COZ2026073110', remark: '—'
+    },
+    coz2026072907: {
+      status: 'completed', statusText: '订单已完成', pickup: 'B018',
+      readyHint: '取餐完成，感谢你的光临',
+      store: 'CozyCoffee 中心店', storeMeta: '文三路 128 号 · 到店自提',
+      items: [
+        { name:'冷萃咖啡', spec:'冰 · 中杯 · 无糖', price:'¥30.00', qty:'× 2' }
+      ],
+      coupon: null,
+      goodsAmount: '¥60.00', qtyTotal: '2 件', paid: '¥60.00',
+      time: '07-29 09:12:30', orderNo: 'COZ2026072907', remark: '—'
+    }
+  };
+
+  (function init() {
+    const id = new URLSearchParams(location.search).get('id');
+    const o = ORDERS[id] || ORDERS.coz2026073110;
+
+    document.getElementById('statusPanel').className = 'status-panel ' + o.status;
+    document.getElementById('statusLabel').textContent = o.statusText;
+    document.getElementById('pickupCode').textContent = o.pickup;
+    document.getElementById('pickupHint').textContent = o.readyHint;
+
+    document.getElementById('storeName').textContent = o.store;
+    document.getElementById('storeMeta').textContent = o.storeMeta;
+
+    document.getElementById('itemList').innerHTML = o.items.map(it => `
+      <div class="item-row">
+        <div class="item-img"></div>
+        <div class="item-info">
+          <span class="item-name">${it.name}</span>
+          <span class="item-spec">${it.spec}</span>
+        </div>
+        <div class="item-right">
+          <span class="item-price">${it.price}</span>
+          <span class="item-qty">${it.qty}</span>
+        </div>
+      </div>`).join('');
+
+    let priceHTML = `
+      <div class="price-row"><span>商品金额</span><span>${o.goodsAmount}</span></div>
+      <div class="price-row"><span>数量</span><span>${o.qtyTotal}</span></div>`;
+    if (o.coupon) {
+      priceHTML += `<div class="price-row discount"><span>优惠合计 <span class="coupon-tag">(${o.coupon.label})</span></span><span>${o.coupon.discount}</span></div>`;
+    }
+    priceHTML += `<div class="price-row total"><span>实付</span><span class="val">${o.paid}</span></div>`;
+    document.getElementById('priceList').innerHTML = priceHTML;
+
+    document.getElementById('orderTime').textContent = o.time;
+    document.getElementById('orderPickup').textContent = o.pickup;
+    document.getElementById('orderNo').textContent = o.orderNo;
+    document.getElementById('orderRemark').textContent = o.remark;
+  })();
+
+  function goBack(fallback) {
+    if (document.referrer && window.history.length > 1) { history.back(); }
+    else { location.href = fallback; }
+  }
+</script>
+</body>
+</html>
