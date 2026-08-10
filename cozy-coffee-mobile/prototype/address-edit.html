@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>收货地址 · Cozy Coffee</title>
+<title>添加地址 · Cozy Coffee</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -25,103 +25,90 @@
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
 
-  .back-btn {
-    display:inline-flex; align-items:center; justify-content:center;
-    width:36px; height:36px;
-    margin-bottom:14px;
-    font-size:26px; line-height:1;
-    color:var(--ink);
-    text-decoration:none; cursor:pointer;
-    border-radius:50%;
-    background:rgba(255,255,255,.6);
-    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  /* ── 顶部原生式导航：返回 + 居中标题 ── */
+  .top-nav {
+    position:relative;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px;
   }
-  .back-btn:active { opacity:.55; }
-
-  .page { padding:20px 20px 110px; }
-
-  .page-head { padding:8px 8px 18px; }
-  .page-kicker {
-    display:block;
-    font-size:10px; font-weight:700; letter-spacing:.18em; color:var(--muted);
+  .nav-back {
+    font-size:26px; line-height:1; color:var(--ink);
+    cursor:pointer; padding:6px 4px; width:32px;
   }
-  .page-title {
-    display:block; margin-top:8px;
-    font-family:var(--serif); font-size:24px; font-weight:600; color:var(--ink);
+  .nav-back:active { opacity:.5; }
+  .nav-title {
+    position:absolute; left:50%; transform:translateX(-50%);
+    font-size:16px; font-weight:600; color:var(--ink);
+    white-space:nowrap;
   }
+  .nav-right { width:32px; }
 
-  /* ── 表单卡 ── */
+  .page { padding:0 20px 110px; }
+
+  /* ── 表单卡：标签左 · 控件右 ── */
   .form-card {
+    margin-top:6px;
     border-radius:14px; background:var(--card);
     border:1px solid var(--hairline);
-    padding:8px 20px;
+    overflow:hidden;
   }
-  .field {
-    padding:16px 0;
+  .form-row {
+    display:flex; align-items:center; gap:14px;
+    min-height:54px;
+    padding:0 18px;
     border-bottom:1px solid var(--border);
   }
-  .field:last-child { border-bottom:0; }
-  .field-label {
-    display:block; margin-bottom:10px;
-    font-size:13px; font-weight:600; color:var(--ink);
+  .form-row:last-child { border-bottom:0; }
+  .form-label {
+    flex:none; width:62px;
+    font-size:14px; color:var(--ink);
   }
-  .field-input {
-    width:100%; height:46px;
-    padding:0 14px;
-    border:1px solid var(--hairline); border-radius:6px;
-    background:var(--porcelain-muted);
+  .form-input {
+    flex:1; min-width:0;
+    border:none; background:transparent;
     font-size:14px; color:var(--roastery-ink); font-family:inherit;
+    padding:6px 0;
   }
-  .field-input::placeholder { color:var(--placeholder); }
-  .field-input:focus { outline:none; border-color:var(--roast-brown); }
+  .form-input::placeholder { color:var(--placeholder); }
+  .form-input:focus { outline:none; }
 
-  /* 性别分段 */
-  .gender-group { display:flex; gap:10px; }
+  /* 性别（右对齐） */
+  .gender-group { display:flex; gap:10px; margin-left:auto; }
   .gender-opt {
-    height:40px; padding:0 28px;
+    min-width:64px; height:34px;
     display:flex; align-items:center; justify-content:center;
-    font-size:14px; color:var(--roastery-ink);
     border-radius:6px;
-    border:1px solid var(--hairline); background:var(--porcelain);
-    cursor:pointer;
+    border:1px solid var(--hairline); background:var(--porcelain-muted);
+    font-size:13px; color:var(--roastery-ink); cursor:pointer;
     transition:all .2s;
   }
   .gender-opt.active {
-    background:#F1E4DA; border-color:var(--roast-brown); color:var(--roast-brown);
-    font-weight:600;
+    background:#F1E4DA; border-color:var(--roast-brown);
+    color:var(--roast-brown); font-weight:600;
   }
 
-  /* 收货地址选择行 */
-  .region-row {
-    height:46px;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:0 14px;
-    border:1px solid var(--hairline); border-radius:6px;
-    background:var(--porcelain-muted);
-    cursor:pointer;
+  /* 收货地址选择行（右对齐） */
+  .form-row.tap { cursor:pointer; }
+  .form-row.tap:active { opacity:.7; }
+  .form-value {
+    margin-left:auto;
+    font-size:14px; color:var(--placeholder);
   }
-  .region-value { font-size:14px; color:var(--placeholder); }
-  .region-value.filled { color:var(--roastery-ink); }
-  .region-arrow { font-size:16px; color:var(--placeholder); }
+  .form-value.filled { color:var(--roastery-ink); }
+  .form-arrow { font-size:16px; color:var(--placeholder); }
 
-  /* 设为默认 */
-  .field-default {
-    display:flex; align-items:center; gap:10px;
-    padding:16px 0;
-    cursor:pointer;
-    font-size:14px; color:var(--ink);
-  }
-  .field-check {
-    width:20px; height:20px; border-radius:4px;
+  /* 设为默认（右对齐开关） */
+  .form-check {
+    margin-left:auto; width:22px; height:22px; border-radius:5px;
     border:1px solid var(--hairline); background:var(--porcelain);
     display:flex; align-items:center; justify-content:center;
     font-size:12px; color:#fff;
   }
-  .field-check.on { background:var(--roast-brown); border-color:var(--roast-brown); }
+  .form-check.on { background:var(--roast-brown); border-color:var(--roast-brown); }
 
-  /* 保存 */
+  /* ── 保存 ── */
   .save-btn {
-    margin-top:22px; height:48px;
+    margin-top:24px; height:48px;
     display:flex; align-items:center; justify-content:center;
     border-radius:10px;
     background:var(--roast-brown); color:#fff;
@@ -144,43 +131,42 @@
 
 <div class="page">
 
-  <a class="back-btn" onclick="goBack('address.html')">‹</a>
-
-  <div class="page-head">
-    <span class="page-kicker">ADDRESS</span>
-    <span class="page-title" id="pageTitle">添加地址</span>
+  <!-- 顶部导航 -->
+  <div class="top-nav">
+    <span class="nav-back" onclick="goBack('address.html')">‹</span>
+    <span class="nav-title" id="pageTitle">添加地址</span>
+    <span class="nav-right"></span>
   </div>
 
+  <!-- 表单 -->
   <div class="form-card">
-    <div class="field">
-      <span class="field-label">联系人</span>
-      <input class="field-input" id="fName" placeholder="请填写收货人姓名">
+    <div class="form-row">
+      <span class="form-label">联系人</span>
+      <input class="form-input" id="fName" placeholder="请填写收货人姓名">
     </div>
-    <div class="field">
-      <span class="field-label">性别</span>
+    <div class="form-row">
+      <span class="form-label">性别</span>
       <div class="gender-group">
         <div class="gender-opt active" data-g="男" onclick="pickGender(this)">男</div>
         <div class="gender-opt" data-g="女" onclick="pickGender(this)">女</div>
       </div>
     </div>
-    <div class="field">
-      <span class="field-label">手机号</span>
-      <input class="field-input" id="fPhone" type="tel" placeholder="请填写收货手机号">
+    <div class="form-row">
+      <span class="form-label">手机号</span>
+      <input class="form-input" id="fPhone" type="tel" placeholder="请填写收货手机号">
     </div>
-    <div class="field">
-      <span class="field-label">收货地址</span>
-      <div class="region-row" onclick="cycleRegion()">
-        <span class="region-value" id="fRegion">点击选择</span>
-        <span class="region-arrow">›</span>
-      </div>
+    <div class="form-row tap" onclick="cycleRegion()">
+      <span class="form-label">收货地址</span>
+      <span class="form-value" id="fRegion">点击选择</span>
+      <span class="form-arrow">›</span>
     </div>
-    <div class="field">
-      <span class="field-label">门牌号</span>
-      <input class="field-input" id="fDetail" placeholder="例：A座8102室">
+    <div class="form-row">
+      <span class="form-label">门牌号</span>
+      <input class="form-input" id="fDetail" placeholder="例：A座8102室">
     </div>
-    <div class="field-default" onclick="toggleDefault()">
-      <span class="field-check" id="fDefault"></span>
-      <span>设为默认收货地址</span>
+    <div class="form-row tap" onclick="toggleDefault()">
+      <span class="form-label">设为默认</span>
+      <span class="form-check" id="fDefault"></span>
     </div>
   </div>
 
@@ -198,7 +184,6 @@
   function getAddresses() { try { return JSON.parse(localStorage.getItem('cozy_addresses')) || []; } catch (e) { return []; } }
   function persist(list) { localStorage.setItem('cozy_addresses', JSON.stringify(list)); }
 
-  // 若来自编辑链接，预填表单
   (function init() {
     const id = new URLSearchParams(location.search).get('id');
     if (id) {
