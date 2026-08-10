@@ -22,7 +22,7 @@
   .back-btn {
     display:inline-flex; align-items:center; justify-content:center;
     width:36px; height:36px;
-    margin-bottom:14px;
+    margin-bottom:18px;
     font-size:26px; line-height:1;
     color:var(--ink);
     text-decoration:none; cursor:pointer;
@@ -32,39 +32,32 @@
   }
   .back-btn:active { opacity:.55; }
 
-  .page { padding:20px 20px 120px; }
+  .page { padding:20px 22px 120px; }
 
-  /* ── 当前等级卡（身份 + 成长） ── */
+  /* ── 等级卡（身份 + 成长） ── */
   .current-level {
-    padding:26px 24px 22px;
-    border-radius:12px; color:#fff;
+    padding:28px 26px 24px;
+    border-radius:14px; color:#fff;
     background:linear-gradient(135deg,#3A342E,#2C1E18);
   }
   .level-info { text-align:center; }
   .level-eyebrow {
     display:block;
-    font-size:9px; font-weight:700; letter-spacing:.26em;
-    opacity:.7;
-  }
-  .level-badge {
-    width:44px; height:44px; margin:14px auto 0;
-    display:flex; align-items:center; justify-content:center;
-    border-radius:50%;
-    border:1px solid rgba(255,255,255,.35);
-    font-size:13px; font-weight:700; letter-spacing:.08em;
-    color:#fff; background:rgba(255,255,255,.1);
+    font-size:9px; font-weight:700; letter-spacing:.28em;
+    opacity:.68;
   }
   .level-name {
-    display:block; margin-top:10px;
-    font-family:var(--serif); font-size:22px; font-weight:600;
+    display:block; margin-top:14px;
+    font-family:var(--serif); font-size:26px; font-weight:600;
   }
   .level-exp {
-    display:block; margin-top:6px;
-    font-size:12px; color:rgba(255,255,255,.65);
+    display:block; margin-top:8px;
+    font-size:12px; color:rgba(255,255,255,.62);
   }
-  .level-progress { margin-top:18px; }
-  .progress-bar {
-    height:4px; border-radius:2px; background:rgba(255,255,255,.18); overflow:hidden;
+  .level-progress { margin-top:20px; }
+  .progress-track {
+    height:3px; border-radius:2px;
+    background:rgba(255,255,255,.18); overflow:hidden;
   }
   .progress-fill {
     height:100%; border-radius:2px;
@@ -72,119 +65,68 @@
     transition:width .6s ease;
   }
 
-  /* ── 本月权益（卡片） ── */
-  .monthly-section {
-    margin-top:16px; padding:20px;
-    border-radius:12px; background:var(--card);
+  /* ── Editorial section：线性分隔 + 留白 ── */
+  .section { margin-top:34px; }
+  .section-head {
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    margin-bottom:4px;
   }
-  .section-heading-row {
-    display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
-    margin-bottom:6px;
+  .section-title {
+    font-size:11px; font-weight:700; letter-spacing:.18em; color:var(--muted);
   }
-  .section-title { font-family:var(--serif); font-size:19px; font-weight:600; color:var(--ink); }
-  .section-subtitle { display:block; margin-top:4px; font-size:11px; color:var(--muted); }
-  .month-badge {
-    flex:none; padding:4px 10px;
-    font-size:11px; font-weight:600; color:var(--primary);
-    background:#EFE7DF; border-radius:999px;
+  .section-sub {
+    font-size:11px; color:var(--muted);
   }
-  .benefit-card {
-    display:flex; align-items:center; gap:14px;
-    padding:16px 0; border-bottom:1px solid var(--border);
+
+  /* 本月可用：行式 */
+  .benefit-row {
+    display:flex; align-items:center; gap:16px;
+    padding:18px 2px;
+    border-bottom:1px solid var(--border);
   }
-  .benefit-card:last-child { border-bottom:0; }
-  .benefit-card-icon {
-    flex:none; width:44px; height:44px; border-radius:12px;
-    background:var(--surface); color:var(--primary);
+  .benefit-row:last-child { border-bottom:0; }
+  .b-icon {
+    flex:none; width:40px; height:40px;
     display:flex; align-items:center; justify-content:center;
+    color:var(--primary);
   }
-  .benefit-card-icon svg { width:22px; height:22px; }
-  .benefit-card-copy { flex:1; min-width:0; }
-  .benefit-card-title { display:block; font-size:14px; font-weight:600; color:var(--ink); }
-  .benefit-card-desc { display:block; margin-top:3px; font-size:11px; color:var(--muted); line-height:1.5; }
-  .benefit-card-state { flex:none; font-size:12px; font-weight:600; color:var(--accent); }
-  .benefit-card-btn {
-    flex:none; padding:7px 15px; border-radius:6px;
-    border:1px solid var(--primary); background:var(--card); color:var(--primary);
+  .b-icon svg { width:22px; height:22px; }
+  .b-copy { flex:1; min-width:0; }
+  .b-name { display:block; font-size:14px; font-weight:600; color:var(--ink); }
+  .b-desc { display:block; margin-top:4px; font-size:12px; color:var(--muted); line-height:1.5; }
+  .b-state { flex:none; font-size:12px; font-weight:600; color:var(--accent); }
+  .b-btn {
+    flex:none; padding:7px 16px; border-radius:6px;
+    border:1px solid var(--primary); background:transparent; color:var(--primary);
     font-size:12px; font-weight:600; cursor:pointer;
   }
-  .benefit-card-btn:active { background:var(--surface); }
+  .b-btn:active { background:var(--card); }
 
-  /* ── 等级权益 ── */
-  .benefits-section {
-    margin-top:16px; padding:20px;
-    border-radius:12px; background:var(--card);
+  /* 权益对比：每级一行 */
+  .compare-row {
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    padding:14px 2px;
+    border-bottom:1px solid var(--border);
   }
-  .benefits-section .section-title { margin-bottom:16px; }
-  .level-tabs {
-    display:flex; gap:8px; overflow-x:auto;
-    padding-bottom:6px; margin-bottom:16px;
+  .compare-row:last-child { border-bottom:0; }
+  .compare-name { font-size:14px; color:var(--ink); font-weight:500; }
+  .compare-text { font-size:12px; color:var(--muted); }
+  .compare-row.current .compare-name { color:var(--primary); font-weight:700; }
+  .compare-row.current .compare-text { color:var(--primary); font-weight:600; }
+  .compare-row.current .compare-name::before {
+    content:''; display:inline-block; width:5px; height:5px; border-radius:50%;
+    background:var(--primary); margin-right:8px; vertical-align:2px;
   }
-  .level-tabs::-webkit-scrollbar { display:none; }
-  .level-tab {
-    flex:none; padding:8px 16px;
-    font-size:13px; font-weight:600;
-    border-radius:999px;
-    border:1px solid var(--border);
-    color:var(--muted); background:var(--surface);
-    cursor:pointer; transition:all .25s;
-  }
-  .level-tab.active {
-    background:var(--primary); border-color:var(--primary); color:#fff;
-  }
-  .benefits-list { display:flex; flex-direction:column; }
-  .benefit-item {
-    display:flex; align-items:center; gap:12px;
-    padding:14px 0; border-bottom:1px solid var(--border);
-  }
-  .benefit-item:last-child { border-bottom:0; }
-  .benefit-icon {
-    flex:none; width:38px; height:38px;
-    display:flex; align-items:center; justify-content:center;
-    border-radius:8px;
-    background:var(--surface); color:var(--primary);
-    font-size:11px; font-weight:800; letter-spacing:.04em;
-  }
-  .benefit-info { flex:1; min-width:0; }
-  .benefit-name {
-    display:block; font-size:14px; font-weight:600; color:var(--ink);
-  }
-  .benefit-desc {
-    display:block; margin-top:3px; font-size:11px; line-height:1.5; color:var(--muted);
-  }
-  .benefit-status {
-    flex:none; font-size:11px; font-weight:600;
-    color:var(--muted);
-  }
-  .benefit-status.unlocked { color:var(--accent); }
 
-  /* ── 升级规则 ── */
-  .rules-section {
-    margin-top:16px; padding:20px;
-    border-radius:12px; background:var(--card);
+  /* 升级规则：一行门槛 */
+  .rule-line {
+    padding:16px 2px 0;
+    font-size:13px; line-height:1.9; color:var(--ink);
   }
-  .rules-section .section-title { margin-bottom:8px; }
-  .rule-row {
-    display:flex; justify-content:space-between; align-items:baseline; gap:12px;
-    padding:13px 0; border-bottom:1px solid var(--border);
-    font-size:13px;
-  }
-  .rule-row:last-of-type { border-bottom:0; }
-  .rule-row span:first-child { color:var(--ink); font-weight:600; }
-  .rule-row span:last-child { color:var(--muted); }
+  .rule-line em { font-style:normal; color:var(--primary); font-weight:650; }
   .rule-note {
-    display:block; margin-top:12px; padding-top:12px;
-    border-top:1px solid var(--border);
+    padding:10px 2px 0;
     font-size:11px; line-height:1.7; color:var(--muted);
-  }
-
-  /* ── Toast ── */
-  .toast {
-    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-    padding:10px 22px; border-radius:20px;
-    background:rgba(44,39,35,.88); color:#F7F3EE;
-    font-size:12px; pointer-events:none; z-index:99;
-    opacity:0; transition:opacity .3s ease;
   }
 </style>
 </head>
@@ -194,130 +136,86 @@
 
     <a class="back-btn" onclick="goBack('profile.html')">‹</a>
 
-    <!-- 当前等级（身份 + 成长） -->
+    <!-- 等级卡（身份 + 成长） -->
     <div class="current-level">
       <div class="level-info">
         <span class="level-eyebrow">COZY MEMBER</span>
-        <div class="level-badge">SILVER</div>
         <span class="level-name">白银会员</span>
         <span class="level-exp">380 EXP · 距离黄金会员</span>
       </div>
       <div class="level-progress">
-        <div class="progress-bar"><div class="progress-fill" style="width:62%"></div></div>
+        <div class="progress-track"><div class="progress-fill" style="width:62%"></div></div>
       </div>
     </div>
 
-    <!-- 本月权益 -->
-    <div class="monthly-section">
-      <div class="section-heading-row">
-        <div>
-          <span class="section-title">本月权益</span>
-          <span class="section-subtitle">白银会员专享 · 本月可用</span>
-        </div>
-        <span class="month-badge">8 月</span>
+    <!-- 本月可用 -->
+    <div class="section">
+      <div class="section-head">
+        <span class="section-title">本月可用</span>
+        <span class="section-sub">白银会员专享</span>
       </div>
-      <div class="benefit-card">
-        <span class="benefit-card-icon">
+      <div class="benefit-row">
+        <span class="b-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v3.5a2 2 0 0 0 0 4V18H4v-3.5a2 2 0 0 0 0-4z"/><circle cx="9" cy="12" r=".8" fill="currentColor" stroke="none"/></svg>
         </span>
-        <div class="benefit-card-copy">
-          <span class="benefit-card-title">月度兑换券</span>
-          <span class="benefit-card-desc">95 折兑换券 · 有效期 2026.08.01 - 08.31</span>
+        <div class="b-copy">
+          <span class="b-name">月度兑换券</span>
+          <span class="b-desc">95 折兑换券 · 有效期 2026.08.01 - 08.31</span>
         </div>
-        <span class="benefit-card-state">已领取 ✓</span>
+        <span class="b-state">已领取 ✓</span>
       </div>
-      <div class="benefit-card">
-        <span class="benefit-card-icon">
+      <div class="benefit-row">
+        <span class="b-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="17" height="12" rx="1.5"/><path d="M3.5 13h17"/><path d="M12 8v12"/><path d="M12 8c-3.5 0-6-1.8-6-3.5S8.5 2.5 10 4c1 1 1 4 2 4z"/><path d="M12 8c3.5 0 6-1.8 6-3.5S15.5 2.5 14 4c-1 1-1 4-2 4z"/></svg>
         </span>
-        <div class="benefit-card-copy">
-          <span class="benefit-card-title">生日礼遇</span>
-          <span class="benefit-card-desc">生日当月赠送双倍积分</span>
+        <div class="b-copy">
+          <span class="b-name">生日礼遇</span>
+          <span class="b-desc">生日当月赠送双倍积分</span>
         </div>
-        <button class="benefit-card-btn" onclick="toast('生日礼遇已领取')">去领取</button>
+        <button class="b-btn" onclick="toast('生日礼遇已领取')">去领取</button>
       </div>
     </div>
 
-    <!-- 等级权益 -->
-    <div class="benefits-section">
-      <span class="section-title">会员等级权益</span>
-      <div class="level-tabs" id="levelTabs"></div>
-      <div class="benefits-list" id="benefitsList"></div>
+    <!-- 权益对比（每级一行） -->
+    <div class="section">
+      <div class="section-head">
+        <span class="section-title">会员权益对比</span>
+      </div>
+      <div class="compare-list" id="compareList"></div>
     </div>
 
     <!-- 升级规则 -->
-    <div class="rules-section">
-      <span class="section-title">升级规则</span>
-      <div class="rule-row"><span>基础会员</span><span>0 EXP</span></div>
-      <div class="rule-row"><span>白银会员</span><span>500 EXP</span></div>
-      <div class="rule-row"><span>黄金会员</span><span>1,500 EXP</span></div>
-      <div class="rule-row"><span>钻石会员</span><span>4,000 EXP</span></div>
-      <div class="rule-row"><span>黑金会员</span><span>9,000 EXP</span></div>
-      <span class="rule-note">消费 1 元 = 1 EXP，达到门槛自动升级，升级后权益永久生效。月度挑战与成长任务请前往「月度挑战」查看。</span>
+    <div class="section">
+      <div class="section-head">
+        <span class="section-title">升级规则</span>
+      </div>
+      <div class="rule-line">
+        基础 <em>0</em> · 白银 <em>500</em> · 黄金 <em>1,500</em> · 钻石 <em>4,000</em> · 黑金 <em>9,000</em> EXP
+      </div>
+      <div class="rule-note">消费 1 元 = 1 EXP，达到门槛自动升级，升级后权益永久生效。</div>
     </div>
+
   </div>
 
 <script>
-  const levels = ['basic','silver','gold','diamond','black'];
-  const levelNames = { basic:'基础会员', silver:'白银会员', gold:'黄金会员', diamond:'钻石会员', black:'黑金会员' };
-
-  // 权益以中文为主，英文 code 作装饰
-  const benefitsData = {
-    basic: [
-      { code:'PTS', name:'积分累积', desc:'消费积分 ×1.0' },
-      { code:'ORD', name:'订单追踪', desc:'实时查看订单制作进度' }
-    ],
-    silver: [
-      { code:'PTS', name:'积分倍率提升', desc:'消费积分 ×1.2' },
-      { code:'DISC', name:'兑换优惠', desc:'积分商城兑换 95 折' },
-      { code:'BRT', name:'生日礼遇', desc:'生日当月赠送双倍积分' }
-    ],
-    gold: [
-      { code:'PTS', name:'积分倍率提升', desc:'消费积分 ×1.5' },
-      { code:'DISC', name:'兑换优惠', desc:'积分商城兑换 9 折' },
-      { code:'NEW', name:'新品优先', desc:'季节限定新品优先尝鲜' }
-    ],
-    diamond: [
-      { code:'PTS', name:'积分倍率提升', desc:'消费积分 ×2.0' },
-      { code:'DISC', name:'兑换优惠', desc:'积分商城兑换 85 折' },
-      { code:'CUP', name:'专属咖啡', desc:'每月专属特调 · 会员专属价' }
-    ],
-    black: [
-      { code:'PTS', name:'积分倍率提升', desc:'消费积分 ×3.0' },
-      { code:'DISC', name:'兑换优惠', desc:'积分商城兑换 8 折' },
-      { code:'ALL', name:'全权益解锁', desc:'新品优先 · 专属咖啡 · 专属客服' }
-    ]
-  };
-
   const USER_LEVEL = 'silver';
 
-  function renderLevelTabs() {
-    const tabs = document.getElementById('levelTabs');
-    tabs.innerHTML = levels.map(l => `
-      <div class="level-tab ${l === USER_LEVEL ? 'active' : ''}" onclick="selectLevel('${l}')">${levelNames[l]}</div>
-    `).join('');
+  const compare = [
+    { name:'基础会员', text:'1× 积分' },
+    { name:'白银会员', text:'1.2× 积分 · 95 折兑换' },
+    { name:'黄金会员', text:'1.5× 积分 · 9 折兑换' },
+    { name:'钻石会员', text:'2× 积分 · 85 折兑换' },
+    { name:'黑金会员', text:'3× 积分 · 8 折兑换' }
+  ];
+  const levelKeys = ['basic','silver','gold','diamond','black'];
+
+  function renderCompare() {
+    document.getElementById('compareList').innerHTML = compare.map((c, i) => `
+      <div class="compare-row ${levelKeys[i] === USER_LEVEL ? 'current' : ''}">
+        <span class="compare-name">${c.name}</span>
+        <span class="compare-text">${c.text}</span>
+      </div>`).join('');
   }
-  function selectLevel(level) {
-    document.querySelectorAll('.level-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('levelTabs').children[levels.indexOf(level)].classList.add('active');
-    renderBenefits(level);
-  }
-  function renderBenefits(level) {
-    const list = document.getElementById('benefitsList');
-    const unlocked = levels.indexOf(level) <= levels.indexOf(USER_LEVEL);
-    list.innerHTML = benefitsData[level].map(b => `
-      <div class="benefit-item">
-        <span class="benefit-icon">${b.code}</span>
-        <div class="benefit-info">
-          <span class="benefit-name">${b.name}</span>
-          <span class="benefit-desc">${b.desc}</span>
-        </div>
-        <span class="benefit-status ${unlocked ? 'unlocked' : ''}">${unlocked ? '已解锁' : '未解锁'}</span>
-      </div>
-    `).join('');
-  }
-  renderLevelTabs();
-  renderBenefits(USER_LEVEL);
 
   function toast(msg) {
     let t = document.querySelector('.toast');
@@ -335,6 +233,8 @@
     if (document.referrer && window.history.length > 1) { history.back(); }
     else { location.href = fallback; }
   }
+
+  renderCompare();
 </script>
 </body>
 </html>
