@@ -219,7 +219,9 @@
       return;
     }
 
-    box.innerHTML = list.map(a => `
+    box.innerHTML = list.map(a => {
+      const honorific = a.gender === '女' ? '女士' : '先生';
+      return `
       <div class="address-card ${a.isDefault ? 'default' : ''}">
         <div class="addr-main">
           <span class="addr-pin">${ICONS.pin}</span>
@@ -230,7 +232,7 @@
           ${a.isDefault ? '<span class="default-badge">默认</span>' : ''}
         </div>
         <div class="addr-receiver">
-          <span class="receiver-name">${maskName(a.name)} ${a.gender || ''}</span>
+          <span class="receiver-name">${maskName(a.name)} ${honorific}</span>
           <span class="receiver-phone">${maskPhone(a.phone)}</span>
         </div>
         <div class="addr-actions">
@@ -238,8 +240,8 @@
           <div class="act" onclick="go('address-edit.html?id=' + ${a.id})" title="编辑">${ICONS.pencil}</div>
           <div class="act" onclick="removeAddress(${a.id})" title="删除">${ICONS.trash}</div>
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   }
 
   function setDefault(id) {
