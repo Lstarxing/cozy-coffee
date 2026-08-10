@@ -104,22 +104,25 @@
     font-size:10px; font-weight:650; opacity:.85;
   }
 
-  .ledger {
-    display:grid; grid-template-columns:1.3fr 1fr 1fr;
+  .points-row {
+    display:flex; align-items:flex-end; justify-content:space-between; gap:12px;
     margin-top:16px; padding-top:14px;
     border-top:1px solid var(--line, currentColor);
+    cursor:pointer;
   }
-  .ledger-cell { padding-left:18px; border-left:1px solid var(--line, currentColor); }
-  .ledger-cell:first-child { padding-left:0; border-left:0; }
-  .ledger-value {
+  .points-value {
     display:block;
-    font-family:var(--serif); font-size:24px; font-weight:700; line-height:1;
+    font-family:var(--serif); font-size:34px; font-weight:700; line-height:1;
     letter-spacing:-.01em;
   }
-  .ledger-value.small { font-size:19px; }
-  .ledger-label {
-    display:block; margin-top:6px;
+  .points-label {
+    display:block; margin-top:7px;
     font-size:10px; letter-spacing:.08em; opacity:.72;
+  }
+  .points-link {
+    flex:none;
+    font-size:10px; font-weight:600; letter-spacing:.06em;
+    opacity:.78; padding-bottom:2px;
   }
 
   .level-progress { margin-top:16px; }
@@ -320,19 +323,12 @@
       <span class="identity-action">账户 →</span>
     </div>
 
-    <div class="ledger">
-      <div class="ledger-cell" onclick="go('points-history.html')">
-        <span class="ledger-value" id="ledPoints">1,200</span>
-        <span class="ledger-label">当前积分</span>
+    <div class="points-row" onclick="go('points-history.html')">
+      <div>
+        <span class="points-value" id="ledPoints">1,200</span>
+        <span class="points-label">当前积分</span>
       </div>
-      <div class="ledger-cell" onclick="go('coupons.html')">
-        <span class="ledger-value small" id="ledExchange">1</span>
-        <span class="ledger-label">兑换券</span>
-      </div>
-      <div class="ledger-cell" onclick="go('coupons.html')">
-        <span class="ledger-value small" id="ledCoupons">2</span>
-        <span class="ledger-label">优惠券</span>
-      </div>
+      <span class="points-link">积分明细 ›</span>
     </div>
 
     <div class="level-progress">
@@ -488,8 +484,6 @@
     document.getElementById('brandEmblem').innerHTML = EMBLEMS[level];
     document.getElementById('levelChip').textContent = t.name;
     document.getElementById('ledPoints').textContent = t.points;
-    document.getElementById('ledExchange').textContent = t.exchange;
-    document.getElementById('ledCoupons').textContent = t.coupons;
 
     // 等级进度
     const idx = ORDER.indexOf(level);
