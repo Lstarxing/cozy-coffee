@@ -33,7 +33,7 @@
      ═══════════════════════════════════════ */
   .member-card {
     position:relative; overflow:hidden;
-    padding:18px 20px 18px;
+    padding:16px 18px 16px;
     border-radius:14px;
     box-shadow:0 6px 20px rgba(43,30,22,.08);
     transition:background .35s ease, color .35s ease;
@@ -54,15 +54,15 @@
   .brand-text { font-size:10px; font-weight:800; letter-spacing:.24em; opacity:.84; }
 
   .card-identity {
-    display:flex; align-items:center; gap:16px;
-    margin-top:22px;
+    display:flex; align-items:center; gap:14px;
+    margin-top:18px;
   }
   .level-emblem-wrap {
-    position:relative; width:66px; height:66px; flex:none;
+    position:relative; width:44px; height:44px; flex:none;
     display:flex; align-items:center; justify-content:center;
   }
   .level-emblem { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
-  .level-emblem svg { width:100%; height:100%; filter: drop-shadow(0 8px 14px rgba(0,0,0,.22)); }
+  .level-emblem svg { width:100%; height:100%; filter: drop-shadow(0 6px 10px rgba(0,0,0,.20)); }
   .emblem-shine {
     position:absolute; inset:0; pointer-events:none;
     background: linear-gradient(135deg, rgba(255,255,255,.45) 0%, rgba(255,255,255,.06) 40%, transparent 62%);
@@ -70,32 +70,33 @@
     mix-blend-mode:screen;
   }
   .identity-copy { flex:1; min-width:0; }
-  .level-name {
-    display:block;
-    font-family:var(--serif); font-size:30px; font-weight:600; line-height:1.1;
-  }
   .user-name {
-    display:block; margin-top:6px;
-    font-size:13px; opacity:.72;
+    display:block;
+    font-size:14px; font-weight:600;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .level-en {
+    display:block; margin-top:3px;
+    font-family:var(--serif); font-size:20px; font-weight:600; line-height:1.15;
+    letter-spacing:.06em;
   }
 
   .points-row {
-    margin-top:18px; padding-top:16px;
+    margin-top:14px; padding-top:13px;
     border-top:1px solid var(--line, currentColor);
     cursor:pointer;
   }
   .points-value {
     display:block;
-    font-family:var(--serif); font-size:34px; font-weight:700; line-height:1;
+    font-family:var(--serif); font-size:26px; font-weight:700; line-height:1;
     letter-spacing:-.01em;
   }
   .points-label {
-    display:block; margin-top:7px;
-    font-size:10px; font-weight:650; letter-spacing:.18em; opacity:.72;
+    display:block; margin-top:6px;
+    font-size:9px; font-weight:650; letter-spacing:.18em; opacity:.72;
   }
 
-  .level-progress { margin-top:20px; }
+  .level-progress { margin-top:16px; }
   .growth-row {
     display:flex; align-items:baseline; justify-content:space-between; gap:12px;
     margin-bottom:9px;
@@ -291,8 +292,8 @@
         <span class="emblem-shine"></span>
       </div>
       <div class="identity-copy">
-        <span class="level-name" id="levelName">白银会员</span>
         <span class="user-name">Cozy 咖啡爱好者</span>
+        <span class="level-en" id="levelEn">SILVER</span>
       </div>
     </div>
 
@@ -455,17 +456,17 @@
     card.classList.toggle('is-dark', t.isDark);
 
     document.getElementById('levelEmblem').innerHTML = EMBLEMS[level];
-    document.getElementById('levelName').textContent = t.name;
+    document.getElementById('levelEn').textContent = t.en;
     document.getElementById('ledPoints').textContent = t.points;
 
     // 等级进度
     const idx = ORDER.indexOf(level);
     const isMax = idx >= ORDER.length - 1;
-    let pct = 100, label = '已达到最高等级', exp = t.name;
+    let pct = 100, label = '已达最高等级', exp = t.en;
     if (!isMax) {
       const cur = THRESHOLDS[level], next = THRESHOLDS[ORDER[idx + 1]];
       pct = Math.max(0, Math.min(100, Math.round(((t.exp - cur) / (next - cur)) * 100)));
-      label = '距离' + THEMES[ORDER[idx + 1]].name;
+      label = '距 ' + THEMES[ORDER[idx + 1]].en + ' 还需';
       exp = Math.max(0, next - t.exp).toLocaleString() + ' EXP';
     }
     document.getElementById('progressFill').style.width = pct + '%';
