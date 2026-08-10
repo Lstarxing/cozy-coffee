@@ -32,41 +32,22 @@
   }
   .back-btn:active { opacity:.55; }
 
-  .page { padding:20px 22px 120px; }
+  .page { padding:20px 22px 40px; }
 
-  /* ── 等级卡（身份 + 成长） ── */
-  .current-level {
-    padding:28px 26px 24px;
-    border-radius:14px; color:#fff;
-    background:linear-gradient(135deg,#3A342E,#2C1E18);
-  }
-  .level-info { text-align:center; }
-  .level-eyebrow {
+  /* ── 页头（安静身份行，非卡） ── */
+  .page-head { padding:6px 2px 26px; }
+  .page-title {
     display:block;
-    font-size:9px; font-weight:700; letter-spacing:.28em;
-    opacity:.68;
+    font-family:var(--serif); font-size:24px; font-weight:600; color:var(--ink);
   }
-  .level-name {
-    display:block; margin-top:14px;
-    font-family:var(--serif); font-size:26px; font-weight:600;
-  }
-  .level-exp {
+  .page-sub {
     display:block; margin-top:8px;
-    font-size:12px; color:rgba(255,255,255,.62);
+    font-size:12px; color:var(--muted);
   }
-  .level-progress { margin-top:20px; }
-  .progress-track {
-    height:3px; border-radius:2px;
-    background:rgba(255,255,255,.18); overflow:hidden;
-  }
-  .progress-fill {
-    height:100%; border-radius:2px;
-    background:linear-gradient(90deg,#C9A98A,#E8D5C0);
-    transition:width .6s ease;
-  }
+  .page-sub em { font-style:normal; color:var(--primary); font-weight:650; }
 
   /* ── Editorial section：线性分隔 + 留白 ── */
-  .section { margin-top:34px; }
+  .section { margin-top:32px; }
   .section-head {
     display:flex; align-items:baseline; justify-content:space-between; gap:12px;
     margin-bottom:4px;
@@ -74,9 +55,7 @@
   .section-title {
     font-size:11px; font-weight:700; letter-spacing:.18em; color:var(--muted);
   }
-  .section-sub {
-    font-size:11px; color:var(--muted);
-  }
+  .section-sub { font-size:11px; color:var(--muted); }
 
   /* 本月可用：行式 */
   .benefit-row {
@@ -103,6 +82,7 @@
   .b-btn:active { background:var(--card); }
 
   /* 权益对比：每级一行 */
+  .compare-list { margin-top:6px; }
   .compare-row {
     display:flex; align-items:baseline; justify-content:space-between; gap:12px;
     padding:14px 2px;
@@ -128,6 +108,48 @@
     padding:10px 2px 0;
     font-size:11px; line-height:1.7; color:var(--muted);
   }
+
+  /* ── 会员进度（复用 web 端进度条，适配 Editorial） ── */
+  .member-progress {
+    margin-top:40px;
+    padding:22px 2px 0;
+    border-top:1px solid var(--border);
+  }
+  .progress-top {
+    display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+    margin-bottom:14px;
+  }
+  .progress-level {
+    font-family:var(--serif); font-size:18px; font-weight:600; color:var(--ink);
+  }
+  .progress-level em {
+    font-style:normal; font-size:11px; font-weight:700; letter-spacing:.12em;
+    color:var(--muted); margin-left:8px;
+  }
+  .progress-exp { font-size:13px; font-weight:650; color:var(--ink); }
+  .progress-exp i { font-style:normal; font-size:11px; font-weight:400; color:var(--muted); }
+  .progress-track {
+    height:3px; border-radius:2px;
+    background:var(--border); overflow:hidden;
+  }
+  .progress-fill {
+    height:100%; border-radius:2px;
+    background:var(--primary); transition:width .6s ease;
+  }
+  .progress-motivation {
+    margin-top:10px;
+    font-size:11px; text-align:center; color:var(--muted);
+  }
+  .progress-motivation em { font-style:normal; color:var(--primary); font-weight:650; }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
 </style>
 </head>
 <body>
@@ -136,16 +158,10 @@
 
     <a class="back-btn" onclick="goBack('profile.html')">‹</a>
 
-    <!-- 等级卡（身份 + 成长） -->
-    <div class="current-level">
-      <div class="level-info">
-        <span class="level-eyebrow">COZY MEMBER</span>
-        <span class="level-name">白银会员</span>
-        <span class="level-exp">380 EXP · 距离黄金会员</span>
-      </div>
-      <div class="level-progress">
-        <div class="progress-track"><div class="progress-fill" style="width:62%"></div></div>
-      </div>
+    <!-- 页头：安静身份行 -->
+    <div class="page-head">
+      <span class="page-title">会员权益</span>
+      <span class="page-sub">白银会员 <em>· SILVER</em></span>
     </div>
 
     <!-- 本月可用 -->
@@ -193,6 +209,18 @@
         基础 <em>0</em> · 白银 <em>500</em> · 黄金 <em>1,500</em> · 钻石 <em>4,000</em> · 黑金 <em>9,000</em> EXP
       </div>
       <div class="rule-note">消费 1 元 = 1 EXP，达到门槛自动升级，升级后权益永久生效。</div>
+    </div>
+
+    <!-- 会员进度（web 端进度条复用，置底） -->
+    <div class="member-progress">
+      <div class="progress-top">
+        <span class="progress-level">白银会员 <em>SILVER</em></span>
+        <span class="progress-exp">1,120 <i>/ 1,500 EXP</i></span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width:62%"></div>
+      </div>
+      <div class="progress-motivation">再积 <em>380</em> EXP 升级至黄金会员</div>
     </div>
 
   </div>
