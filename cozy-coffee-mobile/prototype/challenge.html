@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>月度挑战 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  /* ── 顶部原生式导航 ── */
+  .top-nav {
+    position:relative;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px;
+  }
+  .nav-back { font-size:26px; line-height:1; color:var(--ink); cursor:pointer; padding:6px 4px; width:32px; }
+  .nav-back:active { opacity:.5; }
+  .nav-title {
+    position:absolute; left:50%; transform:translateX(-50%);
+    font-size:16px; font-weight:600; color:var(--ink);
+    white-space:nowrap;
+  }
+  .nav-right { width:32px; }
+
+  .page { padding:0 20px 120px; }
+
+  /* ── Hero ── */
+  .challenge-hero {
+    margin-top:6px;
+    padding:26px 24px 22px;
+    border-radius:12px; color:#fff;
+    background:linear-gradient(135deg,#3A342E,#2C1E18);
+    text-align:center;
+  }
+  .hero-eyebrow {
+    display:block;
+    font-size:9px; font-weight:700; letter-spacing:.26em;
+    opacity:.7;
+  }
+  .hero-title {
+    display:block; margin-top:10px;
+    font-family:var(--serif); font-size:24px; font-weight:600;
+  }
+  .hero-sub {
+    display:block; margin-top:6px;
+    font-size:12px; color:rgba(255,255,255,.65);
+  }
+  .hero-stats {
+    display:flex; gap:12px;
+    margin-top:22px;
+  }
+  .stat {
+    flex:1; padding:12px 0;
+    border-radius:8px;
+    background:rgba(255,255,255,.08);
+  }
+  .stat-val { display:block; font-size:18px; font-weight:700; }
+  .stat-lbl { display:block; margin-top:3px; font-size:10px; opacity:.7; }
+
+  /* ── 任务列表 ── */
+  .task-section {
+    margin-top:16px; padding:8px 20px 12px;
+    border-radius:12px; background:var(--card);
+  }
+  .task-card {
+    padding:18px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .task-card:last-child { border-bottom:0; }
+  .task-topline {
+    display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
+  }
+  .task-title { display:block; font-size:14px; font-weight:600; color:var(--ink); }
+  .task-desc { display:block; margin-top:3px; font-size:11px; color:var(--muted); }
+  .task-reward { flex:none; font-size:13px; font-weight:700; color:var(--primary); }
+  .task-progress-track {
+    margin-top:12px; height:4px; border-radius:2px;
+    background:var(--border); overflow:hidden;
+  }
+  .task-progress-fill {
+    height:100%; border-radius:2px;
+    background:var(--primary); transition:width .5s ease;
+  }
+  .task-bottomline {
+    margin-top:8px; display:flex; justify-content:space-between; align-items:center;
+    font-size:11px; color:var(--muted);
+  }
+  .task-state { font-weight:600; }
+  .task-state.done { color:var(--accent); }
+  .claim-btn {
+    padding:6px 16px; border-radius:6px;
+    border:1px solid var(--primary); background:var(--card); color:var(--primary);
+    font-size:12px; font-weight:600; cursor:pointer;
+  }
+  .claim-btn:active { background:var(--surface); }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- 顶部导航 -->
+  <div class="top-nav">
+    <span class="nav-back" onclick="goBack('profile.html')">‹</span>
+    <span class="nav-title">月度挑战</span>
+    <span class="nav-right"></span>
+  </div>
+
+  <!-- Hero -->
+  <div class="challenge-hero">
+    <span class="hero-eyebrow">COZY CHALLENGE</span>
+    <span class="hero-title">8 月咖啡挑战</span>
+    <span class="hero-sub">完成挑战任务，赢取额外积分</span>
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-val" id="heroDone">1/4</span><span class="stat-lbl">已完成挑战</span></div>
+      <div class="stat"><span class="stat-val" id="heroPoints">+150</span><span class="stat-lbl">本月已获积分</span></div>
+    </div>
+  </div>
+
+  <!-- 任务列表 -->
+  <div class="task-section" id="taskList"></div>
+
+</div>
+
+<script>
+  // state: progress进行中 / claimable可领取 / claimed已领取
+  const tasks = [
+    { title:'完成 3 次咖啡订单', desc:'到店自提或外送均可', reward:100, cur:2, total:3, state:'progress' },
+    { title:'完成 1 次积分兑换', desc:'积分商城任意商品', reward:150, cur:1, total:1, state:'claimed' },
+    { title:'连续签到 7 天', desc:'每日签到页打卡', reward:200, cur:3, total:7, state:'progress' },
+    { title:'新品尝鲜', desc:'下单含「新品」标签商品', reward:120, cur:1, total:1, state:'claimable' }
+  ];
+
+  function render() {
+    const box = document.getElementById('taskList');
+    box.innerHTML = tasks.map((t, i) => {
+      const pct = Math.round(t.cur / t.total * 100);
+      const stateHTML = {
+        progress: '<span class="task-state">进行中</span>',
+        claimable: `<button class="claim-btn" onclick="claimTask(${i})">领取</button>`,
+        claimed: '<span class="task-state done">已完成 · 已领取</span>'
+      }[t.state];
+      return `
+        <div class="task-card">
+          <div class="task-topline">
+            <div>
+              <span class="task-title">${t.title}</span>
+              <span class="task-desc">${t.desc}</span>
+            </div>
+            <span class="task-reward">+${t.reward} 积分</span>
+          </div>
+          <div class="task-progress-track"><div class="task-progress-fill" style="width:${pct}%"></div></div>
+          <div class="task-bottomline">
+            <span>${t.cur}/${t.total}</span>
+            ${stateHTML}
+          </div>
+        </div>`;
+    }).join('');
+
+    const done = tasks.filter(t => t.state === 'claimed').length;
+    document.getElementById('heroDone').textContent = done + '/' + tasks.length;
+    document.getElementById('heroPoints').textContent = '+' + tasks
+      .filter(t => t.state === 'claimed').reduce((s, t) => s + t.reward, 0);
+  }
+
+  function claimTask(i) {
+    if (tasks[i].state !== 'claimable') return;
+    tasks[i].state = 'claimed';
+    render();
+    toast('已领取 +' + tasks[i].reward + ' 积分');
+  }
+
+  function goBack(fallback) {
+    if (document.referrer && window.history.length > 1) { history.back(); }
+    else { location.href = fallback; }
+  }
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
+  }
+
+  render();
+</script>
+</body>
+</html>
