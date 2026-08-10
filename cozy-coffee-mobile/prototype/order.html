@@ -154,153 +154,25 @@
 
   <!-- 分类切换 -->
   <div class="category-switch">
-    <div class="category-item active" onclick="switchCat(this,'咖啡订单')">
-      咖啡订单<span class="category-count">2</span>
+    <div class="category-item active" data-f="pickup" onclick="switchCat(this)">
+      自取<span class="category-count" id="pickupCount">1</span>
     </div>
-    <div class="category-item" onclick="switchCat(this,'兑换订单')">
-      兑换订单<span class="category-count">2</span>
+    <div class="category-item" data-f="delivery" onclick="switchCat(this)">
+      外送<span class="category-count" id="deliveryCount">1</span>
     </div>
   </div>
 
   <div class="page">
 
-    <!-- 咖啡订单视图 -->
-    <div id="coffeeView">
-      <div class="order-receipt" onclick="go('order-detail.html?id=coz2026073110')">
-        <div class="receipt-head">
-          <div>
-            <span class="store-name">CozyCoffee 中心店</span>
-            <span class="order-meta">07-31 15:28:45 · 取餐码 <em>A021</em></span>
-          </div>
-          <div class="status-block">
-            <span class="order-status processing">制作中</span>
-            <span class="expire-countdown">预计 15:32 可取</span>
-          </div>
-        </div>
-        <div class="receipt-items">
-          <div class="order-item">
-            <div class="item-image"></div>
-            <div class="item-info">
-              <span class="item-name">云南保山 SOE</span>
-              <span class="item-spec">热 · 中杯 · 微甜</span>
-            </div>
-            <div class="item-right">
-              <span class="item-price">¥28.00</span>
-              <span class="item-qty">× 1</span>
-            </div>
-          </div>
-          <div class="order-item">
-            <div class="item-image" style="background:linear-gradient(135deg,#D4C8B8,#C8B8A4);"></div>
-            <div class="item-info">
-              <span class="item-name">Dirty</span>
-              <span class="item-spec">冰 · 中杯 · 正常</span>
-            </div>
-            <div class="item-right">
-              <span class="item-price">¥32.00</span>
-              <span class="item-qty">× 1</span>
-            </div>
-          </div>
-        </div>
-        <div class="receipt-summary">
-          <span class="summary-label">共 2 件 · 到店自提</span>
-          <span class="order-action" onclick="event.stopPropagation(); reorder('coz2026073110')">再来一单</span>
-        </div>
-      </div>
+    <!-- 咖啡订单（JS 渲染，按自取/外送过滤） -->
+    <div id="orderList"></div>
 
-      <div class="order-receipt" onclick="go('order-detail.html?id=coz2026072907')">
-        <div class="receipt-head">
-          <div>
-            <span class="store-name">CozyCoffee 中心店</span>
-            <span class="order-meta">07-29 09:12:30 · 取餐码 <em>B018</em></span>
-          </div>
-          <span class="order-status completed">已完成</span>
-        </div>
-        <div class="receipt-items">
-          <div class="order-item">
-            <div class="item-image" style="background:linear-gradient(135deg,#C8D0C8,#B8C4B8);"></div>
-            <div class="item-info">
-              <span class="item-name">冷萃咖啡</span>
-              <span class="item-spec">冰 · 中杯 · 无糖</span>
-            </div>
-            <div class="item-right">
-              <span class="item-price">¥28.00</span>
-              <span class="item-qty">× 1</span>
-            </div>
-          </div>
-          <div class="order-item">
-            <div class="item-image" style="background:linear-gradient(135deg,#E8C9C0,#D8B0A4);"></div>
-            <div class="item-info">
-              <span class="item-name">冰摇荔枝咖啡</span>
-              <span class="item-spec">冰 · 大杯 · 微糖</span>
-            </div>
-            <div class="item-right">
-              <span class="item-price">¥38.00</span>
-              <span class="item-qty">× 1</span>
-            </div>
-          </div>
-        </div>
-        <div class="receipt-summary">
-          <span class="summary-label">共 2 件 · 到店自提</span>
-          <span class="order-action" onclick="event.stopPropagation(); reorder('coz2026072907')">再来一单</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 兑换订单视图 -->
-    <div id="redeemView" style="display:none;">
-      <div class="order-receipt" onclick="go('redeem-detail.html?id=coz2026073000')">
-        <div class="receipt-head">
-          <div>
-            <span class="store-name">积分兑换</span>
-            <span class="order-meta">07-30 14:22:18 · 权益码 <em>RZ78921</em></span>
-          </div>
-          <span class="order-status completed">已完成</span>
-        </div>
-        <div class="receipt-items">
-          <div class="order-item">
-            <div class="item-image"></div>
-            <div class="item-info">
-              <span class="item-name">云南保山 SOE 咖啡豆</span>
-              <span class="item-spec">数量 × 1</span>
-            </div>
-          </div>
-        </div>
-        <div class="receipt-summary">
-          <span class="summary-label">已发放至券包</span>
-          <span class="order-action" onclick="event.stopPropagation(); rereedeem('coz2026073000')">再次兑换</span>
-        </div>
-      </div>
-
-      <div class="order-receipt" onclick="go('redeem-detail.html?id=coz2026072700')">
-        <div class="receipt-head">
-          <div>
-            <span class="store-name">积分兑换</span>
-            <span class="order-meta">07-27 16:05:33 · 物流 <em>SF1234567890</em></span>
-          </div>
-          <span class="order-status completed">已完成</span>
-        </div>
-        <div class="receipt-items">
-          <div class="order-item">
-            <div class="item-image" style="background:linear-gradient(135deg,#D8CFC4,#C8BCAE);"></div>
-            <div class="item-info">
-              <span class="item-name">拿铁金定制马克杯</span>
-              <span class="item-spec">数量 × 1</span>
-            </div>
-          </div>
-        </div>
-        <div class="receipt-summary">
-          <span class="summary-label">快递配送</span>
-          <span class="order-action" onclick="event.stopPropagation(); rereedeem('coz2026072700')">再次兑换</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 空状态（无数据时） -->
+    <!-- 空状态 -->
     <div class="empty-state" id="emptyState" style="display:none;">
       <span class="empty-icon">☕</span>
-      <span class="empty-title">还没有咖啡订单</span>
+      <span class="empty-title" id="emptyTitle">暂无自取订单</span>
       <span class="empty-desc">选择一杯喜欢的咖啡，<br>我们会为你现制。</span>
-      <span class="empty-action">探索咖啡 →</span>
+      <span class="empty-action" onclick="go('menu.html')">去点单 →</span>
     </div>
 
   </div>
@@ -328,6 +200,85 @@
 
   function go(href) { location.href = href; }
 
+  // 咖啡订单数据（自取/外送）
+  const COFFEE_ORDERS = [
+    {
+      id:'coz2026073110', fulfillment:'pickup', status:'processing', statusText:'制作中',
+      time:'07-31 15:28:45', meta:'取餐码 <em>A021</em>', note:'预计 15:32 可取',
+      items:[
+        { name:'云南保山 SOE', spec:'热 · 中杯 · 微甜', price:'¥28.00', qty:'× 1' },
+        { name:'Dirty', spec:'冰 · 中杯 · 正常', price:'¥32.00', qty:'× 1' }
+      ],
+      count:'共 2 件 · 到店自提'
+    },
+    {
+      id:'coz2026072907', fulfillment:'delivery', status:'completed', statusText:'已完成',
+      time:'07-29 09:12:30', meta:'外送 · 文三路 128 号', note:'已送达',
+      items:[
+        { name:'冷萃咖啡', spec:'冰 · 中杯 · 无糖', price:'¥28.00', qty:'× 1' },
+        { name:'冰摇荔枝咖啡', spec:'冰 · 大杯 · 微糖', price:'¥38.00', qty:'× 1' }
+      ],
+      count:'共 2 件 · 外送'
+    }
+  ];
+
+  let activeFulfillment = 'pickup';
+
+  function render() {
+    const list = document.getElementById('orderList');
+    document.getElementById('pickupCount').textContent = COFFEE_ORDERS.filter(o => o.fulfillment === 'pickup').length;
+    document.getElementById('deliveryCount').textContent = COFFEE_ORDERS.filter(o => o.fulfillment === 'delivery').length;
+    const shown = COFFEE_ORDERS.filter(o => o.fulfillment === activeFulfillment);
+
+    if (!shown.length) {
+      document.getElementById('orderList').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'block';
+      document.getElementById('emptyTitle').textContent = '暂无' + (activeFulfillment === 'pickup' ? '自取' : '外送') + '订单';
+      return;
+    }
+    document.getElementById('orderList').style.display = 'block';
+    document.getElementById('emptyState').style.display = 'none';
+
+    list.innerHTML = shown.map(o => `
+      <div class="order-receipt" onclick="go('order-detail.html?id=${o.id}')">
+        <div class="receipt-head">
+          <div>
+            <span class="store-name">CozyCoffee 中心店</span>
+            <span class="order-meta">${o.time} · ${o.meta}</span>
+          </div>
+          <div class="status-block">
+            <span class="order-status ${o.status}">${o.statusText}</span>
+            ${o.note ? '<span class="expire-countdown">' + o.note + '</span>' : ''}
+          </div>
+        </div>
+        <div class="receipt-items">
+          ${o.items.map(it => `
+            <div class="order-item">
+              <div class="item-image"></div>
+              <div class="item-info">
+                <span class="item-name">${it.name}</span>
+                <span class="item-spec">${it.spec}</span>
+              </div>
+              <div class="item-right">
+                <span class="item-price">${it.price}</span>
+                <span class="item-qty">${it.qty}</span>
+              </div>
+            </div>`).join('')}
+        </div>
+        <div class="receipt-summary">
+          <span class="summary-label">${o.count}</span>
+          <span class="order-action" onclick="event.stopPropagation(); reorder('${o.id}')">再来一单</span>
+        </div>
+      </div>`).join('');
+  }
+
+  function switchCat(el) {
+    document.querySelectorAll('.category-item').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    activeFulfillment = el.dataset.f;
+    render();
+  }
+
   // 再来一单：订单项 → localStorage → 菜单页恢复购物车
   const REORDER = {
     coz2026073110: [
@@ -346,25 +297,7 @@
     location.href = 'menu.html';
   }
 
-  // 再次兑换：跳积分商城，由 mall.html 校验商品是否在售
-  const REREEDEEM = {
-    coz2026073000: { productName:'云南保山 SOE 咖啡豆' },
-    coz2026072700: { productName:'拿铁金定制马克杯' }
-  };
-  function rereedeem(id) {
-    const p = REREEDEEM[id];
-    if (!p) return;
-    localStorage.setItem('cozy_rereedeem', JSON.stringify(p));
-    location.href = 'mall.html';
-  }
-
-  function switchCat(el, label) {
-    document.querySelectorAll('.category-item').forEach(t => t.classList.remove('active'));
-    el.classList.add('active');
-    const isCoffee = label === '咖啡订单';
-    document.getElementById('coffeeView').style.display = isCoffee ? 'block' : 'none';
-    document.getElementById('redeemView').style.display = isCoffee ? 'none' : 'block';
-  }
+  render();
 
   function toast(msg) {
     let t = document.querySelector('.toast');

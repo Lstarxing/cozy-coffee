@@ -21,7 +21,7 @@
     --roastery-ink:#2B1E16; --quiet-ink:#756A63;
     --placeholder:#9E948E; --hairline:#E3DED8;
     --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
-    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
 
@@ -50,16 +50,21 @@
     text-align:center;
     color:#fff;
   }
-  .pickup-panel.processing { background:var(--roast-brown); }
+  .pickup-panel.processing,
+  .pickup-panel.pending,
+  .pickup-panel.shipped { background:var(--roast-brown); }
   .pickup-panel.completed { background:var(--glaze-green); }
+  .pickup-panel.cancelled { background:#756A63; }
   .pickup-eyebrow { display:block; font-size:10px; font-weight:700; letter-spacing:.24em; opacity:.8; }
   .pickup-code {
     display:block; margin-top:8px;
-    font-family:var(--serif); font-size:42px; font-weight:800; letter-spacing:.1em; line-height:1;
+    font-family:var(--serif); font-size:34px; font-weight:800; letter-spacing:.06em; line-height:1;
+    word-break:break-all;
   }
+  .code-caption { display:block; margin-top:8px; font-size:10px; letter-spacing:.16em; opacity:.75; }
   .pickup-status { display:block; margin-top:8px; font-size:12px; opacity:.85; }
 
-  /* ── 门店（第一主体） ── */
+  /* ── 门店/配送（第一主体） ── */
   .store-block {
     display:flex; align-items:center; gap:12px;
     padding:22px 2px 18px;
@@ -96,6 +101,7 @@
   .product-right { flex:none; text-align:right; }
   .product-price { display:block; font-size:15px; font-weight:650; color:var(--ink); }
   .product-qty { display:block; margin-top:4px; font-size:11px; color:var(--muted); }
+  .product-points { display:block; font-size:15px; font-weight:700; color:var(--primary); }
 
   /* ── 金额（优惠总结） ── */
   .amount-block { padding:6px 2px 10px; }
@@ -127,7 +133,7 @@
   }
   .copy-btn:active { opacity:.6; }
 
-  /* ── 底部再来一单 ── */
+  /* ── 底部操作 ── */
   .detail-footer {
     position:fixed; bottom:0; left:50%; transform:translateX(-50%);
     width:100%; max-width:390px;
@@ -171,16 +177,17 @@
   <div class="pickup-panel processing" id="pickupPanel">
     <span class="pickup-eyebrow" id="pickupEyebrow">COZY PICKUP</span>
     <span class="pickup-code" id="pickupCode">A021</span>
+    <span class="code-caption" id="codeCaption">取餐码</span>
     <span class="pickup-status" id="pickupStatus">正在制作 · 预计 15:32 完成</span>
   </div>
 
-  <!-- 门店（第一主体） -->
+  <!-- 门店/配送（第一主体） -->
   <div class="store-block">
     <div class="store-copy">
       <span class="store-name" id="storeName">CozyCoffee 中心店</span>
       <span class="store-addr" id="storeAddr">杭州 · 文三路 128 号</span>
     </div>
-    <div class="store-actions">
+    <div class="store-actions" id="storeActions">
       <span class="store-act" onclick="toast('拨打门店电话')" title="电话">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6c0-1.1.9-2 2-2h2l1.5 4.5L7 10a13 13 0 0 0 7 7l1.5-2.5L20 16v2a2 2 0 0 1-2 2A14 14 0 0 1 4 6z"/></svg>
       </span>
@@ -200,55 +207,105 @@
   <div class="meta-block">
     <div class="meta-row"><span>下单时间</span><span id="orderTime">07-31 15:28:45</span></div>
     <div class="meta-row"><span>订单编号</span><span><span id="orderNo">COZ2026073110</span><em class="copy-btn" onclick="copyOrderNo()">复制</em></span></div>
-    <div class="meta-row"><span>取餐码</span><span id="orderPickup">A021</span></div>
+    <div class="meta-row"><span id="metaFulfillLabel">取餐码</span><span id="metaFulfill">A021</span></div>
   </div>
 
 </div>
 
-<!-- 底部再来一单 -->
+<!-- 底部操作 -->
 <div class="detail-footer">
-  <div class="reorder-btn" onclick="reorder()">再来一单</div>
+  <div class="reorder-btn" id="footerBtn" onclick="footerAction()">再来一单</div>
 </div>
 
 <script>
   const ORDERS = {
+    /* ── 咖啡订单 ── */
     coz2026073110: {
-      status: 'processing', eyebrow: 'COZY PICKUP', pickup: 'A021',
-      statusText: '正在制作 · 预计 15:32 完成',
-      store: 'CozyCoffee 中心店', storeAddr: '杭州 · 文三路 128 号',
-      items: [
+      type:'coffee', fulfillment:'pickup', status:'processing',
+      eyebrow:'COZY PICKUP', code:'A021', codeCaption:'取餐码', statusText:'正在制作 · 预计 15:32 完成',
+      store:'CozyCoffee 中心店', storeAddr:'杭州 · 文三路 128 号',
+      items:[
         { name:'云南保山 SOE', productName:'经典手冲', spec:'热 / 中杯 / 默认糖', price:'¥28.00', qty:'× 1' },
         { name:'Dirty', productName:'Dirty', spec:'冰 / 中杯 / 正常', price:'¥32.00', qty:'× 1' }
       ],
-      coupon: { label:'满35减10', discount:'-¥10.00' },
-      goodsAmount: '¥60.00', paid: '¥50.00',
-      time: '07-31 15:28:45', orderNo: 'COZ2026073110'
+      coupon:{ label:'满35减10', discount:'-¥10.00' },
+      goodsAmount:'¥60.00', paid:'¥50.00',
+      time:'07-31 15:28:45', orderNo:'COZ2026073110'
     },
     coz2026072907: {
-      status: 'completed', eyebrow: 'COZY COFFEE', pickup: 'B018',
-      statusText: '订单已完成 · 取餐完成',
-      store: 'CozyCoffee 中心店', storeAddr: '杭州 · 文三路 128 号',
-      items: [
+      type:'coffee', fulfillment:'delivery', status:'completed',
+      eyebrow:'COZY DELIVERY', code:'SF1068192000', codeCaption:'物流单号', statusText:'订单已完成 · 已送达',
+      store:'CozyCoffee 中心店', deliveryAddr:'文三路 128 号 3 幢 1 单元',
+      items:[
         { name:'冷萃咖啡', productName:'瓶装冷萃', spec:'冰 / 中杯 / 无糖', price:'¥28.00', qty:'× 1' },
         { name:'冰摇荔枝咖啡', productName:'冰摇荔枝咖啡', spec:'冰 / 大杯 / 微糖', price:'¥38.00', qty:'× 1' }
       ],
-      coupon: null,
-      goodsAmount: '¥66.00', paid: '¥66.00',
-      time: '07-29 09:12:30', orderNo: 'COZ2026072907'
+      coupon:null,
+      goodsAmount:'¥66.00', paid:'¥66.00',
+      time:'07-29 09:12:30', orderNo:'COZ2026072907'
+    },
+
+    /* ── 兑换订单 ── */
+    rd202607280002: {
+      type:'redeem', fulfillment:'pickup', status:'completed',
+      eyebrow:'COZY PICKUP', code:'P72811', codeCaption:'取货码', statusText:'已完成 · 到店自提',
+      store:'杭州中心店', storeAddr:'文三路 128 号',
+      items:[ { name:'Cozy 品牌贴纸包', productName:'Cozy 品牌贴纸包', spec:'数量 × 1', points:'100 积分' } ],
+      consumePoints:'100', remainingPoints:'3,180',
+      time:'07-28 11:05:32', orderNo:'RD202607280002'
+    },
+    rd202607200003: {
+      type:'redeem', fulfillment:'delivery', status:'shipped',
+      eyebrow:'COZY DELIVERY', code:'SF1068192001', codeCaption:'物流单号', statusText:'已发货 · 顺丰速运',
+      store:'杭州中心店', deliveryAddr:'浙江省杭州市西湖区文三路 128 号',
+      items:[ { name:'Cozy 经典帆布包', productName:'Cozy 经典帆布包', spec:'数量 × 1', points:'1,600 积分' } ],
+      consumePoints:'1,600', remainingPoints:'2,080',
+      time:'07-20 16:42:10', orderNo:'RD202607200003'
+    },
+    rd202607120004: {
+      type:'redeem', fulfillment:'delivery', status:'processing',
+      eyebrow:'COZY DELIVERY', code:'SF1068192002', codeCaption:'物流单号', statusText:'处理中 · 等待揽收',
+      store:'杭州中心店', deliveryAddr:'浙江省杭州市西湖区文三路 128 号',
+      items:[ { name:'挂耳咖啡精选礼盒', productName:'挂耳咖啡精选礼盒', spec:'数量 × 1', points:'3,500 积分' } ],
+      consumePoints:'3,500', remainingPoints:'1,580',
+      time:'07-12 09:30:44', orderNo:'RD202607120004'
+    },
+    rd202607050005: {
+      type:'redeem', fulfillment:'delivery', status:'pending',
+      eyebrow:'COZY DELIVERY', code:'待出库', codeCaption:'物流单号', statusText:'待处理 · 即将发货',
+      store:'杭州中心店', deliveryAddr:'浙江省杭州市西湖区文三路 128 号',
+      items:[ { name:'定制拿铁金搅拌勺', productName:'定制拿铁金搅拌勺', spec:'数量 × 1', points:'600 积分' } ],
+      consumePoints:'600', remainingPoints:'2,280',
+      time:'07-05 14:18:22', orderNo:'RD202607050005'
+    },
+    rd202606300006: {
+      type:'redeem', fulfillment:'pickup', status:'cancelled',
+      eyebrow:'COZY PICKUP', code:'P63019', codeCaption:'取货码', statusText:'已取消 · 积分已退还',
+      store:'杭州中心店', storeAddr:'文三路 128 号',
+      items:[ { name:'拿铁金定制马克杯', productName:'拿铁金定制马克杯', spec:'数量 × 1', points:'1,200 积分' } ],
+      consumePoints:'1,200', remainingPoints:'2,080',
+      time:'06-30 19:05:11', orderNo:'RD202606300006'
     }
   };
+
+  let currentOrder = null;
 
   (function init() {
     const id = new URLSearchParams(location.search).get('id');
     const o = ORDERS[id] || ORDERS.coz2026073110;
+    currentOrder = o;
 
     document.getElementById('pickupPanel').className = 'pickup-panel ' + o.status;
     document.getElementById('pickupEyebrow').textContent = o.eyebrow;
-    document.getElementById('pickupCode').textContent = o.pickup;
+    document.getElementById('pickupCode').textContent = o.code;
+    document.getElementById('codeCaption').textContent = o.codeCaption;
     document.getElementById('pickupStatus').textContent = o.statusText;
 
-    document.getElementById('storeName').textContent = o.store;
-    document.getElementById('storeAddr').textContent = o.storeAddr;
+    document.getElementById('storeName').textContent = o.store || 'CozyCoffee 中心店';
+    document.getElementById('storeAddr').textContent = o.fulfillment === 'delivery'
+      ? '配送至 · ' + (o.deliveryAddr || '')
+      : (o.storeAddr || '');
+    document.getElementById('storeActions').style.display = o.fulfillment === 'pickup' ? 'flex' : 'none';
 
     document.getElementById('itemList').innerHTML = o.items.map(it => `
       <div class="product-row">
@@ -258,23 +315,49 @@
           <span class="product-spec">${it.spec}</span>
         </div>
         <div class="product-right">
-          <span class="product-price">${it.price}</span>
-          <span class="product-qty">${it.qty}</span>
+          ${it.price
+            ? `<span class="product-price">${it.price}</span><span class="product-qty">${it.qty}</span>`
+            : `<span class="product-points">${it.points}</span>`}
         </div>
       </div>`).join('');
 
-    let amountHTML = `<div class="amount-row"><span>商品金额</span><span>${o.goodsAmount}</span></div>`;
-    if (o.coupon) {
-      amountHTML += `<div class="amount-row discount"><span>优惠券 <span class="coupon-tag">(${o.coupon.label})</span></span><span>${o.coupon.discount}</span></div>`;
+    let amountHTML;
+    if (o.type === 'coffee') {
+      amountHTML = `<div class="amount-row"><span>商品金额</span><span>${o.goodsAmount}</span></div>`;
+      if (o.coupon) {
+        amountHTML += `<div class="amount-row discount"><span>优惠券 <span class="coupon-tag">(${o.coupon.label})</span></span><span>${o.coupon.discount}</span></div>`;
+      }
+      amountHTML += `<div class="amount-divider"></div>
+        <div class="amount-row total"><span>实付金额</span><span>${o.paid}</span></div>`;
+    } else {
+      amountHTML = `
+        <div class="amount-row"><span>消耗积分</span><span>${o.consumePoints} 积分</span></div>
+        <div class="amount-row"><span>兑换后剩余</span><span>${o.remainingPoints} 积分</span></div>
+        <div class="amount-divider"></div>
+        <div class="amount-row total"><span>实付</span><span>${o.consumePoints} 积分</span></div>`;
     }
-    amountHTML += `<div class="amount-divider"></div>
-      <div class="amount-row total"><span>实付金额</span><span>${o.paid}</span></div>`;
     document.getElementById('priceList').innerHTML = amountHTML;
 
     document.getElementById('orderTime').textContent = o.time;
     document.getElementById('orderNo').textContent = o.orderNo;
-    document.getElementById('orderPickup').textContent = o.pickup;
+    document.getElementById('metaFulfillLabel').textContent = o.codeCaption;
+    document.getElementById('metaFulfill').textContent = o.code;
+
+    document.getElementById('footerBtn').textContent = o.type === 'coffee' ? '再来一单' : '再次兑换';
   })();
+
+  function footerAction() {
+    if (!currentOrder) return;
+    if (currentOrder.type === 'coffee') {
+      localStorage.setItem('cozy_reorder', JSON.stringify({
+        items: currentOrder.items.map(it => ({ productName: it.productName, name: it.name, spec: it.spec, price: it.price, qty: it.qty }))
+      }));
+      location.href = 'menu.html';
+    } else {
+      localStorage.setItem('cozy_rereedeem', JSON.stringify({ productName: currentOrder.items[0].productName }));
+      location.href = 'mall.html';
+    }
+  }
 
   function copyOrderNo() {
     const no = document.getElementById('orderNo').textContent.trim();
@@ -288,15 +371,6 @@
   function goBack(fallback) {
     if (document.referrer && window.history.length > 1) { history.back(); }
     else { location.href = fallback; }
-  }
-
-  function reorder() {
-    const id = new URLSearchParams(location.search).get('id');
-    const o = ORDERS[id] || ORDERS.coz2026073110;
-    localStorage.setItem('cozy_reorder', JSON.stringify({
-      items: o.items.map(it => ({ productName: it.productName, name: it.name, spec: it.spec, price: it.price, qty: it.qty }))
-    }));
-    location.href = 'menu.html';
   }
 
   function toast(msg) {
