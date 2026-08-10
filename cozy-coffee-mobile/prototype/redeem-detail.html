@@ -44,66 +44,56 @@
 
   /* ── 状态面板 ── */
   .status-panel {
-    margin-top:6px; padding:24px 24px 22px;
+    margin-top:6px; padding:22px 24px 20px;
     border-radius:14px;
     text-align:center;
   }
   .status-panel.completed { background:var(--glaze-green-soft); color:var(--glaze-green); }
-  .status-label {
-    display:block; font-size:13px; font-weight:700; letter-spacing:.08em;
-  }
+  .status-label { display:block; font-size:13px; font-weight:700; letter-spacing:.08em; }
   .delivery-code {
-    display:block; margin-top:14px;
-    font-family:var(--serif); font-size:34px; font-weight:800; letter-spacing:.06em; line-height:1;
+    display:block; margin-top:12px;
+    font-family:var(--serif); font-size:30px; font-weight:800; letter-spacing:.06em; line-height:1;
   }
   .code-caption { display:block; margin-top:8px; font-size:10px; letter-spacing:.16em; opacity:.7; }
-  .delivery-hint { display:block; margin-top:12px; font-size:12px; opacity:.75; }
+  .delivery-hint { display:block; margin-top:10px; font-size:12px; opacity:.75; }
 
-  /* ── 卡块 ── */
+  /* ── 综合单据卡 ── */
   .card-block {
     margin-top:14px; border-radius:14px; background:var(--card);
-    padding:4px 18px 16px; overflow:hidden;
+    padding:2px 18px 4px; overflow:hidden;
   }
-  .block-title {
-    display:block;
-    padding:14px 0 10px;
-    font-size:10px; font-weight:700; letter-spacing:.18em; color:var(--muted);
-  }
+  .divider { height:1px; background:var(--border); }
 
-  /* 商品行 */
   .item-row {
-    display:flex; align-items:center; gap:12px;
-    padding:12px 0; border-top:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:15px 0 13px;
   }
-  .item-row:first-child { border-top:0; padding-top:6px; }
-  .item-img {
-    flex:none; width:52px; height:52px; border-radius:8px;
-    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
-  }
-  .item-info { flex:1; min-width:0; }
-  .item-name { display:block; font-size:13px; font-weight:650; color:var(--ink); }
-  .item-spec { display:block; margin-top:3px; font-size:11px; color:var(--muted); }
+  .item-main { flex:1; min-width:0; }
+  .item-name { display:block; font-size:14px; font-weight:650; color:var(--ink); }
+  .item-spec { display:block; margin-top:4px; font-size:11px; color:var(--muted); }
   .item-right { flex:none; text-align:right; }
   .item-points { display:block; font-size:14px; font-weight:700; color:var(--primary); }
 
-  /* 积分行 */
   .price-row {
     display:flex; align-items:baseline; justify-content:space-between; gap:12px;
-    padding:11px 0; border-top:1px solid var(--border);
-    font-size:13px; color:var(--ink);
+    padding:11px 0; font-size:13px; color:var(--ink);
   }
-  .price-row:first-child { border-top:0; }
   .price-row.total { padding-top:13px; font-weight:700; }
-  .price-row.total .val { color:var(--primary); font-size:18px; font-weight:750; }
+  .price-row.total .val { color:var(--primary); font-size:16px; font-weight:750; }
 
-  /* 信息行 */
   .info-row {
     display:flex; align-items:baseline; justify-content:space-between; gap:12px;
-    padding:11px 0; border-top:1px solid var(--border);
-    font-size:13px; color:var(--muted);
+    padding:11px 0; font-size:13px; color:var(--muted);
   }
-  .info-row:first-child { border-top:0; }
   .info-row span:last-child { color:var(--ink); text-align:right; }
+  .info-row:last-child { padding-bottom:15px; }
+  .copy-btn {
+    display:inline-block; margin-left:6px;
+    padding:1px 8px; border-radius:6px;
+    border:1px solid var(--primary); color:var(--primary);
+    font-size:11px; font-weight:600; cursor:pointer;
+  }
+  .copy-btn:active { opacity:.6; }
 
   /* ── 底部再次兑换 ── */
   .detail-footer {
@@ -153,25 +143,16 @@
     <span class="delivery-hint" id="deliveryHint">权益已发放至「我的券包」</span>
   </div>
 
-  <!-- 商品明细 -->
+  <!-- 综合单据卡 -->
   <div class="card-block">
-    <span class="block-title">商品明细</span>
     <div id="itemList"></div>
-  </div>
-
-  <!-- 积分明细 -->
-  <div class="card-block">
-    <span class="block-title">积分明细</span>
+    <div class="divider"></div>
     <div id="priceList"></div>
-  </div>
-
-  <!-- 订单信息 -->
-  <div class="card-block">
-    <span class="block-title">订单信息</span>
+    <div class="divider"></div>
     <div class="info-row"><span>兑换时间</span><span id="orderTime">07-30 14:22:18</span></div>
     <div class="info-row"><span>交付方式</span><span id="deliveryMethod">权益码 · 券包</span></div>
     <div class="info-row"><span>权益码</span><span id="orderCode">RZ78921</span></div>
-    <div class="info-row"><span>订单号</span><span id="orderNo">COZ2026073000</span></div>
+    <div class="info-row"><span>订单编号</span><span><span id="orderNo">COZ2026073000</span><em class="copy-btn" onclick="copyOrderNo()">复制</em></span></div>
     <div class="info-row"><span>备注</span><span id="orderRemark">—</span></div>
   </div>
 
@@ -204,6 +185,8 @@
     }
   };
 
+  let currentProductName = '';
+
   (function init() {
     const id = new URLSearchParams(location.search).get('id');
     const o = ORDERS[id] || ORDERS.coz2026073000;
@@ -216,8 +199,7 @@
 
     document.getElementById('itemList').innerHTML = o.items.map(it => `
       <div class="item-row">
-        <div class="item-img"></div>
-        <div class="item-info">
+        <div class="item-main">
           <span class="item-name">${it.name}</span>
           <span class="item-spec">${it.spec}</span>
         </div>
@@ -238,7 +220,14 @@
     document.getElementById('orderRemark').textContent = o.remark;
   })();
 
-  let currentProductName = '';
+  function copyOrderNo() {
+    const no = document.getElementById('orderNo').textContent.trim();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(no).then(() => toast('订单号已复制')).catch(() => {});
+    } else {
+      toast('订单号：' + no);
+    }
+  }
 
   function rereedeem() {
     if (!currentProductName) return;
@@ -249,6 +238,19 @@
   function goBack(fallback) {
     if (document.referrer && window.history.length > 1) { history.back(); }
     else { location.href = fallback; }
+  }
+
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
   }
 </script>
 </body>
