@@ -1,4 +1,7 @@
-<!-- 订单页：咖啡订单与积分兑换订单两类，收据式层级呈现。 -->
+<!--
+  订单页 - 复现 prototype/order.html：自取/外送分类，仅咖啡订单
+  每单: 时间+取餐码/外送地址 + 状态 + 商品 + 再来一单
+-->
 <template>
   <view class="order-page" :style="{ paddingTop: statusBarHeight + 44 + 'px' }">
     <view class="category-switch">
@@ -14,101 +17,54 @@
       </view>
     </view>
 
-    <LoadingState v-if="loading && !currentOrders.length" :text="loadingText" />
-    <RetryState v-else-if="errorMessage && !currentOrders.length" :description="errorMessage" @retry="loadCurrent" />
+    <LoadingState v-if="loading && !coffeeOrders.length" :text="loadingText" />
+    <RetryState v-else-if="errorMessage && !coffeeOrders.length" :description="errorMessage" @retry="loadCurrent" />
 
-    <view v-else-if="currentOrders.length" class="order-list">
-      <!-- 咖啡订单 -->
-      <template v-if="currentCategory === 'coffee'">
-        <view v-for="order in currentOrders" :key="order.id" class="order-receipt" @click="goToDetail(order.id)">
-          <view class="receipt-head">
-            <view>
-              <text class="store-name">CozyCoffee 中心店</text>
-              <text class="order-no">订单 {{ order.orderNo || order.id }}</text>
+    <view v-else-if="shownOrders.length" class="order-list">
+      <view v-for="order in shownOrders" :key="order.id" class="order-receipt" @click="goToDetail(order.id)">
+        <view class="receipt-head">
+          <view>
+            <text class="store-name">CozyCoffee 中心店</text>
+            <text class="order-meta">{{ formatTime(order.createdAt) }} · {{ fulfillmentMeta(order) }}</text>
+          </view>
+          <view class="status-block">
+            <text class="order-status" :class="statusClass(order.status)">{{ getStatusText(order.status) }}</text>
+            <text v-if="isPending(order.status)" class="expire-countdown" :class="{ urgent: isExpiringSoon(order) }">
+              {{ formatCountdown(order) }}
+            </text>
+          </view>
+        </view>
+
+        <view class="receipt-items">
+          <view v-for="item in order.items" :key="item.id || `${item.productName}-${item.spec}`" class="order-item">
+            <image :src="item.productImage || '/static/images/default-product.png'" class="item-image" mode="aspectFill" />
+            <view class="item-info">
+              <text class="item-name">{{ item.productName }}</text>
+              <text class="item-spec">{{ item.spec || '默认规格' }}</text>
             </view>
-            <view class="status-block">
-              <text class="order-status" :class="statusClass(order.status)">{{ getStatusText(order.status) }}</text>
-              <text v-if="isPending(order.status)" class="expire-countdown" :class="{ urgent: isExpiringSoon(order) }">
-                {{ formatCountdown(order) }}
-              </text>
+            <view class="item-right">
+              <text class="item-price">¥{{ money(item.itemAmount ?? Number(item.unitPrice || 0) * Number(item.quantity || 1)) }}</text>
+              <text class="item-qty">× {{ item.quantity }}</text>
             </view>
           </view>
+        </view>
 
-          <view class="receipt-items">
-            <view v-for="item in order.items" :key="item.id || `${item.name}-${item.spec}`" class="order-item">
-              <image :src="item.image" class="item-image" mode="aspectFill" />
-              <view class="item-info">
-                <text class="item-name">{{ item.name }}</text>
-                <text class="item-spec">{{ item.spec || '默认规格' }}</text>
-              </view>
-              <view class="item-right">
-                <text class="item-price">¥{{ money(item.price) }}</text>
-                <text class="item-qty">× {{ item.quantity }}</text>
-              </view>
-            </view>
-          </view>
-
-          <view class="receipt-summary">
-            <view>
-              <text class="summary-label">共 {{ order.totalQty }} 件 · 到店自提</text>
-              <text class="summary-total">实付 ¥{{ money(order.totalPrice) }}</text>
-            </view>
-            <view class="order-action" v-if="normalizeStatus(order.status) === 'completed'" @click.stop="reOrder(order)">再次点单</view>
+        <view class="receipt-summary">
+          <text class="summary-label">共 {{ order.totalQty }} 件 · {{ fulfillmentLabel(order) }}</text>
+          <view class="summary-actions">
+            <view v-if="isCompleted(order.status)" class="order-action" @click.stop="reOrder(order)">再来一单</view>
             <text v-else class="detail-link">查看详情 →</text>
           </view>
         </view>
-      </template>
-
-      <!-- 兑换订单 -->
-      <template v-else>
-        <view v-for="order in currentOrders" :key="order.id" class="order-receipt" @click="goToRedemptionDetail(order.id)">
-          <view class="receipt-head">
-            <view>
-              <text class="store-name">积分兑换</text>
-              <text class="order-no">订单 {{ order.orderNo || order.id }}</text>
-            </view>
-            <text class="order-status" :class="redemptionStatusClass(order.status)">{{ getRedemptionStatusText(order.status) }}</text>
-          </view>
-
-          <view class="receipt-items">
-            <view class="order-item">
-              <image :src="order.productImage ? order.productImage : '/static/images/default-product.png'" class="item-image" mode="aspectFill" />
-              <view class="item-info">
-                <text class="item-name">{{ order.productName }}</text>
-                <text class="item-spec">数量 × {{ order.quantity || 1 }}</text>
-              </view>
-              <view class="item-right">
-                <text class="item-points">{{ order.pointsCost }} 积分</text>
-              </view>
-            </view>
-          </view>
-
-          <view class="receipt-summary">
-            <view>
-              <text class="summary-label">{{ formatRedeemTime(order.createdAt) }}</text>
-              <text v-if="order.fulfillmentType === 'VIRTUAL'" class="summary-total virtual-tag">已发放至券包</text>
-              <text v-else class="summary-total">{{ order.receiverName }} · {{ order.receiverPhone }}</text>
-            </view>
-            <text class="detail-link">查看详情 →</text>
-          </view>
-        </view>
-      </template>
+      </view>
     </view>
 
-    <!-- 咖啡订单空状态 -->
-    <view v-else-if="currentCategory === 'coffee'" class="editorial-empty">
-      <CozyIcon name="coffee" :size="48" color="#8B6958" class="empty-icon" />
-      <text class="empty-title">还没有咖啡订单</text>
-      <text class="empty-desc">选择一杯喜欢的咖啡，<br>我们会为你现制</text>
-      <view class="empty-action" @click="goToMenu">探索咖啡 →</view>
-    </view>
-
-    <!-- 兑换订单空状态 -->
+    <!-- 空状态 -->
     <view v-else class="editorial-empty">
-      <CozyIcon name="gift" :size="48" color="#8B6958" class="empty-icon" />
-      <text class="empty-title">还没有兑换记录</text>
-      <text class="empty-desc">累计积分，<br>兑换你的咖啡礼遇</text>
-      <view class="empty-action" @click="goToMall">查看会员权益 →</view>
+      <CozyIcon name="coffee" :size="48" color="#8B6958" class="empty-icon" />
+      <text class="empty-title">暂无{{ currentCategory === 'pickup' ? '自取' : '外送' }}订单</text>
+      <text class="empty-desc">选择一杯喜欢的咖啡，<br>我们会为你现制。</text>
+      <view class="empty-action" @click="goToMenu">去点单 →</view>
     </view>
   </view>
 </template>
@@ -117,7 +73,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { onHide, onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { getOrderList } from '@/api/order'
-import { getMyRedemptions } from '@/api/member'
 import { useCartStore } from '@/stores/cart'
 import { restoreOrderToCart } from '@/services/order/ReorderService'
 import LoadingState from '@/components/states/LoadingState.vue'
@@ -125,14 +80,13 @@ import RetryState from '@/components/states/RetryState.vue'
 import CozyIcon from '@/components/CozyIcon.vue'
 
 const categories = [
-  { value: 'coffee', label: '咖啡订单' },
-  { value: 'redeem', label: '兑换订单' }
+  { value: 'pickup', label: '自取' },
+  { value: 'delivery', label: '外送' }
 ]
 
-const currentCategory = ref('coffee')
+const currentCategory = ref('pickup')
 const statusBarHeight = ref(20)
 const coffeeOrders = ref([])
-const redeemOrders = ref([])
 const loading = ref(false)
 const errorMessage = ref('')
 const nowTs = ref(Date.now())
@@ -160,69 +114,46 @@ onShow(() => {
 onHide(stopTicker)
 onUnload(stopTicker)
 
-const currentOrders = computed(() =>
-  currentCategory.value === 'coffee' ? coffeeOrders.value : redeemOrders.value
-)
-
-const counts = computed(() => ({
-  coffee: coffeeOrders.value.length,
-  redeem: redeemOrders.value.length
+const shownOrders = computed(() => coffeeOrders.value.filter(order => {
+  const isDelivery = String(order.diningMethod || '').toUpperCase() === 'DELIVERY'
+  return currentCategory.value === 'delivery' ? isDelivery : !isDelivery
 }))
 
+const counts = computed(() => {
+  const delivery = coffeeOrders.value.filter(o => String(o.diningMethod || '').toUpperCase() === 'DELIVERY').length
+  return { pickup: coffeeOrders.value.length - delivery, delivery }
+})
+
 const loadingText = computed(() =>
-  currentCategory.value === 'coffee' ? '正在读取咖啡订单…' : '正在读取兑换订单…'
+  currentCategory.value === 'pickup' ? '正在读取自取订单…' : '正在读取外送订单…'
 )
 
 function switchCategory(value) {
   if (currentCategory.value === value) return
   currentCategory.value = value
-  loadCurrent()
 }
 
 async function loadCurrent() {
   loading.value = true
   errorMessage.value = ''
   try {
-    if (currentCategory.value === 'coffee') {
-      await loadCoffeeOrders()
-    } else {
-      await loadRedeemOrders()
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
-async function loadCoffeeOrders() {
-  try {
     const response = await getOrderList()
     if (response.code === 200 && response.data) {
       coffeeOrders.value = response.data.map(order => ({
         ...order,
-        totalPrice: order.payAmount || order.totalAmount,
         totalQty: order.totalQuantity || 0,
         items: (order.items || []).map(item => ({
           ...item,
-          name: item.productName,
-          price: item.unitPrice,
-          image: item.productImage || '/static/images/default-product.png',
           spec: [item.cupSize, item.temperature, item.sugarLevel].filter(Boolean).join(' · ')
         }))
       }))
+    } else {
+      errorMessage.value = response?.message || '订单加载失败，请稍后重试'
     }
   } catch (error) {
     errorMessage.value = error?.message || '订单加载失败，请稍后重试'
-  }
-}
-
-async function loadRedeemOrders() {
-  try {
-    const response = await getMyRedemptions()
-    if (response.code === 200 && response.data) {
-      redeemOrders.value = response.data
-    }
-  } catch (error) {
-    errorMessage.value = error?.message || '兑换记录加载失败，请稍后重试'
+  } finally {
+    loading.value = false
   }
 }
 
@@ -239,6 +170,8 @@ function stopTicker() {
 
 function normalizeStatus(status) { return String(status || '').toLowerCase() }
 function isPending(status) { return ['pending', 'pending_payment'].includes(normalizeStatus(status)) }
+function isCompleted(status) { return normalizeStatus(status) === 'completed' }
+function isDeliveryOrder(order) { return String(order.diningMethod || '').toUpperCase() === 'DELIVERY' }
 
 function getExpireMs(order) {
   if (order?.expireAt) {
@@ -287,34 +220,27 @@ function statusClass(status) {
   return 'pending'
 }
 
-function getRedemptionStatusText(status) {
-  return ({
-    pending: '待处理', processing: '处理中', completed: '已完成',
-    cancelled: '已取消', canceled: '已取消', issued: '已发放'
-  })[normalizeStatus(status)] || '已提交'
+function fulfillmentMeta(order) {
+  if (isDeliveryOrder(order)) return '外送'
+  return order.pickupCode ? `取餐码 <em class="pickup-em">${order.pickupCode}</em>` : '到店自提'
 }
 
-function redemptionStatusClass(status) {
-  const normalized = normalizeStatus(status)
-  if (['completed', 'issued'].includes(normalized)) return 'completed'
-  if (['cancelled', 'canceled'].includes(normalized)) return 'cancelled'
-  if (normalized === 'processing') return 'processing'
-  return 'pending'
+function fulfillmentLabel(order) {
+  return isDeliveryOrder(order) ? '外送' : '到店自提'
 }
 
-function formatRedeemTime(createdAt) {
-  if (!createdAt) return ''
-  const d = new Date(createdAt)
-  if (Number.isNaN(d.getTime())) return String(createdAt)
+function formatTime(value) {
+  if (!value) return '--'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return String(value).replace('T', ' ').slice(0, 19)
   const pad = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
 function money(value) { return Number(value || 0).toFixed(2) }
 function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
-function goToMall() { uni.navigateTo({ url: '/pages/mall/index' }) }
 function goToDetail(orderId) { uni.navigateTo({ url: `/pages/order/detail?id=${encodeURIComponent(orderId)}` }) }
-function goToRedemptionDetail(orderId) { uni.navigateTo({ url: `/pages/mall/index?orderId=${encodeURIComponent(orderId)}` }) }
+
 async function reOrder(order) {
   if (reorderingOrderId.value) return
   reorderingOrderId.value = String(order?.id || '')
@@ -360,7 +286,7 @@ function openRestoredCart() {
 <style lang="scss" scoped>
 .order-page { min-height: 100vh; padding-bottom: 140rpx; background: $cozy-surface; }
 
-/* 一级分类切换：咖啡订单 / 兑换订单 */
+/* 分类切换：自取 / 外送 */
 .category-switch {
   position: sticky; top: 0; z-index: 10;
   display: flex; height: 96rpx; background: #fff;
@@ -387,7 +313,8 @@ function openRestoredCart() {
 .order-receipt { margin-bottom: 22rpx; overflow: hidden; border-radius: $cozy-radius-lg; background: #fff; }
 .receipt-head { padding: 26rpx 26rpx 22rpx; display: flex; align-items: flex-start; justify-content: space-between; gap: 20rpx; border-bottom: 1rpx solid $cozy-border; }
 .store-name { display: block; color: $cozy-ink; font-size: 27rpx; font-weight: 680; }
-.order-no { display: block; margin-top: 7rpx; color: $cozy-muted; font-size: 19rpx; }
+.order-meta { display: block; margin-top: 7rpx; color: $cozy-muted; font-size: 19rpx; }
+.pickup-em { font-style: normal; color: $cozy-primary; font-weight: 650; }
 .status-block { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 8rpx; }
 .order-status { padding: 6rpx 13rpx; border-radius: 999rpx; font-size: 19rpx; font-weight: 700; }
 .order-status.pending { background: $cozy-warning-soft; color: #8a4d10; }
@@ -406,11 +333,9 @@ function openRestoredCart() {
 .item-right { flex: none; text-align: right; }
 .item-price { display: block; color: $cozy-ink; font-size: 24rpx; font-weight: 650; }
 .item-qty { display: block; margin-top: 7rpx; color: $cozy-muted; font-size: 19rpx; }
-.item-points { display: block; color: $cozy-primary; font-size: 26rpx; font-weight: 750; }
-.receipt-summary { padding: 22rpx 26rpx 25rpx; display: flex; align-items: flex-end; justify-content: space-between; gap: 20rpx; background: $cozy-surface; }
-.summary-label { display: block; color: $cozy-muted; font-size: 19rpx; }
-.summary-total { display: block; margin-top: 7rpx; color: $cozy-primary; font-size: 26rpx; font-weight: 750; }
-.summary-total.virtual-tag { color: $cozy-accent; }
+.receipt-summary { padding: 22rpx 26rpx 25rpx; display: flex; align-items: center; justify-content: space-between; gap: 20rpx; background: $cozy-surface; }
+.summary-label { color: $cozy-muted; font-size: 19rpx; }
+.summary-actions { flex: none; display: flex; align-items: center; }
 .order-action { min-height: 66rpx; padding: 0 20rpx; display: flex; align-items: center; border: 1rpx solid $cozy-primary; border-radius: $cozy-radius-md; color: $cozy-primary; font-size: 21rpx; font-weight: 650; }
 .detail-link { padding-bottom: 9rpx; color: $cozy-primary; font-size: 20rpx; font-weight: 650; }
 
@@ -419,17 +344,9 @@ function openRestoredCart() {
   display: flex; flex-direction: column; align-items: center;
   padding: 420rpx 60rpx 120rpx; text-align: center;
 }
-.empty-icon {
-  margin-bottom: 32rpx;
-}
-.empty-title {
-  display: block; color: $cozy-ink; font-size: 34rpx; font-weight: 680;
-  letter-spacing: 2rpx;
-}
-.empty-desc {
-  display: block; margin-top: 20rpx; color: $cozy-muted; font-size: 24rpx;
-  line-height: 1.8; letter-spacing: 1rpx;
-}
+.empty-icon { margin-bottom: 32rpx; }
+.empty-title { display: block; color: $cozy-ink; font-size: 34rpx; font-weight: 680; letter-spacing: 2rpx; }
+.empty-desc { display: block; margin-top: 20rpx; color: $cozy-muted; font-size: 24rpx; line-height: 1.8; letter-spacing: 1rpx; }
 .empty-action {
   margin-top: 44rpx; padding: 18rpx 48rpx;
   border: 1rpx solid #5B4033; border-radius: $cozy-radius-md;

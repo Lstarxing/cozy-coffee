@@ -1,139 +1,272 @@
+<!--
+  订单详情页 - 复现 prototype/order-detail.html：统一小票
+  状态区 → 门店/配送 → 商品 → 金额 → 订单信息；支持咖啡+兑换、自取+外送
+-->
 <template>
   <view class="detail-page">
     <LoadingState v-if="loading" text="正在加载订单…" />
     <RetryState v-else-if="errorMessage" :description="errorMessage" @retry="loadOrder" />
+
     <view v-else-if="order" class="detail-content">
-      <view class="status-panel" :class="statusClass">
-        <text class="status-title">{{ statusText(order.status) }}</text>
-        <text class="status-description">{{ statusDescription(order.status) }}</text>
-        <view v-if="order.pickupCode" class="pickup-code-row"><text>取餐码</text><text>{{ order.pickupCode }}</text></view>
+      <!-- 状态区 -->
+      <view class="pickup-panel" :class="statusClass">
+        <text class="pickup-eyebrow">{{ eyebrow }}</text>
+        <text class="pickup-code">{{ codeText }}</text>
+        <text class="code-caption">{{ codeCaption }}</text>
+        <text class="pickup-status">{{ statusText }}</text>
       </view>
 
-      <StoreSummary />
-
-      <view class="detail-section">
-        <view class="section-heading"><text>商品明细</text><text>{{ order.totalQuantity || itemCount }} 件</text></view>
-        <view v-for="item in order.items || []" :key="item.id || item.productId" class="order-line">
-          <image class="line-image" :src="item.productImage || '/static/images/default-product.png'" mode="aspectFill" />
-          <view class="line-body"><text class="line-name">{{ item.productName }}</text><text class="line-spec">{{ itemSpec(item) }}</text><text class="line-qty">× {{ item.quantity }}</text></view>
-          <text class="line-price">¥{{ money(item.itemAmount ?? Number(item.unitPrice || 0) * Number(item.quantity || 1)) }}</text>
+      <!-- 门店/配送（第一主体） -->
+      <view class="store-block">
+        <view class="store-copy">
+          <text class="store-name">{{ isDelivery ? '配送至' : storeName }}</text>
+          <text class="store-addr">{{ storeAddr }}</text>
+        </view>
+        <view v-if="!isDelivery" class="store-actions">
+          <view class="store-act" @click="callStore"><CozyIcon name="phone" :size="17" color="#753A22" /></view>
+          <view class="store-act" @click="navigateStore"><CozyIcon name="pin" :size="17" color="#753A22" /></view>
         </view>
       </view>
 
-      <view class="detail-section price-section">
-        <view class="price-row"><text>商品金额</text><text>¥{{ money(order.totalAmount) }}</text></view>
-        <view v-if="Number(order.discountAmount || 0)" class="price-row discount"><text>优惠</text><text>-¥{{ money(order.discountAmount) }}</text></view>
-        <view class="price-row total"><text>实付</text><text>¥{{ money(order.payAmount ?? order.totalAmount) }}</text></view>
+      <!-- 商品 -->
+      <view class="products">
+        <view v-for="item in orderItems" :key="itemKey(item)" class="product-row">
+          <image :src="item.productImage || '/static/images/default-product.png'" class="product-img" mode="aspectFill" />
+          <view class="product-main">
+            <text class="product-name">{{ item.productName || item.name }}</text>
+            <text class="product-spec">{{ itemSpec(item) }}</text>
+          </view>
+          <view class="product-right">
+            <template v-if="isRedeem">
+              <text class="product-points">{{ formatPoints(item.pointsCost) }} 积分</text>
+            </template>
+            <template v-else>
+              <text class="product-price">¥{{ money(item.itemAmount ?? Number(item.unitPrice || 0) * Number(item.quantity || 1)) }}</text>
+              <text class="product-qty">× {{ item.quantity }}</text>
+            </template>
+          </view>
+        </view>
       </view>
 
-      <view class="detail-section info-section">
-        <view class="info-row"><text>订单号</text><text selectable>{{ order.orderNo }}</text></view>
-        <view class="info-row"><text>下单时间</text><text>{{ formatTime(order.createdAt) }}</text></view>
-        <view class="info-row"><text>取餐方式</text><text>到店自提</text></view>
-        <view v-if="order.remark" class="info-row"><text>备注</text><text>{{ order.remark }}</text></view>
+      <!-- 金额（优惠总结） -->
+      <view class="amount-block">
+        <template v-if="isRedeem">
+          <view class="amount-row"><text>消耗积分</text><text>{{ formatPoints(consumePoints) }} 积分</text></view>
+          <view class="amount-row"><text>兑换后剩余</text><text>{{ formatPoints(remainingPoints) }} 积分</text></view>
+        </template>
+        <template v-else>
+          <view class="amount-row"><text>商品金额</text><text>¥{{ money(order.totalAmount) }}</text></view>
+          <view v-if="Number(order.discountAmount || 0)" class="amount-row discount">
+            <text>优惠 <text class="coupon-tag">{{ couponLabel }}</text></text>
+            <text>-¥{{ money(order.discountAmount) }}</text>
+          </view>
+          <view v-if="deliveryFee" class="amount-row"><text>配送费</text><text>{{ money(deliveryFee) }}</text></view>
+        </template>
+        <view class="amount-divider" />
+        <view class="amount-row total">
+          <text>{{ isRedeem ? '实付' : '实付金额' }}</text>
+          <text>{{ totalText }}</text>
+        </view>
       </view>
+
+      <!-- 订单信息（低权重） -->
+      <view class="meta-block">
+        <view class="meta-row"><text>下单时间</text><text>{{ formatFullTime(order.createdAt) }}</text></view>
+        <view class="meta-row">
+          <text>订单编号</text>
+          <view class="meta-value"><text selectable>{{ order.orderNo }}</text><text class="copy-btn" @click="copyOrderNo">复制</text></view>
+        </view>
+        <view class="meta-row"><text>{{ codeCaption }}</text><text>{{ codeText }}</text></view>
+      </view>
+
       <view class="detail-spacer" />
     </view>
 
-    <view v-if="canCancel || canReorder" class="detail-footer safe-area-bottom">
-      <view v-if="canCancel" class="footer-button cancel-button" @click="confirmCancel">取消订单</view>
-      <view v-if="canReorder" class="footer-button reorder-button" :class="{ disabled: reordering }" @click="reOrder">再来一单</view>
+    <!-- 底部操作 -->
+    <view v-if="order && canAction" class="detail-footer safe-area-bottom">
+      <view class="reorder-btn" :class="{ disabled: reordering }" @click="footerAction">
+        {{ isRedeem ? (reordering ? '跳转中…' : '再次兑换') : (reordering ? '恢复中…' : '再来一单') }}
+      </view>
     </view>
   </view>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
-import { onHide, onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { cancelOrder, getOrderDetail } from '@/api/order'
+import { getRedemptionDetail } from '@/api/member'
 import { useCartStore } from '@/stores/cart'
 import { useSessionStore } from '@/stores/session'
 import { restoreOrderToCart } from '@/services/order/ReorderService'
 import { refreshMemberProfile } from '@/services/session/MemberProfileService'
-import StoreSummary from '@/components/order/StoreSummary.vue'
+import { FIXED_STORE } from '@/config/store'
 import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
+import CozyIcon from '@/components/CozyIcon.vue'
 
 const orderId = ref('')
+const type = ref('coffee')
 const order = ref(null)
 const loading = ref(true)
 const errorMessage = ref('')
 const reordering = ref(false)
 const cartStore = useCartStore()
 const sessionStore = useSessionStore()
-const itemCount = computed(() => (order.value?.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0))
-const normalizedStatus = computed(() => String(order.value?.status || '').toLowerCase())
-const canCancel = computed(() => ['pending', 'pending_payment'].includes(normalizedStatus.value))
-const canReorder = computed(() => Boolean(order.value?.items?.length) && ['completed', 'cancelled', 'canceled'].includes(normalizedStatus.value))
-const statusClass = computed(() => ({ completed: 'success', cancelled: 'muted', canceled: 'muted' })[normalizedStatus.value] || 'active')
-let pollTimer = null
-let memberRefreshTimer = null
-let completedMemberRefreshed = false
 
-onLoad(options => { orderId.value = options.id || options.orderId || '' })
-onShow(() => { if (orderId.value) { loadOrder(); startPolling() } })
-onHide(stopPolling)
-onUnload(() => { stopPolling(); clearMemberRefreshTimer() })
+const isRedeem = computed(() => type.value === 'redeem')
+const normalizedStatus = computed(() => String(order.value?.status || '').toLowerCase())
+const isDelivery = computed(() => {
+  if (isRedeem.value) return order.value?.fulfillmentType === 'DELIVERY'
+  return String(order.value?.diningMethod || '').toUpperCase() === 'DELIVERY'
+})
+
+const orderItems = computed(() => {
+  if (isRedeem.value) {
+    const o = order.value || {}
+    if (o.items?.length) return o.items
+    return [{
+      productName: o.productName,
+      productImage: o.productImage,
+      spec: `数量 ×${o.quantity || 1}`,
+      pointsCost: o.pointsCost,
+      quantity: o.quantity || 1
+    }]
+  }
+  return order.value?.items || []
+})
+
+const statusClass = computed(() => ({
+  completed: 'completed',
+  cancelled: 'cancelled',
+  canceled: 'cancelled'
+})[normalizedStatus.value] || 'active')
+
+const eyebrow = computed(() => {
+  if (isRedeem.value) return isDelivery.value ? 'COZY DELIVERY' : 'COZY PICKUP'
+  return isDelivery.value ? 'COZY DELIVERY' : 'COZY PICKUP'
+})
+const codeCaption = computed(() => {
+  if (isDelivery.value) return '物流单号'
+  if (isRedeem.value) return '取货码'
+  return '取餐码'
+})
+const codeText = computed(() => {
+  if (isDelivery.value) return order.value?.trackingNumber || order.value?.deliveryNo || '待出库'
+  return order.value?.pickupCode || order.value?.virtualCode || '—'
+})
+const statusText = computed(() => {
+  const status = normalizedStatus.value
+  const redeem = {
+    pending: '待处理 · 即将发货',
+    processing: '处理中 · 等待揽收',
+    shipped: '已发货 · ' + (order.value?.shippingCompany || '快递配送'),
+    completed: '已完成' + (isDelivery.value ? ' · 已送达' : ' · 到店自提'),
+    cancelled: '已取消 · 积分已退还'
+  }
+  const coffee = {
+    pending: '等待门店接单',
+    pending_payment: '订单待处理',
+    preparing: '咖啡制作中',
+    processing: '咖啡制作中',
+    completed: '订单已完成',
+    cancelled: '订单已取消'
+  }
+  return (isRedeem.value ? redeem : coffee)[status] || '订单已提交'
+})
+
+const storeName = computed(() => isRedeem.value ? (order.value?.storeName || '杭州中心店') : FIXED_STORE.name)
+const storeAddr = computed(() => {
+  if (isDelivery.value) return order.value?.receiverAddress || '配送至已确认收货地址'
+  if (isRedeem.value) return order.value?.storeName ? '到店自提 · 文三路 128 号' : FIXED_STORE.address
+  return FIXED_STORE.address
+})
+
+const consumePoints = computed(() => order.value?.pointsCost || 0)
+const remainingPoints = computed(() => {
+  const current = Number(sessionStore.memberInfo?.currentPoints) || 0
+  return current
+})
+const couponLabel = computed(() => order.value?.couponName || order.value?.couponLabel || '优惠')
+const deliveryFee = computed(() => Number(order.value?.deliveryFee || 0))
+const totalText = computed(() => isRedeem.value
+  ? `${formatPoints(consumePoints)} 积分`
+  : `¥${money(order.value?.payAmount ?? order.value?.totalAmount)}`)
+
+const canAction = computed(() => {
+  if (isRedeem.value) return true
+  return Boolean(order.value?.items?.length)
+})
+
+onLoad(options => {
+  orderId.value = options.id || options.orderId || ''
+  if (options.type === 'redeem') type.value = 'redeem'
+})
+onShow(() => { if (orderId.value) loadOrder() })
 
 async function loadOrder(silent = false) {
   if (!silent) loading.value = true
   errorMessage.value = ''
   try {
-    const response = await getOrderDetail(orderId.value)
+    const response = isRedeem.value ? await getRedemptionDetail(orderId.value) : await getOrderDetail(orderId.value)
     order.value = response?.data ?? response
-    refreshMemberWhenCompleted(order.value)
+    if (!isRedeem.value) refreshMemberWhenCompleted(order.value)
+  } catch (error) {
+    errorMessage.value = error?.message || '订单加载失败，请重试'
+  } finally {
+    if (!silent) loading.value = false
   }
-  catch (error) { errorMessage.value = error?.message || '订单加载失败，请重试' }
-  finally { if (!silent) loading.value = false }
 }
 
-function startPolling() {
-  stopPolling()
-  pollTimer = setInterval(() => {
-    if (!['completed', 'cancelled', 'canceled'].includes(normalizedStatus.value)) loadOrder(true)
-    else stopPolling()
-  }, 5000)
-}
-function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
-
+let completedMemberRefreshed = false
 async function refreshMemberWhenCompleted(currentOrder) {
   if (String(currentOrder?.status || '').toLowerCase() !== 'completed' || completedMemberRefreshed) return
   completedMemberRefreshed = true
-  try {
-    await refreshMemberProfile(sessionStore)
-  } catch (_) {
-    completedMemberRefreshed = false
-    return
-  }
-
-  clearMemberRefreshTimer()
-  memberRefreshTimer = setTimeout(() => {
-    refreshMemberProfile(sessionStore).catch(() => {})
-  }, 1500)
+  try { await refreshMemberProfile(sessionStore) } catch (_) { completedMemberRefreshed = false }
 }
 
-function clearMemberRefreshTimer() {
-  if (!memberRefreshTimer) return
-  clearTimeout(memberRefreshTimer)
-  memberRefreshTimer = null
+function itemKey(item) {
+  return item?.id ?? `${item.productId}-${item.productName}-${item.spec}`
 }
-
-function statusText(status) { return ({ pending: '等待门店接单', pending_payment: '订单待处理', preparing: '咖啡制作中', processing: '咖啡制作中', completed: '订单已完成', cancelled: '订单已取消' })[String(status || '').toLowerCase()] || '订单已提交' }
-function statusDescription(status) { return ['preparing', 'processing'].includes(String(status).toLowerCase()) ? '咖啡师正在为你制作，请稍候' : '请留意订单状态，及时到店取餐' }
-function money(value) { return Number(value || 0).toFixed(2) }
-function formatTime(value) { return value ? String(value).replace('T', ' ').slice(0, 16) : '--' }
 function parseOptions(value) { try { return typeof value === 'string' ? JSON.parse(value) : (value || {}) } catch (_) { return {} } }
 function itemSpec(item) {
+  if (isRedeem.value) return item.spec || (item.quantity ? `数量 ×${item.quantity}` : '')
   const options = parseOptions(item.optionsJson)
   return [item.cupSize, item.temperature, item.sugarLevel, options.milkType || item.milkType, item.coffeeStrength]
     .filter(Boolean)
     .join(' · ') || '默认规格'
 }
-function confirmCancel() { uni.showModal({ title: '取消订单', content: '确认取消这张订单？', success: async result => { if (!result.confirm) return; try { await cancelOrder(orderId.value); uni.showToast({ title: '订单已取消', icon: 'success' }); loadOrder() } catch (error) { uni.showToast({ title: error?.message || '取消失败', icon: 'none' }) } } }) }
+function money(value) { return Number(value || 0).toFixed(2) }
+function formatPoints(value) { return Number(value || 0).toLocaleString() }
+function formatFullTime(value) {
+  if (!value) return '--'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return String(value).replace('T', ' ').slice(0, 19)
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
 
-async function reOrder() {
-  if (reordering.value || !order.value) return
+function copyOrderNo() {
+  uni.setClipboardData({
+    data: String(order.value?.orderNo || ''),
+    success: () => uni.showToast({ title: '订单号已复制', icon: 'none' })
+  })
+}
+function callStore() {
+  uni.showToast({ title: '拨打门店电话', icon: 'none' })
+}
+function navigateStore() {
+  uni.showToast({ title: '打开导航', icon: 'none' })
+}
+
+async function footerAction() {
+  if (reordering.value) return
   reordering.value = true
+  if (isRedeem.value) {
+    uni.navigateTo({ url: '/pages/mall/index' })
+    reordering.value = false
+    return
+  }
   uni.showLoading({ title: '正在恢复商品', mask: true })
   try {
     const result = await restoreOrderToCart({ order: order.value, cartStore })
@@ -142,7 +275,6 @@ async function reOrder() {
       uni.showToast({ title: '原订单商品均已下架，请重新选择', icon: 'none', duration: 2200 })
       return
     }
-
     const notices = []
     if (result.invalidItems.length) notices.push(`${result.invalidItems.length} 款商品已下架，未加入购物车`)
     if (result.adjustedItems.length) notices.push(`${result.adjustedItems.length} 款商品规格已按当前菜单调整`)
@@ -175,14 +307,182 @@ function openRestoredCart() {
 <style lang="scss" scoped>
 .detail-page { min-height: 100vh; background: $cozy-surface; }
 .detail-content { padding: 24rpx; }
-.status-panel { margin-bottom: 20rpx; padding: 34rpx; border-radius: $cozy-radius-lg; color: #fff; text-align: center; }
-.status-panel.active { background: $cozy-primary; }.status-panel.success { background: $cozy-accent; }.status-panel.muted { background: #756a63; }
-.status-title { display: block; font-size: 36rpx; font-weight: 750; }.status-description { display: block; margin-top: 10rpx; color: rgba(255,255,255,.82); font-size: 22rpx; }
-.pickup-code-row { margin-top: 24rpx; padding-top: 20rpx; display: flex; align-items: baseline; justify-content: center; gap: 18rpx; border-top: 1rpx solid rgba(255,255,255,.2); font-size: 23rpx; }.pickup-code-row text:last-child { font-size: 48rpx; font-weight: 800; letter-spacing: .12em; }
-.detail-section { margin-top: 20rpx; padding: 28rpx; border-radius: $cozy-radius-lg; background: #fff; }
-.section-heading { display: flex; justify-content: space-between; margin-bottom: 16rpx; color: $cozy-ink; font-size: 28rpx; font-weight: 700; }.section-heading text:last-child { color: $cozy-muted; font-size: 22rpx; font-weight: 400; }
-.order-line { display: flex; gap: 16rpx; padding: 20rpx 0; border-bottom: 1rpx solid $cozy-border; }.order-line:last-child { border-bottom: 0; }
-.line-image { width: 96rpx; height: 96rpx; flex: none; border-radius: $cozy-radius-md; background: $cozy-surface; }.line-body { min-width: 0; flex: 1; }.line-name { display: block; color: $cozy-ink; font-size: 25rpx; font-weight: 650; }.line-spec,.line-qty { display: block; margin-top: 6rpx; color: $cozy-muted; font-size: 20rpx; }.line-price { color: $cozy-ink; font-size: 24rpx; font-weight: 700; }
-.price-row,.info-row { min-height: 62rpx; display: flex; align-items: center; justify-content: space-between; gap: 24rpx; color: $cozy-muted; font-size: 24rpx; }.price-row text:last-child,.info-row text:last-child { color: $cozy-ink; text-align: right; }.price-row.discount,.price-row.discount text:last-child { color: $cozy-primary; }.price-row.total { margin-top: 8rpx; padding-top: 12rpx; border-top: 1rpx solid $cozy-border; color: $cozy-ink; font-weight: 700; }.price-row.total text:last-child { color: $cozy-primary; font-size: 32rpx; }
-.detail-spacer { height: 150rpx; }.detail-footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 14rpx 28rpx max(14rpx, env(safe-area-inset-bottom)); display: flex; gap: 16rpx; border-top: 1rpx solid $cozy-border; background: #fff; }.footer-button { flex: 1; height: 84rpx; display: flex; align-items: center; justify-content: center; border-radius: $cozy-radius-md; font-size: 26rpx; font-weight: 650; }.cancel-button { border: 2rpx solid $cozy-primary; color: $cozy-primary; }.reorder-button { background: $cozy-primary; color: #fff; }.reorder-button.disabled { opacity: .55; }
+
+/* ── 状态区（品牌色，紧凑） ── */
+.pickup-panel {
+  padding: 34rpx 32rpx 30rpx;
+  border-radius: $cozy-radius-lg;
+  text-align: center;
+  color: #fff;
+
+  &.active { background: $cozy-primary; }
+  &.completed { background: $cozy-accent; }
+  &.cancelled { background: $cozy-muted; }
+}
+.pickup-eyebrow { display: block; font-size: 18rpx; font-weight: 700; letter-spacing: .24em; opacity: .8; }
+.pickup-code {
+  display: block;
+  margin-top: 14rpx;
+  font-family: $font-display;
+  font-size: 60rpx;
+  font-weight: 800;
+  letter-spacing: .06em;
+  line-height: 1;
+  word-break: break-all;
+}
+.code-caption { display: block; margin-top: 14rpx; font-size: 18rpx; letter-spacing: .16em; opacity: .75; }
+.pickup-status { display: block; margin-top: 14rpx; font-size: 22rpx; opacity: .85; }
+
+/* ── 门店/配送 ── */
+.store-block {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 36rpx 4rpx 30rpx;
+  border-bottom: 1rpx solid $cozy-border;
+}
+.store-copy { flex: 1; min-width: 0; }
+.store-name {
+  display: block;
+  font-family: $font-display;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.store-addr {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: $cozy-muted;
+}
+.store-actions { flex: none; display: flex; gap: 14rpx; }
+.store-act {
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: 50%;
+  border: 1rpx solid $cozy-border;
+  background: $bg-white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $cozy-primary;
+
+  &:active { opacity: .6; }
+}
+
+/* ── 商品 ── */
+.products { padding: 6rpx 4rpx; }
+.product-row {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 26rpx 0;
+  border-bottom: 1rpx solid $cozy-border;
+
+  &:last-child { border-bottom: 0; }
+}
+.product-img {
+  flex: none;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: $cozy-radius-md;
+  background: linear-gradient(135deg, #E8DDD2, #D8C8B4);
+}
+.product-main { flex: 1; min-width: 0; }
+.product-name {
+  display: block;
+  font-family: $font-display;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.product-spec {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: $cozy-muted;
+  line-height: 1.5;
+}
+.product-right { flex: none; text-align: right; }
+.product-price { display: block; font-size: 27rpx; font-weight: 650; color: $cozy-ink; }
+.product-qty { display: block; margin-top: 6rpx; font-size: 20rpx; color: $cozy-muted; }
+.product-points { display: block; font-size: 27rpx; font-weight: 700; color: $cozy-primary; }
+
+/* ── 金额 ── */
+.amount-block { padding: 8rpx 4rpx 16rpx; }
+.amount-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 15rpx 0;
+  font-size: 24rpx;
+  color: $cozy-ink;
+
+  .coupon-tag { font-size: 19rpx; color: $cozy-muted; }
+  &.discount { color: $cozy-primary; }
+}
+.amount-divider { height: 1rpx; background: $cozy-border; margin: 12rpx 0 6rpx; }
+.amount-row.total {
+  padding-top: 20rpx;
+  font-weight: 700;
+
+  span:last-child { color: $cozy-primary; font-size: 36rpx; font-weight: 750; }
+}
+
+/* ── 订单信息（低权重） ── */
+.meta-block {
+  padding: 22rpx 4rpx 8rpx;
+  border-top: 1rpx solid $cozy-border;
+}
+.meta-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 13rpx 0;
+  font-size: 21rpx;
+  color: $cozy-muted;
+
+  > text:last-child, .meta-value { color: $cozy-ink; text-align: right; }
+}
+.meta-value { display: flex; align-items: center; gap: 12rpx; min-width: 0; }
+.copy-btn {
+  flex: none;
+  padding: 0 12rpx;
+  border-radius: $cozy-radius-sm;
+  border: 1rpx solid $cozy-border;
+  color: $cozy-muted;
+  font-size: 19rpx;
+  font-weight: 600;
+
+  &:active { opacity: .6; }
+}
+
+.detail-spacer { height: 150rpx; }
+
+/* ── 底部操作 ── */
+.detail-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14rpx 28rpx max(14rpx, env(safe-area-inset-bottom));
+  border-top: 1rpx solid $cozy-border;
+  background: $bg-white;
+}
+.reorder-btn {
+  height: 84rpx;
+  border-radius: $cozy-radius-md;
+  background: $cozy-primary;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-md;
+  font-weight: 600;
+
+  &:active { background: $cozy-primary-hover; }
+  &.disabled { opacity: .55; }
+}
 </style>

@@ -111,6 +111,18 @@
             }
         },
         {
+            "path": "pages/challenge/index",
+            "style": {
+                "navigationBarTitleText": "月度挑战"
+            }
+        },
+        {
+            "path": "pages/points/redemptions",
+            "style": {
+                "navigationBarTitleText": "兑换记录"
+            }
+        },
+        {
             "path": "pages/search/index",
             "style": {
                 "navigationBarTitleText": "搜索"

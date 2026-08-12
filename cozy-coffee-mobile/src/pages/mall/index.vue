@@ -10,7 +10,7 @@
 
     <view class="mall-tabs">
       <view class="mall-tab" :class="{ active: activeTab === 'products' }" @click="activeTab = 'products'">兑换商城</view>
-      <view class="mall-tab" :class="{ active: activeTab === 'orders' }" @click="openRedemptionOrders">兑换记录</view>
+      <view class="mall-tab" @click="goToRedemptions">兑换记录</view>
     </view>
 
     <template v-if="activeTab === 'products'">
@@ -39,38 +39,6 @@
               <view v-if="canRedeem(item)" class="redeem-btn">兑换</view>
               <view v-else class="redeem-btn disabled">{{ getUnavailableText(item) }}</view>
             </view>
-          </view>
-        </view>
-      </view>
-    </template>
-
-    <template v-else>
-      <view v-if="orderLoading && redemptionOrders.length === 0" class="page-state">正在加载兑换记录…</view>
-      <view v-else-if="orderError" class="page-state error">
-        <text>{{ orderError }}</text>
-        <button class="retry-button" @click="loadRedemptionOrders">重新加载</button>
-      </view>
-      <view v-else-if="redemptionOrders.length === 0" class="page-state">暂无兑换记录</view>
-      <view v-else class="redemption-list">
-        <view v-for="order in redemptionOrders" :key="order.id" class="redemption-card">
-          <view class="redemption-header">
-            <text class="order-no">{{ order.orderNo }}</text>
-            <text class="order-status" :class="order.status">{{ getOrderStatusText(order.status) }}</text>
-          </view>
-          <view class="redemption-product">
-            <image :src="order.productImage || '/static/images/default-product.png'" mode="aspectFill" />
-            <view class="redemption-copy">
-              <text class="redemption-name">{{ order.productName }}</text>
-              <text class="redemption-meta">数量 ×{{ order.quantity }} · {{ order.pointsCost }} 积分</text>
-              <text class="redemption-meta">{{ formatOrderTime(order.createdAt) }}</text>
-            </view>
-          </view>
-          <view v-if="order.virtualCode || order.pickupCode" class="fulfillment-code">
-            {{ order.virtualCode ? '权益码' : '取货码' }}：{{ order.virtualCode || order.pickupCode }}
-          </view>
-          <view class="redemption-actions">
-            <text>{{ getFulfillmentText(order.fulfillmentType) }}</text>
-            <view v-if="canCancelOrder(order)" class="cancel-order-btn" @click="handleCancelOrder(order)">取消兑换</view>
           </view>
         </view>
       </view>
@@ -116,7 +84,7 @@ import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
 import { getPointsProducts } from '@/api/product'
-import { cancelRedemption, getMemberInfo, getMyRedemptions, redeemPoints } from '@/api/member'
+import { getMemberInfo, redeemPoints } from '@/api/member'
 import { getMemberLevelName } from '@/constants/member'
 import {
   POINTS_REDEEM_DISCOUNTS,
@@ -127,15 +95,12 @@ import {
 const userStore = useUserStore()
 const activeTab = ref('products')
 const products = ref([])
-const redemptionOrders = ref([])
 const showRedeemModal = ref(false)
 const selectedProduct = ref(null)
 const redeemQuantity = ref(1)
 const productLoading = ref(false)
-const orderLoading = ref(false)
 const redeeming = ref(false)
 const productError = ref('')
-const orderError = ref('')
 
 const redeemDiscount = computed(() => POINTS_REDEEM_DISCOUNTS[userStore.userLevel] || 1)
 const discountLabel = computed(() => `${Number((redeemDiscount.value * 10).toFixed(1))}折`)
@@ -182,27 +147,13 @@ async function loadProducts() {
   }
 }
 
-async function loadRedemptionOrders() {
-  orderLoading.value = true
-  orderError.value = ''
-  try {
-    const response = await getMyRedemptions()
-    redemptionOrders.value = response.data || []
-  } catch (error) {
-    redemptionOrders.value = []
-    orderError.value = error?.message || '兑换记录加载失败'
-  } finally {
-    orderLoading.value = false
-  }
-}
-
 async function loadMallData() {
   try {
     await loadMember()
   } catch (error) {
     productError.value = error?.message || '会员积分加载失败'
   }
-  await Promise.all([loadProducts(), loadRedemptionOrders()])
+  await loadProducts()
 }
 
 function canRedeem(item) {
@@ -267,46 +218,8 @@ async function confirmRedeem() {
   }
 }
 
-function openRedemptionOrders() {
-  activeTab.value = 'orders'
-  if (!redemptionOrders.value.length && !orderLoading.value) loadRedemptionOrders()
-}
-
-function getOrderStatusText(status) {
-  return ({ pending: '待处理', processing: '处理中', shipped: '已发货', completed: '已完成', cancelled: '已取消' })[status] || status || '未知状态'
-}
-
-function getFulfillmentText(type) {
-  return ({ VIRTUAL: '自动发放', PICKUP: '门店自提', DELIVERY: '快递配送' })[type] || '兑换订单'
-}
-
-function formatOrderTime(value) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value).replace('T', ' ').slice(0, 16)
-  const pad = number => String(number).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
-function canCancelOrder(order) {
-  return ['pending', 'processing'].includes(order.status)
-}
-
-function handleCancelOrder(order) {
-  uni.showModal({
-    title: '取消兑换',
-    content: `取消后将退还 ${order.pointsCost} 积分，是否继续？`,
-    success: async result => {
-      if (!result.confirm) return
-      try {
-        await cancelRedemption(order.id)
-        uni.showToast({ title: '已取消并退还积分', icon: 'success' })
-        await Promise.all([loadMember(), loadProducts(), loadRedemptionOrders()])
-      } catch (error) {
-        uni.showToast({ title: error?.message || '取消失败', icon: 'none' })
-      }
-    }
-  })
+function goToRedemptions() {
+  uni.navigateTo({ url: '/pages/points/redemptions' })
 }
 
 function goToHistory() {
@@ -344,22 +257,6 @@ onShow(loadMallData)
 .original-points { margin-left: 8rpx; color: $text-placeholder; font-size: 20rpx; text-decoration: line-through; }
 .redeem-btn { flex-shrink: 0; padding: 8rpx 16rpx; border-radius: 20rpx; background: $primary-color; color: #fff; font-size: $font-size-xs; }
 .redeem-btn.disabled { background: #ccc; }
-.redemption-list { display: flex; flex-direction: column; gap: $spacing-md; }
-.redemption-card { padding: $spacing-md; border-radius: $cozy-radius-lg; background: $bg-white; }
-.redemption-header, .redemption-actions { display: flex; align-items: center; justify-content: space-between; gap: $spacing-sm; }
-.order-no { color: $text-secondary; font-size: $font-size-xs; }
-.order-status { color: $cozy-accent; font-size: $font-size-xs; font-weight: 600; }
-.order-status.cancelled { color: $text-placeholder; }
-.order-status.completed { color: $success-color; }
-.redemption-product { display: flex; gap: $spacing-md; margin-top: $spacing-md; }
-.redemption-product image { width: 120rpx; height: 120rpx; flex-shrink: 0; border-radius: $cozy-radius-md; }
-.redemption-copy { min-width: 0; flex: 1; }
-.redemption-name, .redemption-meta { display: block; }
-.redemption-name { margin-bottom: 12rpx; color: $text-primary; font-size: $font-size-md; font-weight: 600; }
-.redemption-meta { margin-top: 6rpx; color: $text-secondary; font-size: $font-size-xs; }
-.fulfillment-code { margin-top: $spacing-sm; padding: 14rpx 18rpx; border-radius: $cozy-radius-md; background: $cozy-surface; color: $cozy-primary; font-size: $font-size-sm; font-weight: 600; }
-.redemption-actions { margin-top: $spacing-md; padding-top: $spacing-sm; border-top: 1rpx solid $border-color; color: $text-secondary; font-size: $font-size-xs; }
-.cancel-order-btn { padding: 10rpx 20rpx; border: 1rpx solid $border-color; border-radius: 999rpx; color: $text-primary; }
 .modal-mask { position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.5); }
 .modal-content { width: 82%; overflow: hidden; border-radius: $cozy-radius-lg; background: $bg-white; }
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: $spacing-md; border-bottom: 1rpx solid $border-color; }

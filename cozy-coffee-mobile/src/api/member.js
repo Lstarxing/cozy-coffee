@@ -110,3 +110,9 @@ export const getRedemptionDetail = (orderId) => {
 export const cancelRedemption = (orderId) => {
     return post(`/member/mall/orders/${orderId}/cancel`)
 }
+
+// 确认收货
+// 正确路径: /api/member/mall/orders/{id}/confirm-receipt (POST)
+export const confirmRedemptionReceipt = (orderId) => {
+    return post(`/member/mall/orders/${orderId}/confirm-receipt`)
+}
