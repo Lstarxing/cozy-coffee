@@ -5,9 +5,9 @@
 -->
 <template>
   <view class="home-page">
-    <scroll-view scroll-y class="content-scroll">
+    <scroll-view scroll-y class="content-scroll" :scroll-into-view="scrollTarget" @scroll="onScroll">
       <!-- ═══ 第一屏：Hero + 服务入口 ═══ -->
-      <view class="screen-1">
+      <view id="screen1" class="screen-1">
         <view class="hero">
           <image class="hero-img" :src="imageUrl('hero-coffee-photo.jpg')" mode="aspectFill" />
           <view class="hero-copy">
@@ -39,11 +39,11 @@
           </view>
         </view>
 
-        <text class="scroll-hint">⌄</text>
+        <text class="scroll-hint" @click="scrollTo('origin')">⌄</text>
       </view>
 
       <!-- ═══ 第二屏：Origin Archive — 八个产区色块 ═══ -->
-      <view class="origin-archive">
+      <view id="origin" class="origin-archive">
         <view class="origin-head">
           <text class="origin-label">ORIGIN ARCHIVE</text>
           <text class="origin-title cozy-display">风味从土地开始</text>
@@ -78,8 +78,11 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import CozyIcon from '@/components/CozyIcon.vue'
 import { imageUrl } from '@/config/image'
+
+const scrollTarget = ref('')
 
 const entries = [
   { label: '积分商城', icon: 'gift', url: '/pages/mall/index' },
@@ -167,6 +170,37 @@ const origins = [
 
 function goMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 function goPage(url) { uni.navigateTo({ url }) }
+
+// 整屏吸附：上滑跨过半屏 → origin，下滑跨回半屏 → screen1
+const screenHeight = () => uni.getSystemInfoSync().windowHeight
+let snapTimer = null
+let programmatic = false
+let currentScreen = 'screen1'
+
+function onScroll(e) {
+  if (programmatic) return
+  const scrollTop = e.detail.scrollTop
+  if (snapTimer) clearTimeout(snapTimer)
+  snapTimer = setTimeout(() => {
+    const threshold = screenHeight() * 0.5
+    const target = scrollTop > threshold ? 'origin' : 'screen1'
+    if (target !== currentScreen) snapTo(target)
+  }, 90)
+}
+
+function snapTo(id) {
+  currentScreen = id
+  programmatic = true
+  scrollTarget.value = ''
+  setTimeout(() => {
+    scrollTarget.value = id
+    setTimeout(() => { programmatic = false }, 360)
+  }, 20)
+}
+
+function scrollTo(id) {
+  snapTo(id)
+}
 </script>
 
 <style lang="scss" scoped>
@@ -239,7 +273,7 @@ function goPage(url) { uni.navigateTo({ url }) }
 }
 .scroll-hint {
   position: absolute;
-  bottom: 120rpx;
+  bottom: calc(50px + env(safe-area-inset-bottom) + 24rpx);
   left: 50%;
   transform: translateX(-50%);
   font-size: 40rpx;
