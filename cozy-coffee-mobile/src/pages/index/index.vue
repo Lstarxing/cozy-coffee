@@ -428,7 +428,7 @@ function nextSlide() {
   white-space: nowrap;
 }
 .origin-foot {
-  margin: 0;
+  margin: 48rpx 0 0;
   text-align: center;
 }
 .origin-cta {
