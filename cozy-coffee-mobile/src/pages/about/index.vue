@@ -4,18 +4,6 @@
 -->
 <template>
   <view class="about-page">
-    <!-- Hero -->
-    <view class="about-hero">
-      <image :src="imageUrl('hero-season-soe.jpg')" class="hero-media" mode="aspectFill" />
-      <view class="hero-scrim" />
-      <view class="hero-content">
-        <text class="hero-kicker">ABOUT OUR JOURNEY</text>
-        <text class="hero-title cozy-display">关于 Cozy Coffee</text>
-        <text class="hero-lead">从一颗咖啡豆\n到一杯被认真对待的咖啡</text>
-        <text class="hero-sub">我们记录产地 理解风味\n也分享每一次人与咖啡相遇</text>
-      </view>
-    </view>
-
     <!-- 为什么开始 -->
     <view class="section story">
       <view class="section-copy">
@@ -75,7 +63,9 @@
       </view>
       <view class="behind-grid">
         <view v-for="cell in behindCells" :key="cell.caption" class="behind-cell">
-          <image :src="cell.image" mode="aspectFill" class="behind-image" />
+          <view class="behind-image-box">
+            <image :src="cell.image" mode="aspectFill" class="behind-image" />
+          </view>
           <text class="behind-caption">{{ cell.caption }}</text>
         </view>
       </view>
@@ -129,55 +119,6 @@ const behindCells = [
   min-height: 100vh;
   background: $cozy-surface;
   padding-bottom: 80rpx;
-}
-
-/* ── Hero ── */
-.about-hero {
-  position: relative;
-  height: 560rpx;
-  overflow: hidden;
-}
-.hero-media {
-  width: 100%;
-  height: 100%;
-}
-.hero-scrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(26,16,10,.18) 0%, rgba(26,16,10,.04) 45%, rgba(26,16,10,.36) 100%);
-}
-.hero-content {
-  position: absolute;
-  top: 96rpx;
-  left: 40rpx;
-  right: 40rpx;
-  color: #fff;
-}
-.hero-kicker {
-  display: block;
-  font-size: 20rpx;
-  font-weight: 600;
-  letter-spacing: .16em;
-  opacity: .8;
-}
-.hero-title {
-  display: block;
-  margin-top: 14rpx;
-  font-size: 48rpx;
-}
-.hero-lead {
-  display: block;
-  margin-top: 16rpx;
-  font-size: 26rpx;
-  line-height: 1.6;
-  color: rgba(255,255,255,.92);
-}
-.hero-sub {
-  display: block;
-  margin-top: 10rpx;
-  font-size: 22rpx;
-  line-height: 1.6;
-  color: rgba(255,255,255,.72);
 }
 
 /* ── 通用 ── */
@@ -350,9 +291,18 @@ const behindCells = [
   border-radius: $cozy-radius-md;
   background: $cozy-bg;
 }
-.behind-image {
+/* 3:4 图片盒：padding-top 撑高，图片绝对定位填满（避免真机 aspect-ratio 不生效导致一列） */
+.behind-image-box {
+  position: relative;
   width: 100%;
-  aspect-ratio: 3 / 4;
+  padding-top: 133.33%;
+}
+.behind-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 .behind-caption {
   display: block;

@@ -149,7 +149,7 @@
         {
             "path": "pages/about/index",
             "style": {
-                "navigationBarTitleText": "关于 Cozy Coffee"
+                "navigationBarTitleText": "关于我们"
             }
         }
     ],
