@@ -259,7 +259,7 @@ function nextSlide() {
 }
 .scroll-hint {
   position: absolute;
-  bottom: calc(50px + env(safe-area-inset-bottom) + 24rpx);
+  bottom: 16rpx;
   left: 50%;
   transform: translateX(-50%);
   font-size: 40rpx;
@@ -354,10 +354,10 @@ function nextSlide() {
   background: $cozy-bg;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   overflow: hidden;
 }
 .origin-head {
-  margin-top: 128rpx;
   padding: 0 16rpx;
   text-align: center;
 }
@@ -386,7 +386,7 @@ function nextSlide() {
   position: relative;
   width: 100%;
   height: 580rpx;
-  margin: auto 0;
+  margin: 36rpx 0 24rpx;
   flex-shrink: 0;
   padding: 32rpx 24rpx 8rpx;
   box-sizing: content-box;
@@ -428,7 +428,7 @@ function nextSlide() {
   white-space: nowrap;
 }
 .origin-foot {
-  margin: 56rpx 0 20rpx;
+  margin: 0;
   text-align: center;
 }
 .origin-cta {
