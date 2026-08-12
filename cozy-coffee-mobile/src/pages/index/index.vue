@@ -208,7 +208,7 @@ function nextSlide() {
 }
 .hero-copy {
   position: absolute;
-  top: 110rpx;
+  top: 240rpx;
   left: 80rpx;
   width: 240rpx;
   display: flex;
