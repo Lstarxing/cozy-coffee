@@ -9,7 +9,7 @@
       <!-- ═══ 第一屏：Hero + 服务入口 ═══ -->
       <view class="screen-1">
         <view class="hero">
-          <image class="hero-img" src="/static/images/home/hero-coffee-ritual.jpg" mode="aspectFill" />
+          <image class="hero-img" src="/static/images/home/hero-yunnan-natural.jpg" mode="aspectFill" />
           <view class="hero-copy">
             <text class="hero-kicker">COZY COFFEE</text>
             <text class="hero-cn">一杯咖啡</text>
