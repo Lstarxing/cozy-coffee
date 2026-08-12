@@ -9,7 +9,7 @@
       <!-- ═══ 第一屏：Hero + 服务入口 ═══ -->
       <view class="screen-1">
         <view class="hero">
-          <image class="hero-img" src="/static/images/home/hero-coffee-photo.jpg" mode="aspectFill" />
+          <image class="hero-img" :src="imageUrl('hero-coffee-photo.jpg')" mode="aspectFill" />
           <view class="hero-copy">
             <text class="hero-kicker">COZY COFFEE</text>
             <text class="hero-cn">一杯咖啡</text>
@@ -79,6 +79,7 @@
 
 <script setup>
 import CozyIcon from '@/components/CozyIcon.vue'
+import { imageUrl } from '@/config/image'
 
 const entries = [
   { label: '积分商城', icon: 'gift', url: '/pages/mall/index' },

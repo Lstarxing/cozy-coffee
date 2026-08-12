@@ -5,7 +5,7 @@
       <!-- 世界产区地图 -->
       <view class="map-section">
         <image
-          src="/static/images/origin-map.png"
+          :src="imageUrl('origin-map.png')"
           mode="widthFix"
           class="map-image"
         />
@@ -70,6 +70,7 @@
 </template>
 
 <script setup>
+import { imageUrl } from '@/config/image'
 import { COFFEE_ORIGINS } from '@/data/coffeeOrigins'
 
 const origins = COFFEE_ORIGINS

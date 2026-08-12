@@ -6,7 +6,7 @@
   <view class="about-page">
     <!-- Hero -->
     <view class="about-hero">
-      <image src="/static/images/home/hero-season-soe.jpg" class="hero-media" mode="aspectFill" />
+      <image :src="imageUrl('hero-season-soe.jpg')" class="hero-media" mode="aspectFill" />
       <view class="hero-scrim" />
       <view class="hero-content">
         <text class="hero-kicker">ABOUT OUR JOURNEY</text>
@@ -26,7 +26,7 @@
         <text class="story-body">Cozy Coffee 希望记录这些关于产地、风味和人的故事。</text>
       </view>
       <view class="story-media">
-        <image src="/static/images/about/about-store.jpg" mode="aspectFill" class="story-image" />
+        <image :src="imageUrl('about-store.jpg')" mode="aspectFill" class="story-image" />
       </view>
     </view>
 
@@ -91,6 +91,8 @@
 </template>
 
 <script setup>
+import { imageUrl } from '@/config/image'
+
 const journeySteps = [
   { num: '01', zh: '产地探索', en: 'Origin', desc: '走遍世界八大产区，理解每一片土地的风味语言。' },
   { num: '02', zh: '精选咖啡豆', en: 'Selection', desc: '从处理法到批次，只留下值得被记录的那一颗。' },
@@ -115,10 +117,10 @@ const values = [
 ]
 
 const behindCells = [
-  { image: '/static/images/about/about-beans.jpg', caption: '豆子 · 从生到熟的两次旅途' },
-  { image: '/static/images/about/about-cupping.jpg', caption: '杯测 · 听风味的语言' },
-  { image: '/static/images/about/about-roastery.jpg', caption: '烘焙 · 看见风味在变化' },
-  { image: '/static/images/about/about-pour-over.jpg', caption: '手冲 · 把水流写进风味' }
+  { image: imageUrl('about-beans.jpg'), caption: '豆子 · 从生到熟的两次旅途' },
+  { image: imageUrl('about-cupping.jpg'), caption: '杯测 · 听风味的语言' },
+  { image: imageUrl('about-roastery.jpg'), caption: '烘焙 · 看见风味在变化' },
+  { image: imageUrl('about-pour-over.jpg'), caption: '手冲 · 把水流写进风味' }
 ]
 </script>
 

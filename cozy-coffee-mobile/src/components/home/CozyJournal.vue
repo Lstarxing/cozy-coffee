@@ -12,11 +12,13 @@
 </template>
 
 <script setup>
+import { imageUrl } from '@/config/image'
+
 // Phase 1 static — Phase 2 replace with API call, keep shape identical
 const journal = {
   title: '云南咖啡产地记录',
   subtitle: '5 年，我们寻找一杯更好的咖啡。',
-  image: '/static/images/journal-yunnan.png',
+  image: imageUrl('journal-yunnan.png'),
   link: '/pages/origins/index'
 }
 

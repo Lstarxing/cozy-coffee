@@ -44,13 +44,14 @@
 
 <script setup>
 import { ref } from 'vue'
+import { imageUrl } from '@/config/image'
 
 const emit = defineEmits(['order', 'explore'])
 
 const currentSlide = ref(0)
 const slides = [
   {
-    image: '/static/images/home/hero-season-soe.jpg',
+    image: imageUrl('hero-season-soe.jpg'),
     shade: 'bottom',
     copyPos: 'left',
     copyVPos: 'bottom',
@@ -64,7 +65,7 @@ const slides = [
     secondaryAction: { type: 'explore' }
   },
   {
-    image: '/static/images/home/hero-origin-notes.jpg',
+    image: imageUrl('hero-origin-notes.jpg'),
     shade: 'top',
     copyPos: 'left',
     copyVPos: 'top',
@@ -78,7 +79,7 @@ const slides = [
     secondaryAction: null
   },
   {
-    image: '/static/images/home/hero-coffee-ritual.jpg',
+    image: imageUrl('hero-coffee-ritual.jpg'),
     shade: 'subtle',
     copyPos: 'right',
     copyVPos: 'top',

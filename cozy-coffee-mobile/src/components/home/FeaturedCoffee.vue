@@ -26,6 +26,8 @@
 </template>
 
 <script setup>
+import { imageUrl } from '@/config/image'
+
 const emit = defineEmits(['select'])
 
 const products = [
@@ -33,31 +35,31 @@ const products = [
     id: 1,
     name: '云南保山 SOE',
     notes: 'Floral · Citrus · Honey',
-    image: '/static/images/product-yunnan-soe.png'
+    image: imageUrl('product-yunnan-soe.png')
   },
   {
     id: 2,
     name: 'Dirty',
     notes: 'Espresso · Cold Milk · Layers',
-    image: '/static/images/product-dirty.png'
+    image: imageUrl('product-dirty.png')
   },
   {
     id: 3,
     name: '冷萃咖啡',
     notes: '12hr Brew · Smooth · Sweet',
-    image: '/static/images/product-coldbrew.png'
+    image: imageUrl('product-coldbrew.png')
   },
   {
     id: 4,
     name: '埃塞俄比亚 耶加雪菲',
     notes: 'Jasmine · Lemon · Tea',
-    image: '/static/images/product-ethiopia-yirgacheffe.png'
+    image: imageUrl('product-ethiopia-yirgacheffe.png')
   },
   {
     id: 5,
     name: '海盐焦糖拿铁',
     notes: 'Sea Salt · Caramel · Velvet',
-    image: '/static/images/product-salted-caramel-latte.png'
+    image: imageUrl('product-salted-caramel-latte.png')
   }
 ]
 
