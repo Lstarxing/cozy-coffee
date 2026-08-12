@@ -1,59 +1,97 @@
+<!--
+  积分商城 - 复现 prototype/mall.html 极简 Editorial
+  衬线积分头 + 文字快捷链接 + 下划线分类 Tab（全部/优惠券/实物礼品）+ 1:1 商品网格 + 商品详情覆盖层
+-->
 <template>
   <view class="mall-page">
+    <!-- 积分头 -->
     <view class="points-header">
-      <view class="points-info">
-        <text class="points-label">当前积分</text>
-        <text class="points-value">{{ userStore.memberInfo.currentPoints || 0 }}</text>
-      </view>
-      <view class="points-action" @click="goToHistory">积分明细 ></view>
+      <text class="points-label">当前可用积分</text>
+      <text class="points-value">{{ userStore.memberInfo.currentPoints || 0 }}</text>
     </view>
 
+    <!-- 文字快捷链接 -->
+    <view class="quick-links">
+      <text class="quick-link" @click="goToHistory">积分明细</text>
+      <view class="quick-divider" />
+      <text class="quick-link" @click="goToRedemptions">兑换记录</text>
+      <view class="quick-divider" />
+      <text class="quick-link" @click="goToRules">积分规则</text>
+    </view>
+
+    <!-- 分类 Tab -->
     <view class="mall-tabs">
-      <view class="mall-tab" :class="{ active: activeTab === 'products' }" @click="activeTab = 'products'">兑换商城</view>
-      <view class="mall-tab" @click="goToRedemptions">兑换记录</view>
+      <view
+        v-for="tab in tabs"
+        :key="tab.value"
+        class="mall-tab"
+        :class="{ active: activeType === tab.value }"
+        @click="switchTab(tab.value)"
+      >{{ tab.label }}</view>
     </view>
 
-    <template v-if="activeTab === 'products'">
-      <view v-if="redeemDiscount < 1" class="discount-tip">
-        {{ getMemberLevelName(userStore.userLevel) }}积分兑换享 {{ discountLabel }}，结算积分按后端规则向上取整
-      </view>
-      <view v-if="productLoading && products.length === 0" class="page-state">正在加载积分商品…</view>
-      <view v-else-if="productError" class="page-state error">
-        <text>{{ productError }}</text>
-        <button class="retry-button" @click="loadProducts">重新加载</button>
-      </view>
-      <view v-else-if="products.length === 0" class="page-state">暂无可兑换商品</view>
-      <view v-else class="products-grid">
-        <view v-for="item in products" :key="item.id" class="product-card" @click="openRedeemModal(item)">
-          <image :src="item.image" class="product-image" mode="aspectFill" />
-          <view class="product-info">
-            <text class="product-name">{{ item.name }}</text>
-            <text class="product-desc">{{ item.desc }}</text>
-            <text v-if="item.monthlyLimit" class="product-limit">本月剩余 {{ getRedeemQuantityLimit(item) }} 件</text>
-            <view class="product-footer">
-              <view class="product-price">
-                <text class="price-value">{{ getDiscountedPointsCost(item.pointsPrice, 1, userStore.userLevel) }}</text>
-                <text class="price-unit">积分</text>
-                <text v-if="redeemDiscount < 1" class="original-points">{{ item.pointsPrice }}</text>
-              </view>
-              <view v-if="canRedeem(item)" class="redeem-btn">兑换</view>
-              <view v-else class="redeem-btn disabled">{{ getUnavailableText(item) }}</view>
-            </view>
+    <!-- 商品网格 -->
+    <view v-if="productLoading && products.length === 0" class="page-state">正在加载积分商品…</view>
+    <view v-else-if="productError && products.length === 0" class="page-state error">
+      <text>{{ productError }}</text>
+      <view class="retry-button" @click="loadProducts">重新加载</view>
+    </view>
+    <view v-else-if="shownProducts.length === 0" class="page-state">暂无可兑换商品</view>
+    <view v-else class="products-grid">
+      <view
+        v-for="item in shownProducts"
+        :key="item.id"
+        class="product-card"
+        @click="openDetail(item)"
+      >
+        <view class="product-image">
+          <image v-if="item.image" :src="item.image" class="product-photo" mode="aspectFill" />
+        </view>
+        <view class="product-info">
+          <text class="product-name">{{ item.name }}</text>
+          <view class="product-points">
+            <text class="points-num">{{ getDiscountedPointsCost(item.pointsPrice, 1, userStore.userLevel) }}</text>
+            <text class="points-unit">积分</text>
+            <text v-if="redeemDiscount < 1" class="points-original">{{ item.pointsPrice }}</text>
           </view>
         </view>
       </view>
-    </template>
+    </view>
 
-    <view v-if="showRedeemModal" class="modal-mask" @click="closeRedeemModal">
-      <view class="modal-content" @click.stop>
-        <view class="modal-header">
-          <text class="modal-title">确认兑换</text>
-          <text class="modal-close" @click="closeRedeemModal">×</text>
+    <!-- 商品详情覆盖层 -->
+    <view v-if="showDetail" class="detail-page">
+      <view class="detail-nav">
+        <text class="detail-back" @click="closeDetail">‹</text>
+        <text class="detail-nav-title">商品详情</text>
+      </view>
+
+      <view class="detail-body">
+        <view class="detail-image-area">
+          <view class="detail-image">
+            <image v-if="selectedProduct?.image" :src="selectedProduct.image" class="detail-photo" mode="aspectFill" />
+          </view>
         </view>
-        <view v-if="selectedProduct" class="modal-body">
-          <image :src="selectedProduct.image" class="modal-image" mode="aspectFill" />
-          <text class="modal-name">{{ selectedProduct.name }}</text>
-          <view class="quantity-row">
+
+        <view class="detail-head">
+          <text class="detail-name">{{ selectedProduct?.name }}</text>
+          <view class="detail-tags">
+            <text class="tag">{{ memberTag }}</text>
+            <text v-if="limitTag" class="tag tag--limit">{{ limitTag }}</text>
+          </view>
+        </view>
+
+        <view class="detail-sections">
+          <view v-for="s in detailSections" :key="s.label" class="detail-section">
+            <text class="section-label">{{ s.label }}</text>
+            <text class="section-value">{{ s.value }}</text>
+          </view>
+        </view>
+
+        <view class="detail-cta-wrap">
+          <view
+            v-if="!isPhysical || !needStorePickup"
+            class="quantity-row"
+          >
             <text class="quantity-label">兑换数量</text>
             <view class="stepper">
               <view class="stepper-btn" :class="{ disabled: redeemQuantity <= 1 }" @click="decreaseQuantity">−</view>
@@ -61,18 +99,12 @@
               <view class="stepper-btn" :class="{ disabled: !canIncreaseQuantity }" @click="increaseQuantity">＋</view>
             </view>
           </view>
-          <text class="modal-price">合计 {{ selectedTotalCost }} 积分</text>
-          <text v-if="redeemDiscount < 1" class="modal-original-price">
-            原价 {{ selectedProduct.pointsPrice * redeemQuantity }} 积分 · {{ discountLabel }}
-          </text>
-          <text class="modal-stock">库存 {{ selectedProduct.stock }} 件，当前最多可兑 {{ selectedQuantityLimit }} 件</text>
-          <text v-if="!hasEnoughPoints" class="points-warning">当前积分不足</text>
-        </view>
-        <view class="modal-footer">
-          <view class="modal-btn cancel" @click="closeRedeemModal">取消</view>
-          <view class="modal-btn confirm" :class="{ disabled: !canConfirmRedeem }" @click="confirmRedeem">
-            {{ redeeming ? '兑换中…' : '确认兑换' }}
-          </view>
+
+          <view
+            class="detail-cta"
+            :class="{ disabled: !canRedeemSelected }"
+            @click="confirmRedeem"
+          >{{ ctaText }}</view>
         </view>
       </view>
     </view>
@@ -93,17 +125,24 @@ import {
 } from '@/domain/member/memberRules'
 
 const userStore = useUserStore()
-const activeTab = ref('products')
 const products = ref([])
-const showRedeemModal = ref(false)
+const showDetail = ref(false)
 const selectedProduct = ref(null)
 const redeemQuantity = ref(1)
 const productLoading = ref(false)
 const redeeming = ref(false)
 const productError = ref('')
+const activeType = ref('all')
+
+const tabs = [
+  { value: 'all', label: '全部' },
+  { value: 'coupon', label: '优惠券' },
+  { value: 'physical', label: '实物礼品' }
+]
 
 const redeemDiscount = computed(() => POINTS_REDEEM_DISCOUNTS[userStore.userLevel] || 1)
-const discountLabel = computed(() => `${Number((redeemDiscount.value * 10).toFixed(1))}折`)
+const isPhysical = computed(() => selectedProduct.value?.productType === 'PHYSICAL')
+const needStorePickup = computed(() => selectedProduct.value?.fulfillmentType === 'PICKUP' || isPhysical.value)
 const selectedQuantityLimit = computed(() => getRedeemQuantityLimit(selectedProduct.value || {}))
 const selectedTotalCost = computed(() => getDiscountedPointsCost(
   selectedProduct.value?.pointsPrice,
@@ -116,13 +155,49 @@ const canIncreaseQuantity = computed(() => {
   const nextCost = getDiscountedPointsCost(selectedProduct.value.pointsPrice, redeemQuantity.value + 1, userStore.userLevel)
   return (userStore.memberInfo?.currentPoints || 0) >= nextCost
 })
-const canConfirmRedeem = computed(() => (
+const canRedeemSelected = computed(() => (
   Boolean(selectedProduct.value) &&
   redeemQuantity.value >= 1 &&
-  redeemQuantity.value <= selectedQuantityLimit.value &&
+  redeemQuantity.value <= Math.max(1, selectedQuantityLimit.value) &&
   hasEnoughPoints.value &&
   !redeeming.value
 ))
+const ctaText = computed(() => {
+  if (redeeming.value) return '兑换中…'
+  if (canRedeemSelected.value) return `立即兑换 · ${selectedTotalCost.value} 积分`
+  const diff = selectedTotalCost.value - (userStore.memberInfo?.currentPoints || 0)
+  return `积分不足 · 还差 ${Math.max(0, diff).toLocaleString()} 积分`
+})
+
+const shownProducts = computed(() => {
+  if (activeType.value === 'all') return products.value
+  return products.value.filter(p => p.category === activeType.value)
+})
+
+const memberTag = computed(() => selectedProduct.value?.memberLevel
+  ? `${getMemberLevelName(selectedProduct.value.memberLevel)}及以上会员`
+  : '全部会员')
+const limitTag = computed(() => {
+  const limit = selectedProduct.value?.monthlyLimit
+  if (limit) return `限兑 ${limit} 件`
+  if (selectedProduct.value?.stock != null && selectedProduct.value.stock >= 0) return `库存 ${selectedProduct.value.stock} 件`
+  return ''
+})
+
+const detailSections = computed(() => {
+  const p = selectedProduct.value || {}
+  const sections = []
+  sections.push({ label: '商品类型', value: p.productType === 'PHYSICAL' ? '实物周边 · 礼品' : '优惠券 · 虚拟权益' })
+  if (p.validDays) sections.push({ label: '有效期限', value: `自获取之日起 ${p.validDays} 天内有效` })
+  else if (p.productType === 'PHYSICAL') sections.push({ label: '有效期限', value: '兑换后 14 天内发货' })
+  if (p.description) sections.push({ label: '商品说明', value: p.description })
+  if (p.originalPrice) sections.push({ label: '参考价值', value: `¥${p.originalPrice}` })
+  sections.push({
+    label: '领取方式',
+    value: p.productType === 'PHYSICAL' ? '到店自提 · 邮寄到家' : '兑换后自动发放至券包'
+  })
+  return sections
+})
 
 async function loadMember() {
   const response = await getMemberInfo()
@@ -136,8 +211,9 @@ async function loadProducts() {
     const response = await getPointsProducts()
     products.value = (response.data || []).map(item => ({
       ...item,
-      image: item.imageUrl || item.image || '/static/images/default-product.png',
-      desc: item.description || ''
+      image: item.imageUrl || item.image || '',
+      description: item.description || '',
+      category: item.category || (item.productType === 'PHYSICAL' ? 'physical' : 'coupon')
     }))
   } catch (error) {
     products.value = []
@@ -156,29 +232,20 @@ async function loadMallData() {
   await loadProducts()
 }
 
-function canRedeem(item) {
-  return getRedeemQuantityLimit(item) > 0 &&
-    (userStore.memberInfo?.currentPoints || 0) >= getDiscountedPointsCost(item.pointsPrice, 1, userStore.userLevel)
+function switchTab(value) {
+  if (activeType.value === value) return
+  activeType.value = value
 }
 
-function getUnavailableText(item) {
-  if (getRedeemQuantityLimit(item) <= 0) return item.stock > 0 ? '已达限购' : '已兑完'
-  return '积分不足'
-}
-
-function openRedeemModal(item) {
-  if (!canRedeem(item)) {
-    uni.showToast({ title: getUnavailableText(item), icon: 'none' })
-    return
-  }
+function openDetail(item) {
   selectedProduct.value = item
   redeemQuantity.value = 1
-  showRedeemModal.value = true
+  showDetail.value = true
 }
 
-function closeRedeemModal() {
+function closeDetail() {
   if (redeeming.value) return
-  showRedeemModal.value = false
+  showDetail.value = false
   selectedProduct.value = null
   redeemQuantity.value = 1
 }
@@ -192,7 +259,10 @@ function increaseQuantity() {
 }
 
 async function confirmRedeem() {
-  if (!canConfirmRedeem.value) return
+  if (!canRedeemSelected.value) {
+    uni.showToast({ title: '积分不足', icon: 'none' })
+    return
+  }
   redeeming.value = true
   uni.showLoading({ title: '兑换中…', mask: true })
   try {
@@ -203,12 +273,11 @@ async function confirmRedeem() {
       storeId: selectedProduct.value.productType === 'VIRTUAL' ? undefined : 1
     })
     if (response.code === 200) {
-      showRedeemModal.value = false
+      showDetail.value = false
       selectedProduct.value = null
       redeemQuantity.value = 1
       uni.showToast({ title: '兑换成功', icon: 'success' })
       await loadMallData()
-      activeTab.value = 'orders'
     }
   } catch (error) {
     uni.showToast({ title: error?.message || '兑换失败', icon: 'none' })
@@ -218,66 +287,319 @@ async function confirmRedeem() {
   }
 }
 
-function goToRedemptions() {
-  uni.navigateTo({ url: '/pages/points/redemptions' })
-}
-
-function goToHistory() {
-  uni.navigateTo({ url: '/pages/points/history' })
-}
+function goToHistory() { uni.navigateTo({ url: '/pages/points/history' }) }
+function goToRedemptions() { uni.navigateTo({ url: '/pages/points/redemptions' }) }
+function goToRules() { uni.showToast({ title: '积分规则', icon: 'none' }) }
 
 onShow(loadMallData)
 </script>
 
 <style lang="scss" scoped>
-.mall-page { min-height: 100vh; padding: $spacing-md; background: $bg-color; }
-.points-header { display: flex; justify-content: space-between; align-items: center; padding: $spacing-lg; border-radius: $cozy-radius-lg; background: $cozy-surface-alt; color: #fff; }
-.points-label { display: block; font-size: $font-size-sm; opacity: .8; }
-.points-value { font-size: 56rpx; font-weight: 700; }
-.points-action { font-size: $font-size-sm; opacity: .85; }
-.mall-tabs { display: flex; margin: $spacing-md 0; padding: 6rpx; border-radius: 999rpx; background: $bg-white; }
-.mall-tab { flex: 1; padding: 18rpx; border-radius: 999rpx; color: $text-secondary; text-align: center; font-size: $font-size-sm; }
-.mall-tab.active { background: $cozy-primary; color: #fff; font-weight: 600; }
-.discount-tip { margin-bottom: $spacing-md; padding: 18rpx 22rpx; border-radius: $cozy-radius-md; background: $cozy-accent-soft; color: $cozy-primary; font-size: $font-size-xs; line-height: 1.5; }
-.page-state { padding: 100rpx 24rpx; color: $cozy-muted; text-align: center; }
+.mall-page {
+  min-height: 100vh;
+  background: $cozy-surface;
+  padding-bottom: 60rpx;
+}
+
+/* ── 积分头 ── */
+.points-header {
+  padding: 56rpx 48rpx 32rpx;
+  background: $cozy-surface;
+}
+.points-label {
+  display: block;
+  font-size: 26rpx;
+  color: $cozy-muted;
+  letter-spacing: .04em;
+}
+.points-value {
+  display: block;
+  margin-top: 16rpx;
+  font-family: $font-display;
+  font-size: 92rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+  line-height: 1;
+}
+
+/* ── 文字快捷链接 ── */
+.quick-links {
+  display: flex;
+  align-items: center;
+  padding: 32rpx 48rpx 44rpx;
+  background: $cozy-surface;
+}
+.quick-link {
+  flex: 1;
+  text-align: center;
+  font-size: 26rpx;
+  color: $cozy-ink;
+  letter-spacing: .04em;
+
+  &:active { opacity: .6; }
+}
+.quick-divider {
+  width: 1rpx;
+  height: 26rpx;
+  background: $cozy-border;
+}
+
+/* ── 分类 Tab ── */
+.mall-tabs {
+  display: flex;
+  margin: 0 40rpx;
+  padding: 0 8rpx;
+  border-bottom: 1rpx solid $cozy-border;
+}
+.mall-tab {
+  flex: 1;
+  padding: 28rpx 0;
+  text-align: center;
+  font-size: 30rpx;
+  color: $cozy-muted;
+  position: relative;
+  transition: color $cozy-duration $cozy-ease-out;
+
+  &.active {
+    color: $cozy-ink;
+    font-weight: 600;
+  }
+  &.active::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -1rpx;
+    transform: translateX(-50%);
+    width: 48rpx;
+    height: 4rpx;
+    border-radius: 2rpx;
+    background: $cozy-ink;
+  }
+}
+
+/* ── 商品网格 ── */
+.products-grid {
+  margin: 32rpx 40rpx 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32rpx 28rpx;
+  padding-bottom: 48rpx;
+}
+.product-card {
+  &:active .product-image { transform: scale(.98); }
+}
+.product-image {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 16rpx;
+  background: $cozy-bg;
+  overflow: hidden;
+  transition: transform $cozy-duration $cozy-ease-out;
+}
+.product-photo {
+  width: 100%;
+  height: 100%;
+}
+.product-info { padding: 24rpx 4rpx 0; }
+.product-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-family: $font-display;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+  line-height: 1.4;
+}
+.product-points {
+  display: flex;
+  align-items: baseline;
+  gap: 6rpx;
+  margin-top: 14rpx;
+}
+.points-num { font-size: 34rpx; font-weight: 700; color: $cozy-primary; }
+.points-unit { font-size: 22rpx; color: $cozy-muted; }
+.points-original {
+  margin-left: 10rpx;
+  font-size: 20rpx;
+  color: $cozy-placeholder;
+  text-decoration: line-through;
+}
+
+.page-state { padding: 120rpx 40rpx; color: $cozy-muted; text-align: center; }
 .page-state text { display: block; }
 .page-state.error { color: $error-color; }
-.retry-button { width: 220rpx; margin-top: 24rpx; border-radius: $cozy-radius-md; background: $cozy-primary; color: #fff; font-size: 24rpx; }
-.products-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: $spacing-md; }
-.product-card { overflow: hidden; border-radius: $cozy-radius-md; background: $bg-white; }
-.product-image { width: 100%; height: 200rpx; }
-.product-info { padding: $spacing-sm; }
-.product-name, .product-desc, .product-limit { display: block; }
-.product-name { margin-bottom: 4rpx; color: $text-primary; font-size: $font-size-md; font-weight: 600; }
-.product-desc { min-height: 58rpx; margin-bottom: 8rpx; color: $text-placeholder; font-size: $font-size-xs; }
-.product-limit { margin-bottom: 10rpx; color: $cozy-accent; font-size: 20rpx; }
-.product-footer { display: flex; align-items: center; justify-content: space-between; gap: 8rpx; }
-.price-value { color: $primary-color; font-size: $font-size-lg; font-weight: 600; }
-.price-unit { margin-left: 4rpx; color: $primary-color; font-size: $font-size-xs; }
-.original-points { margin-left: 8rpx; color: $text-placeholder; font-size: 20rpx; text-decoration: line-through; }
-.redeem-btn { flex-shrink: 0; padding: 8rpx 16rpx; border-radius: 20rpx; background: $primary-color; color: #fff; font-size: $font-size-xs; }
-.redeem-btn.disabled { background: #ccc; }
-.modal-mask { position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.5); }
-.modal-content { width: 82%; overflow: hidden; border-radius: $cozy-radius-lg; background: $bg-white; }
-.modal-header { display: flex; align-items: center; justify-content: space-between; padding: $spacing-md; border-bottom: 1rpx solid $border-color; }
-.modal-title { font-size: $font-size-lg; font-weight: 600; }
-.modal-close { color: $text-placeholder; font-size: 48rpx; }
-.modal-body { padding: $spacing-lg; text-align: center; }
-.modal-image { width: 180rpx; height: 180rpx; margin-bottom: $spacing-md; border-radius: $cozy-radius-md; }
-.modal-name { display: block; margin-bottom: $spacing-md; color: $text-primary; font-size: $font-size-lg; font-weight: 600; }
-.quantity-row { display: flex; align-items: center; justify-content: space-between; margin: $spacing-md 0; }
-.quantity-label { color: $text-secondary; font-size: $font-size-sm; }
-.stepper { display: flex; align-items: center; overflow: hidden; border: 1rpx solid $border-color; border-radius: 999rpx; }
-.stepper-btn { width: 70rpx; padding: 10rpx 0; color: $cozy-primary; font-size: 34rpx; }
-.stepper-btn.disabled { color: $text-placeholder; }
-.stepper-value { min-width: 58rpx; color: $text-primary; font-size: $font-size-md; font-weight: 600; }
-.modal-price { display: block; margin-top: $spacing-sm; color: $primary-color; font-size: $font-size-xl; font-weight: 600; }
-.modal-original-price, .modal-stock, .points-warning { display: block; margin-top: 8rpx; font-size: $font-size-xs; }
-.modal-original-price, .modal-stock { color: $text-placeholder; }
-.points-warning { color: $error-color; }
-.modal-footer { display: flex; border-top: 1rpx solid $border-color; }
-.modal-btn { flex: 1; padding: $spacing-md; text-align: center; font-size: $font-size-md; }
-.modal-btn.cancel { color: $text-secondary; }
-.modal-btn.confirm { background: $primary-color; color: #fff; }
-.modal-btn.confirm.disabled { background: #ccc; }
+.retry-button {
+  width: 220rpx;
+  margin: 32rpx auto 0;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $cozy-radius-md;
+  background: $cozy-primary;
+  color: #fff;
+  font-size: 24rpx;
+}
+
+/* ── 商品详情覆盖层 ── */
+.detail-page {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  animation: detail-in .35s cubic-bezier(.32,.72,.32,1);
+}
+@keyframes detail-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.detail-nav {
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding: 20rpx 32rpx;
+  border-bottom: 1rpx solid $cozy-border;
+}
+.detail-back {
+  font-size: 48rpx;
+  line-height: 1;
+  color: $cozy-ink;
+  padding: 4rpx 8rpx;
+}
+.detail-nav-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 30rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.detail-body { flex: 1; overflow-y: auto; }
+
+.detail-image-area {
+  padding: 48rpx 64rpx 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.detail-image {
+  width: 480rpx;
+  height: 480rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+  background: $cozy-surface;
+}
+.detail-photo { width: 100%; height: 100%; }
+
+.detail-head {
+  padding: 0 48rpx 44rpx;
+  border-bottom: 1rpx solid $cozy-border;
+}
+.detail-name {
+  display: block;
+  font-family: $font-display;
+  font-size: 44rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+  line-height: 1.3;
+}
+.detail-tags {
+  margin-top: 24rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.tag {
+  display: inline-block;
+  padding: 10rpx 22rpx;
+  font-size: 22rpx;
+  border: 1rpx solid $cozy-ink;
+  color: $cozy-ink;
+  border-radius: 4rpx;
+  letter-spacing: .02em;
+}
+.tag--limit {
+  border-color: #9B3932;
+  color: #9B3932;
+}
+
+.detail-sections { padding: 0 48rpx; }
+.detail-section {
+  padding: 32rpx 0;
+  border-bottom: 1rpx solid $cozy-border;
+
+  &:last-child { border-bottom: 0; }
+}
+.section-label {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.section-value {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: $cozy-muted;
+}
+
+.detail-cta-wrap {
+  padding: 40rpx 48rpx 48rpx;
+  background: #fff;
+  margin-top: 8rpx;
+}
+.quantity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28rpx;
+}
+.quantity-label { color: $cozy-muted; font-size: 28rpx; }
+.stepper {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1rpx solid $cozy-border;
+  border-radius: 999rpx;
+}
+.stepper-btn {
+  width: 80rpx;
+  padding: 12rpx 0;
+  color: $cozy-primary;
+  font-size: 40rpx;
+  text-align: center;
+
+  &.disabled { color: $cozy-placeholder; }
+}
+.stepper-value {
+  min-width: 64rpx;
+  color: $cozy-ink;
+  font-size: 30rpx;
+  font-weight: 600;
+  text-align: center;
+}
+.detail-cta {
+  height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $cozy-primary;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+  border-radius: 48rpx;
+  transition: opacity $cozy-duration $cozy-ease-out;
+
+  &:active { opacity: .85; }
+  &.disabled {
+    background: $cozy-border;
+    color: $cozy-muted;
+  }
+}
 </style>
