@@ -66,8 +66,20 @@
       <view class="section-head">
         <text class="section-title">升级规则</text>
       </view>
-      <view class="rule-line">
-        基础 <em>0</em> · 白银 <em>500</em> · 黄金 <em>1,500</em> · 钻石 <em>4,000</em> · 黑金 <em>9,000</em> EXP
+      <view class="rule-table">
+        <view class="rule-row rule-head">
+          <text class="rule-cell">会员等级</text>
+          <text class="rule-cell">升级门槛</text>
+        </view>
+        <view
+          v-for="row in ruleRows"
+          :key="row.level"
+          class="rule-row"
+          :class="{ current: row.level === currentLevel }"
+        >
+          <text class="rule-cell">{{ row.name }}</text>
+          <text class="rule-cell">{{ row.threshold }} EXP</text>
+        </view>
       </view>
       <view class="rule-note">消费 1 元 = 1 EXP，达到门槛自动升级，升级后权益永久生效。</view>
     </view>
@@ -121,6 +133,13 @@ const compare = [
   { level: 'diamond', name: '钻石会员', text: '2× 积分 · 85 折兑换' },
   { level: 'black', name: '黑金会员', text: '3× 积分 · 8 折兑换' }
 ]
+
+// 升级门槛表格
+const ruleRows = levels.map(level => ({
+  level,
+  name: getLevelName(level),
+  threshold: formatExp(levelThresholds[level])
+}))
 
 // 进度
 const nextThreshold = computed(() => {
@@ -333,14 +352,38 @@ onShow(loadBenefitsPage)
 }
 
 /* 升级规则：一行门槛 */
-.rule-line {
-  padding: 28rpx 4rpx 0;
-  font-size: 26rpx;
-  line-height: 1.9;
-  color: $cozy-ink;
+.rule-table {
+  margin-top: 20rpx;
+  border: 1rpx solid $cozy-border;
+  border-radius: 12rpx;
+  overflow: hidden;
 }
-.rule-line em {
-  font-style: normal;
+.rule-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1rpx solid $cozy-border;
+
+  &:last-child { border-bottom: 0; }
+  &.current { background: $cozy-bg; }
+}
+.rule-head {
+  background: $cozy-bg;
+}
+.rule-cell {
+  flex: 1;
+  padding: 22rpx 28rpx;
+  font-size: 24rpx;
+  color: $cozy-ink;
+
+  &:last-child { text-align: right; }
+}
+.rule-head .rule-cell {
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: .06em;
+  color: $cozy-muted;
+}
+.rule-row.current .rule-cell {
   color: $cozy-primary;
   font-weight: 650;
 }
