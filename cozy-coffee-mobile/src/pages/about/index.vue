@@ -118,7 +118,6 @@ const behindCells = [
 .about-page {
   min-height: 100vh;
   background: $cozy-surface;
-  padding-bottom: 80rpx;
 }
 
 /* ── 通用 ── */
