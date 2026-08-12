@@ -198,7 +198,7 @@ function nextSlide() {
 .hero {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 3 / 4;
   overflow: hidden;
   background: linear-gradient(180deg, #F0E7DC 0%, #E4D5C2 55%, #D8C4AC 100%);
 }
@@ -209,7 +209,7 @@ function nextSlide() {
 }
 .hero-copy {
   position: absolute;
-  top: 240rpx;
+  top: 180rpx;
   left: 80rpx;
   width: 240rpx;
   display: flex;
