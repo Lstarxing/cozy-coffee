@@ -26,7 +26,7 @@
         <text class="story-body">Cozy Coffee 希望记录这些关于产地、风味和人的故事。</text>
       </view>
       <view class="story-media">
-        <image src="/static/images/product-yunnan-soe.png" mode="aspectFill" class="story-image" />
+        <image src="/static/images/about/about-store.jpg" mode="aspectFill" class="story-image" />
       </view>
     </view>
 
@@ -115,10 +115,10 @@ const values = [
 ]
 
 const behindCells = [
-  { image: '/static/images/product-dirty.png', caption: '豆子 · 从生到熟的两次旅途' },
-  { image: '/static/images/product-coldbrew.png', caption: '杯测 · 听风味的语言' },
-  { image: '/static/images/product-ethiopia-yirgacheffe.png', caption: '烘焙 · 看见风味在变化' },
-  { image: '/static/images/product-salted-caramel-latte.png', caption: '手冲 · 把水流写进风味' }
+  { image: '/static/images/about/about-beans.jpg', caption: '豆子 · 从生到熟的两次旅途' },
+  { image: '/static/images/about/about-cupping.jpg', caption: '杯测 · 听风味的语言' },
+  { image: '/static/images/about/about-roastery.jpg', caption: '烘焙 · 看见风味在变化' },
+  { image: '/static/images/about/about-pour-over.jpg', caption: '手冲 · 把水流写进风味' }
 ]
 </script>
 
