@@ -5,7 +5,14 @@
 -->
 <template>
   <view class="home-page">
-    <scroll-view scroll-y class="content-scroll" :scroll-into-view="scrollTarget" @scroll="onScroll">
+    <scroll-view
+      scroll-y
+      class="content-scroll"
+      :scroll-into-view="scrollTarget"
+      scroll-with-animation
+      :show-scrollbar="false"
+      @scroll="onScroll"
+    >
       <!-- ═══ 第一屏：Hero + 服务入口 ═══ -->
       <view id="screen1" class="screen-1">
         <view class="hero">
@@ -78,7 +85,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import CozyIcon from '@/components/CozyIcon.vue'
 import { imageUrl } from '@/config/image'
 
@@ -172,20 +179,24 @@ function goMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 function goPage(url) { uni.navigateTo({ url }) }
 
 // 整屏吸附：上滑跨过半屏 → origin，下滑跨回半屏 → screen1
-const screenHeight = () => uni.getSystemInfoSync().windowHeight
+const windowHeight = ref(0)
 let snapTimer = null
 let programmatic = false
 let currentScreen = 'screen1'
+
+onMounted(() => {
+  windowHeight.value = uni.getSystemInfoSync().windowHeight
+})
 
 function onScroll(e) {
   if (programmatic) return
   const scrollTop = e.detail.scrollTop
   if (snapTimer) clearTimeout(snapTimer)
   snapTimer = setTimeout(() => {
-    const threshold = screenHeight() * 0.5
+    const threshold = windowHeight.value * 0.5
     const target = scrollTop > threshold ? 'origin' : 'screen1'
     if (target !== currentScreen) snapTo(target)
-  }, 90)
+  }, 120)
 }
 
 function snapTo(id) {
@@ -194,7 +205,7 @@ function snapTo(id) {
   scrollTarget.value = ''
   setTimeout(() => {
     scrollTarget.value = id
-    setTimeout(() => { programmatic = false }, 360)
+    setTimeout(() => { programmatic = false }, 420)
   }, 20)
 }
 
