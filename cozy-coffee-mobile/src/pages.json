@@ -168,19 +168,27 @@
         "list": [
             {
                 "pagePath": "pages/index/index",
-                "text": "首页"
+                "text": "首页",
+                "iconPath": "static/tabbar/home.png",
+                "selectedIconPath": "static/tabbar/home-active.png"
             },
             {
                 "pagePath": "pages/menu/menu",
-                "text": "点单"
+                "text": "点单",
+                "iconPath": "static/tabbar/menu.png",
+                "selectedIconPath": "static/tabbar/menu-active.png"
             },
             {
                 "pagePath": "pages/order/order",
-                "text": "订单"
+                "text": "订单",
+                "iconPath": "static/tabbar/order.png",
+                "selectedIconPath": "static/tabbar/order-active.png"
             },
             {
                 "pagePath": "pages/profile/profile",
-                "text": "我的"
+                "text": "我的",
+                "iconPath": "static/tabbar/profile.png",
+                "selectedIconPath": "static/tabbar/profile-active.png"
             }
         ]
     }
