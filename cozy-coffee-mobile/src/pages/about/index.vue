@@ -281,12 +281,12 @@ const behindCells = [
   background: $cozy-surface;
 }
 .behind-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20rpx;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  column-gap: 20rpx;
+  row-gap: 20rpx;
 }
 .behind-cell {
-  width: calc(50% - 10rpx);
   overflow: hidden;
   border-radius: $cozy-radius-md;
   background: $cozy-bg;
