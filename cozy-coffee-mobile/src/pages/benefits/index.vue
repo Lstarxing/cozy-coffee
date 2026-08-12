@@ -1,73 +1,85 @@
 <!--
-  会员权益页 - 复现 web 端 MemberBenefits：等级 tabs + 每级 feature 卡（3D 卡面 + 权益列表 + 领取）+ 会员进度 footer
+  会员权益页 - 复现 prototype/benefits.html 极简 Editorial
+  页头（安静身份行）→ 本月可用（行式）→ 权益对比（每级一行）→ 升级规则 → 会员进度（web 端进度条置底）
 -->
 <template>
   <view class="benefits-page">
-    <!-- 等级 tabs -->
-    <view class="level-tabs">
-      <view
-        v-for="level in levels"
-        :key="level"
-        class="level-tab"
-        :class="selectedLevel === level ? 'active ' + level : ''"
-        @click="selectedLevel = level"
-      >{{ getLevelName(level) }}</view>
+    <!-- 页头：安静身份行 -->
+    <view class="page-head">
+      <view class="head-identity">
+        <LevelBadge :level="currentLevel" :color="levelAccent" :size="44" />
+        <text class="head-title">会员权益</text>
+      </view>
+      <text class="head-sub">{{ getLevelName(currentLevel) }} <em>· {{ currentLevel.toUpperCase() }}</em></text>
     </view>
 
-    <!-- 每级 feature 卡 -->
-    <view class="feature-card" :class="[selectedLevel, { 'is-black': selectedLevel === 'black' }]">
-      <!-- 3D 卡面 -->
-      <view class="card-visual">
-        <view class="physical-card" :class="selectedLevel">
-          <view class="card-face">
-            <view class="card-brand"><LevelBadge :level="selectedLevel" :size="34" :color="theme.accent" /></view>
-            <text class="card-logo">COZY {{ selectedLevel.toUpperCase() }}</text>
-            <text class="card-number">8888 8888 8888 8888</text>
-            <text class="card-member">MEMBER</text>
-          </view>
-        </view>
+    <!-- 本月可用 -->
+    <view class="section">
+      <view class="section-head">
+        <text class="section-title">本月可用</text>
+        <text class="section-sub">{{ getLevelName(currentLevel) }}专享</text>
       </view>
 
-      <!-- 权益列表 -->
-      <view class="benefit-list">
-        <view class="benefit-row" v-for="(b, i) in currentBenefits" :key="i">
-          <text class="b-icon">{{ b.code }}</text>
-          <view class="b-copy">
-            <text class="b-name">{{ b.name }}</text>
-            <text class="b-desc">{{ b.desc }}</text>
-          </view>
+      <view class="benefit-row">
+        <text class="b-icon">券</text>
+        <view class="b-copy">
+          <text class="b-name">月度兑换券</text>
+          <text class="b-desc">{{ monthlyBenefitText }}</text>
         </view>
+        <view
+          class="b-btn"
+          :class="{ muted: benefitDone }"
+          @click="handleReceiveMonthlyBenefit"
+        >{{ benefitActionText }}</view>
       </view>
 
-      <!-- 领取（当前等级） -->
-      <view v-if="currentLevel === selectedLevel" class="benefit-action">
-        <view v-if="benefitLoading" class="inline-state">正在查询本月权益…</view>
-        <view v-else-if="benefitError" class="inline-state error" @click="loadBenefitsPage">{{ benefitError }}，点击重试</view>
-        <template v-else>
-          <view
-            class="receive-btn"
-            :class="[selectedLevel, { disabled: !canReceiveMonthlyBenefit }]"
-            @click="handleReceiveMonthlyBenefit"
-          >{{ benefitActionText }}</view>
-          <text v-if="shouldShowUpgradeTip" class="upgrade-tip">恭喜升级！{{ getLevelName(currentLevel) }}月度权益将在下月 1 日生效</text>
-        </template>
+      <view class="benefit-row">
+        <text class="b-icon">礼</text>
+        <view class="b-copy">
+          <text class="b-name">生日礼遇</text>
+          <text class="b-desc">生日当月赠送双倍积分</text>
+        </view>
+        <view class="b-btn muted" @click="birthdayTip">去领取</view>
       </view>
     </view>
 
-    <!-- 会员进度 footer -->
-    <view class="member-progress-footer">
-      <view class="progress-info">
-        <view class="current-status">
-          <text class="status-icon">{{ levelEmoji }}</text>
-          <text class="status-text">{{ getLevelName(currentLevel) }} {{ currentLevel.toUpperCase() }}</text>
+    <!-- 权益对比（每级一行） -->
+    <view class="section">
+      <view class="section-head">
+        <text class="section-title">会员权益对比</text>
+      </view>
+      <view class="compare-list">
+        <view
+          v-for="(c, i) in compare"
+          :key="c.level"
+          class="compare-row"
+          :class="{ current: c.level === currentLevel }"
+        >
+          <text class="compare-name">{{ c.name }}</text>
+          <text class="compare-text">{{ c.text }}</text>
         </view>
-        <view class="progress-numbers">
-          <text class="current-exp">{{ currentExp }}</text>
-          <text class="total-exp">{{ nextThreshold != null ? '/ ' + nextThreshold + ' EXP' : '' }}</text>
-        </view>
+      </view>
+    </view>
+
+    <!-- 升级规则 -->
+    <view class="section">
+      <view class="section-head">
+        <text class="section-title">升级规则</text>
+      </view>
+      <view class="rule-line">
+        基础 <em>0</em> · 白银 <em>500</em> · 黄金 <em>1,500</em> · 钻石 <em>4,000</em> · 黑金 <em>9,000</em> EXP
+      </view>
+      <view class="rule-note">消费 1 元 = 1 EXP，达到门槛自动升级，升级后权益永久生效。</view>
+    </view>
+
+    <!-- 会员进度（web 端进度条复用，置底） -->
+    <view class="member-progress">
+      <view class="progress-top">
+        <text class="progress-level">{{ getLevelName(currentLevel) }} <em>{{ currentLevel.toUpperCase() }}</em></text>
+        <text class="progress-exp">{{ formatExp(currentExp) }} <i>/ {{ nextThreshold != null ? formatExp(nextThreshold) : '—' }} EXP</i></text>
       </view>
       <view class="progress-track">
-        <view class="progress-fill" :class="currentLevel" :style="{ width: progressPercent + '%' }"></view>
+        <view class="progress-fill" :style="{ width: progressPercent + '%', background: levelAccent }"></view>
       </view>
       <view class="progress-motivation">{{ progressMotivation }}</view>
     </view>
@@ -77,22 +89,21 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
 import { getMemberBenefits, getMemberInfo, receiveMonthlyBenefit } from '@/api/member'
-import { MEMBER_LEVELS, MEMBER_LEVEL_THRESHOLDS, getMemberLevelName } from '@/constants/member'
+import { MEMBER_LEVELS, MEMBER_LEVEL_THRESHOLDS, getMemberLevelName, MEMBER_LEVEL_THEMES } from '@/constants/member'
 import LevelBadge from '@/components/member/LevelBadge.vue'
 import DevLevelSwitcher from '@/components/dev/DevLevelSwitcher.vue'
 
 const userStore = useUserStore()
-
+const getLevelName = getMemberLevelName
 const levels = MEMBER_LEVELS
-const currentLevel = ref(userStore.userLevel || 'basic')
-const selectedLevel = ref(currentLevel.value)
-const currentExp = ref(Number(userStore.memberInfo?.expTotal) || 0)
 const levelThresholds = MEMBER_LEVEL_THRESHOLDS
 
+const currentLevel = ref(userStore.userLevel || 'basic')
+const currentExp = ref(Number(userStore.memberInfo?.expTotal) || 0)
 const benefitLoading = ref(false)
 const benefitError = ref('')
 const claimingBenefit = ref(false)
@@ -100,17 +111,16 @@ const monthlyBenefitStatus = ref({
   claimed: false, canClaim: false, benefitName: '', currentLevel: null, claimedLevel: null
 })
 
-const getLevelName = getMemberLevelName
+const levelAccent = computed(() => (MEMBER_LEVEL_THEMES[currentLevel.value] || {}).accent || '#753A22')
 
-// 每级卡面主题（对齐 web 端 physical-card 配色；accent 为卡面品牌徽章色，按明暗调整对比）
-const LEVEL_THEMES = {
-  basic:   { card: 'linear-gradient(135deg,#A1887F,#8D6E63)', text: '#3E2723', accent: '#3E2723' },
-  silver:  { card: 'linear-gradient(135deg,#E0E0E0,#BDBDBD 45%,#FFFFFF 55%,#9E9E9E)', text: '#424242', accent: '#FFFFFF' },
-  gold:    { card: 'linear-gradient(135deg,#FFECB3,#FFC107 45%,#FF8F00)', text: '#795548', accent: '#795548' },
-  diamond: { card: 'linear-gradient(135deg,#01579B,#0288D1 50%,#29B6F6)', text: '#01579B', accent: '#FFFFFF' },
-  black:   { card: 'linear-gradient(135deg,#1a1a1a,#000)', text: '#FFD700', accent: '#FFD700' }
-}
-const theme = computed(() => LEVEL_THEMES[selectedLevel.value])
+// 各等级权益对比（对齐原型 / web 端）
+const compare = [
+  { level: 'basic', name: '基础会员', text: '1× 积分' },
+  { level: 'silver', name: '白银会员', text: '1.2× 积分 · 95 折兑换' },
+  { level: 'gold', name: '黄金会员', text: '1.5× 积分 · 9 折兑换' },
+  { level: 'diamond', name: '钻石会员', text: '2× 积分 · 85 折兑换' },
+  { level: 'black', name: '黑金会员', text: '3× 积分 · 8 折兑换' }
+]
 
 // 进度
 const nextThreshold = computed(() => {
@@ -130,59 +140,23 @@ const progressPercent = computed(() => {
 })
 const progressMotivation = computed(() => {
   if (nextThreshold.value == null) return '已到达最高等级，尊享全部会员权益'
-  return '再积 ' + (nextThreshold.value - currentExp.value) + ' EXP 升级至 ' + nextLevelName.value
+  return '再积 ' + formatExp(nextThreshold.value - currentExp.value) + ' EXP 升级至' + nextLevelName.value
 })
-const levelEmoji = computed(() => ({ basic: '☕', silver: '🥈', gold: '🏆', diamond: '💎', black: '👑' })[currentLevel.value] || '☕')
 
-// 各等级权益
-const benefitsData = {
-  basic: [
-    { code: '积', name: '消费积分', desc: '1元=1积分' },
-    { code: '签', name: '每日签到', desc: '每日+2积分，连签7天送满35减10券' },
-    { code: '包', name: '月度权益', desc: '每月可领取等级礼包' }
-  ],
-  silver: [
-    { code: '积', name: '消费积分', desc: '1元=1.1积分' },
-    { code: '兑', name: '积分兑换', desc: '积分商城9.8折' },
-    { code: '包', name: '月度权益', desc: '每月可领取白银等级礼包' }
-  ],
-  gold: [
-    { code: '积', name: '消费积分', desc: '1元=1.2积分' },
-    { code: '兑', name: '积分兑换', desc: '积分商城9.5折' },
-    { code: '包', name: '月度权益', desc: '每月可领取黄金等级礼包' }
-  ],
-  diamond: [
-    { code: '积', name: '消费积分', desc: '1元=1.3积分' },
-    { code: '兑', name: '积分兑换', desc: '积分商城9折' },
-    { code: '包', name: '月度权益', desc: '每月可领取钻石等级礼包' }
-  ],
-  black: [
-    { code: '速', name: '积分加速包', desc: '每月前300元消费1.7倍积分' },
-    { code: '积', name: '消费积分', desc: '1元=1.35积分' },
-    { code: '兑', name: '积分兑换', desc: '积分商城8.5折' },
-    { code: '包', name: '月度权益包', desc: '按月领取专属会员礼遇' },
-    { code: '新', name: '新品优先', desc: '新品试饮与优先购' }
-  ]
-}
-const currentBenefits = computed(() => benefitsData[selectedLevel.value] || [])
-
-const canReceiveMonthlyBenefit = computed(() => (
-  monthlyBenefitStatus.value.canClaim &&
-  !monthlyBenefitStatus.value.claimed &&
-  !claimingBenefit.value
-))
+const benefitDone = computed(() => monthlyBenefitStatus.value.claimed)
+const monthlyBenefitText = computed(() => {
+  if (monthlyBenefitStatus.value.claimed) return '本月兑换券已领取，可在券包查看'
+  return '95 折兑换券 · 本月有效'
+})
 const benefitActionText = computed(() => {
+  if (benefitLoading.value) return '查询中…'
   if (claimingBenefit.value) return '领取中…'
-  if (monthlyBenefitStatus.value.claimed) return '本月权益已领取'
-  if (!monthlyBenefitStatus.value.canClaim) return '本月暂无可领权益'
-  return '领取月度权益礼包'
+  if (monthlyBenefitStatus.value.claimed) return '已领取 ✓'
+  if (!monthlyBenefitStatus.value.canClaim) return '暂无可领'
+  return '去领取'
 })
-const shouldShowUpgradeTip = computed(() => {
-  if (!monthlyBenefitStatus.value.claimed) return false
-  const currentIndex = levels.indexOf(monthlyBenefitStatus.value.currentLevel)
-  const claimedIndex = levels.indexOf(monthlyBenefitStatus.value.claimedLevel)
-  return currentIndex > claimedIndex && claimedIndex >= 0
-})
+
+function formatExp(value) { return Number(value || 0).toLocaleString() }
 
 async function loadBenefitsPage() {
   benefitLoading.value = true
@@ -192,7 +166,6 @@ async function loadBenefitsPage() {
     if (memberResponse.code === 200 && memberResponse.data) {
       userStore.setMemberInfo(memberResponse.data)
       currentLevel.value = memberResponse.data.memberLevel || 'basic'
-      selectedLevel.value = currentLevel.value
       currentExp.value = Number(memberResponse.data.expTotal) || 0
     }
   } catch (error) {
@@ -209,7 +182,7 @@ async function loadBenefitsPage() {
 }
 
 async function handleReceiveMonthlyBenefit() {
-  if (!canReceiveMonthlyBenefit.value) return
+  if (benefitDone.value || claimingBenefit.value) return
   claimingBenefit.value = true
   try {
     await receiveMonthlyBenefit()
@@ -223,6 +196,10 @@ async function handleReceiveMonthlyBenefit() {
   }
 }
 
+function birthdayTip() {
+  uni.showToast({ title: '生日当月自动赠送双倍积分', icon: 'none' })
+}
+
 onShow(loadBenefitsPage)
 </script>
 
@@ -230,247 +207,199 @@ onShow(loadBenefitsPage)
 .benefits-page {
   min-height: 100vh;
   background: $cozy-surface;
-  padding: 24rpx 24rpx 60rpx;
+  padding: 40rpx 44rpx 80rpx;
 }
 
-/* ── 等级 tabs ── */
-.level-tabs {
+/* ── 页头（安静身份行，非卡） ── */
+.page-head { padding: 12rpx 4rpx 40rpx; }
+.head-identity { display: flex; align-items: center; gap: 20rpx; }
+.head-title {
+  font-family: $font-display;
+  font-size: 48rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.head-sub {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  color: $cozy-muted;
+}
+.head-sub em {
+  font-style: normal;
+  color: $cozy-primary;
+  font-weight: 650;
+  font-size: 18rpx;
+  letter-spacing: .08em;
+}
+
+/* ── Editorial section：线性分隔 + 留白 ── */
+.section { margin-top: 48rpx; }
+.section-head {
   display: flex;
-  gap: 16rpx;
-  overflow-x: auto;
-  white-space: nowrap;
-  padding-bottom: 20rpx;
-  border-bottom: 1rpx solid $border-color;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-bottom: 4rpx;
 }
-.level-tab {
-  flex-shrink: 0;
-  padding: 12rpx 28rpx;
-  border-radius: 999rpx;
-  background: $bg-white;
-  border: 1rpx solid $border-color;
-  font-size: $font-size-sm;
-  color: $text-secondary;
-  transition: all .25s;
-
-  &.active {
-    color: #fff;
-    font-weight: 600;
-  }
-  &.active.basic { background: #8D6E63; border-color: #8D6E63; }
-  &.active.silver { background: #90A4AE; border-color: #90A4AE; }
-  &.active.gold { background: #FF8F00; border-color: #FF8F00; }
-  &.active.diamond { background: #1565C0; border-color: #1565C0; }
-  &.active.black { background: #171411; border-color: #171411; color: #E6C97A; }
+.section-title {
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: .18em;
+  color: $cozy-muted;
 }
+.section-sub { font-size: 20rpx; color: $cozy-muted; }
 
-/* ── feature 卡 ── */
-.feature-card {
-  margin-top: 24rpx;
-  padding: 36rpx 32rpx 40rpx;
-  border-radius: 24rpx;
-  background: $bg-white;
-  box-shadow: 0 8rpx 30rpx rgba(0,0,0,.06);
-
-  &.is-black {
-    background: #0C0C0C;
-    box-shadow: 0 16rpx 40rpx rgba(0,0,0,.4);
-  }
-}
-
-/* 3D 卡面 */
-.card-visual {
-  display: flex;
-  justify-content: center;
-  padding: 8rpx 0 34rpx;
-}
-.physical-card {
-  position: relative;
-  width: 560rpx;
-  height: 340rpx;
-  border-radius: 24rpx;
-  transform: perspective(1400rpx) rotateY(-14deg) rotateX(6deg);
-  box-shadow: -16rpx 20rpx 40rpx rgba(0,0,0,.28), inset 0 0 30rpx rgba(0,0,0,.2);
-  transition: transform .5s ease;
-
-  .card-face {
-    position: absolute;
-    inset: 0;
-    padding: 28rpx;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    border-radius: inherit;
-    background-image: linear-gradient(45deg, rgba(255,255,255,.06) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.06) 50%, rgba(255,255,255,.06) 75%, transparent 75%, transparent);
-    background-size: 30rpx 30rpx;
-  }
-  .card-brand { display: flex; }
-  .card-logo {
-    align-self: flex-end;
-    font-family: serif;
-    font-weight: 900;
-    letter-spacing: 2rpx;
-    font-size: 26rpx;
-    color: #fff;
-    text-shadow: 0 2rpx 4rpx rgba(0,0,0,.4);
-  }
-  .card-number {
-    font-family: monospace;
-    letter-spacing: 4rpx;
-    font-size: 30rpx;
-    color: #fff;
-    opacity: .92;
-    text-shadow: 0 2rpx 4rpx #000;
-  }
-  .card-member {
-    font-size: 18rpx;
-    letter-spacing: 2rpx;
-    color: rgba(255,255,255,.55);
-  }
-
-  &.basic { background: linear-gradient(135deg,#A1887F,#8D6E63); }
-  &.basic .card-logo, &.basic .card-number { color: #3E2723; text-shadow: 0 2rpx 0 rgba(255,255,255,.2); }
-  &.basic .card-member { color: rgba(62,39,35,.6); }
-
-  &.silver { background: linear-gradient(135deg,#E0E0E0,#BDBDBD 45%,#FFFFFF 55%,#9E9E9E); }
-  &.silver .card-logo, &.silver .card-number { color: #424242; text-shadow: 0 2rpx 2rpx rgba(255,255,255,.8); }
-  &.silver .card-member { color: #616161; }
-
-  &.gold { background: linear-gradient(135deg,#FFECB3,#FFC107 45%,#FF8F00); box-shadow: inset 0 0 30rpx rgba(255,215,0,.3); }
-  &.gold .card-logo, &.gold .card-number { color: #795548; text-shadow: 0 2rpx 2rpx rgba(255,255,255,.5); }
-  &.gold .card-member { color: #8D6E63; }
-
-  &.diamond { background: linear-gradient(135deg,#01579B,#0288D1 50%,#29B6F6); border: 1rpx solid rgba(255,255,255,.5); }
-  &.diamond .card-logo, &.diamond .card-number { color: #E1F5FE; text-shadow: 0 0 16rpx rgba(255,255,255,.5); }
-  &.diamond .card-member { color: #81D4FA; }
-
-  &.black { background: linear-gradient(135deg,#1a1a1a,#000); border: 1rpx solid rgba(255,215,0,.3); }
-  &.black .card-logo, &.black .card-number { color: #FFD700; }
-  &.black .card-member { color: rgba(255,215,0,.5); }
-}
-
-/* 权益列表 */
-.benefit-list {
-  padding: 0 8rpx;
-}
+/* 本月可用：行式 */
 .benefit-row {
   display: flex;
   align-items: center;
   gap: 24rpx;
-  padding: 24rpx 0;
-  border-bottom: 1rpx solid $border-color;
+  padding: 34rpx 4rpx;
+  border-bottom: 1rpx solid $cozy-border;
 
-  &:last-child { border-bottom: none; }
-
-  .b-icon {
-    flex-shrink: 0;
-    width: 64rpx;
-    height: 64rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 16rpx;
-    background: $cozy-surface;
-    color: $cozy-primary;
-    font-size: 22rpx;
-    font-weight: 750;
-  }
-  .b-copy { flex: 1; min-width: 0; }
-  .b-name {
-    display: block;
-    font-size: $font-size-md;
-    font-weight: 600;
-    color: $text-primary;
-  }
-  .b-desc {
-    display: block;
-    margin-top: 4rpx;
-    font-size: $font-size-sm;
-    color: $text-secondary;
-  }
+  &:last-child { border-bottom: 0; }
 }
-
-/* 黑金卡权益文字 */
-.feature-card.is-black .benefit-row .b-icon { background: rgba(255,215,0,.14); color: #FFD700; }
-.feature-card.is-black .benefit-row .b-name { color: #F7E7CE; }
-.feature-card.is-black .benefit-row .b-desc { color: rgba(247,231,206,.55); }
-.feature-card.is-black .benefit-row { border-bottom: 1rpx solid rgba(255,255,255,.08); }
-
-/* 领取按钮 */
-.benefit-action { margin-top: 8rpx; }
-.receive-btn {
-  height: 88rpx;
+.b-icon {
+  flex: none;
+  width: 76rpx;
+  height: 76rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 16rpx;
-  font-size: $font-size-md;
-  font-weight: 600;
-  color: #fff;
-  background: linear-gradient(135deg,#A1887F,#8D6E63);
-  box-shadow: 0 6rpx 20rpx rgba(141,110,99,.3);
-
-  &.silver { background: linear-gradient(135deg,#CFD8DC,#90A4AE); }
-  &.gold { background: linear-gradient(135deg,#FFD54F,#FF8F00); }
-  &.diamond { background: linear-gradient(135deg,#64B5F6,#1565C0); }
-  &.black { background: linear-gradient(135deg,#424242,#212121); color: #FFD700; }
-  &.disabled { background: $bg-gray; color: $text-placeholder; box-shadow: none; }
+  border-radius: 50%;
+  background: $cozy-bg;
+  color: $cozy-primary;
+  font-family: $font-display;
+  font-size: 26rpx;
+  font-weight: 700;
 }
-.upgrade-tip {
+.b-copy { flex: 1; min-width: 0; }
+.b-name {
   display: block;
-  margin-top: 16rpx;
-  text-align: center;
-  font-size: $font-size-xs;
-  color: $cozy-accent;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $cozy-ink;
 }
-.inline-state {
-  padding: 28rpx 12rpx;
-  color: $text-secondary;
-  text-align: center;
-  font-size: $font-size-sm;
-  &.error { color: $error-color; }
+.b-desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: $cozy-muted;
+  line-height: 1.5;
+}
+.b-btn {
+  flex: none;
+  padding: 14rpx 30rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid $cozy-primary;
+  background: transparent;
+  color: $cozy-primary;
+  font-size: 22rpx;
+  font-weight: 600;
+
+  &:active { background: $cozy-bg; }
+
+  &.muted {
+    border-color: $cozy-border;
+    color: $cozy-muted;
+  }
 }
 
-/* ── 会员进度 footer ── */
-.member-progress-footer {
-  margin-top: 24rpx;
-  padding: 32rpx;
-  border-radius: 24rpx;
-  background: $bg-white;
+/* 权益对比：每级一行 */
+.compare-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 28rpx 4rpx;
+  border-bottom: 1rpx solid $cozy-border;
+
+  &:last-child { border-bottom: 0; }
 }
-.progress-info {
+.compare-name { font-size: 28rpx; color: $cozy-ink; font-weight: 500; }
+.compare-text { font-size: 22rpx; color: $cozy-muted; }
+.compare-row.current .compare-name { color: $cozy-primary; font-weight: 700; }
+.compare-row.current .compare-text { color: $cozy-primary; font-weight: 600; }
+.compare-row.current .compare-name::before {
+  content: '';
+  display: inline-block;
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  background: $cozy-primary;
+  margin-right: 14rpx;
+  vertical-align: 2rpx;
+}
+
+/* 升级规则：一行门槛 */
+.rule-line {
+  padding: 28rpx 4rpx 0;
+  font-size: 26rpx;
+  line-height: 1.9;
+  color: $cozy-ink;
+}
+.rule-line em {
+  font-style: normal;
+  color: $cozy-primary;
+  font-weight: 650;
+}
+.rule-note {
+  padding: 16rpx 4rpx 0;
+  font-size: 20rpx;
+  line-height: 1.7;
+  color: $cozy-muted;
+}
+
+/* ── 会员进度（web 端进度条复用，适配 Editorial） ── */
+.member-progress {
+  margin-top: 64rpx;
+  padding: 36rpx 4rpx 0;
+  border-top: 1rpx solid $cozy-border;
+}
+.progress-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20rpx;
+  align-items: baseline;
+  gap: 20rpx;
+  margin-bottom: 26rpx;
 }
-.current-status { display: flex; align-items: center; gap: 12rpx; }
-.status-icon { font-size: 40rpx; }
-.status-text { font-size: $font-size-md; font-weight: 800; color: $text-primary; }
-.progress-numbers { display: flex; align-items: baseline; gap: 6rpx; }
-.current-exp { font-size: 44rpx; font-weight: 800; color: #222; }
-.total-exp { font-size: 22rpx; color: $text-placeholder; }
-
+.progress-level {
+  font-family: $font-display;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.progress-level em {
+  font-style: normal;
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: $cozy-muted;
+  margin-left: 12rpx;
+}
+.progress-exp { font-size: 26rpx; font-weight: 650; color: $cozy-ink; }
+.progress-exp i {
+  font-style: normal;
+  font-size: 20rpx;
+  font-weight: 400;
+  color: $cozy-muted;
+}
 .progress-track {
-  height: 14rpx;
-  border-radius: 999rpx;
-  background: $bg-gray;
+  height: 6rpx;
+  border-radius: 4rpx;
+  background: $cozy-border;
   overflow: hidden;
 }
 .progress-fill {
   height: 100%;
-  border-radius: inherit;
+  border-radius: 4rpx;
   transition: width .6s ease;
 }
-.progress-fill.basic { background: linear-gradient(90deg,#D7CCC8,#A1887F); }
-.progress-fill.silver { background: linear-gradient(90deg,#ECEFF1,#B0BEC5); }
-.progress-fill.gold { background: linear-gradient(90deg,#FFF176,#FFB300); }
-.progress-fill.diamond { background: linear-gradient(90deg,#64B5F6,#1976D2); }
-.progress-fill.black { background: linear-gradient(90deg,#757575,#212121); }
-
 .progress-motivation {
   margin-top: 16rpx;
+  font-size: 20rpx;
   text-align: center;
-  font-size: $font-size-xs;
-  color: $text-placeholder;
+  color: $cozy-muted;
 }
 </style>
