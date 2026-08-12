@@ -355,6 +355,7 @@ function nextSlide() {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 56rpx;
   overflow: hidden;
 }
 .origin-head {
@@ -386,7 +387,6 @@ function nextSlide() {
   position: relative;
   width: 100%;
   height: 580rpx;
-  margin: 36rpx 0 24rpx;
   flex-shrink: 0;
   padding: 32rpx 24rpx 8rpx;
   box-sizing: content-box;
