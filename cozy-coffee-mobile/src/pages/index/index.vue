@@ -197,7 +197,7 @@ function nextSlide() {
    ═══════════════════════════════════════ */
 .hero {
   position: relative;
-  height: 60vh;
+  height: 66vh;
   overflow: hidden;
   background: linear-gradient(180deg, #F0E7DC 0%, #E4D5C2 55%, #D8C4AC 100%);
 }
