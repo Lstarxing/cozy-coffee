@@ -44,7 +44,20 @@ export class SessionService {
   }
 
   async establishSilentSession() {
-    if (this.sessionStore.isAuthenticated) return true
+    // 已有 token：先校验有效性，失效则清除并重新登录（避免带坏 token 请求全部 401）
+    if (this.sessionStore.isAuthenticated) {
+      try {
+        await this.authApi.getCurrentSession()
+        return true
+      } catch (error) {
+        if (error instanceof AuthError) {
+          this.sessionStore.clearSession()
+        } else {
+          // 网络类错误不强制登出，保留会话
+          return true
+        }
+      }
+    }
 
     let code = null
     // #ifdef MP-WEIXIN
