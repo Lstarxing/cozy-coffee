@@ -1,95 +1,96 @@
 <!--
-  首页 - 完全复刻 prototype/index.html：极简 Editorial 滚动
+  首页 - 复刻 prototype/index.html：微信原生 swiper 竖滑整屏翻页
   第一屏：Hero（大图 + 左上文案）+ 自提/外送 + 5 极简入口
   第二屏：Origin Archive 八产区散布
 -->
 <template>
   <view class="home-page">
-    <scroll-view
-      scroll-y
-      class="content-scroll"
-      :scroll-into-view="scrollTarget"
-      scroll-with-animation
-      :show-scrollbar="false"
-      @scroll="onScroll"
+    <swiper
+      class="home-swiper"
+      vertical
+      :current="currentSlide"
+      :duration="400"
+      @change="onSwiperChange"
     >
       <!-- ═══ 第一屏：Hero + 服务入口 ═══ -->
-      <view id="screen1" class="screen-1">
-        <view class="hero">
-          <image class="hero-img" :src="imageUrl('hero-coffee-photo.jpg')" mode="aspectFill" />
-          <view class="hero-copy">
-            <text class="hero-kicker">COZY COFFEE</text>
-            <text class="hero-cn">一杯咖啡</text>
-            <text class="hero-cn sub">一段安静时光</text>
-            <text class="hero-en">A quiet moment with coffee</text>
+      <swiper-item>
+        <view class="screen-1">
+          <view class="hero">
+            <image class="hero-img" :src="imageUrl('hero-coffee-photo.jpg')" mode="aspectFill" />
+            <view class="hero-copy">
+              <text class="hero-kicker">COZY COFFEE</text>
+              <text class="hero-cn">一杯咖啡</text>
+              <text class="hero-cn sub">一段安静时光</text>
+              <text class="hero-en">A quiet moment with coffee</text>
+            </view>
           </view>
+
+          <view class="service">
+            <view class="pickup-row">
+              <view class="pickup-half" @click="goMenu">
+                <text class="pickup-cn">自提</text>
+                <text class="pickup-en">PICK UP</text>
+              </view>
+              <view class="pickup-divider" />
+              <view class="pickup-half" @click="goMenu">
+                <text class="pickup-cn">外送</text>
+                <text class="pickup-en">DELIVERY</text>
+              </view>
+            </view>
+
+            <view class="entry-row">
+              <view v-for="entry in entries" :key="entry.label" class="entry-item" @click="goPage(entry.url)">
+                <view class="entry-icon"><CozyIcon :name="entry.icon" :size="18" color="#8B8178" /></view>
+                <text class="entry-label">{{ entry.label }}</text>
+              </view>
+            </view>
+          </view>
+
+          <text class="scroll-hint" @click="nextSlide">⌄</text>
         </view>
-
-        <view class="service">
-          <view class="pickup-row">
-            <view class="pickup-half" @click="goMenu">
-              <text class="pickup-cn">自提</text>
-              <text class="pickup-en">PICK UP</text>
-            </view>
-            <view class="pickup-divider" />
-            <view class="pickup-half" @click="goMenu">
-              <text class="pickup-cn">外送</text>
-              <text class="pickup-en">DELIVERY</text>
-            </view>
-          </view>
-
-          <view class="entry-row">
-            <view v-for="entry in entries" :key="entry.label" class="entry-item" @click="goPage(entry.url)">
-              <view class="entry-icon"><CozyIcon :name="entry.icon" :size="18" color="#8B8178" /></view>
-              <text class="entry-label">{{ entry.label }}</text>
-            </view>
-          </view>
-        </view>
-
-        <text class="scroll-hint" @click="scrollTo('origin')">⌄</text>
-      </view>
+      </swiper-item>
 
       <!-- ═══ 第二屏：Origin Archive — 八个产区色块 ═══ -->
-      <view id="origin" class="origin-archive">
-        <view class="origin-head">
-          <text class="origin-label">ORIGIN ARCHIVE</text>
-          <text class="origin-title cozy-display">风味从土地开始</text>
-          <text class="origin-sub">来自世界的八种风味，在杭州相遇</text>
-        </view>
+      <swiper-item>
+        <view class="origin-archive">
+          <view class="origin-head">
+            <text class="origin-label">ORIGIN ARCHIVE</text>
+            <text class="origin-title cozy-display">风味从土地开始</text>
+            <text class="origin-sub">来自世界的八种风味，在杭州相遇</text>
+          </view>
 
-        <view class="origin-scatter">
-          <view
-            v-for="o in origins"
-            :key="o.id"
-            class="scatter-item"
-            :class="{ 'scatter-em': o.id === 'yunnan' }"
-            :style="{ left: o.pos[0], top: o.pos[1] }"
-          >
+          <view class="origin-scatter">
             <view
-              class="scatter-silhouette"
-              :style="{ background: o.color, clipPath: o.silhouette, width: o.size[0], height: o.size[1] }"
-            />
-            <text class="scatter-name">{{ o.name }}</text>
-            <text class="scatter-flavor">{{ o.flavor }}</text>
+              v-for="o in origins"
+              :key="o.id"
+              class="scatter-item"
+              :class="{ 'scatter-em': o.id === 'yunnan' }"
+              :style="{ left: o.pos[0], top: o.pos[1] }"
+            >
+              <view
+                class="scatter-silhouette"
+                :style="{ background: o.color, clipPath: o.silhouette, width: o.size[0], height: o.size[1] }"
+              />
+              <text class="scatter-name">{{ o.name }}</text>
+              <text class="scatter-flavor">{{ o.flavor }}</text>
+            </view>
+          </view>
+
+          <view class="origin-foot">
+            <text class="origin-cta" @click="goPage('/pages/origins/index')">探索 8 个产区 →</text>
           </view>
         </view>
-
-        <view class="origin-foot">
-          <text class="origin-cta" @click="goPage('/pages/origins/index')">探索 8 个产区 →</text>
-        </view>
-      </view>
-
-      <view class="bottom-spacer" />
-    </scroll-view>
+      </swiper-item>
+    </swiper>
   </view>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import CozyIcon from '@/components/CozyIcon.vue'
 import { imageUrl } from '@/config/image'
 
-const scrollTarget = ref('')
+const currentSlide = ref(0)
 
 const entries = [
   { label: '积分商城', icon: 'gift', url: '/pages/mall/index' },
@@ -178,45 +179,18 @@ const origins = [
 function goMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 function goPage(url) { uni.navigateTo({ url }) }
 
-// 整屏吸附：上滑跨过半屏 → origin，下滑跨回半屏 → screen1
-const windowHeight = ref(0)
-let snapTimer = null
-let programmatic = false
-let currentScreen = 'screen1'
-
-onMounted(() => {
-  windowHeight.value = uni.getSystemInfoSync().windowHeight
-})
-
-function onScroll(e) {
-  if (programmatic) return
-  const scrollTop = e.detail.scrollTop
-  if (snapTimer) clearTimeout(snapTimer)
-  snapTimer = setTimeout(() => {
-    const threshold = windowHeight.value * 0.5
-    const target = scrollTop > threshold ? 'origin' : 'screen1'
-    if (target !== currentScreen) snapTo(target)
-  }, 120)
+function onSwiperChange(e) {
+  currentSlide.value = e.detail.current
 }
 
-function snapTo(id) {
-  currentScreen = id
-  programmatic = true
-  scrollTarget.value = ''
-  setTimeout(() => {
-    scrollTarget.value = id
-    setTimeout(() => { programmatic = false }, 420)
-  }, 20)
-}
-
-function scrollTo(id) {
-  snapTo(id)
+function nextSlide() {
+  if (currentSlide.value < 1) currentSlide.value += 1
 }
 </script>
 
 <style lang="scss" scoped>
 .home-page { height: 100vh; overflow: hidden; background: $cozy-bg; }
-.content-scroll { height: 100%; }
+.home-swiper { height: 100%; }
 
 /* ═══════════════════════════════════════
    HERO
@@ -225,6 +199,7 @@ function scrollTo(id) {
   position: relative;
   height: 60vh;
   overflow: hidden;
+  background: linear-gradient(180deg, #F0E7DC 0%, #E4D5C2 55%, #D8C4AC 100%);
 }
 .hero-img {
   width: 100%;
@@ -277,21 +252,21 @@ function scrollTo(id) {
 /* ── 第一屏容器 + 向下滚动提示 ── */
 .screen-1 {
   position: relative;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 .scroll-hint {
   position: absolute;
-  bottom: 16rpx;
+  bottom: calc(50px + env(safe-area-inset-bottom) + 24rpx);
   left: 50%;
   transform: translateX(-50%);
   font-size: 40rpx;
   line-height: 1;
   color: $cozy-muted;
   opacity: .65;
-  pointer-events: none;
+  pointer-events: auto;
   animation: hint-bounce 1.8s ease-in-out infinite;
 }
 @keyframes hint-bounce {
@@ -374,11 +349,12 @@ function scrollTo(id) {
    ORIGIN ARCHIVE — 八个产区色块
    ═══════════════════════════════════════ */
 .origin-archive {
-  min-height: 100vh;
-  padding: 0 12rpx 80rpx;
+  height: 100%;
+  padding: 0 12rpx 0;
   background: $cozy-bg;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .origin-head {
   margin-top: 128rpx;
@@ -460,6 +436,4 @@ function scrollTo(id) {
   font-size: 26rpx;
   font-weight: 650;
 }
-
-.bottom-spacer { height: 140rpx; }
 </style>
