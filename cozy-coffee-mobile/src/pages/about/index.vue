@@ -51,7 +51,7 @@
 
     <!-- 我们坚持的事情 -->
     <view class="section values">
-      <view class="section-head section-head--center">
+      <view class="section-head">
         <text class="eyebrow">WHAT WE BELIEVE</text>
         <text class="section-title cozy-display">我们坚持的事情</text>
         <text class="section-lead">不强调规模，只回应每一杯。</text>
