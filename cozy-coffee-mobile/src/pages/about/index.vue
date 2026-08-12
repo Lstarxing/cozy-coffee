@@ -142,13 +142,13 @@ const behindCells = [
 .hero-scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(26,16,10,.42) 0%, rgba(26,16,10,.12) 45%, rgba(26,16,10,.68) 100%);
+  background: linear-gradient(180deg, rgba(26,16,10,.18) 0%, rgba(26,16,10,.04) 45%, rgba(26,16,10,.36) 100%);
 }
 .hero-content {
   position: absolute;
-  bottom: 56rpx;
-  left: 32rpx;
-  right: 32rpx;
+  top: 96rpx;
+  left: 40rpx;
+  right: 40rpx;
   color: #fff;
 }
 .hero-kicker {
@@ -297,7 +297,7 @@ const behindCells = [
   margin-bottom: 36rpx;
   padding-bottom: 36rpx;
   border-bottom: 1rpx solid $cozy-border;
-  text-align: center;
+  text-align: left;
 }
 .value-item:last-child {
   margin-bottom: 0;
@@ -350,7 +350,7 @@ const behindCells = [
 }
 .behind-image {
   width: 100%;
-  height: 300rpx;
+  aspect-ratio: 3 / 4;
 }
 .behind-caption {
   display: block;
@@ -362,24 +362,24 @@ const behindCells = [
 /* ── 品牌宣言 ── */
 .manifesto {
   padding: 100rpx 32rpx;
-  background: $cozy-surface-alt;
+  background: $cozy-bg;
   text-align: center;
 }
 .manifesto .eyebrow {
-  color: rgba(255,255,255,.5);
+  color: $cozy-muted;
 }
 .manifesto-title {
   display: block;
   margin-top: 30rpx;
   font-size: 44rpx;
   line-height: 1.5;
-  color: #fff;
+  color: $cozy-ink;
 }
 .manifesto-sign {
   display: block;
   margin-top: 40rpx;
   font-size: 20rpx;
   letter-spacing: .2em;
-  color: rgba(255,255,255,.6);
+  color: $cozy-muted;
 }
 </style>
