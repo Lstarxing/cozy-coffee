@@ -1,5 +1,5 @@
 <!--
-  兑换记录页 - 复现 prototype/points-redemptions.html：自取/外送筛选 + 订单卡片 + 取消/确认收货
+  兑换记录页 - 精确复现 prototype/points-redemptions.html：自取/外送筛选 + 订单卡片 + 取消/确认收货
   数据源: /member/mall/orders (PointsOrderDTO)
 -->
 <template>
@@ -38,7 +38,9 @@
         </view>
 
         <view class="order-product">
-          <image :src="order.productImage || '/static/images/default-product.png'" class="order-thumb" mode="aspectFill" />
+          <view class="order-thumb">
+            <image v-if="order.productImage" :src="order.productImage" class="thumb-photo" mode="aspectFill" />
+          </view>
           <view class="order-copy">
             <text class="order-name">{{ order.productName }}</text>
             <text class="order-meta">数量 ×{{ order.quantity || 1 }} · {{ formatTime(order.createdAt) }}</text>
@@ -189,37 +191,37 @@ onShow(loadOrders)
 .redemptions-page {
   min-height: 100vh;
   background: $cozy-surface;
-  padding: 20rpx 24rpx 60rpx;
+  padding: 40rpx 40rpx 240rpx;
 }
 
 /* ── 页头 ── */
-.page-head { padding: 10rpx 4rpx 26rpx; }
+.page-head { padding: 16rpx 16rpx 36rpx; }
 .page-title {
   display: block;
   font-family: $font-display;
-  font-size: 42rpx;
+  font-size: 44rpx;
   font-weight: 600;
   color: $cozy-ink;
   line-height: 1.2;
 }
 .page-sub {
   display: block;
-  margin-top: 10rpx;
-  font-size: 22rpx;
+  margin-top: 12rpx;
+  font-size: 24rpx;
   color: $cozy-muted;
 }
 
 /* ── 状态筛选 ── */
 .filter-tabs {
   display: flex;
-  padding: 0 4rpx;
+  padding: 0 8rpx;
   border-bottom: 1rpx solid $cozy-border;
 }
 .filter-tab {
   flex: 1;
-  padding: 22rpx 0;
+  padding: 26rpx 0;
   text-align: center;
-  font-size: $font-size-md;
+  font-size: 28rpx;
   color: $cozy-muted;
   position: relative;
   transition: color $cozy-duration $cozy-ease-out;
@@ -245,12 +247,12 @@ onShow(loadOrders)
 .order-list {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
-  margin-top: 28rpx;
+  gap: 28rpx;
+  margin-top: 36rpx;
 }
 .order-card {
-  padding: 30rpx;
-  border-radius: $cozy-radius-lg;
+  padding: 36rpx;
+  border-radius: 28rpx;
   background: $bg-white;
   transition: opacity .2s;
 
@@ -260,10 +262,10 @@ onShow(loadOrders)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16rpx;
+  gap: 20rpx;
 }
 .order-no {
-  font-size: 20rpx;
+  font-size: 22rpx;
   color: $cozy-placeholder;
   letter-spacing: .04em;
   overflow: hidden;
@@ -272,9 +274,9 @@ onShow(loadOrders)
 }
 .status-chip {
   flex: none;
-  padding: 5rpx 14rpx;
-  border-radius: $cozy-radius-sm;
-  font-size: 20rpx;
+  padding: 6rpx 20rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
   font-weight: 650;
   letter-spacing: .02em;
 
@@ -288,21 +290,23 @@ onShow(loadOrders)
 .order-product {
   display: flex;
   align-items: center;
-  gap: 22rpx;
-  margin-top: 24rpx;
+  gap: 28rpx;
+  margin-top: 28rpx;
 }
 .order-thumb {
   flex: none;
-  width: 96rpx;
-  height: 96rpx;
-  border-radius: $cozy-radius-md;
-  background: $cozy-surface;
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 16rpx;
+  background: linear-gradient(135deg, #E8DDD2, #D8C8B4);
+  overflow: hidden;
 }
+.thumb-photo { width: 100%; height: 100%; }
 .order-copy { min-width: 0; flex: 1; }
 .order-name {
   display: block;
   font-family: $font-display;
-  font-size: 28rpx;
+  font-size: 30rpx;
   font-weight: 600;
   color: $cozy-ink;
   white-space: nowrap;
@@ -311,13 +315,13 @@ onShow(loadOrders)
 }
 .order-meta {
   display: block;
-  margin-top: 10rpx;
-  font-size: 21rpx;
+  margin-top: 12rpx;
+  font-size: 24rpx;
   color: $cozy-muted;
 }
 .order-points {
   flex: none;
-  font-size: 26rpx;
+  font-size: 28rpx;
   font-weight: 700;
   color: $cozy-primary;
 }
@@ -326,29 +330,29 @@ onShow(loadOrders)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16rpx;
-  margin-top: 22rpx;
-  padding-top: 20rpx;
+  gap: 20rpx;
+  margin-top: 24rpx;
+  padding-top: 24rpx;
   border-top: 1rpx solid $cozy-border;
 }
 .order-fulfill {
   min-width: 0;
-  font-size: 21rpx;
+  font-size: 24rpx;
   color: $cozy-muted;
 }
 .fulfill-code {
   display: block;
-  margin-top: 5rpx;
+  margin-top: 6rpx;
   font-family: monospace;
-  font-size: 20rpx;
+  font-size: 22rpx;
   color: $cozy-primary;
   letter-spacing: .05em;
 }
-.order-actions { display: flex; gap: 14rpx; flex: none; }
+.order-actions { display: flex; gap: 16rpx; flex: none; }
 .mini-btn {
-  padding: 14rpx 26rpx;
-  border-radius: $cozy-radius-md;
-  font-size: 22rpx;
+  padding: 14rpx 28rpx;
+  border-radius: 12rpx;
+  font-size: 24rpx;
   font-weight: 600;
   border: 1rpx solid $cozy-border;
   background: $bg-white;
@@ -369,31 +373,31 @@ onShow(loadOrders)
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 120rpx 0 90rpx;
+  padding: 144rpx 0 112rpx;
 }
 .empty-mark {
-  width: 108rpx;
-  height: 108rpx;
+  width: 128rpx;
+  height: 128rpx;
   border-radius: 50%;
   background: $cozy-surface;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: $font-display;
-  font-size: 24rpx;
+  font-size: 28rpx;
   font-weight: 700;
   letter-spacing: .08em;
   color: $cozy-primary;
 }
 .empty-text {
-  margin-top: 26rpx;
-  font-size: 26rpx;
+  margin-top: 32rpx;
+  font-size: 28rpx;
   font-weight: 600;
   color: $cozy-ink;
 }
 .empty-hint {
-  margin-top: 14rpx;
-  font-size: 22rpx;
+  margin-top: 16rpx;
+  font-size: 24rpx;
   color: $cozy-muted;
 }
 
@@ -409,39 +413,39 @@ onShow(loadOrders)
 }
 .modal-card {
   width: 78%;
-  max-width: 560rpx;
-  border-radius: $cozy-radius-lg;
+  max-width: 600rpx;
+  border-radius: 28rpx;
   background: $bg-white;
-  padding: 44rpx 36rpx 34rpx;
+  padding: 52rpx 44rpx 40rpx;
   text-align: center;
 }
 .modal-title {
   display: block;
   font-family: $font-display;
-  font-size: 32rpx;
+  font-size: 36rpx;
   font-weight: 600;
   color: $cozy-ink;
 }
 .modal-content {
   display: block;
-  margin-top: 20rpx;
-  font-size: 24rpx;
+  margin-top: 24rpx;
+  font-size: 26rpx;
   line-height: 1.7;
   color: $cozy-muted;
 }
 .modal-actions {
   display: flex;
-  gap: 16rpx;
-  margin-top: 38rpx;
+  gap: 20rpx;
+  margin-top: 48rpx;
 }
 .modal-btn {
   flex: 1;
-  height: 80rpx;
-  border-radius: $cozy-radius-md;
+  height: 88rpx;
+  border-radius: 12rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: $font-size-md;
+  font-size: 28rpx;
   font-weight: 600;
 
   &.ghost { background: $cozy-surface; color: $cozy-ink; }

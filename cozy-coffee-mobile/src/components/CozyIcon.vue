@@ -22,6 +22,7 @@ const ICONS = {
   coupon: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v4a2.2 2.2 0 0 0 0 4.4V19H4v-3.6a2.2 2.2 0 0 0 0-4.4z"/><circle cx="9" cy="12" r=".8" fill="currentColor" stroke="none"/></svg>'),
   shield: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 18.5V8.5l1.3-1.5L9.2 11 12 5l2.8 6 3.4-4L19.5 8.5V18.5z"/><path d="M6.5 13.5h11"/></svg>'),
   swap: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M14 4l4 4-4 4"/><path d="M20 16H7M10 12l-4 4 4 4"/></svg>'),
+  bean: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm.5 3c0 0 1.5 3 1.5 7s-1.5 7-1.5 7c-1.5 0-4.5-3-4.5-7s3-7 4.5-7z"/></svg>'),
 }
 
 const props = defineProps({

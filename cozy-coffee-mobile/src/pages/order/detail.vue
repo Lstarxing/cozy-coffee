@@ -1,5 +1,5 @@
 <!--
-  订单详情页 - 复现 prototype/order-detail.html：统一小票
+  订单详情页 - 精确复现 prototype/order-detail.html：统一小票
   状态区 → 门店/配送 → 商品 → 金额 → 订单信息；支持咖啡+兑换、自取+外送
 -->
 <template>
@@ -31,7 +31,7 @@
       <!-- 商品 -->
       <view class="products">
         <view v-for="item in orderItems" :key="itemKey(item)" class="product-row">
-          <image :src="item.productImage || '/static/images/default-product.png'" class="product-img" mode="aspectFill" />
+          <view class="product-img"><image v-if="item.productImage" :src="item.productImage" class="product-photo" mode="aspectFill" /></view>
           <view class="product-main">
             <text class="product-name">{{ item.productName || item.name }}</text>
             <text class="product-spec">{{ itemSpec(item) }}</text>
@@ -94,7 +94,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { cancelOrder, getOrderDetail } from '@/api/order'
+import { getOrderDetail } from '@/api/order'
 import { getRedemptionDetail } from '@/api/member'
 import { useCartStore } from '@/stores/cart'
 import { useSessionStore } from '@/stores/session'
@@ -142,10 +142,7 @@ const statusClass = computed(() => ({
   canceled: 'cancelled'
 })[normalizedStatus.value] || 'active')
 
-const eyebrow = computed(() => {
-  if (isRedeem.value) return isDelivery.value ? 'COZY DELIVERY' : 'COZY PICKUP'
-  return isDelivery.value ? 'COZY DELIVERY' : 'COZY PICKUP'
-})
+const eyebrow = computed(() => isDelivery.value ? 'COZY DELIVERY' : 'COZY PICKUP')
 const codeCaption = computed(() => {
   if (isDelivery.value) return '物流单号'
   if (isRedeem.value) return '取货码'
@@ -183,10 +180,7 @@ const storeAddr = computed(() => {
 })
 
 const consumePoints = computed(() => order.value?.pointsCost || 0)
-const remainingPoints = computed(() => {
-  const current = Number(sessionStore.memberInfo?.currentPoints) || 0
-  return current
-})
+const remainingPoints = computed(() => Number(sessionStore.memberInfo?.currentPoints) || 0)
 const couponLabel = computed(() => order.value?.couponName || order.value?.couponLabel || '优惠')
 const deliveryFee = computed(() => Number(order.value?.deliveryFee || 0))
 const totalText = computed(() => isRedeem.value
@@ -306,12 +300,13 @@ function openRestoredCart() {
 
 <style lang="scss" scoped>
 .detail-page { min-height: 100vh; background: $cozy-surface; }
-.detail-content { padding: 24rpx; }
+.detail-content { padding: 12rpx 40rpx 0; }
 
 /* ── 状态区（品牌色，紧凑） ── */
 .pickup-panel {
-  padding: 34rpx 32rpx 30rpx;
-  border-radius: $cozy-radius-lg;
+  margin-top: 12rpx;
+  padding: 36rpx 48rpx 32rpx;
+  border-radius: 28rpx;
   text-align: center;
   color: #fff;
 
@@ -319,46 +314,46 @@ function openRestoredCart() {
   &.completed { background: $cozy-accent; }
   &.cancelled { background: $cozy-muted; }
 }
-.pickup-eyebrow { display: block; font-size: 18rpx; font-weight: 700; letter-spacing: .24em; opacity: .8; }
+.pickup-eyebrow { display: block; font-size: 20rpx; font-weight: 700; letter-spacing: .24em; opacity: .8; }
 .pickup-code {
   display: block;
-  margin-top: 14rpx;
+  margin-top: 16rpx;
   font-family: $font-display;
-  font-size: 60rpx;
+  font-size: 68rpx;
   font-weight: 800;
   letter-spacing: .06em;
   line-height: 1;
   word-break: break-all;
 }
-.code-caption { display: block; margin-top: 14rpx; font-size: 18rpx; letter-spacing: .16em; opacity: .75; }
-.pickup-status { display: block; margin-top: 14rpx; font-size: 22rpx; opacity: .85; }
+.code-caption { display: block; margin-top: 16rpx; font-size: 20rpx; letter-spacing: .16em; opacity: .75; }
+.pickup-status { display: block; margin-top: 16rpx; font-size: 24rpx; opacity: .85; }
 
 /* ── 门店/配送 ── */
 .store-block {
   display: flex;
   align-items: center;
-  gap: 20rpx;
-  padding: 36rpx 4rpx 30rpx;
+  gap: 24rpx;
+  padding: 44rpx 4rpx 36rpx;
   border-bottom: 1rpx solid $cozy-border;
 }
 .store-copy { flex: 1; min-width: 0; }
 .store-name {
   display: block;
   font-family: $font-display;
-  font-size: 36rpx;
+  font-size: 40rpx;
   font-weight: 600;
   color: $cozy-ink;
 }
 .store-addr {
   display: block;
-  margin-top: 8rpx;
-  font-size: 22rpx;
+  margin-top: 10rpx;
+  font-size: 24rpx;
   color: $cozy-muted;
 }
-.store-actions { flex: none; display: flex; gap: 14rpx; }
+.store-actions { flex: none; display: flex; gap: 16rpx; }
 .store-act {
-  width: 68rpx;
-  height: 68rpx;
+  width: 72rpx;
+  height: 72rpx;
   border-radius: 50%;
   border: 1rpx solid $cozy-border;
   background: $bg-white;
@@ -371,77 +366,79 @@ function openRestoredCart() {
 }
 
 /* ── 商品 ── */
-.products { padding: 6rpx 4rpx; }
+.products { padding: 8rpx 4rpx; }
 .product-row {
   display: flex;
   align-items: center;
-  gap: 24rpx;
-  padding: 26rpx 0;
+  gap: 28rpx;
+  padding: 32rpx 0;
   border-bottom: 1rpx solid $cozy-border;
 
   &:last-child { border-bottom: 0; }
 }
 .product-img {
   flex: none;
-  width: 112rpx;
-  height: 112rpx;
-  border-radius: $cozy-radius-md;
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 24rpx;
   background: linear-gradient(135deg, #E8DDD2, #D8C8B4);
+  overflow: hidden;
 }
+.product-photo { width: 100%; height: 100%; }
 .product-main { flex: 1; min-width: 0; }
 .product-name {
   display: block;
   font-family: $font-display;
-  font-size: 30rpx;
+  font-size: 32rpx;
   font-weight: 600;
   color: $cozy-ink;
 }
 .product-spec {
   display: block;
-  margin-top: 8rpx;
-  font-size: 21rpx;
+  margin-top: 10rpx;
+  font-size: 24rpx;
   color: $cozy-muted;
   line-height: 1.5;
 }
 .product-right { flex: none; text-align: right; }
-.product-price { display: block; font-size: 27rpx; font-weight: 650; color: $cozy-ink; }
-.product-qty { display: block; margin-top: 6rpx; font-size: 20rpx; color: $cozy-muted; }
-.product-points { display: block; font-size: 27rpx; font-weight: 700; color: $cozy-primary; }
+.product-price { display: block; font-size: 30rpx; font-weight: 650; color: $cozy-ink; }
+.product-qty { display: block; margin-top: 8rpx; font-size: 22rpx; color: $cozy-muted; }
+.product-points { display: block; font-size: 30rpx; font-weight: 700; color: $cozy-primary; }
 
 /* ── 金额 ── */
-.amount-block { padding: 8rpx 4rpx 16rpx; }
+.amount-block { padding: 12rpx 4rpx 20rpx; }
 .amount-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 20rpx;
-  padding: 15rpx 0;
-  font-size: 24rpx;
+  gap: 24rpx;
+  padding: 18rpx 0;
+  font-size: 26rpx;
   color: $cozy-ink;
 
-  .coupon-tag { font-size: 19rpx; color: $cozy-muted; }
+  .coupon-tag { font-size: 20rpx; color: $cozy-muted; }
   &.discount { color: $cozy-primary; }
 }
-.amount-divider { height: 1rpx; background: $cozy-border; margin: 12rpx 0 6rpx; }
+.amount-divider { height: 1rpx; background: $cozy-border; margin: 16rpx 0 8rpx; }
 .amount-row.total {
-  padding-top: 20rpx;
+  padding-top: 24rpx;
   font-weight: 700;
 
-  span:last-child { color: $cozy-primary; font-size: 36rpx; font-weight: 750; }
+  span:last-child { color: $cozy-primary; font-size: 40rpx; font-weight: 750; }
 }
 
 /* ── 订单信息（低权重） ── */
 .meta-block {
-  padding: 22rpx 4rpx 8rpx;
+  padding: 28rpx 4rpx 8rpx;
   border-top: 1rpx solid $cozy-border;
 }
 .meta-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 20rpx;
-  padding: 13rpx 0;
-  font-size: 21rpx;
+  gap: 24rpx;
+  padding: 16rpx 0;
+  font-size: 24rpx;
   color: $cozy-muted;
 
   > text:last-child, .meta-value { color: $cozy-ink; text-align: right; }
@@ -449,11 +446,11 @@ function openRestoredCart() {
 .meta-value { display: flex; align-items: center; gap: 12rpx; min-width: 0; }
 .copy-btn {
   flex: none;
-  padding: 0 12rpx;
-  border-radius: $cozy-radius-sm;
+  padding: 0 14rpx;
+  border-radius: 12rpx;
   border: 1rpx solid $cozy-border;
   color: $cozy-muted;
-  font-size: 19rpx;
+  font-size: 22rpx;
   font-weight: 600;
 
   &:active { opacity: .6; }
@@ -467,19 +464,19 @@ function openRestoredCart() {
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 14rpx 28rpx max(14rpx, env(safe-area-inset-bottom));
+  padding: 24rpx 40rpx max(24rpx, env(safe-area-inset-bottom));
   border-top: 1rpx solid $cozy-border;
   background: $bg-white;
 }
 .reorder-btn {
-  height: 84rpx;
-  border-radius: $cozy-radius-md;
+  height: 96rpx;
+  border-radius: 20rpx;
   background: $cozy-primary;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: $font-size-md;
+  font-size: 30rpx;
   font-weight: 600;
 
   &:active { background: $cozy-primary-hover; }

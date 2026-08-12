@@ -1,9 +1,9 @@
 <!--
-  订单页 - 复现 prototype/order.html：自取/外送分类，仅咖啡订单
+  订单页 - 精确复现 prototype/order.html：自取/外送分类，仅咖啡订单
   每单: 时间+取餐码/外送地址 + 状态 + 商品 + 再来一单
 -->
 <template>
-  <view class="order-page" :style="{ paddingTop: statusBarHeight + 44 + 'px' }">
+  <view class="order-page">
     <view class="category-switch">
       <view
         v-for="cat in categories"
@@ -25,19 +25,20 @@
         <view class="receipt-head">
           <view>
             <text class="store-name">CozyCoffee 中心店</text>
-            <text class="order-meta">{{ formatTime(order.createdAt) }} · {{ fulfillmentMeta(order) }}</text>
+            <text class="order-meta">{{ formatTime(order.createdAt) }} · {{ fulfillmentLabel(order) }}<text v-if="order.pickupCode && !isDeliveryOrder(order)" class="meta-em">取餐码 {{ order.pickupCode }}</text></text>
           </view>
           <view class="status-block">
             <text class="order-status" :class="statusClass(order.status)">{{ getStatusText(order.status) }}</text>
             <text v-if="isPending(order.status)" class="expire-countdown" :class="{ urgent: isExpiringSoon(order) }">
               {{ formatCountdown(order) }}
             </text>
+            <text v-else-if="isCompleted(order.status)" class="expire-countdown">{{ completedNote(order) }}</text>
           </view>
         </view>
 
         <view class="receipt-items">
           <view v-for="item in order.items" :key="item.id || `${item.productName}-${item.spec}`" class="order-item">
-            <image :src="item.productImage || '/static/images/default-product.png'" class="item-image" mode="aspectFill" />
+            <view class="item-image"><image v-if="item.productImage" :src="item.productImage" class="item-img" mode="aspectFill" /></view>
             <view class="item-info">
               <text class="item-name">{{ item.productName }}</text>
               <text class="item-spec">{{ item.spec || '默认规格' }}</text>
@@ -60,8 +61,8 @@
     </view>
 
     <!-- 空状态 -->
-    <view v-else class="editorial-empty">
-      <CozyIcon name="coffee" :size="48" color="#8B6958" class="empty-icon" />
+    <view v-else class="empty-state">
+      <text class="empty-icon">☕</text>
       <text class="empty-title">暂无{{ currentCategory === 'pickup' ? '自取' : '外送' }}订单</text>
       <text class="empty-desc">选择一杯喜欢的咖啡，<br>我们会为你现制。</text>
       <view class="empty-action" @click="goToMenu">去点单 →</view>
@@ -70,14 +71,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { onHide, onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+import { computed, ref } from 'vue'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { getOrderList } from '@/api/order'
 import { useCartStore } from '@/stores/cart'
 import { restoreOrderToCart } from '@/services/order/ReorderService'
 import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
-import CozyIcon from '@/components/CozyIcon.vue'
 
 const categories = [
   { value: 'pickup', label: '自取' },
@@ -85,7 +85,6 @@ const categories = [
 ]
 
 const currentCategory = ref('pickup')
-const statusBarHeight = ref(20)
 const coffeeOrders = ref([])
 const loading = ref(false)
 const errorMessage = ref('')
@@ -99,10 +98,6 @@ onLoad(options => {
   if (categories.some(c => c.value === cat)) currentCategory.value = cat
 })
 
-onMounted(() => {
-  statusBarHeight.value = uni.getSystemInfoSync().statusBarHeight || 20
-})
-
 onShow(() => {
   const saved = uni.getStorageSync('cozy_order_category')
   if (categories.some(c => c.value === saved)) currentCategory.value = saved
@@ -111,7 +106,6 @@ onShow(() => {
   loadCurrent()
 })
 
-onHide(stopTicker)
 onUnload(stopTicker)
 
 const shownOrders = computed(() => coffeeOrders.value.filter(order => {
@@ -220,13 +214,12 @@ function statusClass(status) {
   return 'pending'
 }
 
-function fulfillmentMeta(order) {
-  if (isDeliveryOrder(order)) return '外送'
-  return order.pickupCode ? `取餐码 <em class="pickup-em">${order.pickupCode}</em>` : '到店自提'
-}
-
 function fulfillmentLabel(order) {
   return isDeliveryOrder(order) ? '外送' : '到店自提'
+}
+
+function completedNote(order) {
+  return isDeliveryOrder(order) ? '已送达' : '可取'
 }
 
 function formatTime(value) {
@@ -284,73 +277,175 @@ function openRestoredCart() {
 </script>
 
 <style lang="scss" scoped>
-.order-page { min-height: 100vh; padding-bottom: 140rpx; background: $cozy-surface; }
+.order-page { min-height: 100vh; padding: 0 0 240rpx; background: $cozy-surface; }
 
-/* 分类切换：自取 / 外送 */
+/* ── 分类切换 ── */
 .category-switch {
-  position: sticky; top: 0; z-index: 10;
-  display: flex; height: 96rpx; background: #fff;
-  border-top: 1rpx solid $cozy-border; border-bottom: 1rpx solid $cozy-border;
+  display: flex;
+  height: 96rpx;
+  background: $bg-white;
+  border-top: 1rpx solid $cozy-border;
+  border-bottom: 1rpx solid $cozy-border;
 }
 .category-item {
-  flex: 1; display: flex; align-items: center; justify-content: center; gap: 10rpx;
-  color: $cozy-muted; font-size: 25rpx; font-weight: 600;
-  position: relative; transition: color $cozy-duration $cozy-ease-out;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $cozy-muted;
+  position: relative;
 }
-.category-item.active { color: $cozy-primary; font-weight: 720; }
+.category-item.active { color: $cozy-primary; font-weight: 700; }
 .category-item.active::after {
-  content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 64rpx; height: 4rpx; border-radius: 2rpx; background: $cozy-primary;
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64rpx;
+  height: 4rpx;
+  border-radius: 2rpx;
+  background: $cozy-primary;
 }
 .category-count {
-  min-width: 32rpx; height: 32rpx; padding: 0 8rpx; display: inline-flex;
-  align-items: center; justify-content: center; border-radius: 999rpx;
-  background: $cozy-surface; color: $cozy-muted; font-size: 18rpx; font-weight: 700;
+  min-width: 32rpx;
+  padding: 0 8rpx;
+  height: 32rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  background: $cozy-surface;
+  font-size: 20rpx;
+  font-weight: 700;
+  color: $cozy-muted;
 }
-.category-item.active .category-count { background: $cozy-accent-soft; color: $cozy-accent; }
 
-.order-list { padding: 24rpx; }
-.order-receipt { margin-bottom: 22rpx; overflow: hidden; border-radius: $cozy-radius-lg; background: #fff; }
-.receipt-head { padding: 26rpx 26rpx 22rpx; display: flex; align-items: flex-start; justify-content: space-between; gap: 20rpx; border-bottom: 1rpx solid $cozy-border; }
-.store-name { display: block; color: $cozy-ink; font-size: 27rpx; font-weight: 680; }
-.order-meta { display: block; margin-top: 7rpx; color: $cozy-muted; font-size: 19rpx; }
-.pickup-em { font-style: normal; color: $cozy-primary; font-weight: 650; }
-.status-block { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 8rpx; }
-.order-status { padding: 6rpx 13rpx; border-radius: 999rpx; font-size: 19rpx; font-weight: 700; }
-.order-status.pending { background: $cozy-warning-soft; color: #8a4d10; }
-.order-status.processing { background: $cozy-info-soft; color: #285b70; }
+.order-list { padding: 32rpx 24rpx 0; }
+
+/* ── 订单收据卡 ── */
+.order-receipt {
+  margin-bottom: 24rpx;
+  overflow: hidden;
+  border-radius: 24rpx;
+  background: $bg-white;
+}
+.receipt-head {
+  padding: 28rpx 28rpx 24rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24rpx;
+  border-bottom: 1rpx solid $cozy-border;
+}
+.store-name { display: block; font-size: 28rpx; font-weight: 650; color: $cozy-ink; }
+.order-meta { display: block; margin-top: 6rpx; font-size: 20rpx; color: $cozy-muted; }
+.meta-em { font-style: normal; color: $cozy-primary; font-weight: 650; }
+.status-block { flex: none; text-align: right; }
+.order-status {
+  display: inline-block;
+  padding: 6rpx 20rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+.order-status.processing { background: #EAF0F2; color: #285B70; }
 .order-status.completed { background: $cozy-accent-soft; color: $cozy-accent; }
-.order-status.cancelled { background: $cozy-error-soft; color: #9b3932; }
-.expire-countdown { color: $cozy-muted; font-size: 18rpx; }
-.expire-countdown.urgent { color: $cozy-error; font-weight: 650; }
-.receipt-items { padding: 6rpx 26rpx; }
-.order-item { display: flex; align-items: center; gap: 18rpx; padding: 20rpx 0; border-bottom: 1rpx solid $cozy-border; }
-.order-item:last-child { border-bottom: 0; }
-.item-image { width: 106rpx; height: 106rpx; flex: none; border-radius: $cozy-radius-md; background: $cozy-surface; }
-.item-info { min-width: 0; flex: 1; }
-.item-name { display: block; overflow: hidden; color: $cozy-ink; font-size: 25rpx; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.item-spec { display: block; margin-top: 7rpx; overflow: hidden; color: $cozy-muted; font-size: 20rpx; text-overflow: ellipsis; white-space: nowrap; }
-.item-right { flex: none; text-align: right; }
-.item-price { display: block; color: $cozy-ink; font-size: 24rpx; font-weight: 650; }
-.item-qty { display: block; margin-top: 7rpx; color: $cozy-muted; font-size: 19rpx; }
-.receipt-summary { padding: 22rpx 26rpx 25rpx; display: flex; align-items: center; justify-content: space-between; gap: 20rpx; background: $cozy-surface; }
-.summary-label { color: $cozy-muted; font-size: 19rpx; }
-.summary-actions { flex: none; display: flex; align-items: center; }
-.order-action { min-height: 66rpx; padding: 0 20rpx; display: flex; align-items: center; border: 1rpx solid $cozy-primary; border-radius: $cozy-radius-md; color: $cozy-primary; font-size: 21rpx; font-weight: 650; }
-.detail-link { padding-bottom: 9rpx; color: $cozy-primary; font-size: 20rpx; font-weight: 650; }
-
-/* 编辑式空状态 */
-.editorial-empty {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 420rpx 60rpx 120rpx; text-align: center;
+.order-status.pending { background: #F4EBDD; color: #8A4D10; }
+.order-status.cancelled { background: $cozy-border; color: $cozy-muted; }
+.expire-countdown {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  color: $cozy-muted;
 }
-.empty-icon { margin-bottom: 32rpx; }
-.empty-title { display: block; color: $cozy-ink; font-size: 34rpx; font-weight: 680; letter-spacing: 2rpx; }
-.empty-desc { display: block; margin-top: 20rpx; color: $cozy-muted; font-size: 24rpx; line-height: 1.8; letter-spacing: 1rpx; }
+.expire-countdown.urgent { color: #9B3932; font-weight: 600; }
+
+.receipt-items { padding: 4rpx 28rpx; }
+.order-item {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid $cozy-border;
+
+  &:last-child { border-bottom: 0; }
+}
+.item-image {
+  flex: none;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 16rpx;
+  background: linear-gradient(135deg, #E8DDD2, #D8C8B4);
+  overflow: hidden;
+}
+.item-img { width: 100%; height: 100%; }
+.item-info { flex: 1; min-width: 0; }
+.item-name { display: block; font-size: 26rpx; font-weight: 650; color: $cozy-ink; }
+.item-spec { display: block; margin-top: 6rpx; font-size: 20rpx; color: $cozy-muted; }
+.item-right { flex: none; text-align: right; }
+.item-price { display: block; font-size: 26rpx; font-weight: 650; color: $cozy-ink; }
+.item-qty { display: block; margin-top: 6rpx; font-size: 20rpx; color: $cozy-muted; }
+
+.receipt-summary {
+  padding: 24rpx 28rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24rpx;
+  background: $cozy-surface;
+}
+.summary-label { font-size: 22rpx; color: $cozy-muted; }
+.summary-actions { flex: none; display: flex; align-items: center; }
+.order-action {
+  flex: none;
+  padding: 16rpx 28rpx;
+  border: 1rpx solid $cozy-primary;
+  border-radius: 16rpx;
+  color: $cozy-primary;
+  font-size: 22rpx;
+  font-weight: 650;
+
+  &:active { background: $bg-white; }
+}
+.detail-link {
+  flex: none;
+  padding-bottom: 8rpx;
+  color: $cozy-primary;
+  font-size: 22rpx;
+  font-weight: 650;
+}
+
+/* ── 空状态 ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 240rpx 80rpx 120rpx;
+  text-align: center;
+}
+.empty-icon { font-size: 80rpx; color: $cozy-muted; }
+.empty-title {
+  margin-top: 40rpx;
+  font-family: $font-display;
+  font-size: 44rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.empty-desc { margin-top: 20rpx; font-size: 26rpx; line-height: 1.7; color: $cozy-muted; }
 .empty-action {
-  margin-top: 44rpx; padding: 18rpx 48rpx;
-  border: 1rpx solid #5B4033; border-radius: $cozy-radius-md;
-  color: #5B4033; font-size: 24rpx; font-weight: 600;
-  letter-spacing: 1rpx; transition: all $cozy-duration $cozy-ease-out;
+  margin-top: 56rpx;
+  padding: 24rpx 64rpx;
+  border: 1rpx solid $cozy-primary;
+  border-radius: 16rpx;
+  color: $cozy-primary;
+  font-size: 26rpx;
+  font-weight: 600;
+
+  &:active { opacity: .7; }
 }
 </style>

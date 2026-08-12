@@ -1,5 +1,5 @@
 <!--
-  月度挑战页 - 复现 prototype/challenge.html：hero + 4 任务，达标自动发放积分（claimed），无手动领取
+  月度挑战页 - 精确复现 prototype/challenge.html：hero + 4 任务，达标自动发放积分（claimed），无手动领取
   数据源: /member/monthly-task (MonthlyTaskDTO)
 -->
 <template>
@@ -27,7 +27,7 @@
       <RetryState v-else-if="errorMessage && tasks.length === 0" :description="errorMessage" @retry="loadTasks" />
       <template v-else>
         <view v-for="task in tasks" :key="task.key" class="task-row" :class="{ done: isDone(task) }">
-          <view class="task-icon"><CozyIcon :name="task.icon" :size="22" color="var(--task-icon)" /></view>
+          <view class="task-icon"><CozyIcon :name="task.icon" :size="22" color="#753A22" /></view>
           <view class="task-main">
             <view class="task-top">
               <text class="task-name">{{ task.name }}</text>
@@ -111,14 +111,13 @@ onShow(loadTasks)
 .challenge-page {
   min-height: 100vh;
   background: $cozy-surface;
-  padding: 0 0 60rpx;
+  padding: 12rpx 40rpx 240rpx;
 }
 
 /* ── Hero ── */
 .challenge-hero {
-  margin: 20rpx 24rpx 0;
-  padding: 40rpx 32rpx 34rpx;
-  border-radius: $cozy-radius-lg;
+  padding: 52rpx 48rpx 44rpx;
+  border-radius: 24rpx;
   background: linear-gradient(135deg, #3A342E, #2C1E18);
   color: #fff;
   text-align: center;
@@ -132,52 +131,52 @@ onShow(loadTasks)
 }
 .hero-title {
   display: block;
-  margin-top: 14rpx;
+  margin-top: 20rpx;
   font-family: $font-display;
-  font-size: 44rpx;
+  font-size: 48rpx;
   font-weight: 600;
 }
 .hero-sub {
   display: block;
-  margin-top: 10rpx;
-  font-size: 22rpx;
+  margin-top: 12rpx;
+  font-size: 24rpx;
   color: rgba(255,255,255,.65);
 }
 .hero-stats {
   display: flex;
-  gap: 20rpx;
-  margin-top: 34rpx;
+  gap: 24rpx;
+  margin-top: 44rpx;
 }
 .stat {
   flex: 1;
-  padding: 22rpx 0;
-  border-radius: $cozy-radius-md;
+  padding: 24rpx 0;
+  border-radius: 16rpx;
   background: rgba(255,255,255,.08);
 }
 .stat-val {
   display: block;
-  font-size: 34rpx;
+  font-size: 36rpx;
   font-weight: 700;
 }
 .stat-lbl {
   display: block;
   margin-top: 6rpx;
-  font-size: 19rpx;
+  font-size: 20rpx;
   opacity: .7;
 }
 
 /* ── 任务列表 ── */
 .task-section {
-  margin: 24rpx 24rpx 0;
-  padding: 8rpx 24rpx 16rpx;
-  border-radius: $cozy-radius-lg;
+  margin-top: 32rpx;
+  padding: 16rpx 40rpx 24rpx;
+  border-radius: 24rpx;
   background: $bg-white;
 }
 .task-row {
   display: flex;
   align-items: center;
-  gap: 20rpx;
-  padding: 28rpx 0;
+  gap: 28rpx;
+  padding: 32rpx 0;
   border-bottom: 1rpx solid $cozy-border;
 
   &:last-child { border-bottom: 0; }
@@ -185,9 +184,9 @@ onShow(loadTasks)
 }
 .task-icon {
   flex: none;
-  width: 76rpx;
-  height: 76rpx;
-  border-radius: $cozy-radius-md;
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 24rpx;
   background: $cozy-surface;
   color: $cozy-primary;
   display: flex;
@@ -202,13 +201,13 @@ onShow(loadTasks)
   gap: 16rpx;
 }
 .task-name {
-  font-size: $font-size-md;
+  font-size: 28rpx;
   font-weight: 600;
   color: $cozy-ink;
 }
 .task-reward {
   flex: none;
-  font-size: 21rpx;
+  font-size: 24rpx;
   font-weight: 700;
   color: $cozy-primary;
 
@@ -220,25 +219,25 @@ onShow(loadTasks)
 .task-desc {
   display: block;
   margin-top: 6rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
   color: $cozy-muted;
 }
 .task-progress {
   margin-top: 16rpx;
-  height: 5rpx;
-  border-radius: 3rpx;
+  height: 6rpx;
+  border-radius: 4rpx;
   background: $cozy-border;
   overflow: hidden;
 }
 .task-progress-fill {
   height: 100%;
-  border-radius: 3rpx;
+  border-radius: 4rpx;
   background: $cozy-primary;
   transition: width .5s ease;
 }
 .task-status {
   flex: none;
-  font-size: 22rpx;
+  font-size: 26rpx;
   font-weight: 650;
   color: $cozy-ink;
 

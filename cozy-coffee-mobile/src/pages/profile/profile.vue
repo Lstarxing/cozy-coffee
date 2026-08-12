@@ -10,7 +10,7 @@
 
       <view class="card-top">
         <view class="brand-row">
-          <CozyIcon name="coffee" :size="20" :color="memberText" />
+          <CozyIcon name="coffee" :size="18" :color="memberText" />
           <text class="brand-text">COZY MEMBER</text>
         </view>
       </view>
@@ -239,14 +239,14 @@ function contactService() {
 </script>
 
 <style lang="scss" scoped>
-.profile-page { min-height: 100vh; padding: 20rpx 28rpx 140rpx; background: $cozy-surface; }
+.profile-page { min-height: 100vh; padding: 40rpx 40rpx 220rpx; background: $cozy-surface; }
 
 /* ===== 会员身份卡（紧凑 · 等级主题） ===== */
 .member-card {
   position: relative;
   overflow: hidden;
-  padding: 30rpx 32rpx 30rpx;
-  border-radius: $cozy-radius-lg;
+  padding: 32rpx 36rpx 32rpx;
+  border-radius: 28rpx;
   box-shadow: 0 12rpx 40rpx rgba(43,30,22,.08);
   background: var(--member-surface, $cozy-surface);
   color: var(--member-text, $cozy-ink);
@@ -265,9 +265,9 @@ function contactService() {
 }
 
 .card-top { display: flex; align-items: center; }
-.brand-row { display: flex; align-items: center; gap: 12rpx; }
+.brand-row { display: flex; align-items: center; gap: 14rpx; }
 .brand-text {
-  font-size: 19rpx;
+  font-size: 20rpx;
   font-weight: 800;
   letter-spacing: .24em;
   opacity: .84;
@@ -277,8 +277,8 @@ function contactService() {
 .card-identity {
   display: flex;
   align-items: center;
-  gap: 24rpx;
-  margin-top: 30rpx;
+  gap: 28rpx;
+  margin-top: 36rpx;
 }
 .level-emblem-wrap {
   position: relative;
@@ -312,15 +312,14 @@ function contactService() {
 }
 
 .points-row {
-  margin-top: 26rpx;
-  padding-top: 24rpx;
+  margin-top: 28rpx;
+  padding-top: 26rpx;
   border-top: 1rpx solid currentColor;
-  opacity: .9;
 }
 .points-value {
   display: block;
   font-family: $font-display;
-  font-size: 50rpx;
+  font-size: 52rpx;
   font-weight: 700;
   line-height: 1;
   letter-spacing: -.01em;
@@ -328,7 +327,7 @@ function contactService() {
 }
 .points-label {
   display: block;
-  margin-top: 10rpx;
+  margin-top: 12rpx;
   font-size: 18rpx;
   font-weight: 650;
   letter-spacing: .18em;
@@ -336,19 +335,19 @@ function contactService() {
   color: inherit;
 }
 
-.level-progress { margin-top: 28rpx; }
+.level-progress { margin-top: 32rpx; }
 .growth-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 20rpx;
-  margin-bottom: 14rpx;
+  margin-bottom: 18rpx;
 }
-.growth-label { font-size: 21rpx; opacity: .74; color: inherit; }
-.growth-exp { font-size: 22rpx; font-weight: 650; color: inherit; }
+.growth-label { font-size: 22rpx; opacity: .74; color: inherit; }
+.growth-exp { font-size: 24rpx; font-weight: 650; color: inherit; }
 .progress-track {
-  height: 5rpx;
-  border-radius: 3rpx;
+  height: 6rpx;
+  border-radius: 4rpx;
   background: rgba(60,40,30,.12);
   overflow: hidden;
 }
@@ -360,19 +359,19 @@ function contactService() {
 
 /* ===== 卡片容器 ===== */
 .entry-card {
-  margin-top: 22rpx;
-  border-radius: $cozy-radius-lg;
+  margin-top: 28rpx;
+  border-radius: 28rpx;
   background: $bg-white;
   overflow: hidden;
 }
-.entry-card.first { margin-top: 30rpx; }
+.entry-card.first { margin-top: 52rpx; }
 
 /* ── 我的订单（两行入口） ── */
 .order-row {
   display: flex;
   align-items: center;
-  gap: 22rpx;
-  padding: 28rpx 30rpx;
+  gap: 28rpx;
+  padding: 32rpx 36rpx;
   border-bottom: 1rpx solid $cozy-border;
 
   &:last-child { border-bottom: 0; }
@@ -380,9 +379,9 @@ function contactService() {
 }
 .order-ic {
   flex: none;
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: $cozy-radius-md;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 18rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -391,74 +390,74 @@ function contactService() {
 .order-copy { flex: 1; min-width: 0; }
 .order-name {
   display: block;
-  font-size: $font-size-md;
+  font-size: 28rpx;
   font-weight: 600;
   color: $cozy-ink;
 }
 .order-note {
   display: block;
   margin-top: 6rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
   color: $cozy-muted;
 }
 .order-count {
   flex: none;
-  min-width: 40rpx;
-  height: 40rpx;
-  padding: 0 12rpx;
+  min-width: 44rpx;
+  height: 44rpx;
+  padding: 0 14rpx;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999rpx;
   background: $cozy-surface;
   color: $cozy-muted;
-  font-size: 20rpx;
+  font-size: 22rpx;
   font-weight: 700;
 }
-.order-arrow { flex: none; font-size: 34rpx; color: $cozy-placeholder; line-height: 1; }
+.order-arrow { flex: none; font-size: 36rpx; color: $cozy-placeholder; line-height: 1; }
 
-/* ── 会员功能（一行 5 格） ── */
+/* ── 会员功能（一行 4 格，月度挑战换行到第二排） ── */
 .func-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  row-gap: 36rpx;
-  padding: 44rpx 10rpx 40rpx;
+  grid-template-columns: repeat(4, 1fr);
+  row-gap: 48rpx;
+  padding: 56rpx 12rpx 52rpx;
 }
 .f-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16rpx;
+  gap: 20rpx;
 
   &:active { opacity: .55; }
 }
 .f-icon {
-  width: 48rpx;
-  height: 48rpx;
+  width: 52rpx;
+  height: 52rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   color: $cozy-muted;
 }
-.f-label { font-size: 21rpx; color: $cozy-ink; font-weight: 500; letter-spacing: .02em; }
+.f-label { font-size: 22rpx; color: $cozy-ink; font-weight: 500; letter-spacing: .02em; }
 
 /* ── 服务（安静文字列表） ── */
 .svc-row {
   display: flex;
   align-items: center;
-  gap: 20rpx;
-  padding: 28rpx 30rpx;
+  gap: 24rpx;
+  padding: 32rpx 36rpx;
   border-bottom: 1rpx solid $cozy-border;
 
   &:last-child { border-bottom: 0; }
   &:active { opacity: .8; }
 }
-.svc-name { font-size: $font-size-md; color: $cozy-ink; }
-.svc-note { flex: 1; text-align: right; font-size: 20rpx; color: $cozy-muted; }
-.svc-arrow { flex: none; font-size: 34rpx; color: $cozy-placeholder; line-height: 1; }
+.svc-name { font-size: 28rpx; color: $cozy-ink; }
+.svc-note { flex: 1; text-align: right; font-size: 22rpx; color: $cozy-muted; }
+.svc-arrow { flex: none; font-size: 36rpx; color: $cozy-placeholder; line-height: 1; }
 
 /* ===== 底部品牌区域 ===== */
-.profile-footer { padding: 70rpx 0 20rpx; text-align: center; }
+.profile-footer { padding: 92rpx 0 20rpx; text-align: center; }
 .footer-kicker {
   display: block;
   font-size: 18rpx;
@@ -468,24 +467,24 @@ function contactService() {
 }
 .footer-brand {
   display: block;
-  margin-top: 24rpx;
+  margin-top: 28rpx;
   font-family: $font-display;
-  font-size: 34rpx;
+  font-size: 36rpx;
   font-weight: 700;
   letter-spacing: .3em;
   color: $cozy-ink;
 }
 .footer-tag {
   display: block;
-  margin-top: 16rpx;
-  font-size: 20rpx;
+  margin-top: 20rpx;
+  font-size: 22rpx;
   letter-spacing: .08em;
   color: $cozy-muted;
 }
 .footer-about {
   display: inline-block;
-  margin-top: 30rpx;
-  font-size: 20rpx;
+  margin-top: 36rpx;
+  font-size: 22rpx;
   letter-spacing: .08em;
   color: $cozy-placeholder;
 
