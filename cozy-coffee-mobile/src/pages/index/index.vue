@@ -273,7 +273,7 @@ function scrollTo(id) {
 }
 .scroll-hint {
   position: absolute;
-  bottom: calc(50px + env(safe-area-inset-bottom) + 24rpx);
+  bottom: 16rpx;
   left: 50%;
   transform: translateX(-50%);
   font-size: 40rpx;
