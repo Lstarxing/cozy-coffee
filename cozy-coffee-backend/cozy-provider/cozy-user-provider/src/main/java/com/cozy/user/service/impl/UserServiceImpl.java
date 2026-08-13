@@ -227,6 +227,37 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
+    public String loginWechat(String openid) {
+        if (openid == null || openid.isBlank()) {
+            throw new BusinessException("微信登录 openid 无效");
+        }
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getOpenid, openid);
+        User user = userMapper.selectOne(wrapper);
+        if (user == null) {
+            user = new User();
+            user.setUsername("wx_" + openid);
+            user.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+            user.setMemberCode(generateMemberCode());
+            user.setInviteCode(generateInviteCode());
+            user.setNickname("微信用户");
+            user.setAvatar("/images/default-avatar.png");
+            user.setOpenid(openid);
+            userMapper.insert(user);
+            try {
+                memberService.createMember(user.getId());
+            } catch (Exception e) {
+                log.warn("创建微信用户会员信息失败: userId={}", user.getId(), e);
+            }
+        }
+        if ("disabled".equals(user.getStatus())) {
+            throw new BusinessException("账号已被禁用");
+        }
+        return issueToken(user);
+    }
+
+    @Override
     public void resetPasswordDev(String username, String newPassword) {
         if (username == null || username.isBlank() || newPassword == null || newPassword.length() < 6) {
             throw new BusinessException("账号或新密码格式不正确");

@@ -20,6 +20,7 @@ public class User {
     private Boolean inviteRewardGranted; // v5.0: 邀请奖励是否已发放（被邀请人首单后触发）
     private String phone;
     private String email;
+    private String openid; // 微信登录 openid（唯一，未绑定微信时为空）
     private String role = "user"; // 用户角色: user-普通用户, admin-管理员
     private String status = "active"; // 用户状态: active-正常, disabled-禁用
     private Integer tokenVersion = 0; // Token版本号，用于禁用时使Token失效

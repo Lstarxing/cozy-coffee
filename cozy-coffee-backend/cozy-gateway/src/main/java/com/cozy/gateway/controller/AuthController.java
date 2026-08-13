@@ -57,11 +57,13 @@ public class AuthController {
     }
 
     @PostMapping("/wechat/session")
-    public Result<Map<String, Object>> wechatDevSession(@Valid @RequestBody WechatDevSessionRequest request) {
-        if (!devLoginEnabled) {
+    public Result<Map<String, Object>> wechatSession(@Valid @RequestBody WechatDevSessionRequest request) {
+        if (!devLoginEnabled && !authService.wechatConfigured()) {
             return Result.forbidden();
         }
-        return Result.success(authService.loginWechatDev(request.getDeviceId()), "微信开发登录成功");
+        boolean real = authService.wechatConfigured();
+        return Result.success(authService.loginWechat(request.getCode(), request.getDeviceId()),
+                real ? "微信登录成功" : "微信开发登录成功");
     }
 
     @PostMapping("/password/reset-dev")

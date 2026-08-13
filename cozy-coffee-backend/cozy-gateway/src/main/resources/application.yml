@@ -55,3 +55,11 @@ storage:
   access-key-secret: ${STORAGE_ACCESS_KEY_SECRET:}
   dir-prefix: ${STORAGE_DIR_PREFIX:images/}
   public-base-url: ${STORAGE_PUBLIC_BASE_URL:}
+
+# 认证配置：微信登录（未配置 secret 时走开发登录）
+cozy:
+  auth:
+    dev-login-enabled: ${AUTH_DEV_LOGIN_ENABLED:true}
+    wechat:
+      appid: ${WECHAT_APPID:}
+      secret: ${WECHAT_SECRET:}

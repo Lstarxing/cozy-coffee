@@ -25,8 +25,25 @@ public class AuthService {
     @DubboReference(check = false, timeout = 3000, retries = 0)
     private UserService userService;
 
+    private final WechatService wechatService;
+
     public Map<String, Object> login(LoginRequest request) {
         return Map.of("token", userService.login(request));
+    }
+
+    public boolean wechatConfigured() {
+        return wechatService.isConfigured();
+    }
+
+    /**
+     * 微信登录：配置了 appid/secret 走真 code2Session；否则退回开发登录。
+     */
+    public Map<String, Object> loginWechat(String code, String deviceId) {
+        if (wechatService.isConfigured()) {
+            String openid = wechatService.code2Session(code);
+            return Map.of("token", userService.loginWechat(openid));
+        }
+        return Map.of("token", userService.loginWechatDev(deviceId));
     }
 
     public Map<String, Object> loginWechatDev(String deviceId) {

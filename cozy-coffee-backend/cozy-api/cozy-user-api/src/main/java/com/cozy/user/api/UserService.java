@@ -19,6 +19,11 @@ public interface UserService {
 
     String loginWechatDev(String deviceId);
 
+    /**
+     * 微信登录：按 openid 查找或创建用户并签发 token。
+     */
+    String loginWechat(String openid);
+
     void resetPasswordDev(String username, String newPassword);
 
     /**
