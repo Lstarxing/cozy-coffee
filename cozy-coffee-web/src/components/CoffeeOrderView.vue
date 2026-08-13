@@ -114,6 +114,12 @@ const selectedProduct = ref(null)
 const showCart = ref(false)
 const cartRef = ref(null)
 
+// 幂等键：一次下单尝试内保持稳定，网络重试不会重复下单；下单成功后重置
+let checkoutIdempotencyKey = ''
+function newCheckoutIdempotencyKey() {
+  return `web-checkout-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`
+}
+
 const { cartItems, addToCart, clearCart } = useCart()
 
 // 筛选凑单商品 (燕麦曲奇、牛角包)
@@ -201,8 +207,10 @@ const handleCheckout = async (orderData) => {
         }
       })
     }
-    const res = await createOrder(payload)
+    if (!checkoutIdempotencyKey) checkoutIdempotencyKey = newCheckoutIdempotencyKey()
+    const res = await createOrder(payload, checkoutIdempotencyKey)
     if (res.success) {
+      checkoutIdempotencyKey = ''
       ElMessage.success(res.message || '订单创建成功！')
       clearCart()
       showCart.value = false

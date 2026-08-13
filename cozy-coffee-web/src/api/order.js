@@ -12,8 +12,10 @@ export function getCoffeeProductDetail(id) {
 
 // 创建订单
 // data: { items: [], couponCode: string, remark: string }
-export function createOrder(data) {
-    return request.post('/order/create', data)
+// idempotencyKey: 幂等键（防重复下单），未传则自动生成
+export function createOrder(data, idempotencyKey) {
+    const key = idempotencyKey || `web-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`
+    return request.post('/order/create', data, { headers: { 'Idempotency-Key': key } })
 }
 
 // 获取订单列表
