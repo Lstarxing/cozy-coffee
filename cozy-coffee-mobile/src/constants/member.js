@@ -30,21 +30,21 @@ export const MEMBER_LEVEL_THEMES = Object.freeze({
     isDark: false
   },
   silver: {
-    surface: 'linear-gradient(135deg, #ECE8E4, #D6D0CA)',
-    text: '#3E342E',
-    accent: '#8C7B70',
+    surface: 'linear-gradient(135deg,#F1EEE9 0%,#D1CCC6 48%,#A8A39C 100%)',
+    text: '#2C2824',
+    accent: '#857F78',
     isDark: false
   },
   gold: {
-    surface: 'linear-gradient(135deg, #E8D7A5, #C9A45C)',
-    text: '#3B2920',
-    accent: '#B8862D',
+    surface: 'linear-gradient(135deg,#F9E7B0 0%,#E8C078 50%,#B58224 100%)',
+    text: '#3A2412',
+    accent: '#8A5B12',
     isDark: false
   },
   diamond: {
-    surface: 'linear-gradient(135deg, #DCE4E6, #B8C6CA)',
-    text: '#263238',
-    accent: '#546E7A',
+    surface: 'linear-gradient(135deg,#7C9DB9,#4A6FA5)',
+    text: '#FFFFFF',
+    accent: '#D5E3EE',
     isDark: false
   },
   black: {

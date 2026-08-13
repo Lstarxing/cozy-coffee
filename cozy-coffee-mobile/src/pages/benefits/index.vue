@@ -7,7 +7,7 @@
     <!-- 页头：安静身份行 -->
     <view class="page-head">
       <view class="head-identity">
-        <LevelBadge :level="currentLevel" :color="levelAccent" :size="44" />
+        <LevelBadge :level="currentLevel" :size="44" />
         <text class="head-title">会员权益</text>
       </view>
       <text class="head-sub">{{ getLevelName(currentLevel) }} <em>· {{ currentLevel.toUpperCase() }}</em></text>
