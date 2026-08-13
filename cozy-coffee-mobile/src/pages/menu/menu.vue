@@ -3,7 +3,7 @@
   导航胶囊 + 门店信息（详情抽屉）+ 左分类栏（scroll-spy 联动）+ 连续滚动商品区（吸顶标题）+ 沉浸式商品详情 + 底部购物车
 -->
 <template>
-  <view class="menu-page">
+  <view class="menu-page" :style="{ height: menuPageHeight + 'px' }">
     <!-- 自定义导航栏（胶囊保留） -->
     <view class="menu-nav" :style="{ paddingTop: statusBarHeight + 'px', paddingRight: navRight + 'px' }">
       <view class="nav-inner">
@@ -111,13 +111,11 @@
     <CartSheet
       :visible="cartVisible"
       :items="cartStore.items"
-      :total="cartStore.subtotal"
       @close="cartVisible = false"
       @clear="clearCart"
       @edit="editCartLine"
       @decrease="cartStore.decreaseQty"
       @increase="cartStore.increaseQty"
-      @checkout="goToCheckout"
     />
 
     <!-- 门店详情抽屉 -->
@@ -174,7 +172,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { FIXED_STORE } from '@/config/store'
 import { getMenuData } from '@/api/product'
@@ -200,8 +198,10 @@ const errorMessage = ref('')
 const cartVisible = ref(false)
 const storeSheetVisible = ref(false)
 const fulfillment = ref('pickup')
-const statusBarHeight = ref(20)
-const navRight = ref(16)
+const sysInfo = uni.getSystemInfoSync()
+const statusBarHeight = ref(sysInfo.statusBarHeight || 20)
+const navRight = ref(100)
+const menuPageHeight = ref(sysInfo.windowHeight || 667)
 let scrollLocked = false
 let scrollSpyTick = false
 
@@ -211,12 +211,6 @@ const offShelfTitle = ref('')
 const offShelfLines = ref([])
 
 const currentCategory = computed(() => categories.value[currentCategoryIndex.value] || { id: '', name: '', en: '', products: [] })
-
-onMounted(() => {
-  const info = uni.getSystemInfoSync()
-  statusBarHeight.value = info.statusBarHeight || 20
-  navRight.value = 100
-})
 
 onLoad((options) => {
   pendingCategory = (options && options.category) ? String(options.category).toLowerCase() : ''
@@ -427,7 +421,7 @@ function closeOffShelf() {
 </script>
 
 <style lang="scss" scoped>
-.menu-page { height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: $cozy-bg; }
+.menu-page { display: flex; flex-direction: column; overflow: hidden; background: $cozy-surface; }
 
 /* ── 导航胶囊（与原型 menu.html 一致） ── */
 .menu-nav { flex: none; background: #fff; }
@@ -437,14 +431,19 @@ function closeOffShelf() {
 .nav-capsule__divider { width: 1px; height: 16px; background: $cozy-border; }
 
 /* ── 门店信息 ── */
-.store-info { flex: none; padding: 14rpx 28rpx 16rpx; background: #fff; border-bottom: 1rpx solid $cozy-border; }
+.store-info {
+  flex: none;
+  margin: 0;
+  padding: 24rpx 28rpx 26rpx;
+  background: #fff;
+}
 .store-row { display: flex; align-items: center; justify-content: space-between; }
 .store-left { display: flex; align-items: center; gap: 8rpx; }
-.store-fav { color: $cozy-primary; font-size: 26rpx; }
+.store-fav { color: $cozy-ink; font-size: 26rpx; }
 .store-name { color: $cozy-ink; font-size: 30rpx; font-weight: 650; }
 .pickup-switch { display: flex; border: 1rpx solid $cozy-border; border-radius: 12rpx; overflow: hidden; }
 .pickup-opt { padding: 10rpx 28rpx; font-size: 22rpx; color: $cozy-muted; background: $cozy-surface; }
-.pickup-opt.active { background: $cozy-primary; color: #fff; }
+.pickup-opt.active { background: $cozy-ink; color: #fff; }
 .store-meta { margin-top: 10rpx; font-size: 22rpx; color: $cozy-muted; }
 .store-foot { margin-top: 12rpx; display: flex; align-items: center; justify-content: space-between; font-size: 22rpx; color: $cozy-muted; }
 .status-icon { color: $cozy-accent; }
@@ -456,8 +455,8 @@ function closeOffShelf() {
 /* 左分类栏 */
 .category-sidebar { flex: none; width: 180rpx; height: 100%; background: $cozy-surface; border-right: 1rpx solid $cozy-border; }
 .category-item { position: relative; padding: 40rpx 16rpx; text-align: center; font-size: 26rpx; color: $cozy-muted; }
-.category-item.active { background: #fff; color: $cozy-primary; font-weight: 700; }
-.cat-count { position: absolute; right: 10rpx; top: 50%; transform: translateY(-50%); min-width: 30rpx; height: 30rpx; padding: 0 6rpx; border-radius: 999rpx; background: $cozy-primary; color: #fff; font-size: 18rpx; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
+.category-item.active { background: #fff; color: $cozy-ink; font-weight: 700; }
+.cat-count { position: absolute; right: 10rpx; top: 50%; transform: translateY(-50%); min-width: 30rpx; height: 30rpx; padding: 0 6rpx; border-radius: 999rpx; background: $cozy-ink; color: #fff; font-size: 18rpx; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
 
 /* 右商品区 */
 .product-scroll { min-width: 0; flex: 1; height: 100%; background: #fff; }
@@ -476,12 +475,12 @@ function closeOffShelf() {
 .product-desc { display: -webkit-box; overflow: hidden; margin-top: 6rpx; color: $cozy-muted; font-size: 21rpx; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
 .product-extra { margin-top: 6rpx; font-size: 19rpx; color: $cozy-placeholder; }
 .product-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
-.product-price { display: flex; align-items: baseline; color: $cozy-primary; }
+.product-price { display: flex; align-items: baseline; color: $cozy-ink; }
 .currency { font-size: 20rpx; font-weight: 700; }
 .price { font-size: 32rpx; font-weight: 750; line-height: 1; }
-.add-btn { position: relative; width: 52rpx; height: 52rpx; border-radius: 50%; background: $cozy-primary; color: #fff; display: flex; align-items: center; justify-content: center; }
-.add-plus { font-size: 30rpx; font-weight: 500; line-height: 1; }
-.add-count { position: absolute; top: -10rpx; right: -8rpx; min-width: 32rpx; height: 32rpx; padding: 0 6rpx; display: flex; align-items: center; justify-content: center; border: 2rpx solid #fff; border-radius: 999rpx; background: $cozy-primary; color: #fff; font-size: 18rpx; box-sizing: border-box; }
+.add-btn { position: relative; width: 44rpx; height: 44rpx; border-radius: 50%; background: $cozy-ink; color: #fff; text-align: center; line-height: 44rpx; }
+.add-plus { font-size: 34rpx; font-weight: 600; line-height: 44rpx; }
+.add-count { position: absolute; top: -8rpx; right: -6rpx; min-width: 32rpx; height: 32rpx; padding: 0 6rpx; display: flex; align-items: center; justify-content: center; border: 2rpx solid #fff; border-radius: 999rpx; background: $cozy-ink; color: #fff; font-size: 18rpx; box-sizing: border-box; }
 .product-spacer { height: 160rpx; }
 
 /* ── 门店详情抽屉 ── */
@@ -497,7 +496,7 @@ function closeOffShelf() {
 .sheet-row:last-child { border-bottom: 0; }
 .sheet-label { flex: none; width: 120rpx; font-size: 24rpx; color: $cozy-muted; }
 .sheet-value { flex: 1; font-size: 26rpx; color: $cozy-ink; line-height: 1.4; }
-.sheet-value.cozy-today { color: $cozy-primary; font-weight: 600; }
+.sheet-value.cozy-today { color: $cozy-ink; font-weight: 600; }
 .sheet-icon { flex: none; font-size: 32rpx; color: $cozy-muted; }
 
 /* ── 下架提示 ── */
@@ -506,5 +505,5 @@ function closeOffShelf() {
 .off-shelf-title { display: block; font-size: 30rpx; font-weight: 700; color: $cozy-ink; }
 .off-shelf-list { margin-top: 28rpx; text-align: left; }
 .off-shelf-line { display: block; padding: 14rpx 0; font-size: 26rpx; color: $cozy-muted; }
-.off-shelf-btn { margin-top: 36rpx; height: 84rpx; border-radius: 18rpx; background: $cozy-primary; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: 600; }
+.off-shelf-btn { margin-top: 36rpx; height: 84rpx; border-radius: 18rpx; background: $cozy-ink; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: 600; }
 </style>

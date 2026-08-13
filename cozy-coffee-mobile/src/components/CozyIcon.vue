@@ -27,18 +27,24 @@ const ICONS = {
   check: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'),
   trash: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>'),
   'shopping-bag': 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>'),
+  star: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l2.3 5.4 5.9.5-4.5 3.9 1.4 5.7L12 14.8l-5.1 3.1 1.4-5.7-4.5-3.9 5.9-.5z"/></svg>'),
+  'star-filled': 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l2.3 5.4 5.9.5-4.5 3.9 1.4 5.7L12 14.8l-5.1 3.1 1.4-5.7-4.5-3.9 5.9-.5z"/></svg>'),
+  pencil: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/><path d="M14 6l4 4"/></svg>'),
+  plus: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'),
 }
 
 const props = defineProps({
   name: { type: String, required: true },
   size: { type: [Number, String], default: 20 },
-  color: { type: String, default: '' }
+  color: { type: String, default: '' },
+  strokeWidth: { type: [Number, String], default: '' }
 })
 
 const src = computed(() => {
-  const base = ICONS[props.name] || ''
-  if (!props.color) return base
-  return base.replace(/currentColor/g, encodeURIComponent(props.color))
+  let base = ICONS[props.name] || ''
+  if (props.color) base = base.replace(/currentColor/g, encodeURIComponent(props.color))
+  if (props.strokeWidth) base = base.replace(/stroke-width="[^"]*"/g, `stroke-width="${props.strokeWidth}"`)
+  return base
 })
 
 const iconStyle = computed(() => {

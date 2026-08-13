@@ -151,9 +151,9 @@ const supportsMilk = computed(() => {
   return !NO_MILK_CHANGE.some(n => String(product.value?.name || '').includes(n))
 })
 const milkOptions = [
-  { value: 'WHOLE', label: '全脂奶', extra: 0 },
-  { value: 'OAT', label: '燕麦奶', extra: 4 },
-  { value: 'COCONUT', label: '椰奶', extra: 4 }
+  { value: 'WHOLE', label: '标准牛乳', extra: 0 },
+  { value: 'OAT', label: '换燕麦奶', extra: 4 },
+  { value: 'COCONUT', label: '换椰奶', extra: 4 }
 ]
 
 const unitPrice = computed(() => {
@@ -169,7 +169,7 @@ const selectedSpecsText = computed(() => {
   if (sizeOptions.value.length > 1) parts.push({ STANDARD: '标准杯', MEDIUM: '中杯', LARGE: '大杯', EXTRA_LARGE: '超大杯' }[form.cupSize] || form.cupSize)
   if (tempOptions.value.length > 1) parts.push({ HOT: '热', COLD: '冰', WARM: '温' }[form.temperature] || form.temperature)
   if (sugarOptions.value.length > 1) parts.push(form.sugarLevel === 'NONE' ? '无糖' : (form.sugarLevel === 'HALF' ? '半糖' : (form.sugarLevel === 'LESS' ? '少糖' : '标准糖')))
-  if (supportsMilk.value) parts.push({ WHOLE: '全脂奶', OAT: '燕麦奶', COCONUT: '椰奶' }[form.milkType] || form.milkType)
+  if (supportsMilk.value) parts.push({ WHOLE: '标准牛乳', OAT: '换燕麦奶', COCONUT: '换椰奶' }[form.milkType] || form.milkType)
   if (isEspresso.value) parts.push(form.coffeeStrength === 'STRONG' ? '加浓' : '标准')
   return parts.length ? parts.join(' · ') : '默认规格'
 })
@@ -228,7 +228,7 @@ function addToCart() {
 .spec-hero { position: relative; }
 .spec-image { width: 100%; height: 520rpx; display: block; background: linear-gradient(135deg,#E8DDD2,#D8C8B4); }
 .spec-hero-info { padding: 40rpx 40rpx 12rpx; }
-.spec-tag { display: inline-block; margin-bottom: 18rpx; padding: 6rpx 18rpx; border-radius: 8rpx; background: $cozy-primary; color: #fff; font-size: 22rpx; font-weight: 700; letter-spacing: .06em; }
+.spec-tag { display: inline-block; margin-bottom: 18rpx; padding: 6rpx 18rpx; border-radius: 8rpx; background: $cozy-ink; color: #fff; font-size: 22rpx; font-weight: 700; letter-spacing: .06em; }
 .spec-eyebrow { display: block; font-size: 20rpx; font-weight: 700; letter-spacing: .24em; color: $cozy-muted; }
 .spec-name { display: block; margin-top: 14rpx; font-family: $font-display; font-size: 44rpx; font-weight: 600; color: $cozy-ink; line-height: 1.2; }
 .spec-notes { display: block; margin-top: 16rpx; font-family: $font-display; font-size: 24rpx; color: $cozy-muted; letter-spacing: .02em; }
@@ -237,11 +237,11 @@ function addToCart() {
 .spec-group { margin-top: 28rpx; }
 .spec-group:first-child { margin-top: 0; }
 .spec-title { display: block; margin-bottom: 20rpx; font-size: 26rpx; font-weight: 600; color: $cozy-ink; }
-.spec-options { display: flex; flex-wrap: wrap; gap: 20rpx; }
-.spec-option { height: 72rpx; padding: 0 40rpx; display: flex; align-items: center; justify-content: center; gap: 8rpx; font-size: 26rpx; color: $cozy-ink; border-radius: 10rpx; border: 1rpx solid $cozy-border; background: #fff; }
-.spec-option.active { background: #F1E4DA; border-color: $cozy-primary; color: $cozy-primary; font-weight: 600; }
-.spec-extra { color: $cozy-muted; font-size: 20rpx; }
-.spec-option.active .spec-extra { color: $cozy-primary; }
+.spec-options { display: flex; flex-wrap: wrap; gap: 14rpx; }
+.spec-option { height: 56rpx; padding: 0 26rpx; display: flex; align-items: center; justify-content: center; gap: 6rpx; font-size: 24rpx; color: $cozy-ink; border-radius: 8rpx; border: 1rpx solid $cozy-border; background: #fff; }
+.spec-option.active { background: $cozy-surface; border-color: $cozy-ink; color: $cozy-ink; font-weight: 600; }
+.spec-extra { color: $cozy-muted; font-size: 18rpx; }
+.spec-option.active .spec-extra { color: $cozy-ink; }
 
 .spec-card { border-top: 1rpx solid $cozy-border; margin-top: 40rpx; padding: 36rpx 40rpx 4rpx; }
 .spec-card-title { display: block; margin-bottom: 20rpx; font-family: $font-display; font-size: 32rpx; font-weight: 600; color: $cozy-ink; }
@@ -253,11 +253,11 @@ function addToCart() {
 .spec-bottom { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid $cozy-border; }
 .spec-bottom-top { display: flex; align-items: center; gap: 24rpx; margin-bottom: 20rpx; }
 .spec-price-col { flex: 1; min-width: 0; }
-.spec-bottom-price { font-size: 44rpx; font-weight: 700; color: $cozy-primary; line-height: 1.1; }
+.spec-bottom-price { font-size: 44rpx; font-weight: 700; color: $cozy-ink; line-height: 1.1; }
 .spec-selected { display: block; margin-top: 8rpx; font-size: 22rpx; color: $cozy-muted; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .spec-qty { display: flex; align-items: center; gap: 16rpx; border: 1rpx solid $cozy-border; border-radius: 12rpx; padding: 8rpx 18rpx; }
 .qty-btn { width: 48rpx; height: 48rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; color: $cozy-ink; }
 .qty-value { min-width: 36rpx; text-align: center; font-size: 28rpx; font-weight: 600; color: $cozy-ink; }
-.spec-add { width: 100%; height: 92rpx; display: flex; align-items: center; justify-content: center; border-radius: 12rpx; background: $cozy-primary; color: #fff; font-size: 30rpx; font-weight: 650; }
-.spec-add:active { background: $cozy-primary-hover; }
+.spec-add { width: 100%; height: 92rpx; display: flex; align-items: center; justify-content: center; border-radius: 12rpx; background: $cozy-ink; color: #fff; font-size: 30rpx; font-weight: 650; }
+.spec-add:active { background: darken($cozy-ink, 8%); }
 </style>

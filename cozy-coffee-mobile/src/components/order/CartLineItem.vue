@@ -11,7 +11,7 @@
       <text class="line-spec">{{ specText }}</text>
       <view class="line-foot">
         <text class="line-price">¥{{ lineTotal }}</text>
-        <view class="quantity-control">
+        <view class="quantity-control" @click.stop>
           <text class="quantity-button" @click="$emit('decrease', line.lineKey)">−</text>
           <text class="quantity-value">{{ line.quantity }}</text>
           <text class="quantity-button" @click="$emit('increase', line.lineKey)">＋</text>
@@ -34,7 +34,7 @@ const labels = {
   STANDARD: '标准杯', MEDIUM: '中杯', LARGE: '大杯', SMALL: '小杯',
   HOT: '热', COLD: '冰', WARM: '温',
   LESS: '少糖', HALF: '半糖', NONE: '无糖',
-  WHOLE: '全脂奶', OAT: '燕麦奶', COCONUT: '椰奶', SOY: '豆奶',
+  WHOLE: '标准牛乳', OAT: '换燕麦奶', COCONUT: '换椰奶', SOY: '豆奶',
   NORMAL: '标准浓度', STRONG: '加浓'
 }
 
@@ -48,17 +48,17 @@ const lineTotal = computed(() => (Number(props.line.price || 0) * Number(props.l
 </script>
 
 <style lang="scss" scoped>
-.cart-line { display: flex; align-items: flex-start; gap: 24rpx; padding: 28rpx 0; border-bottom: 1rpx solid $cozy-border; }
+.cart-line { width: 100%; display: flex; align-items: flex-start; gap: 20rpx; padding: 24rpx 0; border-bottom: 1rpx solid $cozy-border; box-sizing: border-box; }
 .cart-line:last-child { border-bottom: 0; }
-.line-check { flex: none; width: 40rpx; height: 40rpx; margin-top: 36rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: $cozy-ink; }
-.line-image { flex: none; width: 120rpx; height: 120rpx; border-radius: $cozy-radius-md; background: linear-gradient(135deg, #E8DDD2, #D8C8B4); overflow: hidden; }
+.line-check { flex: none; width: 36rpx; height: 36rpx; margin-top: 32rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: $cozy-ink; }
+.line-image { flex: none; width: 128rpx; height: 128rpx; border-radius: $cozy-radius-md; background: linear-gradient(135deg, #E8DDD2, #D8C8B4); overflow: hidden; }
 .line-image image { width: 100%; height: 100%; }
-.line-body { flex: 1; min-width: 0; }
+.line-body { flex: 1 1 0; min-width: 0; overflow: hidden; }
 .line-name { display: block; overflow: hidden; font-family: $font-display; color: $cozy-ink; font-size: 30rpx; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
-.line-spec { display: block; overflow: hidden; margin-top: 8rpx; color: $cozy-muted; font-size: 22rpx; line-height: 1.5; white-space: nowrap; text-overflow: ellipsis; }
-.line-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 16rpx; }
-.line-price { color: $cozy-ink; font-size: 32rpx; font-weight: 700; }
-.quantity-control { display: flex; align-items: center; gap: 24rpx; border: 1rpx solid $cozy-border; border-radius: 40rpx; padding: 8rpx 16rpx; }
+.line-spec { display: block; overflow: hidden; margin-top: 6rpx; color: $cozy-muted; font-size: 22rpx; line-height: 1.5; white-space: nowrap; text-overflow: ellipsis; }
+.line-foot { display: flex; justify-content: space-between; align-items: center; gap: 12rpx; margin-top: 16rpx; }
+.line-price { flex-shrink: 0; color: $cozy-ink; font-size: 30rpx; font-weight: 700; }
+.quantity-control { flex-shrink: 0; display: flex; align-items: center; gap: 12rpx; border: 1rpx solid $cozy-border; border-radius: 999rpx; padding: 6rpx 14rpx; }
 .quantity-button { width: 40rpx; height: 40rpx; display: flex; align-items: center; justify-content: center; font-size: 28rpx; color: $cozy-ink; }
 .quantity-value { min-width: 26rpx; text-align: center; font-size: 26rpx; color: $cozy-ink; }
 </style>

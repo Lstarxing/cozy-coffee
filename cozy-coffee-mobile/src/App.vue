@@ -67,7 +67,7 @@ page {
 }
 
 /* 去除默认边距 */
-view, text, image, button, input, textarea {
+view, text, image, button, input, textarea, scroll-view {
   box-sizing: border-box;
 }
 

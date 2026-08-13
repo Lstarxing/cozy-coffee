@@ -4,16 +4,18 @@
 -->
 <template>
   <view class="order-page">
-    <view class="category-switch">
-      <view
-        v-for="cat in categories"
-        :key="cat.value"
-        class="category-item"
-        :class="{ active: currentCategory === cat.value }"
-        @click="switchCategory(cat.value)"
-      >
-        <text class="category-label">{{ cat.label }}</text>
-        <text v-if="counts[cat.value]" class="category-count">{{ counts[cat.value] }}</text>
+    <view class="order-top" :style="{ paddingTop: (statusBarHeight + 40) + 'px' }">
+      <view class="category-switch">
+        <view
+          v-for="cat in categories"
+          :key="cat.value"
+          class="category-item"
+          :class="{ active: currentCategory === cat.value }"
+          @click="switchCategory(cat.value)"
+        >
+          <text class="category-label">{{ cat.label }}</text>
+          <text v-if="counts[cat.value]" class="category-count">{{ counts[cat.value] }}</text>
+        </view>
       </view>
     </view>
 
@@ -62,17 +64,20 @@
 
     <!-- 空状态 -->
     <view v-else class="empty-state">
-      <text class="empty-icon">☕</text>
+      <view class="empty-cup" aria-hidden="true">
+        <view class="empty-cup__body" />
+        <view class="empty-cup__handle" />
+      </view>
       <text class="empty-title">暂无{{ currentCategory === 'pickup' ? '自取' : '外送' }}订单</text>
       <text class="empty-desc">选择一杯喜欢的咖啡，<br>我们会为你现制。</text>
-      <view class="empty-action" @click="goToMenu">去点单 →</view>
+      <view class="empty-action" @click="goToMenu">去点单</view>
     </view>
   </view>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { getOrderList } from '@/api/order'
 import { useCartStore } from '@/stores/cart'
 import { restoreOrderToCart } from '@/services/order/ReorderService'
@@ -92,6 +97,8 @@ const nowTs = ref(Date.now())
 const cartStore = useCartStore()
 const reorderingOrderId = ref('')
 let ticker = null
+
+const statusBarHeight = ref(uni.getSystemInfoSync().statusBarHeight || 20)
 
 onLoad(options => {
   const cat = options?.category
@@ -231,7 +238,12 @@ function formatTime(value) {
 }
 
 function money(value) { return Number(value || 0).toFixed(2) }
-function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
+function goToMenu() {
+  uni.switchTab({
+    url: '/pages/menu/menu',
+    fail: () => uni.showToast({ title: '跳转失败，请重试', icon: 'none' })
+  })
+}
 function goToDetail(orderId) { uni.navigateTo({ url: `/pages/order/detail?id=${encodeURIComponent(orderId)}` }) }
 
 async function reOrder(order) {
@@ -279,12 +291,14 @@ function openRestoredCart() {
 <style lang="scss" scoped>
 .order-page { min-height: 100vh; padding: 0 0 240rpx; background: $cozy-surface; }
 
+/* ── 顶部白色区（胶囊下方留白 + 分类切换 + 分隔线） ── */
+.order-top { background: #fff; }
+
 /* ── 分类切换 ── */
 .category-switch {
   display: flex;
   height: 96rpx;
   background: $bg-white;
-  border-top: 1rpx solid $cozy-border;
   border-bottom: 1rpx solid $cozy-border;
 }
 .category-item {
@@ -330,6 +344,7 @@ function openRestoredCart() {
 .order-receipt {
   margin-bottom: 24rpx;
   overflow: hidden;
+  border: 1rpx solid $cozy-border;
   border-radius: 24rpx;
   background: $bg-white;
 }
@@ -425,10 +440,31 @@ function openRestoredCart() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 240rpx 80rpx 120rpx;
+  padding: 360rpx 80rpx 120rpx;
   text-align: center;
 }
-.empty-icon { font-size: 80rpx; color: $cozy-muted; }
+.empty-cup { position: relative; width: 100rpx; height: 76rpx; }
+.empty-cup__body {
+  position: absolute;
+  left: 6rpx;
+  bottom: 6rpx;
+  width: 70rpx;
+  height: 56rpx;
+  border: 5rpx solid $cozy-muted;
+  border-radius: 0 0 16rpx 16rpx;
+  box-sizing: border-box;
+}
+.empty-cup__handle {
+  position: absolute;
+  right: 2rpx;
+  top: 10rpx;
+  width: 22rpx;
+  height: 30rpx;
+  border: 5rpx solid $cozy-muted;
+  border-left: none;
+  border-radius: 0 16rpx 16rpx 0;
+  box-sizing: border-box;
+}
 .empty-title {
   margin-top: 40rpx;
   font-family: $font-display;
@@ -439,13 +475,14 @@ function openRestoredCart() {
 .empty-desc { margin-top: 20rpx; font-size: 26rpx; line-height: 1.7; color: $cozy-muted; }
 .empty-action {
   margin-top: 56rpx;
-  padding: 24rpx 64rpx;
-  border: 1rpx solid $cozy-primary;
-  border-radius: 16rpx;
-  color: $cozy-primary;
+  padding: 16rpx 64rpx;
+  border-radius: 999rpx;
+  background: $cozy-ink;
+  color: #fff;
   font-size: 26rpx;
   font-weight: 600;
+  line-height: 1.4;
 
-  &:active { opacity: .7; }
+  &:active { opacity: .8; }
 }
 </style>
