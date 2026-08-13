@@ -117,6 +117,7 @@
       @edit="editCartLine"
       @decrease="cartStore.decreaseQty"
       @increase="cartStore.increaseQty"
+      @checkout="goToCheckout"
     />
 
     <!-- 门店详情抽屉 -->
@@ -124,16 +125,29 @@
       <view class="sheet-mask" />
       <view class="sheet-content" @click.stop>
         <view class="sheet-header">
-          <text class="sheet-title">门店信息</text>
+          <text class="sheet-title">活动</text>
           <text class="sheet-close" @click="closeStoreDetail">×</text>
         </view>
+
+        <!-- Cozy Day（周五会员日） -->
+        <view class="sheet-row plain">
+          <text class="sheet-label">会员日</text>
+          <text class="sheet-value cozy-today">每周五会员日 · 积分倍率提升 0.5</text>
+        </view>
+
+        <view class="sheet-subheader">
+          <text class="sheet-title">门店信息</text>
+        </view>
+
         <view class="sheet-row">
           <text class="sheet-label">地址</text>
           <text class="sheet-value">CozyCoffee 中心店 · 杭州市西湖区</text>
+          <text class="sheet-icon">↗</text>
         </view>
         <view class="sheet-row">
           <text class="sheet-label">电话</text>
           <text class="sheet-value">400-888-8888</text>
+          <text class="sheet-icon">☎</text>
         </view>
         <view class="sheet-row">
           <text class="sheet-label">营业时间</text>
@@ -143,81 +157,6 @@
           <text class="sheet-label">取餐方式</text>
           <text class="sheet-value">到店自提 · 约 15 分钟</text>
         </view>
-      </view>
-    </view>
-
-    <!-- 商品详情覆盖层（沉浸式） -->
-    <view v-if="detailVisible" class="detail-overlay">
-      <view class="detail-scroll">
-        <view class="detail-hero">
-          <view class="detail-close" @click="closeDetail">×</view>
-          <image :src="detailProduct?.image" class="detail-image" mode="aspectFill" />
-          <view class="detail-hero-info">
-            <text v-if="detailTag" class="detail-tag">{{ detailTag }}</text>
-            <text class="detail-eyebrow">{{ detailEyebrow }}</text>
-            <text class="detail-name">{{ detailProduct?.name }}</text>
-            <text class="detail-notes">{{ detailNotes }}</text>
-          </view>
-        </view>
-
-        <!-- 规格选择 -->
-        <view class="detail-spec-section">
-          <view v-if="sizeOptions.length > 1" class="detail-spec-group">
-            <view class="spec-title-row"><text class="spec-title">杯型</text></view>
-            <view class="spec-options">
-              <view v-for="option in sizeOptions" :key="option.value" class="spec-option" :class="{ active: specForm.cupSize === option.value }" @click="specForm.cupSize = option.value">
-                <text>{{ option.label }}</text>
-                <text v-if="option.extra" class="spec-extra">+¥{{ option.extra }}</text>
-              </view>
-            </view>
-          </view>
-          <view v-if="tempOptions.length > 1" class="detail-spec-group">
-            <view class="spec-title-row"><text class="spec-title">温度</text></view>
-            <view class="spec-options">
-              <view v-for="option in tempOptions" :key="option.value" class="spec-option" :class="{ active: specForm.temperature === option.value }" @click="specForm.temperature = option.value">{{ option.label }}</view>
-            </view>
-          </view>
-          <view v-if="sugarOptions.length > 1" class="detail-spec-group">
-            <view class="spec-title-row"><text class="spec-title">甜度</text></view>
-            <view class="spec-options">
-              <view v-for="option in sugarOptions" :key="option.value" class="spec-option" :class="{ active: specForm.sugarLevel === option.value }" @click="specForm.sugarLevel = option.value">{{ option.label }}</view>
-            </view>
-          </view>
-          <view v-if="isCoffee" class="detail-spec-group">
-            <view class="spec-title-row"><text class="spec-title">咖啡浓度</text></view>
-            <view class="spec-options">
-              <view class="spec-option" :class="{ active: specForm.coffeeStrength === 'NORMAL' }" @click="specForm.coffeeStrength = 'NORMAL'">标准</view>
-              <view class="spec-option" :class="{ active: specForm.coffeeStrength === 'STRONG' }" @click="specForm.coffeeStrength = 'STRONG'">加浓 <text class="spec-extra">+¥5</text></view>
-            </view>
-          </view>
-        </view>
-
-        <!-- 商品详情 -->
-        <view class="detail-card">
-          <text class="detail-card-title">商品详情</text>
-          <view v-if="detailOrigin" class="detail-row"><text class="detail-row-label">产地</text><text class="detail-row-value">{{ detailOrigin }}</text></view>
-          <view v-if="detailProcess" class="detail-row"><text class="detail-row-label">处理法</text><text class="detail-row-value">{{ detailProcess }}</text></view>
-          <view v-if="detailFlavor" class="detail-row"><text class="detail-row-label">风味</text><text class="detail-row-value">{{ detailFlavor }}</text></view>
-          <view v-if="detailRoast" class="detail-row"><text class="detail-row-label">烘焙度</text><text class="detail-row-value">{{ detailRoast }}</text></view>
-        </view>
-
-        <view class="detail-disclaimer">本商品按所选规格现制，出品以门店实物为准。</view>
-      </view>
-
-      <!-- 底部固定加购栏 -->
-      <view class="detail-bottom safe-area-bottom">
-        <view class="detail-bottom-top">
-          <view class="detail-price-col">
-            <text class="detail-bottom-price">¥{{ detailTotalPrice }}</text>
-            <text class="detail-selected">{{ selectedSpecsText }}</text>
-          </view>
-          <view class="detail-qty">
-            <view class="qty-btn" @click="changeQty(-1)">−</view>
-            <text class="qty-value">{{ detailQty }}</text>
-            <view class="qty-btn" @click="changeQty(1)">+</view>
-          </view>
-        </view>
-        <view class="detail-add" @click="addToCart">加入购物车</view>
       </view>
     </view>
 
@@ -235,7 +174,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { FIXED_STORE } from '@/config/store'
 import { getMenuData } from '@/api/product'
@@ -263,14 +202,8 @@ const storeSheetVisible = ref(false)
 const fulfillment = ref('pickup')
 const statusBarHeight = ref(20)
 const navRight = ref(16)
-let scrollSpyTimer = null
 let scrollLocked = false
-
-// 商品详情
-const detailVisible = ref(false)
-const detailProduct = ref(null)
-const detailQty = ref(1)
-const specForm = reactive({ cupSize: 'STANDARD', temperature: 'HOT', sugarLevel: 'STANDARD', coffeeStrength: 'NORMAL' })
+let scrollSpyTick = false
 
 // 下架提示
 const offShelfVisible = ref(false)
@@ -370,25 +303,44 @@ function scrollToCategory(index) {
   scrollIntoView.value = ''
   nextTick(() => {
     scrollIntoView.value = 'cat-' + index
-    setTimeout(() => { scrollLocked = false }, 500)
+    // 锁释放后同步一次到滚动落点，避免动画期间 spy 被抑制导致不同步
+    setTimeout(() => {
+      scrollLocked = false
+      pickActive()
+    }, 800)
   })
 }
 
-function onProductScroll(e) {
+// 吸顶判定：哪个分类标题最接近容器顶部（吸顶位置 top:0），它即当前分类
+function pickActive() {
   if (scrollLocked) return
-  if (scrollSpyTimer) clearTimeout(scrollSpyTimer)
-  scrollSpyTimer = setTimeout(() => {
-    const scrollTop = e.detail.scrollTop
-    let best = 0
-    categories.value.forEach((_, i) => {
-      const q = uni.createSelectorQuery()
-      q.select('#cat-' + i).boundingClientRect()
-      q.exec(res => {
-        if (res[0] && res[0].top <= 200 && i >= best) best = i
-      })
+  const query = uni.createSelectorQuery()
+  query.select('.product-scroll').boundingClientRect()
+  query.selectAll('.group-heading').boundingClientRect()
+  query.exec((res) => {
+    const container = res[0]
+    const headings = res[1]
+    if (!container || !headings || !headings.length) return
+    const containerTop = container.top
+    let best = currentCategoryIndex.value
+    let bestAbs = Infinity
+    headings.forEach((h, i) => {
+      const abs = Math.abs(h.top - containerTop)
+      if (abs < bestAbs) {
+        bestAbs = abs
+        best = i
+      }
     })
-    setTimeout(() => { if (best !== currentCategoryIndex.value) currentCategoryIndex.value = best }, 30)
-  }, 80)
+    if (best !== currentCategoryIndex.value) currentCategoryIndex.value = best
+  })
+}
+
+// 滚动监听：节流调用 pickActive，吸附瞬间立即更新左侧
+function onProductScroll() {
+  if (scrollLocked || scrollSpyTick) return
+  scrollSpyTick = true
+  pickActive()
+  setTimeout(() => { scrollSpyTick = false }, 16)
 }
 
 function categoryCount(categoryId) {
@@ -409,118 +361,19 @@ function formatPrice(value) { return Number(value || 0).toFixed(0) }
 function openStoreDetail() { storeSheetVisible.value = true }
 function closeStoreDetail() { storeSheetVisible.value = false }
 
-// ── 商品详情 ──
-const isFood = computed(() => ['bakery', 'dessert', 'food', 'addon'].includes(String(detailProduct.value?.category || '').toLowerCase()))
-const isCoffee = computed(() => !isFood.value && ['coffee', 'espresso', 'signature', 'soe', 'latte', 'other'].includes(String(detailProduct.value?.category || 'coffee').toLowerCase()))
-
-const sizeOptions = computed(() => {
-  if (isFood.value) return [{ value: 'STANDARD', label: '单份', extra: 0 }]
-  const type = detailProduct.value?.sizeType || 'MEDIUM_LARGE'
-  if (type === 'DEFAULT') return [{ value: 'STANDARD', label: '标准杯', extra: 0 }]
-  if (type === 'ALL_SIZES') return [
-    { value: 'SMALL', label: '小杯', extra: 0 },
-    { value: 'MEDIUM', label: '中杯', extra: 0 },
-    { value: 'LARGE', label: '大杯', extra: 3 }
-  ]
-  return [
-    { value: 'MEDIUM', label: '中杯', extra: 0 },
-    { value: 'LARGE', label: '大杯', extra: 3 }
-  ]
-})
-const sugarOptions = computed(() => {
-  if (isFood.value) return [{ value: '', label: '默认' }]
-  const type = detailProduct.value?.sugarType || 'FREE_CHOICE'
-  if (type === 'NO_SUGAR_ONLY') return [{ value: 'NONE', label: '无糖' }]
-  const values = [{ value: 'STANDARD', label: '标准糖' }, { value: 'LESS', label: '少糖' }, { value: 'HALF', label: '半糖' }]
-  if (type !== 'MIN_LESS_SWEET') values.push({ value: 'NONE', label: '无糖' })
-  return values
-})
-const tempOptions = computed(() => {
-  if (isFood.value) return [{ value: '', label: '默认' }]
-  const type = detailProduct.value?.tempType || 'ALL_OK'
-  if (type === 'COLD_ONLY') return [{ value: 'COLD', label: '冰' }]
-  if (type === 'HOT_ONLY') return [{ value: 'HOT', label: '热' }]
-  if (type === 'NO_HOT') return [{ value: 'COLD', label: '冰' }, { value: 'WARM', label: '温' }]
-  return [{ value: 'HOT', label: '热' }, { value: 'COLD', label: '冰' }, { value: 'WARM', label: '温' }]
-})
-
-const unitPrice = computed(() => {
-  const base = Number(detailProduct.value?.basePrice ?? detailProduct.value?.price ?? 0)
-  const size = specForm.cupSize === 'LARGE' ? 3 : 0
-  const strength = specForm.coffeeStrength === 'STRONG' ? 5 : 0
-  return Number((base + size + strength).toFixed(2))
-})
-const detailTotalPrice = computed(() => (unitPrice.value * detailQty.value).toFixed(2))
-const selectedSpecsText = computed(() => {
-  const parts = []
-  if (sizeOptions.value.length > 1) parts.push(specForm.cupSize === 'LARGE' ? '大杯' : '中杯')
-  if (tempOptions.value.length > 1) parts.push({ HOT: '热', COLD: '冰', WARM: '温' }[specForm.temperature] || specForm.temperature)
-  if (sugarOptions.value.length > 1) parts.push(specForm.sugarLevel === 'NONE' ? '无糖' : (specForm.sugarLevel === 'HALF' ? '半糖' : (specForm.sugarLevel === 'LESS' ? '少糖' : '标准糖')))
-  if (isCoffee.value) parts.push(specForm.coffeeStrength === 'STRONG' ? '加浓' : '标准')
-  return parts.length ? parts.join(' · ') : '默认规格'
-})
-const detailTag = computed(() => detailProduct.value?.tag || detailProduct.value?.isNewProduct ? '新品' : '')
-const detailEyebrow = computed(() => categoryEn(String(detailProduct.value?.category || '').toLowerCase()))
-const detailNotes = computed(() => detailProduct.value?.notes || detailProduct.value?.description || '')
-const detailOrigin = computed(() => detailProduct.value?.origin || '')
-const detailProcess = computed(() => detailProduct.value?.process || '')
-const detailFlavor = computed(() => detailProduct.value?.notes || detailProduct.value?.flavorNotes || '')
-const detailRoast = computed(() => detailProduct.value?.roast || '')
-
+// ── 商品详情 → 独立选规格页 ──
 function openDetail(product) {
-  detailProduct.value = product
-  detailQty.value = 1
-  specForm.cupSize = sizeOptions.value[0]?.value || 'STANDARD'
-  specForm.temperature = tempOptions.value[0]?.value || 'HOT'
-  specForm.sugarLevel = sugarOptions.value[0]?.value || 'STANDARD'
-  specForm.coffeeStrength = 'NORMAL'
-  detailVisible.value = true
-}
-
-function closeDetail() { detailVisible.value = false; detailProduct.value = null }
-
-function changeQty(delta) {
-  detailQty.value = Math.max(1, Math.min(10, detailQty.value + delta))
-}
-
-function addToCart() {
-  if (!detailProduct.value) return
-  const product = detailProduct.value
-  const addons = []
-  if (specForm.coffeeStrength === 'STRONG') addons.push({ code: 'EXTRA_SHOT', name: '加浓', price: 5 })
-
-  cartStore.addItem({
-    ...product,
-    productId: String(product.productId || product.id),
-    id: product.id,
-    name: product.name,
-    image: product.image,
-    basePrice: Number(product.basePrice ?? product.price ?? 0),
-    price: unitPrice.value,
-    cupSize: specForm.cupSize,
-    temperature: specForm.temperature,
-    sugarLevel: isFood.value ? '' : specForm.sugarLevel,
-    coffeeStrength: isCoffee.value ? specForm.coffeeStrength : '',
-    addons,
-    quantity: detailQty.value
-  }, detailQty.value)
-  try { uni.vibrateShort({ type: 'light' }) } catch (_) {}
-  uni.showToast({ title: `已加入购物车 · ${product.name} ×${detailQty.value}`, icon: 'none', duration: 900 })
-  closeDetail()
+  uni.setStorageSync('cozy_spec', { product, line: null })
+  uni.navigateTo({ url: '/pages/menu/spec' })
 }
 
 // ── 购物车 ──
 function editCartLine(line) {
-  // 从购物车跳规格：用商品数据打开详情
+  // 从购物车跳规格：带行数据进独立选规格页
   const product = cartStore.items.find(l => String(l.lineKey) === String(line.lineKey)) || line
-  detailProduct.value = { ...product, image: product.image || '/static/images/default-product.png' }
-  detailQty.value = Number(product.quantity || 1)
-  specForm.cupSize = product.cupSize || 'STANDARD'
-  specForm.temperature = product.temperature || 'HOT'
-  specForm.sugarLevel = product.sugarLevel || 'STANDARD'
-  specForm.coffeeStrength = product.coffeeStrength || 'NORMAL'
-  detailVisible.value = true
   cartVisible.value = false
+  uni.setStorageSync('cozy_spec', { product, line })
+  uni.navigateTo({ url: '/pages/menu/spec' })
 }
 
 function clearCart() {
@@ -576,12 +429,12 @@ function closeOffShelf() {
 <style lang="scss" scoped>
 .menu-page { height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: $cozy-bg; }
 
-/* ── 导航胶囊 ── */
+/* ── 导航胶囊（与原型 menu.html 一致） ── */
 .menu-nav { flex: none; background: #fff; }
-.nav-inner { height: 56px; padding: 0 20rpx; display: flex; align-items: center; }
-.nav-capsule { display: flex; align-items: center; height: 36px; padding: 0 4px; border: 1rpx solid #E8E4DE; border-radius: 24px; background: #fff; }
-.nav-capsule__icon { width: 36px; height: 32px; display: flex; align-items: center; justify-content: center; }
-.nav-capsule__divider { width: 1px; height: 18px; background: #E8E4DE; }
+.nav-inner { height: 56px; padding: 0 32rpx; display: flex; align-items: center; }
+.nav-capsule { display: flex; align-items: center; gap: 2px; padding: 4px 6px; border: 1rpx solid $cozy-border; border-radius: 20px; background: #fff; }
+.nav-capsule__icon { width: 34px; height: 30px; display: flex; align-items: center; justify-content: center; }
+.nav-capsule__divider { width: 1px; height: 16px; background: $cozy-border; }
 
 /* ── 门店信息 ── */
 .store-info { flex: none; padding: 14rpx 28rpx 16rpx; background: #fff; border-bottom: 1rpx solid $cozy-border; }
@@ -601,21 +454,20 @@ function closeOffShelf() {
 .menu-body { flex: 1; display: flex; min-height: 0; overflow: hidden; }
 
 /* 左分类栏 */
-.category-sidebar { flex: none; width: 168rpx; height: 100%; background: $cozy-surface; }
-.category-item { position: relative; padding: 30rpx 12rpx; text-align: center; font-size: 24rpx; color: $cozy-muted; }
+.category-sidebar { flex: none; width: 180rpx; height: 100%; background: $cozy-surface; border-right: 1rpx solid $cozy-border; }
+.category-item { position: relative; padding: 40rpx 16rpx; text-align: center; font-size: 26rpx; color: $cozy-muted; }
 .category-item.active { background: #fff; color: $cozy-primary; font-weight: 700; }
-.category-item.active::before { content: ''; position: absolute; left: 0; top: 34rpx; bottom: 34rpx; width: 6rpx; border-radius: 0 999rpx 999rpx 0; background: $cozy-primary; }
 .cat-count { position: absolute; right: 10rpx; top: 50%; transform: translateY(-50%); min-width: 30rpx; height: 30rpx; padding: 0 6rpx; border-radius: 999rpx; background: $cozy-primary; color: #fff; font-size: 18rpx; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
 
 /* 右商品区 */
 .product-scroll { min-width: 0; flex: 1; height: 100%; background: #fff; }
-.product-content { padding: 0 24rpx 40rpx; }
-.category-section { padding-top: 12rpx; }
-.group-heading { position: sticky; top: 0; z-index: 2; padding: 22rpx 0 14rpx; background: #fff; display: flex; align-items: baseline; justify-content: space-between; }
+.product-content { padding-bottom: 40rpx; }
+/* 吸附后观感与原型一致（标题距顶28rpx、栏高52rpx）；top 向上多伸10rpx遮住微信 scroll-view 内 sticky 顶边的合成缝隙，padding 精确补偿标题位置 */
+.group-heading { position: sticky; top: -13rpx; z-index: 2; padding: 38rpx 24rpx 24rpx; background: #fff; display: flex; align-items: baseline; justify-content: space-between; }
 .group-title { font-size: 30rpx; font-weight: 700; color: $cozy-ink; letter-spacing: .02em; }
 .group-sub { font-size: 17rpx; font-weight: 600; letter-spacing: .14em; color: $cozy-placeholder; }
 
-.product-item { display: flex; gap: 24rpx; padding: 24rpx 0; border-bottom: 1rpx solid $cozy-border; }
+.product-item { display: flex; gap: 24rpx; padding: 24rpx 24rpx; border-bottom: 1rpx solid $cozy-border; }
 .product-image { flex: none; width: 150rpx; height: 150rpx; border-radius: 20rpx; background: $cozy-surface; }
 .product-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .product-title-row { display: flex; align-items: center; gap: 10rpx; }
@@ -636,54 +488,17 @@ function closeOffShelf() {
 .store-sheet { position: fixed; inset: 0; z-index: 30; }
 .sheet-mask { position: absolute; inset: 0; background: rgba(28,20,14,.45); }
 .sheet-content { position: absolute; bottom: 0; left: 0; right: 0; height: 66.67vh; overflow-y: auto; background: #fff; border-radius: 32rpx 32rpx 0 0; padding: 0 40rpx 56rpx; box-sizing: border-box; }
-.sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 34rpx 0 28rpx; border-bottom: 1rpx solid $cozy-border; }
+.sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 36rpx 0 32rpx; border-bottom: 1rpx solid $cozy-border; }
 .sheet-title { font-family: $font-display; font-size: 36rpx; font-weight: 600; color: $cozy-ink; }
 .sheet-close { font-size: 40rpx; color: $cozy-muted; padding: 4rpx 8rpx; }
-.sheet-row { display: flex; align-items: flex-start; gap: 24rpx; padding: 28rpx 0; border-bottom: 1rpx solid $cozy-border; }
+.sheet-subheader { margin-top: 20rpx; padding-bottom: 20rpx; border-bottom: 1rpx solid $cozy-border; }
+.sheet-row { display: flex; align-items: center; gap: 28rpx; padding: 28rpx 0; border-bottom: 1rpx solid $cozy-border; }
+.sheet-row.plain { border-bottom: 0; }
 .sheet-row:last-child { border-bottom: 0; }
 .sheet-label { flex: none; width: 120rpx; font-size: 24rpx; color: $cozy-muted; }
-.sheet-value { flex: 1; font-size: 26rpx; color: $cozy-ink; line-height: 1.5; }
-
-/* ── 商品详情覆盖层 ── */
-.detail-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 25; background: #fff; display: flex; flex-direction: column; }
-.detail-scroll { flex: 1; min-height: 0; overflow-y: auto; }
-.detail-hero { position: relative; }
-.detail-image { width: 100%; height: 520rpx; background: linear-gradient(135deg,#E8DDD2,#D8C8B4); }
-.detail-close { position: absolute; top: 24rpx; left: 24rpx; width: 68rpx; height: 68rpx; border-radius: 50%; background: rgba(255,255,255,.9); display: flex; align-items: center; justify-content: center; font-size: 44rpx; color: $cozy-ink; z-index: 2; }
-.detail-hero-info { padding: 40rpx 40rpx 12rpx; }
-.detail-tag { display: inline-block; margin-bottom: 18rpx; padding: 6rpx 18rpx; border-radius: 8rpx; background: $cozy-primary; color: #fff; font-size: 22rpx; font-weight: 700; letter-spacing: .06em; }
-.detail-eyebrow { display: block; font-size: 20rpx; font-weight: 700; letter-spacing: .24em; color: $cozy-muted; }
-.detail-name { display: block; margin-top: 14rpx; font-family: $font-display; font-size: 56rpx; font-weight: 600; color: $cozy-ink; line-height: 1.2; }
-.detail-notes { display: block; margin-top: 20rpx; font-family: $font-display; font-size: 28rpx; color: $cozy-muted; letter-spacing: .02em; }
-
-.detail-spec-section { border-top: 1rpx solid $cozy-border; padding: 36rpx 40rpx 8rpx; }
-.detail-spec-group { margin-top: 28rpx; }
-.detail-spec-group:first-child { margin-top: 0; }
-.spec-title-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20rpx; }
-.spec-title { font-size: 26rpx; font-weight: 600; color: $cozy-ink; }
-.spec-options { display: flex; flex-wrap: wrap; gap: 20rpx; }
-.spec-option { height: 72rpx; padding: 0 40rpx; display: flex; align-items: center; justify-content: center; gap: 8rpx; font-size: 26rpx; color: $cozy-ink; border-radius: 10rpx; border: 1rpx solid $cozy-border; background: #fff; }
-.spec-option.active { background: #F1E4DA; border-color: $cozy-primary; color: $cozy-primary; font-weight: 600; }
-.spec-extra { color: $cozy-muted; font-size: 20rpx; }
-.spec-option.active .spec-extra { color: $cozy-primary; }
-
-.detail-card { border-top: 1rpx solid $cozy-border; margin-top: 40rpx; padding: 36rpx 40rpx 4rpx; }
-.detail-card-title { display: block; margin-bottom: 20rpx; font-family: $font-display; font-size: 32rpx; font-weight: 600; color: $cozy-ink; }
-.detail-row { display: flex; align-items: flex-start; gap: 32rpx; padding: 16rpx 0; }
-.detail-row-label { flex: none; width: 104rpx; font-size: 22rpx; font-weight: 700; letter-spacing: .1em; color: $cozy-muted; }
-.detail-row-value { flex: 1; font-size: 26rpx; line-height: 1.6; color: $cozy-ink; }
-.detail-disclaimer { border-top: 1rpx solid $cozy-border; margin-top: 40rpx; padding: 28rpx 40rpx 48rpx; font-size: 22rpx; line-height: 1.7; color: $cozy-placeholder; }
-
-.detail-bottom { flex: none; padding: 20rpx 32rpx max(20rpx, env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid $cozy-border; }
-.detail-bottom-top { display: flex; align-items: center; gap: 24rpx; margin-bottom: 20rpx; }
-.detail-price-col { flex: 1; min-width: 0; }
-.detail-bottom-price { font-size: 44rpx; font-weight: 700; color: $cozy-primary; line-height: 1.1; }
-.detail-selected { display: block; margin-top: 8rpx; font-size: 22rpx; color: $cozy-muted; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.detail-qty { display: flex; align-items: center; gap: 16rpx; border: 1rpx solid $cozy-border; border-radius: 12rpx; padding: 8rpx 18rpx; }
-.qty-btn { width: 48rpx; height: 48rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; color: $cozy-ink; }
-.qty-value { min-width: 36rpx; text-align: center; font-size: 28rpx; font-weight: 600; color: $cozy-ink; }
-.detail-add { width: 100%; height: 92rpx; display: flex; align-items: center; justify-content: center; border-radius: 12rpx; background: $cozy-primary; color: #fff; font-size: 30rpx; font-weight: 650; }
-.detail-add:active { background: $cozy-primary-hover; }
+.sheet-value { flex: 1; font-size: 26rpx; color: $cozy-ink; line-height: 1.4; }
+.sheet-value.cozy-today { color: $cozy-primary; font-weight: 600; }
+.sheet-icon { flex: none; font-size: 32rpx; color: $cozy-muted; }
 
 /* ── 下架提示 ── */
 .off-shelf-mask { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 0 72rpx; background: rgba(44,30,24,.42); }

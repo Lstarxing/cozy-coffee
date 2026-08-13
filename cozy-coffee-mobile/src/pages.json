@@ -99,6 +99,12 @@
             }
         },
         {
+            "path": "pages/menu/spec",
+            "style": {
+                "navigationBarTitleText": ""
+            }
+        },
+        {
             "path": "pages/signin/index",
             "style": {
                 "navigationBarTitleText": "每日签到"
