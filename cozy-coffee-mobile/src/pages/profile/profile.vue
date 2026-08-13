@@ -3,9 +3,9 @@
   + 订单双入口 + 功能金刚区（5 格）+ 服务列表 —— 对齐 prototype/profile.html
 -->
 <template>
-  <view class="profile-page">
-    <!-- 会员身份卡（紧凑） -->
-    <view class="member-card" :class="{ 'is-dark': isDark }" :style="themeStyle">
+  <view class="profile-page" :style="{ paddingTop: (statusBarHeight + 40) + 'px' }">
+    <!-- 会员身份卡（当前等级主题） -->
+    <view v-if="isLoggedIn" class="member-card" :class="{ 'is-dark': isDark }" :style="themeStyle">
       <view class="layer-shine" />
 
       <view class="card-top">
@@ -17,7 +17,7 @@
 
       <view class="card-identity">
         <view class="level-emblem-wrap">
-          <LevelBadge :level="themeLevel" :color="memberAccent" :size="88" />
+          <LevelBadge :level="themeLevel" :size="88" />
         </view>
         <view class="identity-copy">
           <text class="user-name">{{ displayName }}</text>
@@ -39,6 +39,26 @@
           <view class="progress-fill" :style="{ width: progressPercent + '%', background: memberAccent }"></view>
         </view>
       </view>
+    </view>
+
+    <!-- 未登录：登录入口卡 -->
+    <view v-else class="member-card login-card" @click="goLogin">
+      <view class="card-top">
+        <view class="brand-row">
+          <CozyIcon name="coffee" :size="18" color="#756A63" />
+          <text class="brand-text">COZY MEMBER</text>
+        </view>
+      </view>
+      <view class="login-identity">
+        <view class="login-emblem">
+          <CozyIcon name="coffee" :size="34" color="#753A22" />
+        </view>
+        <view class="login-copy">
+          <text class="login-title">登录 Cozy 会员</text>
+          <text class="login-desc">登录后可查看会员等级、积分与订单记录</text>
+        </view>
+      </view>
+      <view class="login-btn">登录 / 注册</view>
     </view>
 
     <!-- 订单双入口 -->
@@ -139,18 +159,20 @@ import CozyIcon from '@/components/CozyIcon.vue'
 import DevLevelSwitcher from '@/components/dev/DevLevelSwitcher.vue'
 
 const userStore = useUserStore()
-const { themeStyle, isDark, level: themeLevel } = useMemberTheme()
+const { themeStyle, levelTheme, isDark, level: themeLevel } = useMemberTheme()
 const isLoggedIn = computed(() => userStore.isLoggedIn)
 const userInfo = computed(() => userStore.userInfo || {})
 const memberInfo = computed(() => userStore.memberInfo || {})
 const userLevel = computed(() => userStore.userLevel || 'basic')
 const orderCount = ref({ coffee: 0, redeem: 0 })
 
+const statusBarHeight = ref(uni.getSystemInfoSync().statusBarHeight || 20)
+
 const LEVEL_EN = { basic: 'BASIC', silver: 'SILVER', gold: 'GOLD', diamond: 'DIAMOND', black: 'BLACK' }
 
 const displayName = computed(() => isLoggedIn.value ? (userInfo.value.nickname || 'Cozy 咖啡爱好者') : 'Cozy 咖啡爱好者')
 const levelEn = computed(() => LEVEL_EN[userLevel.value] || userLevel.value.toUpperCase())
-const memberText = computed(() => isDark.value ? '#E6C97A' : '#2B1E16')
+const memberText = computed(() => levelTheme.value.text)
 const memberAccent = computed(() => themeStyle.value['--member-accent'])
 const currentPoints = computed(() => Number(memberInfo.value.currentPoints) || 0)
 
@@ -236,10 +258,14 @@ function goToRedemptions() {
 function contactService() {
   uni.showToast({ title: '客服热线 0571-8888 8888', icon: 'none' })
 }
+
+function goLogin() {
+  uni.navigateTo({ url: '/pages/login/index' })
+}
 </script>
 
 <style lang="scss" scoped>
-.profile-page { min-height: 100vh; padding: 40rpx 40rpx 220rpx; background: $cozy-surface; }
+.profile-page { min-height: 100vh; padding: 0 40rpx 220rpx; background: $cozy-surface; }
 
 /* ===== 会员身份卡（紧凑 · 等级主题） ===== */
 .member-card {
@@ -314,7 +340,7 @@ function contactService() {
 .points-row {
   margin-top: 28rpx;
   padding-top: 26rpx;
-  border-top: 1rpx solid currentColor;
+  border-top: 1rpx solid var(--member-line, currentColor);
 }
 .points-value {
   display: block;
@@ -348,13 +374,61 @@ function contactService() {
 .progress-track {
   height: 6rpx;
   border-radius: 4rpx;
-  background: rgba(60,40,30,.12);
+  background: var(--member-track, rgba(60,40,30,.12));
   overflow: hidden;
 }
 .progress-fill {
   height: 100%;
   border-radius: inherit;
   transition: width .4s ease;
+}
+
+/* ===== 未登录：登录入口卡 ===== */
+.member-card.login-card { background: $bg-white; color: $cozy-ink; cursor: pointer; }
+.login-card .brand-text { color: $cozy-muted; }
+.login-identity {
+  display: flex;
+  align-items: center;
+  gap: 28rpx;
+  margin-top: 36rpx;
+}
+.login-emblem {
+  width: 88rpx;
+  height: 88rpx;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: $cozy-surface;
+}
+.login-copy { flex: 1; min-width: 0; }
+.login-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 650;
+  color: $cozy-ink;
+}
+.login-desc {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: $cozy-muted;
+}
+.login-btn {
+  margin-top: 36rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  background: $cozy-ink;
+  color: #fff;
+  font-size: 26rpx;
+  font-weight: 600;
+
+  &:active { opacity: .85; }
 }
 
 /* ===== 卡片容器 ===== */

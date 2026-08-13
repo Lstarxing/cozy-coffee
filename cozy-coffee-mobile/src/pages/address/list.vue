@@ -1,116 +1,72 @@
 <!--
-  地址管理页 - 账户常用地址列表与编辑
+  地址管理页 - 对齐 prototype/address.html：pin 卡 + 绿色默认徽标 + 脱敏 + 图标操作 + 独立编辑页
 -->
 <template>
   <view class="address-page">
-    <view class="pickup-note">
-      <text class="note-kicker">FIXED PICKUP</text>
-      <text class="note-title">咖啡订单仅支持中心店自提</text>
-      <text class="note-copy">常用地址仅作为账户资料保留，不参与当前点单流程。</text>
+    <!-- 页头 -->
+    <view class="page-head">
+      <text class="page-kicker">ADDRESSES</text>
+      <text class="page-title">收货地址</text>
     </view>
 
     <!-- 地址列表 -->
     <view class="address-list" v-if="addresses.length > 0">
-      <view class="address-card" v-for="item in addresses" :key="item.id">
-        <view class="address-main" @click="selectAddress(item)">
-          <view class="address-top">
-            <text class="receiver">{{ item.name }}</text>
-            <text class="phone">{{ item.phone }}</text>
-            <view class="default-tag" v-if="item.isDefault">默认</view>
+      <view class="address-card" :class="{ default: item.isDefault }" v-for="item in addresses" :key="item.id">
+        <view class="addr-main" @click="selectAddress(item)">
+          <view class="addr-pin"><CozyIcon name="pin" :size="18" color="#753A22" /></view>
+          <view class="addr-copy">
+            <text class="addr-region">{{ item.region }}</text>
+            <text class="addr-detail">{{ item.detail }}</text>
           </view>
-          <text class="address-detail">{{ item.province }}{{ item.city }}{{ item.district }}{{ item.detail }}</text>
+          <text v-if="item.isDefault" class="default-badge">默认</text>
         </view>
-        <view class="address-actions">
-          <view class="action-item" @click="setDefault(item)" v-if="!item.isDefault">
-            <text class="action-text">设为默认</text>
+        <view class="addr-receiver">
+          <text class="receiver-name">{{ maskName(item.name) }}</text>
+          <text class="receiver-phone">{{ maskPhone(item.phone) }}</text>
+        </view>
+        <view class="addr-actions">
+          <view class="act" @click="setDefault(item)">
+            <CozyIcon :name="item.isDefault ? 'star-filled' : 'star'" :size="19" :color="item.isDefault ? '#753A22' : '#756A63'" />
           </view>
-          <view class="action-item" @click="editAddress(item)">
-            <text class="action-text">编辑</text>
+          <view class="act" @click="editAddress(item)">
+            <CozyIcon name="pencil" :size="19" color="#756A63" />
           </view>
-          <view class="action-item action-item--danger" @click="deleteAddress(item)">
-            <text class="action-text">删除</text>
+          <view class="act" @click="deleteAddress(item)">
+            <CozyIcon name="trash" :size="19" color="#756A63" />
           </view>
         </view>
       </view>
     </view>
-    
+
     <!-- 空状态 -->
     <view class="empty-state" v-else>
-      <text class="empty-icon">址</text>
-      <text class="empty-text">暂无常用地址</text>
-      <text class="empty-hint">当前点单无需填写地址，可直接选择商品。</text>
+      <view class="empty-mark"><CozyIcon name="pin" :size="26" color="#753A22" /></view>
+      <text class="empty-text">暂无收货地址</text>
+      <text class="empty-hint">添加地址后，兑换实物礼品可配送上门</text>
     </view>
-    
-    <!-- 添加按钮 -->
-    <view class="add-btn-wrapper safe-area-bottom">
-      <view class="add-btn" @click="addAddress">
-        新增常用地址
-      </view>
-    </view>
-    
-    <!-- 编辑弹窗 -->
-    <view class="modal-mask" v-if="showEditModal" @click="showEditModal = false">
-      <view class="modal-content" @click.stop>
-        <view class="modal-header">
-          <text class="modal-title">{{ isEditing ? '编辑地址' : '新增地址' }}</text>
-          <text class="modal-close" @click="showEditModal = false">×</text>
-        </view>
-        <view class="modal-body">
-          <view class="form-item">
-            <text class="form-label">联系人</text>
-            <input v-model="editForm.name" placeholder="请输入联系人姓名" class="form-input" />
-          </view>
-          <view class="form-item">
-            <text class="form-label">手机号</text>
-            <input v-model="editForm.phone" type="number" placeholder="请输入手机号" maxlength="11" class="form-input" />
-          </view>
-          <view class="form-item">
-            <text class="form-label">所在地区</text>
-            <input v-model="editForm.region" placeholder="省市区" class="form-input" />
-          </view>
-          <view class="form-item">
-            <text class="form-label">详细地址</text>
-            <input v-model="editForm.detail" placeholder="街道门牌号等" class="form-input" />
-          </view>
-          <view class="form-item checkbox-item">
-            <view class="checkbox" :class="{ checked: editForm.isDefault }" @click="editForm.isDefault = !editForm.isDefault">
-              <text v-if="editForm.isDefault">✓</text>
-            </view>
-            <text class="checkbox-label">设为默认地址</text>
-          </view>
-        </view>
-        <view class="modal-footer">
-          <view class="modal-btn" @click="saveAddress">保存</view>
-        </view>
-      </view>
+
+    <!-- 新增地址入口 -->
+    <view class="add-entry" @click="addAddress">
+      <view class="add-plus"><CozyIcon name="plus" :size="20" color="#753A22" /></view>
+      <text class="add-text">新增收货地址</text>
+      <text class="add-arrow">›</text>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { get, post, del, put } from '@/api/request'
+import CozyIcon from '@/components/CozyIcon.vue'
 
-// API 定义
 const getAddressList = () => get('/member/addresses')
-const createAddress = (data) => post('/member/addresses', data)
-const updateAddress = (id, data) => put(`/member/addresses/${id}`, data)
 const deleteAddressApi = (id) => del(`/member/addresses/${id}`)
 const setDefaultAddressApi = (id) => put(`/member/addresses/${id}/default`)
 
 const addresses = ref([])
-const showEditModal = ref(false)
-const isEditing = ref(false)
-const editingId = ref(null)
-const editForm = ref({
-  name: '',
-  phone: '',
-  region: '',
-  detail: '',
-  isDefault: false
-})
 
-onMounted(() => {
+onShow(() => {
   loadAddresses()
 })
 
@@ -122,6 +78,7 @@ const loadAddresses = async () => {
         ...item,
         name: item.receiverName,
         phone: item.receiverPhone,
+        region: [item.province, item.city, item.district].filter(Boolean).join(' '),
         detail: item.detailAddress,
         isDefault: item.isDefault
       }))
@@ -131,72 +88,18 @@ const loadAddresses = async () => {
   }
 }
 
-const addAddress = () => {
-  isEditing.value = false
-  editingId.value = null
-  editForm.value = { name: '', phone: '', region: '', detail: '', isDefault: false }
-  showEditModal.value = true
-}
-
+const addAddress = () => uni.navigateTo({ url: '/pages/address/edit' })
 const editAddress = (item) => {
-  isEditing.value = true
-  editingId.value = item.id
-  editForm.value = {
-    name: item.name,
-    phone: item.phone,
-    region: `${item.province || ''}${item.city || ''}${item.district || ''}`,
-    detail: item.detail,
-    isDefault: item.isDefault
-  }
-  showEditModal.value = true
-}
-
-const saveAddress = async () => {
-  if (!editForm.value.name || !editForm.value.phone || !editForm.value.detail) {
-    uni.showToast({ title: '请填写完整信息', icon: 'none' })
-    return
-  }
-  
-  // 简单解析 region (实际应用中应用 picker)
-  const regionParts = editForm.value.region.split(/(省|市|区|县)/).filter(Boolean)
-  const province = regionParts[0] || '北京市'
-  const city = regionParts[2] || '北京市'
-  const district = regionParts[4] || '海淀区'
-
-  const data = {
-    receiverName: editForm.value.name,
-    receiverPhone: editForm.value.phone,
-    province,
-    city,
-    district,
-    detailAddress: editForm.value.detail,
-    isDefault: editForm.value.isDefault
-  }
-
-  try {
-    let res
-    if (isEditing.value) {
-      res = await updateAddress(editingId.value, data)
-    } else {
-      res = await createAddress(data)
-    }
-    
-    if (res.code === 200) {
-      uni.showToast({ title: '保存成功', icon: 'success' })
-      showEditModal.value = false
-      loadAddresses()
-    }
-  } catch (e) {
-    console.error('保存地址失败', e)
-    uni.showToast({ title: '保存失败', icon: 'none' })
-  }
+  uni.setStorageSync('cozy_edit_address', item)
+  uni.navigateTo({ url: `/pages/address/edit?id=${item.id}` })
 }
 
 const setDefault = async (item) => {
+  if (item.isDefault) return
   try {
     const res = await setDefaultAddressApi(item.id)
     if (res.code === 200) {
-      uni.showToast({ title: '设置成功', icon: 'success' })
+      uni.showToast({ title: '已设为默认', icon: 'success' })
       loadAddresses()
     }
   } catch (e) {
@@ -206,23 +109,28 @@ const setDefault = async (item) => {
 
 const deleteAddress = (item) => {
   uni.showModal({
-    title: '确认删除',
+    title: '删除地址',
     content: '确定要删除这个地址吗？',
     success: async (res) => {
-      if (res.confirm) {
-        try {
-          const delRes = await deleteAddressApi(item.id)
-          if (delRes.code === 200) {
-            uni.showToast({ title: '删除成功', icon: 'success' })
-            loadAddresses()
-          }
-        } catch (e) {
-          console.error('删除地址失败', e)
+      if (!res.confirm) return
+      try {
+        const delRes = await deleteAddressApi(item.id)
+        if (delRes.code === 200) {
+          uni.showToast({ title: '已删除', icon: 'success' })
+          loadAddresses()
         }
+      } catch (e) {
+        console.error('删除地址失败', e)
       }
     }
   })
 }
+
+const maskName = (name) => {
+  const n = String(name || '')
+  return n.length > 1 ? n[0] + '*' + n.slice(-1) : n
+}
+const maskPhone = (phone) => String(phone || '').replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
 
 const selectAddress = (item) => {
   const pages = getCurrentPages()
@@ -239,235 +147,182 @@ const selectAddress = (item) => {
 <style lang="scss" scoped>
 .address-page {
   min-height: 100vh;
-  padding-bottom: 156rpx;
+  padding: 24rpx 32rpx 120rpx;
   background: $cozy-bg;
 }
 
-.pickup-note { padding: 32rpx; background: $cozy-surface-alt; color: $cozy-on-dark; }
-.note-kicker { display: block; color: $cozy-muted-on-dark; font-size: 18rpx; font-weight: 750; letter-spacing: .12em; }
-.note-title { display: block; margin-top: 10rpx; font-size: 31rpx; font-weight: 700; }
-.note-copy { display: block; margin-top: 10rpx; color: $cozy-muted-on-dark; font-size: 22rpx; line-height: 1.5; }
+/* ── 页头 ── */
+.page-head { padding: 8rpx 8rpx 26rpx; }
+.page-kicker {
+  display: block;
+  font-size: 18rpx;
+  font-weight: 700;
+  letter-spacing: .18em;
+  color: $cozy-muted;
+}
+.page-title {
+  display: block;
+  margin-top: 10rpx;
+  font-family: $font-display;
+  font-size: 44rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
 
-// 地址列表
+/* ── 地址列表 ── */
 .address-list {
-  padding: 12rpx 32rpx 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
 }
-
 .address-card {
-  border-bottom: 1rpx solid $cozy-border;
+  border-radius: 28rpx;
   background: $bg-white;
-  
-  .address-main {
-    padding: $spacing-md;
-    
-    .address-top {
-      display: flex;
-      align-items: center;
-      margin-bottom: $spacing-sm;
-      
-      .receiver {
-        font-size: $font-size-lg;
-        font-weight: 600;
-        margin-right: $spacing-md;
-      }
-      
-      .phone {
-        font-size: $font-size-md;
-        color: $text-secondary;
-      }
-      
-      .default-tag {
-        margin-left: $spacing-sm;
-        background: $primary-color;
-        color: white;
-        font-size: $font-size-xs;
-        padding: 2rpx 12rpx;
-        border-radius: 4rpx;
-      }
-    }
-    
-    .address-detail {
-      font-size: $font-size-md;
-      color: $text-secondary;
-      line-height: 1.5;
-    }
-  }
-  
-  .address-actions {
-    display: flex;
-    border-top: 1rpx solid $border-color;
-    
-    .action-item {
-      flex: 1;
-      min-height: 80rpx;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12rpx 0;
-      
-      .action-text {
-        font-size: $font-size-sm;
-        color: $text-secondary;
-      }
-    }
+  border: 1rpx solid $cozy-border;
+  padding: 32rpx 36rpx 28rpx;
+}
+.address-card.default { border-color: #E3CDB6; }
 
-    .action-item--danger .action-text { color: $cozy-error; }
-  }
+.addr-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 24rpx;
+}
+.addr-pin {
+  flex: none;
+  width: 52rpx;
+  height: 52rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $cozy-primary;
+  margin-top: 2rpx;
+}
+.addr-copy { flex: 1; min-width: 0; }
+.addr-region {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+  line-height: 1.4;
+}
+.addr-detail {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: $cozy-muted;
+  line-height: 1.5;
+}
+.default-badge {
+  flex: none;
+  margin-left: 16rpx;
+  padding: 6rpx 18rpx;
+  border-radius: 12rpx;
+  background: $cozy-accent-soft;
+  color: $cozy-accent;
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: .04em;
 }
 
-// 空状态
+.addr-receiver {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid $cozy-border;
+}
+.receiver-name {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.receiver-phone {
+  font-size: 24rpx;
+  color: $cozy-muted;
+}
+
+/* 操作：右侧图标按钮 */
+.addr-actions {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 24rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid $cozy-border;
+  justify-content: flex-end;
+}
+.act {
+  width: 68rpx;
+  height: 68rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $cozy-muted;
+
+  &:active { opacity: .5; }
+}
+
+/* ── 空状态 ── */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 146rpx 32rpx;
-  
-  .empty-icon {
-    width: 104rpx;
-    height: 104rpx;
-    margin-bottom: $spacing-md;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: $cozy-surface;
-    color: $cozy-primary;
-    font-size: 46rpx;
-    font-weight: 700;
-  }
-  
-  .empty-text {
-    color: $cozy-ink;
-    font-size: 29rpx;
-    font-weight: 700;
-  }
-
-  .empty-hint { margin-top: 12rpx; color: $cozy-muted; font-size: 22rpx; text-align: center; }
+  padding: 160rpx 0 80rpx;
 }
-
-// 添加按钮
-.add-btn-wrapper {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: $spacing-md;
-  border-top: 1rpx solid $cozy-border;
-  background: $bg-white;
-  
-  .add-btn {
-    background: $cozy-primary;
-    color: white;
-    text-align: center;
-    min-height: 88rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: $cozy-radius-md;
-    font-size: $font-size-md;
-    font-weight: 600;
-  }
-}
-
-// 弹窗
-.modal-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.5);
+.empty-mark {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+  background: $cozy-surface;
   display: flex;
-  align-items: flex-end;
-  z-index: 999;
+  align-items: center;
+  justify-content: center;
+  color: $cozy-primary;
+}
+.empty-text {
+  margin-top: 32rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.empty-hint {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: $cozy-muted;
 }
 
-.modal-content {
-  width: 100%;
+/* ── 新增地址入口（icon 行） ── */
+.add-entry {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-top: 36rpx;
+  padding: 32rpx 36rpx;
+  border-radius: 28rpx;
   background: $bg-white;
-  border-radius: $border-radius-lg $border-radius-lg 0 0;
-  
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: $spacing-md;
-    border-bottom: 1rpx solid $border-color;
-    
-    .modal-title {
-      font-size: $font-size-lg;
-      font-weight: 600;
-    }
-    
-    .modal-close {
-      font-size: 48rpx;
-      color: $text-placeholder;
-    }
-  }
-  
-  .modal-body {
-    padding: $spacing-md;
-    
-    .form-item {
-      margin-bottom: $spacing-md;
-      
-      .form-label {
-        font-size: $font-size-sm;
-        color: $text-secondary;
-        display: block;
-        margin-bottom: $spacing-xs;
-      }
-      
-      .form-input {
-        width: 100%;
-        padding: $spacing-sm;
-        background: $bg-gray;
-        border-radius: $border-radius-sm;
-        font-size: $font-size-md;
-      }
-      
-      &.checkbox-item {
-        display: flex;
-        align-items: center;
-        
-        .checkbox {
-          width: 36rpx;
-          height: 36rpx;
-          border: 2rpx solid $border-color;
-          border-radius: 6rpx;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-right: $spacing-sm;
-          
-          &.checked {
-            background: $primary-color;
-            border-color: $primary-color;
-            color: white;
-            font-size: 24rpx;
-          }
-        }
-        
-        .checkbox-label {
-          font-size: $font-size-md;
-          color: $text-primary;
-        }
-      }
-    }
-  }
-  
-  .modal-footer {
-    padding: $spacing-md;
-    
-    .modal-btn {
-      background: $cozy-primary;
-      color: white;
-      text-align: center;
-      padding: $spacing-md;
-      border-radius: $cozy-radius-md;
-      font-size: $font-size-md;
-      font-weight: 600;
-    }
-  }
+  border: 1rpx solid $cozy-border;
+
+  &:active { opacity: .75; }
+}
+.add-plus {
+  width: 52rpx;
+  height: 52rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $cozy-primary;
+}
+.add-text {
+  flex: 1;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.add-arrow {
+  font-size: 36rpx;
+  color: $cozy-placeholder;
+  line-height: 1;
 }
 </style>
