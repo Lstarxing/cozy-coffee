@@ -1,15 +1,11 @@
 <template>
   <view class="edit-page">
     <view class="profile-hero">
-      <text class="eyebrow">COZY ACCOUNT</text>
-      <text class="page-title cozy-display">个人资料</text>
-      <text class="page-copy">完善联系方式与生日信息，头像和邀请关系会同步到你的会员账户。</text>
-
       <view class="avatar-row">
         <image :src="avatarUrl" class="avatar" mode="aspectFill" />
         <view class="avatar-copy">
           <text class="avatar-title">会员头像</text>
-          <text class="avatar-note">支持 JPG、PNG、GIF、WebP，最大 5MB</text>
+          <text class="avatar-note">最大 5MB</text>
           <button class="avatar-button" :loading="avatarUploading" :disabled="avatarUploading" @click="chooseAvatar">
             {{ avatarUploading ? '上传中' : '更换头像' }}
           </button>
@@ -33,11 +29,11 @@
       </label>
       <label class="field-row">
         <text class="field-label">手机号</text>
-        <input v-model="form.phone" class="field-input" type="number" maxlength="11" placeholder="选填，用于完善会员资料" />
+        <input v-model="form.phone" class="field-input" type="number" maxlength="11" placeholder="请输入手机号" />
       </label>
       <label class="field-row">
         <text class="field-label">邮箱</text>
-        <input v-model="form.email" class="field-input" type="text" maxlength="100" placeholder="选填，用于完善会员资料" />
+        <input v-model="form.email" class="field-input" type="text" maxlength="100" placeholder="请输入邮箱" />
       </label>
       <picker mode="date" :value="form.birthday" start="1900-01-01" :end="today" @change="handleBirthdayChange">
         <view class="field-row">
@@ -52,53 +48,13 @@
         {{ saving ? '保存中' : '保存资料' }}
       </button>
     </view>
-
-    <view class="section invite-section">
-      <view class="section-heading">
-        <text class="section-title">邀请好友</text>
-        <text class="section-note">首单完成后按后端规则发放奖励</text>
-      </view>
-
-      <view class="invite-code-card" @click="copyInviteCode">
-        <view>
-          <text class="invite-label">我的邀请码</text>
-          <text class="invite-code">{{ userInfo.inviteCode || '加载中…' }}</text>
-        </view>
-        <text class="copy-action">复制</text>
-      </view>
-
-      <view v-if="userInfo.hasAppliedInviteCode" class="bound-state">
-        <text class="bound-mark">✓</text>
-        <view>
-          <text class="bound-title">已绑定好友邀请码</text>
-          <text class="bound-copy">邀请关系只能绑定一次，当前账户已完成绑定。</text>
-        </view>
-      </view>
-
-      <view v-else class="apply-box">
-        <text class="apply-title">补填好友邀请码</text>
-        <text class="apply-copy">注册时未填写的账户，可在这里补填一次。</text>
-        <view class="apply-row">
-          <input
-            v-model="inviteInput"
-            class="invite-input"
-            maxlength="8"
-            placeholder="8 位邀请码"
-            @input="normalizeInviteInput"
-          />
-          <button class="apply-button" :loading="applyingInvite" :disabled="applyingInvite" @click="submitInviteCode">
-            绑定
-          </button>
-        </view>
-      </view>
-    </view>
   </view>
 </template>
 
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { applyInviteCode, getUserInfo, updateProfile, uploadAvatar } from '@/api/auth'
+import { getUserInfo, updateProfile, uploadAvatar } from '@/api/auth'
 import { useSessionStore } from '@/stores/session'
 import { getImageUrl } from '@/utils/image'
 
@@ -106,9 +62,7 @@ const sessionStore = useSessionStore()
 const userInfo = computed(() => sessionStore.userInfo || {})
 const saving = ref(false)
 const avatarUploading = ref(false)
-const applyingInvite = ref(false)
 const avatarPreview = ref('')
-const inviteInput = ref('')
 const today = new Date().toISOString().slice(0, 10)
 const form = reactive({ nickname: '', phone: '', email: '', birthday: '' })
 let snapshot = { nickname: '', phone: '', email: '', birthday: '' }
@@ -159,6 +113,7 @@ function validateProfile() {
   const nickname = form.nickname.trim()
   const phone = form.phone.trim()
   const email = form.email.trim()
+  if (!phone && !email) return '手机号或邮箱至少保留一项（账号凭此登录）'
   if (nickname.length < 2 || nickname.length > 20) return '昵称长度需在 2～20 个字符之间'
   if (phone && !/^1[3-9]\d{9}$/.test(phone)) return '请输入正确的手机号'
   if (email && !/^[\w.-]+@[\w.-]+\.\w+$/.test(email)) return '请输入正确的邮箱地址'
@@ -234,64 +189,20 @@ function chooseAvatar() {
     }
   })
 }
-
-function copyInviteCode() {
-  const code = userInfo.value.inviteCode
-  if (!code) {
-    uni.showToast({ title: '邀请码加载中，请稍后再试', icon: 'none' })
-    return
-  }
-  uni.setClipboardData({
-    data: code,
-    success: () => uni.showToast({ title: '邀请码已复制', icon: 'success' })
-  })
-}
-
-function normalizeInviteInput(event) {
-  inviteInput.value = String(event.detail.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)
-}
-
-async function submitInviteCode() {
-  if (applyingInvite.value) return
-  const code = inviteInput.value.trim().toUpperCase()
-  if (!/^[A-Z0-9]{8}$/.test(code)) {
-    uni.showToast({ title: '请输入完整的 8 位邀请码', icon: 'none' })
-    return
-  }
-  if (code === userInfo.value.inviteCode) {
-    uni.showToast({ title: '不能填写自己的邀请码', icon: 'none' })
-    return
-  }
-
-  applyingInvite.value = true
-  try {
-    await applyInviteCode(code)
-    inviteInput.value = ''
-    await refreshUserInfo()
-    uni.showToast({ title: '邀请码绑定成功', icon: 'success' })
-  } catch (error) {
-    uni.showToast({ title: error?.message || '邀请码绑定失败', icon: 'none', duration: 3000 })
-  } finally {
-    applyingInvite.value = false
-  }
-}
 </script>
 
 <style lang="scss" scoped>
-.edit-page { min-height: 100vh; padding-bottom: 80rpx; background: $cozy-bg; }
-.profile-hero { padding: 42rpx 28rpx 36rpx; background: $cozy-surface-alt; color: #fff; }
-.eyebrow { display: block; color: $cozy-muted-on-dark; font-size: 18rpx; font-weight: 800; letter-spacing: .15em; }
-.page-title { display: block; margin-top: 13rpx; font-size: 42rpx; }
-.page-copy { display: block; max-width: 620rpx; margin-top: 10rpx; color: rgba(255,255,255,.62); font-size: 20rpx; line-height: 1.65; }
-.avatar-row { margin-top: 34rpx; display: flex; align-items: center; gap: 24rpx; }
-.avatar { width: 124rpx; height: 124rpx; flex: none; border: 2rpx solid rgba(255,255,255,.3); border-radius: 50%; background: $cozy-cta-alt-bg; }
+.edit-page { min-height: 100vh; padding-bottom: 80rpx; background: $cozy-surface; }
+.profile-hero { margin: 24rpx; padding: 28rpx 36rpx; border-radius: 28rpx; background: $bg-white; color: $cozy-ink; }
+.avatar-row { display: flex; align-items: center; gap: 24rpx; }
+.avatar { width: 124rpx; height: 124rpx; flex: none; border: 2rpx solid $cozy-border; border-radius: 50%; background: $bg-white; }
 .avatar-copy { min-width: 0; flex: 1; }
 .avatar-title { display: block; font-size: 26rpx; font-weight: 700; }
-.avatar-note { display: block; margin-top: 6rpx; color: $cozy-muted-on-dark; font-size: 18rpx; }
-.avatar-button { width: max-content; min-height: 58rpx; margin: 15rpx 0 0; padding: 0 20rpx; display: flex; align-items: center; border: 1rpx solid $cozy-border-on-dark; border-radius: $cozy-radius-md; background: transparent; color: #fff; font-size: 20rpx; line-height: 1; }
-.avatar-button::after, .primary-button::after, .apply-button::after { border: 0; }
+.avatar-note { display: block; margin-top: 6rpx; color: $cozy-muted; font-size: 18rpx; }
+.avatar-button { width: max-content; min-height: 58rpx; margin: 15rpx 0 0; padding: 0 20rpx; display: flex; align-items: center; border: 1rpx solid $cozy-border; border-radius: $cozy-radius-md; background: transparent; color: $cozy-ink; font-size: 20rpx; line-height: 1; }
+.avatar-button::after, .primary-button::after { border: 0; }
 
-.section { margin: 24rpx; padding: 28rpx; border-radius: $cozy-radius-lg; background: #fff; }
+.section { margin: 0 24rpx 24rpx; padding: 28rpx; border-radius: 28rpx; background: $bg-white; }
 .section-heading { padding-bottom: 20rpx; border-bottom: 1rpx solid $cozy-border; }
 .section-title { display: block; color: $cozy-ink; font-size: 29rpx; font-weight: 720; }
 .section-note { display: block; margin-top: 6rpx; color: $cozy-muted; font-size: 18rpx; }
@@ -303,19 +214,5 @@ async function submitInviteCode() {
 .field-value.placeholder { color: $cozy-placeholder; }
 .field-arrow { flex: none; color: $cozy-placeholder; font-size: 38rpx; }
 .birthday-tip { display: block; margin-top: 16rpx; color: $cozy-muted; font-size: 18rpx; line-height: 1.55; }
-.primary-button { min-height: 86rpx; margin-top: 28rpx; display: flex; align-items: center; justify-content: center; border-radius: $cozy-radius-md; background: $cozy-primary; color: #fff; font-size: 24rpx; font-weight: 700; }
-
-.invite-section { margin-top: 0; }
-.invite-code-card { margin-top: 24rpx; padding: 24rpx; display: flex; align-items: center; justify-content: space-between; border-radius: $cozy-radius-md; background: $cozy-surface-alt; color: #fff; }
-.invite-label { display: block; color: $cozy-muted-on-dark; font-size: 18rpx; }
-.invite-code { display: block; margin-top: 8rpx; font-size: 35rpx; font-weight: 800; letter-spacing: .15em; }
-.copy-action { padding: 13rpx 18rpx; border: 1rpx solid $cozy-border-on-dark; border-radius: $cozy-radius-sm; font-size: 20rpx; }
-.bound-state { margin-top: 22rpx; padding: 22rpx; display: flex; align-items: flex-start; gap: 16rpx; border-radius: $cozy-radius-md; background: $cozy-accent-soft; }
-.bound-mark { width: 44rpx; height: 44rpx; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: $cozy-accent; color: #fff; font-size: 20rpx; }
-.bound-title, .apply-title { display: block; color: $cozy-ink; font-size: 23rpx; font-weight: 680; }
-.bound-copy, .apply-copy { display: block; margin-top: 6rpx; color: $cozy-muted; font-size: 18rpx; line-height: 1.5; }
-.apply-box { margin-top: 24rpx; }
-.apply-row { margin-top: 17rpx; display: flex; gap: 14rpx; }
-.invite-input { min-width: 0; min-height: 76rpx; flex: 1; padding: 0 20rpx; border: 1rpx solid $cozy-border; border-radius: $cozy-radius-md; background: $cozy-surface; color: $cozy-ink; font-size: 24rpx; font-weight: 650; letter-spacing: .08em; }
-.apply-button { width: 130rpx; min-height: 76rpx; margin: 0; display: flex; align-items: center; justify-content: center; border-radius: $cozy-radius-md; background: $cozy-primary; color: #fff; font-size: 22rpx; font-weight: 680; }
+.primary-button { min-height: 88rpx; margin-top: 28rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; background: $cozy-ink; color: #fff; font-size: 26rpx; font-weight: 600; }
 </style>

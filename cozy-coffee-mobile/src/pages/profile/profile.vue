@@ -109,6 +109,16 @@
       </view>
     </view>
 
+    <!-- 邀请好友（会员增长 Banner） -->
+    <view v-if="isLoggedIn" class="invite-banner" @click="goInvite">
+      <view class="invite-banner-left">
+        <text class="invite-banner-kicker">COZY REFERRAL</text>
+        <text class="invite-banner-title">邀请一位朋友，共享会员礼遇</text>
+        <text class="invite-banner-note">好友首单完成，双方均可获得奖励</text>
+      </view>
+      <text class="invite-banner-arrow">›</text>
+    </view>
+
     <!-- 服务 -->
     <view class="entry-card">
       <view class="svc-row" @click="navigateTo('/pages/address/list')">
@@ -262,10 +272,14 @@ function contactService() {
 function goLogin() {
   uni.navigateTo({ url: '/pages/login/index' })
 }
+
+function goInvite() {
+  uni.navigateTo({ url: '/pages/profile/invite' })
+}
 </script>
 
 <style lang="scss" scoped>
-.profile-page { min-height: 100vh; padding: 0 40rpx 220rpx; background: $cozy-surface; }
+.profile-page { min-height: 100vh; padding: 0 40rpx 60rpx; background: $cozy-surface; }
 
 /* ===== 会员身份卡（紧凑 · 等级主题） ===== */
 .member-card {
@@ -529,6 +543,24 @@ function goLogin() {
 .svc-name { font-size: 28rpx; color: $cozy-ink; }
 .svc-note { flex: 1; text-align: right; font-size: 22rpx; color: $cozy-muted; }
 .svc-arrow { flex: none; font-size: 36rpx; color: $cozy-placeholder; line-height: 1; }
+
+/* ── 邀请好友（会员增长 Banner） ── */
+.invite-banner {
+  margin-top: 28rpx;
+  padding: 32rpx 36rpx;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  border-radius: 28rpx;
+  background: $cozy-surface;
+
+  &:active { opacity: .8; }
+}
+.invite-banner-left { flex: 1; min-width: 0; }
+.invite-banner-kicker { display: block; font-size: 18rpx; font-weight: 700; letter-spacing: .18em; color: $cozy-accent; }
+.invite-banner-title { display: block; margin-top: 10rpx; font-family: $font-display; font-size: 30rpx; font-weight: 600; color: $cozy-ink; }
+.invite-banner-note { display: block; margin-top: 8rpx; font-size: 20rpx; color: $cozy-muted; }
+.invite-banner-arrow { flex: none; font-size: 40rpx; color: $cozy-placeholder; line-height: 1; }
 
 /* ===== 底部品牌区域 ===== */
 .profile-footer { padding: 92rpx 0 20rpx; text-align: center; }

@@ -1,15 +1,9 @@
 <!--
   每日签到页 - 精确复现 prototype/signin.html
-  积分头 + 咖啡豆轨迹（7 天进度）+ 立即签到 CTA + checkin-foot 提示块 + 权益说明 + 顶部成功消息
+  咖啡豆轨迹（7 天进度）+ 立即签到 CTA + checkin-foot 提示块 + 权益说明 + 顶部成功消息
 -->
 <template>
   <view class="signin-page">
-    <!-- 积分头 -->
-    <view class="points-header">
-      <text class="points-label">当前可用积分</text>
-      <text class="points-value">{{ formatPoints(currentPoints) }}</text>
-    </view>
-
     <!-- 签到区 -->
     <view class="checkin-section">
       <view class="checkin-head">
@@ -22,7 +16,7 @@
 
       <view class="bean-track">
         <view class="track-line">
-          <view class="track-line-fill" :style="{ width: trackPercent + '%' }"></view>
+          <view class="track-line-fill" :style="{ transform: 'scaleX(' + (trackPercent / 100) + ')' }"></view>
         </view>
         <view class="bean-steps">
           <view
@@ -136,8 +130,6 @@ function label(index) {
   return '+2'
 }
 
-function formatPoints(value) { return Number(value || 0).toLocaleString() }
-
 onShow(async () => {
   try {
     const res = await getMemberInfo()
@@ -189,26 +181,6 @@ const handleSignin = async () => {
   padding: 40rpx 40rpx 240rpx;
 }
 
-/* ── 积分头 ── */
-.points-header {
-  padding: 48rpx 16rpx 32rpx;
-}
-.points-label {
-  display: block;
-  font-size: 26rpx;
-  color: $cozy-muted;
-  letter-spacing: .04em;
-}
-.points-value {
-  display: block;
-  margin-top: 16rpx;
-  font-family: $font-display;
-  font-size: 92rpx;
-  font-weight: 600;
-  color: $cozy-ink;
-  line-height: 1;
-}
-
 /* ── 签到区 ── */
 .checkin-section {
   margin-top: 40rpx;
@@ -256,7 +228,8 @@ const handleSignin = async () => {
   height: 100%;
   border-radius: 4rpx;
   background: $cozy-primary;
-  transition: width .5s ease;
+  transform-origin: left;
+  transition: transform .5s ease;
 }
 .bean-steps {
   display: flex;
@@ -304,21 +277,22 @@ const handleSignin = async () => {
   width: 100%;
   height: 96rpx;
   margin-top: 44rpx;
-  border-radius: 20rpx;
-  background: $cozy-primary;
-  color: #fff;
+  border: 1rpx solid $cozy-border;
+  border-radius: $cozy-radius-md;
+  background: $bg-white;
+  color: $cozy-ink;
   font-size: 30rpx;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background $cozy-duration $cozy-ease-out;
+  transition: border-color $cozy-duration $cozy-ease-out;
 
-  &:active { background: $cozy-primary-hover; }
+  &:active { border-color: $cozy-ink; }
   &.done {
     background: $bg-white;
-    color: $cozy-primary;
-    border: 1rpx solid $cozy-primary;
+    color: $cozy-muted;
+    border: 1rpx solid $cozy-border;
   }
 }
 

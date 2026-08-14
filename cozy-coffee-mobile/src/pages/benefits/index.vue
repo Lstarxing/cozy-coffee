@@ -4,13 +4,15 @@
 -->
 <template>
   <view class="benefits-page">
-    <!-- 页头：安静身份行 -->
+    <!-- 页头：安静身份行（等级徽章 + 当前等级，标题交由原生导航栏） -->
     <view class="page-head">
       <view class="head-identity">
         <LevelBadge :level="currentLevel" :size="44" />
-        <text class="head-title">会员权益</text>
+        <view class="head-level">
+          <text class="head-level-name">{{ getLevelName(currentLevel) }}</text>
+          <text class="head-level-en">· {{ currentLevel.toUpperCase() }}</text>
+        </view>
       </view>
-      <text class="head-sub">{{ getLevelName(currentLevel) }} <em>· {{ currentLevel.toUpperCase() }}</em></text>
     </view>
 
     <!-- 本月可用 -->
@@ -230,30 +232,23 @@ onShow(loadBenefitsPage)
 }
 
 /* ── 页头（安静身份行，非卡） ── */
-.page-head { padding: 12rpx 4rpx 40rpx; }
+.page-head { padding: 12rpx 4rpx 20rpx; }
 .head-identity { display: flex; align-items: center; gap: 20rpx; }
-.head-title {
-  font-family: $font-display;
-  font-size: 48rpx;
-  font-weight: 600;
+.head-level { display: flex; align-items: baseline; gap: 12rpx; }
+.head-level-name {
+  font-size: 30rpx;
+  font-weight: 650;
   color: $cozy-ink;
 }
-.head-sub {
-  display: block;
-  margin-top: 12rpx;
-  font-size: 22rpx;
+.head-level-en {
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: .12em;
   color: $cozy-muted;
-}
-.head-sub em {
-  font-style: normal;
-  color: $cozy-primary;
-  font-weight: 650;
-  font-size: 18rpx;
-  letter-spacing: .08em;
 }
 
 /* ── Editorial section：线性分隔 + 留白 ── */
-.section { margin-top: 48rpx; }
+.section { margin-top: 32rpx; }
 .section-head {
   display: flex;
   align-items: baseline;

@@ -1,23 +1,25 @@
 <!--
-  月度挑战页 - 精确复现 prototype/challenge.html：hero + 4 任务，达标自动发放积分（claimed），无手动领取
+  月度挑战页 - 复现 prototype/challenge.html：Hero 仪表盘（进度 + 积分）+ 4 任务，达标自动发放积分（claimed），无手动领取
   数据源: /member/monthly-task (MonthlyTaskDTO)
 -->
 <template>
   <view class="challenge-page">
-    <!-- Hero -->
+    <!-- Hero：会员成长仪表盘（非活动 Banner） -->
     <view class="challenge-hero">
       <text class="hero-eyebrow">COZY CHALLENGE</text>
       <text class="hero-title">{{ currentMonth }} 咖啡挑战</text>
-      <text class="hero-sub">达标自动发放积分，无需手动领取</text>
-      <view class="hero-stats">
-        <view class="stat">
-          <text class="stat-val">{{ doneCount }}/{{ tasks.length }}</text>
-          <text class="stat-lbl">已完成挑战</text>
+      <text class="hero-sub">完成挑战，积分自动到账</text>
+
+      <view class="hero-progress">
+        <view class="hero-count-row">
+          <text class="hero-count">{{ doneCount }}</text>
+          <text class="hero-count-total">/ {{ tasks.length }}</text>
         </view>
-        <view class="stat">
-          <text class="stat-val">+{{ earnedPoints }}</text>
-          <text class="stat-lbl">本月已获积分</text>
+        <text class="hero-progress-label">已完成挑战</text>
+        <view class="hero-track">
+          <view class="hero-track-fill" :style="{ transform: 'scaleX(' + (donePercent / 100) + ')' }"></view>
         </view>
+        <text class="hero-earned">本月已获得 {{ earnedPoints }} pts</text>
       </view>
     </view>
 
@@ -27,19 +29,20 @@
       <RetryState v-else-if="errorMessage && tasks.length === 0" :description="errorMessage" @retry="loadTasks" />
       <template v-else>
         <view v-for="task in tasks" :key="task.key" class="task-row" :class="{ done: isDone(task) }">
-          <view class="task-icon"><CozyIcon :name="task.icon" :size="22" color="#753A22" /></view>
+          <view class="task-icon" :class="{ done: isDone(task) }">
+            <CozyIcon :name="task.icon" :size="22" :color="isDone(task) ? '#526C43' : '#753A22'" />
+          </view>
           <view class="task-main">
             <view class="task-top">
               <text class="task-name">{{ task.name }}</text>
-              <text v-if="isDone(task)" class="task-reward claimed">✓ 已发放</text>
-              <text v-else class="task-reward">+{{ task.reward }} 积分</text>
+              <text class="task-reward" :class="{ claimed: isDone(task) }">{{ isDone(task) ? '✓ 已发放' : `+${task.reward} 积分` }}</text>
             </view>
             <text class="task-desc">{{ task.desc }}</text>
             <view class="task-progress">
               <view class="task-progress-fill" :style="{ width: task.progress + '%' }"></view>
             </view>
           </view>
-          <text class="task-status" :class="{ done: isDone(task) }">{{ displayCurrent(task) }}/{{ task.target }}</text>
+          <view class="task-status" :class="{ done: isDone(task) }">{{ displayCurrent(task) }}/{{ task.target }}</view>
         </view>
       </template>
     </view>
@@ -86,6 +89,10 @@ const tasks = computed(() => TASKS.map(task => {
 
 const doneCount = computed(() => tasks.value.filter(t => t.done).length)
 const earnedPoints = computed(() => tasks.value.filter(t => t.claimed).reduce((sum, t) => sum + t.reward, 0))
+const donePercent = computed(() => {
+  if (tasks.value.length === 0) return 0
+  return Math.min(100, Math.round((doneCount.value / tasks.value.length) * 100))
+})
 
 function displayCurrent(task) { return task.displayCurrent }
 function isDone(task) { return task.done }
@@ -114,55 +121,81 @@ onShow(loadTasks)
   padding: 12rpx 40rpx 240rpx;
 }
 
-/* ── Hero ── */
+/* ── Hero（会员成长仪表盘 · 浅色卡） ── */
 .challenge-hero {
-  padding: 52rpx 48rpx 44rpx;
+  padding: 52rpx 48rpx 48rpx;
   border-radius: 24rpx;
-  background: linear-gradient(135deg, #3A342E, #2C1E18);
-  color: #fff;
-  text-align: center;
+  background: $bg-white;
+  color: $cozy-ink;
 }
 .hero-eyebrow {
   display: block;
   font-size: 18rpx;
   font-weight: 700;
   letter-spacing: .26em;
-  opacity: .7;
+  color: $cozy-muted;
 }
 .hero-title {
   display: block;
-  margin-top: 20rpx;
+  margin-top: 24rpx;
   font-family: $font-display;
   font-size: 48rpx;
   font-weight: 600;
+  color: $cozy-ink;
 }
 .hero-sub {
   display: block;
-  margin-top: 12rpx;
+  margin-top: 14rpx;
   font-size: 24rpx;
-  color: rgba(255,255,255,.65);
+  color: $cozy-muted;
 }
-.hero-stats {
+.hero-progress { margin-top: 56rpx; }
+.hero-count-row {
   display: flex;
-  gap: 24rpx;
-  margin-top: 44rpx;
+  align-items: baseline;
+  gap: 12rpx;
 }
-.stat {
-  flex: 1;
-  padding: 24rpx 0;
-  border-radius: 16rpx;
-  background: rgba(255,255,255,.08);
-}
-.stat-val {
-  display: block;
-  font-size: 36rpx;
+.hero-count {
+  font-family: $font-display;
+  font-size: 72rpx;
   font-weight: 700;
+  line-height: 1;
+  color: $cozy-ink;
 }
-.stat-lbl {
+.hero-count-total {
+  font-family: $font-display;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: $cozy-placeholder;
+}
+.hero-progress-label {
   display: block;
-  margin-top: 6rpx;
-  font-size: 20rpx;
-  opacity: .7;
+  margin-top: 16rpx;
+  font-size: 22rpx;
+  font-weight: 650;
+  letter-spacing: .12em;
+  color: $cozy-muted;
+}
+.hero-track {
+  margin-top: 32rpx;
+  height: 6rpx;
+  border-radius: 4rpx;
+  background: $cozy-border;
+  overflow: hidden;
+}
+.hero-track-fill {
+  height: 100%;
+  border-radius: 4rpx;
+  background: $cozy-accent;
+  transform-origin: left;
+  transition: transform .5s ease;
+}
+.hero-earned {
+  display: block;
+  margin-top: 28rpx;
+  font-size: 22rpx;
+  letter-spacing: .04em;
+  color: $cozy-muted;
 }
 
 /* ── 任务列表 ── */
@@ -180,7 +213,7 @@ onShow(loadTasks)
   border-bottom: 1rpx solid $cozy-border;
 
   &:last-child { border-bottom: 0; }
-  &.done { opacity: .62; }
+  &.done { opacity: .72; }
 }
 .task-icon {
   flex: none;
@@ -192,6 +225,8 @@ onShow(loadTasks)
   display: flex;
   align-items: center;
   justify-content: center;
+
+  &.done { background: $cozy-accent-soft; }
 }
 .task-main { flex: 1; min-width: 0; }
 .task-top {
@@ -235,12 +270,18 @@ onShow(loadTasks)
   background: $cozy-primary;
   transition: width .5s ease;
 }
+.task-row.done .task-progress-fill { background: $cozy-accent; }
 .task-status {
   flex: none;
-  font-size: 26rpx;
-  font-weight: 650;
-  color: $cozy-ink;
+  min-width: 88rpx;
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  text-align: center;
+  background: $cozy-surface;
+  color: $cozy-muted;
+  font-size: 22rpx;
+  font-weight: 700;
 
-  &.done { color: $cozy-accent; }
+  &.done { background: $cozy-accent-soft; color: $cozy-accent; }
 }
 </style>
