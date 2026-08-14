@@ -90,7 +90,7 @@ function pad(n) { return String(n).padStart(2, '0') }
 
 .map-section { background: $cozy-surface; }
 .map-image { display: block; width: 100%; }
-.map-label { padding: 16rpx 28rpx 20rpx; color: $cozy-muted; font-size: 19rpx; text-align: center; }
+.map-label { padding: 16rpx 28rpx 20rpx; color: $cozy-muted; font-size: 24rpx; text-align: center; }
 
 .origins-list { padding: 0 28rpx; }
 .origin-card { padding: 32rpx 0 56rpx; }
@@ -101,25 +101,25 @@ function pad(n) { return String(n).padStart(2, '0') }
 
 .card-summary { padding-bottom: 0; }
 
-.card-counter { color: $cozy-muted; font-size: 20rpx; letter-spacing: 0.06em; margin-bottom: 20rpx; }
-.card-name { display: block; color: $cozy-ink; font-size: 44rpx; line-height: 1.12; }
-.card-region { display: block; margin-top: 10rpx; color: $cozy-primary; font-size: 24rpx; font-weight: 650; }
-.section-rule { width: 48rpx; height: 2rpx; margin-top: 20rpx; background: $cozy-border; }
-.card-story { display: block; margin-top: 24rpx; color: $cozy-muted; font-size: 24rpx; line-height: 1.75; }
+.card-counter { color: $cozy-muted; font-size: 24rpx; letter-spacing: 0.06em; margin-bottom: 20rpx; }
+.card-name { display: block; color: $cozy-ink; font-size: 48rpx; line-height: 1.12; }
+.card-region { display: block; margin-top: 12rpx; color: $cozy-primary; font-size: 26rpx; font-weight: 650; }
+.section-rule { width: 48rpx; height: 2rpx; margin-top: 24rpx; background: $cozy-border; }
+.card-story { display: block; margin-top: 28rpx; color: $cozy-muted; font-size: 28rpx; line-height: 1.75; }
 
-.facts-rule { width: 56rpx; height: 2rpx; margin-top: 28rpx; background: $cozy-border; }
-.card-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 18rpx 24rpx; margin-top: 28rpx; }
-.fact-label { display: block; color: $cozy-muted; font-size: 20rpx; }
-.fact-value { display: block; margin-top: 6rpx; color: $cozy-ink; font-size: 22rpx; }
+.facts-rule { width: 56rpx; height: 2rpx; margin-top: 32rpx; background: $cozy-border; }
+.card-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx 24rpx; margin-top: 32rpx; }
+.fact-label { display: block; color: $cozy-muted; font-size: 22rpx; }
+.fact-value { display: block; margin-top: 8rpx; color: $cozy-ink; font-size: 26rpx; }
 .fact-role .fact-value { color: $cozy-primary; font-weight: 700; }
 
-.card-flavors { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 24rpx; }
-.flavor-tag { padding: 10rpx 18rpx; border-radius: 999rpx; background: $cozy-surface; color: $cozy-ink; font-size: 20rpx; }
+.card-flavors { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 28rpx; }
+.flavor-tag { padding: 12rpx 22rpx; border-radius: 999rpx; background: $cozy-surface; color: $cozy-ink; font-size: 24rpx; }
 
-.card-route { display: block; margin-top: 24rpx; color: $cozy-primary; font-size: 21rpx; font-weight: 600; }
+.card-route { display: block; margin-top: 28rpx; color: $cozy-primary; font-size: 24rpx; font-weight: 600; }
 
-.card-roastery { display: flex; gap: 12rpx 28rpx; margin-top: 28rpx; }
-.roastery-step { color: $cozy-ink; font-size: 22rpx; font-weight: 650; }
+.card-roastery { display: flex; gap: 12rpx 28rpx; margin-top: 32rpx; }
+.roastery-step { color: $cozy-ink; font-size: 26rpx; font-weight: 650; }
 .roastery-step:not(:last-child)::after { content: ' →'; color: $cozy-muted; margin-left: 28rpx; }
 
 .bottom-spacer { height: 100rpx; }

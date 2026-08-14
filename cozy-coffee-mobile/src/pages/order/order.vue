@@ -69,7 +69,7 @@
         <view class="empty-cup__handle" />
       </view>
       <text class="empty-title">暂无{{ currentCategory === 'pickup' ? '自取' : '外送' }}订单</text>
-      <text class="empty-desc">选择一杯喜欢的咖啡，<br>我们会为你现制。</text>
+      <text class="empty-desc">选择一杯喜欢的咖啡，<br>我们会为你现制</text>
       <view class="empty-action" @click="goToMenu">去点单</view>
     </view>
   </view>
