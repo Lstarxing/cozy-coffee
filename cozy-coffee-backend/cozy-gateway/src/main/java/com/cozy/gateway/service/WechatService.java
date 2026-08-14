@@ -72,10 +72,10 @@ public class WechatService {
             return openid;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new BusinessException("微信登录网络异常");
+            throw new BusinessException("微信登录网络异常: " + e.getMessage());
         } catch (Exception e) {
             log.warn("微信 code2Session 调用异常", e);
-            throw new BusinessException("微信登录网络异常");
+            throw new BusinessException("微信登录网络异常: " + e.getMessage());
         }
     }
 }
