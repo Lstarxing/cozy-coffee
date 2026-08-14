@@ -1,81 +1,57 @@
 <!--
-  优惠券列表页 - 展示用户的优惠券
+  优惠券页 - 对齐 prototype/coupons.html：顶部固定筛选（原生导航标题）+ 券卡（面值/条件 + 名称/范围/到期 + 去使用/状态）
+  数据源: /member/mall/coupons (UserCouponDTO，displayTitle/displaySubTitle 后端已算好)
 -->
 <template>
   <view class="coupon-page">
-    <!-- 标签切换 -->
-    <view class="tabs">
-      <view 
-        class="tab-item" 
+    <!-- 筛选 tabs（顶部固定条，对齐订单页） -->
+    <view class="filter-tabs">
+      <view
+        class="filter-tab"
         :class="{ active: currentTab === 'available' }"
-        @click="currentTab = 'available'"
-      >
-        可使用 ({{ availableCount }})
-      </view>
-      <view 
-        class="tab-item"
+        @click="switchTab('available')"
+      >可使用</view>
+      <view
+        class="filter-tab"
         :class="{ active: currentTab === 'used' }"
-        @click="currentTab = 'used'"
-      >
-        已使用
-      </view>
-      <view 
-        class="tab-item"
+        @click="switchTab('used')"
+      >已使用</view>
+      <view
+        class="filter-tab"
         :class="{ active: currentTab === 'expired' }"
-        @click="currentTab = 'expired'"
-      >
-        已过期
-      </view>
+        @click="switchTab('expired')"
+      >已过期</view>
     </view>
-    
+
     <!-- 券列表 -->
-    <scroll-view scroll-y class="coupon-list">
-      <view 
-        class="coupon-card" 
-        :class="[item.status, item.type]"
-        v-for="item in filteredCoupons" 
+    <view v-if="filteredCoupons.length" class="coupon-list">
+      <view
+        v-for="item in filteredCoupons"
         :key="item.id"
+        class="coupon-card"
+        :class="item.status"
       >
-        <!-- 左侧金额 -->
         <view class="coupon-left">
-          <view class="coupon-value">
-            <text class="currency" v-if="item.value">¥</text>
-            <text class="amount">{{ item.value || (item.discount * 10) }}</text>
-            <text class="unit" v-if="!item.value">折</text>
-          </view>
-          <text class="coupon-condition">
-            {{ item.minAmount ? `满${item.minAmount}可用` : '无门槛' }}
-          </text>
+          <text class="coupon-value">{{ item.displayTitle }}</text>
+          <text class="coupon-condition">{{ item.displaySubTitle }}</text>
         </view>
-        
-        <!-- 右侧信息 -->
         <view class="coupon-right">
           <text class="coupon-name">{{ item.name }}</text>
-          <text class="coupon-scope">全场通用</text>
-          <text class="coupon-expire">{{ item.expireDate }} 到期</text>
+          <text class="coupon-scope">{{ item.scope }}</text>
+          <text class="coupon-expire">{{ item.expireText }}</text>
         </view>
-        
-        <!-- 使用按钮 -->
-        <view class="coupon-action" v-if="item.status === 'available'">
-          <view class="use-btn" @click="useCoupon(item)">去使用</view>
-        </view>
-        
-        <!-- 状态标记 -->
-        <view class="status-tag" v-if="item.status !== 'available'">
-          {{ item.status === 'used' ? '已使用' : '已过期' }}
+        <view class="coupon-action">
+          <view v-if="item.status === 'available'" class="use-btn" @click="useCoupon(item)">去使用</view>
+          <text v-else class="status-tag">{{ statusText(item.status) }}</text>
         </view>
       </view>
-      
-      <!-- 空状态 -->
-      <view class="empty-state" v-if="filteredCoupons.length === 0">
-        <text class="empty-icon">券</text>
-        <text class="empty-text">暂无{{ tabText }}的优惠券</text>
-      </view>
-    </scroll-view>
-    
-    <!-- 兑换入口 -->
-    <view class="exchange-entry" @click="goToMall">
-      <text class="entry-text">去积分商城兑换更多优惠券 →</text>
+    </view>
+
+    <!-- 空状态 -->
+    <view v-else class="empty-state">
+      <view class="empty-mark"><CozyIcon name="coupon" :size="36" color="#753A22" /></view>
+      <text class="empty-text">暂无{{ tabText }}的优惠券</text>
+      <text class="empty-hint">去积分商城兑换更多优惠券</text>
     </view>
   </view>
 </template>
@@ -83,38 +59,48 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getCouponList } from '@/api/coupon'
+import CozyIcon from '@/components/CozyIcon.vue'
 
 const currentTab = ref('available')
 const coupons = ref([])
 
+const TAB_TEXT = { available: '可使用', used: '已使用', expired: '已过期' }
+const STATUS_TEXT = { available: '可使用', used: '已使用', expired: '已过期' }
+
+const TYPE_NAME = {
+  EXCHANGE: '咖啡兑换券',
+  DISCOUNT: '折扣券',
+  FULL_REDUCE: '满减券',
+  BOGO: '买一赠一券',
+  DELIVERY_FEE: '配送费抵扣券',
+  SHOT: '加浓缩券'
+}
+
+const TYPE_SCOPE = {
+  EXCHANGE: '全场饮品通兑',
+  DISCOUNT: '全场通用',
+  FULL_REDUCE: '全场通用',
+  BOGO: '现制饮品',
+  DELIVERY_FEE: '仅限外送',
+  SHOT: '附加券 · 可叠加'
+}
+
 onMounted(async () => {
   try {
-    // 不传 status 参数，获取所有状态的券
     const res = await getCouponList()
-    console.log('优惠券接口返回:', res)
-    
     if (res.code === 200 && res.data) {
       coupons.value = res.data.map(item => {
-        // 后端返回状态: ISSUED(可用), USED(已用), EXPIRED(过期)
-        // 前端需要的状态: available, used, expired
-        let mappedStatus = 'available'
-        if (item.status === 'ISSUED' && item.available === true) {
-          mappedStatus = 'available'
-        } else if (item.status === 'USED') {
-          mappedStatus = 'used'
-        } else if (item.status === 'EXPIRED' || item.available === false) {
-          mappedStatus = 'expired'
-        }
-        
+        const mappedStatus = mapStatus(item)
         return {
           ...item,
-          value: item.value || 0,
-          name: item.productName || getCouponName(item.couponType),
-          expireDate: formatDate(item.expiresAt),
-          status: mappedStatus
+          status: mappedStatus,
+          displayTitle: item.displayTitle || (item.value ? `¥${item.value}` : TYPE_NAME[item.couponType] || '优惠券'),
+          displaySubTitle: item.displaySubTitle || (item.minAmount ? `满${item.minAmount}可用` : '无门槛'),
+          name: item.productName || item.title || TYPE_NAME[item.couponType] || '优惠券',
+          scope: TYPE_SCOPE[item.couponType] || '全场通用',
+          expireText: formatExpire(item, mappedStatus)
         }
       })
-      console.log('处理后的优惠券:', coupons.value)
     }
   } catch (e) {
     console.error('获取优惠券失败', e)
@@ -122,230 +108,219 @@ onMounted(async () => {
   }
 })
 
-// 根据券类型获取默认名称
-const getCouponName = (type) => {
-  const map = {
-    'EXCHANGE': '咖啡兑换券',
-    'DISCOUNT': '折扣券',
-    'FULL_REDUCE': '满减券'
-  }
-  return map[type] || '优惠券'
+// 后端返回 ISSUED/USED/EXPIRED + available，映射为前端三态
+function mapStatus(item) {
+  if (item.status === 'USED') return 'used'
+  if (item.status === 'EXPIRED' || item.available === false) return 'expired'
+  return 'available'
 }
 
-// 格式化日期
-const formatDate = (dateStr) => {
-  if (!dateStr) return ''
+function formatExpire(item, status) {
+  if (status !== 'available') return STATUS_TEXT[status]
+  if (!item.expiresAt) return ''
   try {
-    const date = new Date(dateStr)
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    const d = new Date(item.expiresAt)
+    if (Number.isNaN(d.getTime())) return String(item.expiresAt).slice(0, 10)
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `至 ${mm}-${dd} 到期`
   } catch {
-    return dateStr
+    return ''
   }
 }
 
-const availableCount = computed(() => {
-  return coupons.value.filter(c => c.status === 'available').length
-})
+const filteredCoupons = computed(() => coupons.value.filter(c => c.status === currentTab.value))
+const tabText = computed(() => TAB_TEXT[currentTab.value])
 
-const filteredCoupons = computed(() => {
-  return coupons.value.filter(c => c.status === currentTab.value)
-})
+const statusText = (status) => STATUS_TEXT[status] || status
 
-const tabText = computed(() => {
-  const map = { available: '可使用', used: '已使用', expired: '已过期' }
-  return map[currentTab.value]
-})
-
-const useCoupon = (coupon) => {
-  uni.switchTab({ url: '/pages/menu/menu' })
+function switchTab(value) {
+  if (currentTab.value === value) return
+  currentTab.value = value
 }
 
-const goToMall = () => {
-  uni.navigateTo({ url: '/pages/mall/index' })
+function useCoupon(coupon) {
+  uni.switchTab({ url: '/pages/menu/menu' })
 }
 </script>
 
 <style lang="scss" scoped>
 .coupon-page {
   min-height: 100vh;
+  padding-bottom: 220rpx;
   background: $cozy-surface;
-  display: flex;
-  flex-direction: column;
 }
 
-// 标签
-.tabs {
-  display: flex;
-  background: $bg-white;
+/* ── 筛选 tabs（顶部固定条 · 下划线式，对齐订单页） ── */
+.filter-tabs {
   position: sticky;
   top: 0;
   z-index: 10;
-  
-  .tab-item {
-    flex: 1;
-    text-align: center;
-    margin: 14rpx 8rpx;
-    padding: 16rpx 8rpx;
-    border-radius: 999rpx;
-    background: $cozy-surface;
-    font-size: $font-size-md;
-    color: $text-secondary;
-    position: relative;
-    
-    &.active {
-      background: $cozy-surface-alt;
-      color: #fff;
-      font-weight: 600;
-    }
+  display: flex;
+  height: 96rpx;
+  background: $bg-white;
+  border-bottom: 1rpx solid $cozy-border;
+}
+.filter-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: $cozy-muted;
+  position: relative;
+  transition: color $cozy-duration $cozy-ease-out;
+
+  &.active { color: $cozy-ink; font-weight: 600; }
+  &.active::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 44rpx;
+    height: 4rpx;
+    border-radius: 2rpx;
+    background: $cozy-ink;
   }
 }
 
-// 券列表
+/* ── 券列表 ── */
 .coupon-list {
-  flex: 1;
-  padding: $spacing-md;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  margin: 32rpx 40rpx 0;
 }
-
 .coupon-card {
   display: flex;
+  align-items: stretch;
+  border-radius: 28rpx;
   background: $bg-white;
-  border-radius: $cozy-radius-md;
-  margin-bottom: $spacing-md;
+  border: 1rpx solid $cozy-border;
   overflow: hidden;
-  position: relative;
-  
-  // 已使用/已过期样式
-  &.used, &.expired {
-    opacity: 0.6;
-    
-    .coupon-left {
-      background: #ccc;
-    }
-  }
-  
-  .coupon-left {
-    width: 200rpx;
-    background: $cozy-surface-alt;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: $spacing-md;
-    
-    .coupon-value {
-      display: flex;
-      align-items: baseline;
-      
-      .currency {
-        font-size: $font-size-md;
-      }
-      
-      .amount {
-        font-size: 56rpx;
-        font-weight: 700;
-      }
-      
-      .unit {
-        font-size: $font-size-md;
-        margin-left: 4rpx;
-      }
-    }
-    
-    .coupon-condition {
-      font-size: $font-size-xs;
-      opacity: 0.8;
-      margin-top: $spacing-xs;
-    }
-  }
-  
-  .coupon-right {
-    flex: 1;
-    padding: $spacing-md;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    
-    .coupon-name {
-      font-size: $font-size-md;
-      font-weight: 600;
-      color: $text-primary;
-      margin-bottom: $spacing-xs;
-    }
-    
-    .coupon-scope {
-      font-size: $font-size-xs;
-      color: $text-placeholder;
-      margin-bottom: $spacing-xs;
-    }
-    
-    .coupon-expire {
-      font-size: $font-size-xs;
-      color: $warning-color;
-    }
-  }
-  
-  .coupon-action {
-    display: flex;
-    align-items: center;
-    padding-right: $spacing-md;
-    
-    .use-btn {
-      background: $primary-color;
-      color: white;
-      padding: $spacing-xs $spacing-md;
-      border-radius: $cozy-radius-md;
-      font-size: $font-size-sm;
-    }
-  }
-  
-  .status-tag {
-    position: absolute;
-    top: 18rpx;
-    right: 18rpx;
-    border-radius: 999rpx;
-    background: $cozy-surface;
-    color: $cozy-muted;
-    padding: 6rpx 14rpx;
-    font-size: $font-size-xs;
-  }
+
+  &:not(.used):not(.expired) { border-color: #E3CDB6; }
 }
 
-// 空状态
+.coupon-left {
+  flex: none;
+  width: 208rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 36rpx 12rpx;
+  border-right: 1rpx dashed $cozy-border;
+}
+.coupon-value {
+  font-family: $font-display;
+  font-size: 44rpx;
+  font-weight: 700;
+  color: $cozy-primary;
+  line-height: 1;
+  text-align: center;
+}
+.coupon-condition {
+  font-size: 20rpx;
+  color: $cozy-muted;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.coupon-right {
+  flex: 1;
+  min-width: 0;
+  padding: 32rpx 28rpx;
+}
+.coupon-name {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.coupon-scope {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: $cozy-muted;
+}
+.coupon-expire {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: $cozy-placeholder;
+}
+
+.coupon-action {
+  flex: none;
+  width: 148rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20rpx;
+}
+.use-btn {
+  width: 100%;
+  height: 68rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  background: $cozy-primary;
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 600;
+
+  &:active { background: $cozy-primary-hover; }
+}
+.status-tag {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: $cozy-placeholder;
+}
+
+/* 已使用 / 已过期 */
+.coupon-card.used,
+.coupon-card.expired {
+  background: $cozy-surface;
+  border-color: $cozy-border;
+}
+.coupon-card.used .coupon-value,
+.coupon-card.expired .coupon-value { color: $cozy-placeholder; }
+.coupon-card.used .coupon-name,
+.coupon-card.expired .coupon-name { color: $cozy-muted; }
+
+/* ── 空状态 ── */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 100rpx 0;
-  
-  .empty-icon {
-    width: 88rpx;
-    height: 88rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: $cozy-surface-alt;
-    color: #fff;
-    font-size: 28rpx;
-    font-weight: 750;
-    margin-bottom: $spacing-md;
-  }
-  
-  .empty-text {
-    color: $text-placeholder;
-  }
+  justify-content: center;
+  min-height: calc(100vh - 320rpx);
+  padding: 80rpx 40rpx;
 }
-
-// 兑换入口
-.exchange-entry {
-  background: $bg-white;
-  padding: $spacing-md;
-  text-align: center;
-  
-  .entry-text {
-    color: $primary-color;
-    font-size: $font-size-sm;
-  }
+.empty-mark {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+  background: $cozy-surface;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $cozy-primary;
+}
+.empty-text {
+  margin-top: 40rpx;
+  font-family: $font-display;
+  font-size: 40rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.empty-hint {
+  margin-top: 20rpx;
+  font-size: 26rpx;
+  color: $cozy-muted;
 }
 </style>
