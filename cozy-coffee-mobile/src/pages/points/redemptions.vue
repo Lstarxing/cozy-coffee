@@ -4,21 +4,17 @@
 -->
 <template>
   <view class="redemptions-page">
-    <!-- 页头 -->
-    <view class="page-head">
-      <text class="page-title">兑换记录</text>
-      <text class="page-sub">用积分换来的每一份心意</text>
-    </view>
-
-    <!-- 自取/外送筛选 -->
-    <view class="filter-tabs">
-      <view
-        v-for="f in filters"
-        :key="f.value"
-        class="filter-tab"
-        :class="{ active: activeFilter === f.value }"
-        @click="switchFilter(f.value)"
-      >{{ f.label }}</view>
+    <!-- 顶部白色筛选条（自取/外送，对齐订单页） -->
+    <view class="order-top">
+      <view class="filter-tabs">
+        <view
+          v-for="f in filters"
+          :key="f.value"
+          class="filter-tab"
+          :class="{ active: activeFilter === f.value }"
+          @click="switchFilter(f.value)"
+        >{{ f.label }}</view>
+      </view>
     </view>
 
     <!-- 列表 -->
@@ -64,7 +60,7 @@
 
     <!-- 空状态 -->
     <view v-else class="empty-state">
-      <view class="empty-mark">RDM</view>
+      <view class="empty-mark"><CozyIcon name="gift" :size="36" color="#753A22" /></view>
       <text class="empty-text">暂无{{ activeFilter === 'pickup' ? '自取' : '外送' }}兑换记录</text>
       <text class="empty-hint">去积分商城兑换你的第一份心意</text>
     </view>
@@ -89,6 +85,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { cancelRedemption, confirmRedemptionReceipt, getMyRedemptions } from '@/api/member'
 import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
+import CozyIcon from '@/components/CozyIcon.vue'
 
 const filters = [
   { value: 'pickup', label: '自取' },
@@ -191,36 +188,24 @@ onShow(loadOrders)
 .redemptions-page {
   min-height: 100vh;
   background: $cozy-surface;
-  padding: 40rpx 40rpx 240rpx;
+  padding: 0 0 240rpx;
 }
 
-/* ── 页头 ── */
-.page-head { padding: 16rpx 16rpx 36rpx; }
-.page-title {
-  display: block;
-  font-family: $font-display;
-  font-size: 44rpx;
-  font-weight: 600;
-  color: $cozy-ink;
-  line-height: 1.2;
-}
-.page-sub {
-  display: block;
-  margin-top: 12rpx;
-  font-size: 24rpx;
-  color: $cozy-muted;
-}
+/* ── 顶部白色区（胶囊下方留白 + 筛选，对齐订单页） ── */
+.order-top { background: #fff; }
 
-/* ── 状态筛选 ── */
+/* ── 自取/外送筛选 ── */
 .filter-tabs {
   display: flex;
-  padding: 0 8rpx;
+  height: 96rpx;
+  background: $bg-white;
   border-bottom: 1rpx solid $cozy-border;
 }
 .filter-tab {
   flex: 1;
-  padding: 26rpx 0;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 28rpx;
   color: $cozy-muted;
   position: relative;
@@ -234,12 +219,12 @@ onShow(loadOrders)
     content: '';
     position: absolute;
     left: 50%;
-    bottom: -1rpx;
+    bottom: 0;
     transform: translateX(-50%);
-    width: 44rpx;
+    width: 64rpx;
     height: 4rpx;
     border-radius: 2rpx;
-    background: $cozy-ink;
+    background: $cozy-primary;
   }
 }
 
@@ -247,8 +232,8 @@ onShow(loadOrders)
 .order-list {
   display: flex;
   flex-direction: column;
-  gap: 28rpx;
-  margin-top: 36rpx;
+  gap: 24rpx;
+  padding: 32rpx 24rpx 0;
 }
 .order-card {
   padding: 36rpx;
@@ -368,12 +353,14 @@ onShow(loadOrders)
   &.primary:active { background: $cozy-primary-hover; }
 }
 
-/* ── 空状态 ── */
+/* ── 空状态（复用优惠券页逻辑：图标 + 衬线大标题 + 视口居中） ── */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 144rpx 0 112rpx;
+  justify-content: center;
+  min-height: calc(100vh - 320rpx);
+  padding: 80rpx 40rpx;
 }
 .empty-mark {
   width: 128rpx;
@@ -383,21 +370,18 @@ onShow(loadOrders)
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: $font-display;
-  font-size: 28rpx;
-  font-weight: 700;
-  letter-spacing: .08em;
   color: $cozy-primary;
 }
 .empty-text {
-  margin-top: 32rpx;
-  font-size: 28rpx;
+  margin-top: 40rpx;
+  font-family: $font-display;
+  font-size: 40rpx;
   font-weight: 600;
   color: $cozy-ink;
 }
 .empty-hint {
-  margin-top: 16rpx;
-  font-size: 24rpx;
+  margin-top: 20rpx;
+  font-size: 26rpx;
   color: $cozy-muted;
 }
 
