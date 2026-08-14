@@ -1,19 +1,13 @@
 <!--
-  地址管理页 - 对齐 prototype/address.html：pin 卡 + 绿色默认徽标 + 脱敏 + 图标操作 + 独立编辑页
+  地址管理页 - 对齐 prototype/address.html：pin 卡 + 绿色默认徽标 + 脱敏 + 图标操作 + 独立编辑页（标题由原生导航栏提供）
 -->
 <template>
   <view class="address-page">
-    <!-- 页头 -->
-    <view class="page-head">
-      <text class="page-kicker">ADDRESSES</text>
-      <text class="page-title">收货地址</text>
-    </view>
-
     <!-- 地址列表 -->
     <view class="address-list" v-if="addresses.length > 0">
       <view class="address-card" :class="{ default: item.isDefault }" v-for="item in addresses" :key="item.id">
         <view class="addr-main" @click="selectAddress(item)">
-          <view class="addr-pin"><CozyIcon name="pin" :size="18" color="#753A22" /></view>
+          <view class="addr-pin"><CozyIcon name="pin" :size="24" color="#753A22" /></view>
           <view class="addr-copy">
             <text class="addr-region">{{ item.region }}</text>
             <text class="addr-detail">{{ item.detail }}</text>
@@ -22,17 +16,18 @@
         </view>
         <view class="addr-receiver">
           <text class="receiver-name">{{ maskName(item.name) }}</text>
+          <text class="receiver-honorific">{{ genderSuffix(item.gender) }}</text>
           <text class="receiver-phone">{{ maskPhone(item.phone) }}</text>
         </view>
         <view class="addr-actions">
           <view class="act" @click="setDefault(item)">
-            <CozyIcon :name="item.isDefault ? 'star-filled' : 'star'" :size="19" :color="item.isDefault ? '#753A22' : '#756A63'" />
+            <CozyIcon :name="item.isDefault ? 'star-filled' : 'star'" :size="22" :color="item.isDefault ? '#753A22' : '#756A63'" />
           </view>
           <view class="act" @click="editAddress(item)">
-            <CozyIcon name="pencil" :size="19" color="#756A63" />
+            <CozyIcon name="pencil" :size="22" color="#756A63" />
           </view>
           <view class="act" @click="deleteAddress(item)">
-            <CozyIcon name="trash" :size="19" color="#756A63" />
+            <CozyIcon name="trash" :size="22" color="#756A63" />
           </view>
         </view>
       </view>
@@ -40,14 +35,14 @@
 
     <!-- 空状态 -->
     <view class="empty-state" v-else>
-      <view class="empty-mark"><CozyIcon name="pin" :size="26" color="#753A22" /></view>
+      <view class="empty-mark"><CozyIcon name="pin" :size="30" color="#753A22" /></view>
       <text class="empty-text">暂无收货地址</text>
       <text class="empty-hint">添加地址后，兑换实物礼品可配送上门</text>
     </view>
 
     <!-- 新增地址入口 -->
     <view class="add-entry" @click="addAddress">
-      <view class="add-plus"><CozyIcon name="plus" :size="20" color="#753A22" /></view>
+      <view class="add-plus"><CozyIcon name="plus" :size="24" color="#753A22" /></view>
       <text class="add-text">新增收货地址</text>
       <text class="add-arrow">›</text>
     </view>
@@ -77,6 +72,7 @@ const loadAddresses = async () => {
       addresses.value = res.data.map(item => ({
         ...item,
         name: item.receiverName,
+        gender: item.gender || 'MALE',
         phone: item.receiverPhone,
         region: [item.province, item.city, item.district].filter(Boolean).join(' '),
         detail: item.detailAddress,
@@ -130,6 +126,7 @@ const maskName = (name) => {
   const n = String(name || '')
   return n.length > 1 ? n[0] + '*' + n.slice(-1) : n
 }
+const genderSuffix = (gender) => String(gender || '').toUpperCase() === 'FEMALE' ? '女士' : '先生'
 const maskPhone = (phone) => String(phone || '').replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
 
 const selectAddress = (item) => {
@@ -149,24 +146,6 @@ const selectAddress = (item) => {
   min-height: 100vh;
   padding: 24rpx 32rpx 120rpx;
   background: $cozy-bg;
-}
-
-/* ── 页头 ── */
-.page-head { padding: 8rpx 8rpx 26rpx; }
-.page-kicker {
-  display: block;
-  font-size: 18rpx;
-  font-weight: 700;
-  letter-spacing: .18em;
-  color: $cozy-muted;
-}
-.page-title {
-  display: block;
-  margin-top: 10rpx;
-  font-family: $font-display;
-  font-size: 44rpx;
-  font-weight: 600;
-  color: $cozy-ink;
 }
 
 /* ── 地址列表 ── */
@@ -190,8 +169,8 @@ const selectAddress = (item) => {
 }
 .addr-pin {
   flex: none;
-  width: 52rpx;
-  height: 52rpx;
+  width: 64rpx;
+  height: 64rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -237,6 +216,10 @@ const selectAddress = (item) => {
   font-size: 26rpx;
   font-weight: 600;
   color: $cozy-ink;
+}
+.receiver-honorific {
+  font-size: 24rpx;
+  color: $cozy-muted;
 }
 .receiver-phone {
   font-size: 24rpx;
@@ -307,8 +290,8 @@ const selectAddress = (item) => {
   &:active { opacity: .75; }
 }
 .add-plus {
-  width: 52rpx;
-  height: 52rpx;
+  width: 60rpx;
+  height: 60rpx;
   display: flex;
   align-items: center;
   justify-content: center;

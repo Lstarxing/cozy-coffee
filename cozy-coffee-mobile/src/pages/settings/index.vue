@@ -1,111 +1,109 @@
 <!--
-  账户设置页 - 对齐 prototype/settings.html：白底 intro + 圆角卡片 + 自定义胶囊开关
+  账户设置页 - 章节式品牌设置页：衬线一级标题锚点（页面背景上）+ 白卡设置项 + 自定义胶囊开关
 -->
 <template>
   <view class="settings-page">
-    <!-- 页头 -->
-    <view class="settings-intro">
-      <text class="intro-kicker">COZY SETTINGS</text>
-      <text class="intro-title">账户设置</text>
-      <text class="intro-copy">管理登录方式、必要提醒与本机数据。</text>
-    </view>
-
     <!-- 账号与安全 -->
-    <view class="settings-card">
-      <view class="card-heading">
-        <text class="card-title">账号与安全</text>
-        <text class="card-note">登录信息与密码维护</text>
+    <view class="settings-section">
+      <view class="section-head">
+        <text class="section-title">账号与安全</text>
+        <text class="section-note">登录信息与密码维护</text>
       </view>
-      <view class="settings-row" @click="goToPage('/pages/login/index')">
-        <view class="row-copy">
-          <text class="row-label">绑定手机</text>
-          <text class="row-desc">用于登录与接收必要的订单提醒</text>
+      <view class="settings-card">
+        <view class="settings-row" @click="goToPage('/pages/profile/edit')">
+          <view class="row-copy">
+            <text class="row-label">个人资料</text>
+            <text class="row-desc">昵称、头像、生日与联系方式</text>
+          </view>
+          <view class="row-right"><text class="row-arrow">›</text></view>
         </view>
-        <view class="row-right">
-          <text class="row-value">{{ userPhone || '未绑定' }}</text>
-          <text class="row-arrow">›</text>
+        <view class="settings-row" @click="goToPage('/pages/login/reset')">
+          <view class="row-copy">
+            <text class="row-label">修改密码</text>
+            <text class="row-desc">开发环境账号可在此重置密码</text>
+          </view>
+          <view class="row-right"><text class="row-arrow">›</text></view>
         </view>
-      </view>
-      <view class="settings-row" @click="goToPage('/pages/login/reset')">
-        <view class="row-copy">
-          <text class="row-label">修改密码</text>
-          <text class="row-desc">开发环境账号可在此重置密码</text>
-        </view>
-        <view class="row-right"><text class="row-arrow">›</text></view>
       </view>
     </view>
 
     <!-- 消息提醒 -->
-    <view class="settings-card">
-      <view class="card-heading">
-        <text class="card-title">消息提醒</text>
-        <text class="card-note">仅保留与当前体验相关的通知</text>
+    <view class="settings-section">
+      <view class="section-head">
+        <text class="section-title">消息提醒</text>
+        <text class="section-note">仅保留与当前体验相关的通知</text>
       </view>
-      <view class="settings-row" @click="notifyOrder = !notifyOrder">
-        <view class="row-copy">
-          <text class="row-label">订单状态</text>
-          <text class="row-desc">门店接单、制作与取餐状态</text>
+      <view class="settings-card">
+        <view class="settings-row" @click="notifyOrder = !notifyOrder">
+          <view class="row-copy">
+            <text class="row-label">订单状态</text>
+            <text class="row-desc">门店接单、制作与取餐状态</text>
+          </view>
+          <view class="toggle" :class="{ on: notifyOrder }"><view class="toggle-knob" /></view>
         </view>
-        <view class="toggle" :class="{ on: notifyOrder }"><view class="toggle-knob" /></view>
-      </view>
-      <view class="settings-row" @click="notifyActivity = !notifyActivity">
-        <view class="row-copy">
-          <text class="row-label">会员活动</text>
-          <text class="row-desc">签到、券包与会员权益更新</text>
+        <view class="settings-row" @click="notifyActivity = !notifyActivity">
+          <view class="row-copy">
+            <text class="row-label">会员活动</text>
+            <text class="row-desc">签到、券包与会员权益更新</text>
+          </view>
+          <view class="toggle" :class="{ on: notifyActivity }"><view class="toggle-knob" /></view>
         </view>
-        <view class="toggle" :class="{ on: notifyActivity }"><view class="toggle-knob" /></view>
-      </view>
-      <view class="settings-row" @click="notifyPoints = !notifyPoints">
-        <view class="row-copy">
-          <text class="row-label">积分变动</text>
-          <text class="row-desc">积分获得、使用与到期提示</text>
+        <view class="settings-row" @click="notifyPoints = !notifyPoints">
+          <view class="row-copy">
+            <text class="row-label">积分变动</text>
+            <text class="row-desc">积分获得、使用与到期提示</text>
+          </view>
+          <view class="toggle" :class="{ on: notifyPoints }"><view class="toggle-knob" /></view>
         </view>
-        <view class="toggle" :class="{ on: notifyPoints }"><view class="toggle-knob" /></view>
       </view>
     </view>
 
     <!-- 本机与版本 -->
-    <view class="settings-card">
-      <view class="card-heading">
-        <text class="card-title">本机与版本</text>
-        <text class="card-note">当前设备上的应用信息</text>
+    <view class="settings-section">
+      <view class="section-head">
+        <text class="section-title">本机与版本</text>
+        <text class="section-note">当前设备上的应用信息</text>
       </view>
-      <view class="settings-row" @click="clearCache">
-        <view class="row-copy">
-          <text class="row-label">清除缓存</text>
-          <text class="row-desc">不会删除账户、订单或积分记录</text>
+      <view class="settings-card">
+        <view class="settings-row" @click="clearCache">
+          <view class="row-copy">
+            <text class="row-label">清除缓存</text>
+            <text class="row-desc">不会删除账户、订单或积分记录</text>
+          </view>
+          <view class="row-right">
+            <text class="row-value">{{ cacheSize }}</text>
+            <text class="row-arrow">›</text>
+          </view>
         </view>
-        <view class="row-right">
-          <text class="row-value">{{ cacheSize }}</text>
-          <text class="row-arrow">›</text>
+        <view class="settings-row">
+          <view class="row-copy">
+            <text class="row-label">当前版本</text>
+            <text class="row-desc">CozyCoffee 小程序</text>
+          </view>
+          <view class="row-right"><text class="row-value">v1.0.0</text></view>
         </view>
-      </view>
-      <view class="settings-row">
-        <view class="row-copy">
-          <text class="row-label">当前版本</text>
-          <text class="row-desc">CozyCoffee 小程序</text>
-        </view>
-        <view class="row-right"><text class="row-value">v1.0.0</text></view>
       </view>
     </view>
 
     <!-- 关于与支持 -->
-    <view class="settings-card">
-      <view class="card-heading">
-        <text class="card-title">关于与支持</text>
-        <text class="card-note">正式内容上线后可在此查看</text>
+    <view class="settings-section">
+      <view class="section-head">
+        <text class="section-title">关于与支持</text>
+        <text class="section-note">正式内容上线后可在此查看</text>
       </view>
-      <view class="settings-row">
-        <view class="row-copy"><text class="row-label">用户协议</text></view>
-        <view class="row-right"><text class="row-value quiet">待开放</text></view>
-      </view>
-      <view class="settings-row">
-        <view class="row-copy"><text class="row-label">隐私政策</text></view>
-        <view class="row-right"><text class="row-value quiet">待开放</text></view>
-      </view>
-      <view class="settings-row">
-        <view class="row-copy"><text class="row-label">意见反馈</text></view>
-        <view class="row-right"><text class="row-value quiet">待开放</text></view>
+      <view class="settings-card">
+        <view class="settings-row">
+          <view class="row-copy"><text class="row-label">用户协议</text></view>
+          <view class="row-right"><text class="row-value quiet">待开放</text></view>
+        </view>
+        <view class="settings-row">
+          <view class="row-copy"><text class="row-label">隐私政策</text></view>
+          <view class="row-right"><text class="row-value quiet">待开放</text></view>
+        </view>
+        <view class="settings-row">
+          <view class="row-copy"><text class="row-label">意见反馈</text></view>
+          <view class="row-right"><text class="row-value quiet">待开放</text></view>
+        </view>
       </view>
     </view>
 
@@ -123,7 +121,6 @@ import { useUserStore } from '@/stores/user'
 const userStore = useUserStore()
 
 const isLoggedIn = computed(() => userStore.isLoggedIn)
-const userPhone = computed(() => userStore.userInfo?.phone || '')
 
 const notifyOrder = ref(true)
 const notifyActivity = ref(true)
@@ -176,50 +173,28 @@ const goToPage = (url) => {
   background: $cozy-bg;
 }
 
-/* ── 页头 ── */
-.settings-intro { padding: 10rpx 8rpx 20rpx; }
-.intro-kicker {
+/* ── 章节式分组：衬线一级标题锚点 + 白卡设置项 ── */
+.settings-section { margin-top: 40rpx; }
+.settings-section:first-of-type { margin-top: 0; }
+.section-head { padding: 0 8rpx; }
+.section-title {
   display: block;
-  font-size: 18rpx;
-  font-weight: 700;
-  letter-spacing: .2em;
-  color: $cozy-muted;
-}
-.intro-title {
-  display: block;
-  margin-top: 10rpx;
   font-family: $font-display;
-  font-size: 44rpx;
+  font-size: 38rpx;
   font-weight: 600;
   color: $cozy-ink;
 }
-.intro-copy {
+.section-note {
   display: block;
-  margin-top: 12rpx;
-  font-size: 24rpx;
+  margin-top: 8rpx;
+  font-size: 22rpx;
   color: $cozy-muted;
 }
-
-/* ── 分组卡 ── */
 .settings-card {
-  margin-top: 32rpx;
+  margin-top: 20rpx;
   border-radius: 28rpx;
   background: $bg-white;
   overflow: hidden;
-}
-.card-heading { padding: 36rpx 40rpx 10rpx; }
-.card-title {
-  display: block;
-  font-family: $font-display;
-  font-size: 32rpx;
-  font-weight: 600;
-  color: $cozy-ink;
-}
-.card-note {
-  display: block;
-  margin-top: 6rpx;
-  font-size: 22rpx;
-  color: $cozy-muted;
 }
 
 .settings-row {
@@ -237,14 +212,14 @@ const goToPage = (url) => {
 .row-copy { min-width: 0; flex: 1; padding: 26rpx 0; }
 .row-label {
   display: block;
-  font-size: 28rpx;
+  font-size: 30rpx;
   font-weight: 600;
   color: $cozy-ink;
 }
 .row-desc {
   display: block;
   margin-top: 6rpx;
-  font-size: 22rpx;
+  font-size: 24rpx;
   line-height: 1.45;
   color: $cozy-muted;
 }
@@ -259,7 +234,7 @@ const goToPage = (url) => {
   width: 88rpx;
   height: 52rpx;
   flex: none;
-  border-radius: 26rpx;
+  border-radius: 999rpx;
   background: $cozy-border;
   transition: background .25s;
 }

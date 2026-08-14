@@ -1,5 +1,5 @@
 <!--
-  地址编辑页 - 对齐 prototype/address-edit.html：表单卡 + 保存；后端无 gender 故省略性别
+  地址编辑页 - 对齐 prototype/address-edit.html：表单卡 + 性别选择 + 保存；编辑态回填 gender
 -->
 <template>
   <view class="edit-page">
@@ -8,6 +8,13 @@
       <view class="form-row">
         <text class="form-label">联系人</text>
         <input v-model="form.name" placeholder="请填写收货人姓名" placeholder-class="form-placeholder" class="form-input" />
+      </view>
+      <view class="form-row">
+        <text class="form-label">性别</text>
+        <view class="gender-options">
+          <view class="gender-option" :class="{ selected: form.gender === 'MALE' }" @click="form.gender = 'MALE'">男</view>
+          <view class="gender-option" :class="{ selected: form.gender === 'FEMALE' }" @click="form.gender = 'FEMALE'">女</view>
+        </view>
       </view>
       <view class="form-row">
         <text class="form-label">手机号</text>
@@ -48,7 +55,7 @@ const editingId = ref(null)
 const provinceCode = ref('')
 const cityCode = ref('')
 const regionIndexes = ref([0, 0, 0])
-const form = ref({ name: '', phone: '', region: '', detail: '', isDefault: false })
+const form = ref({ name: '', gender: 'MALE', phone: '', region: '', detail: '', isDefault: false })
 
 // 三级联动：省 → 市 → 区/县
 const provinces = computed(() => Object.entries(chinaRegions['86'] || {}).map(([code, name]) => ({ code, name })))
@@ -69,6 +76,7 @@ onLoad((options) => {
     uni.removeStorageSync('cozy_edit_address')
     if (item) {
       form.value.name = item.name || item.receiverName || ''
+      form.value.gender = item.gender || 'MALE'
       form.value.phone = item.phone || item.receiverPhone || ''
       form.value.detail = item.detail || item.detailAddress || ''
       form.value.isDefault = Boolean(item.isDefault)
@@ -99,6 +107,10 @@ function onRegionColumnChange(e) {
   if (column === 0) {
     provinceCode.value = provinces.value[value]?.code || ''
     cityCode.value = ''
+    // 直辖市等中间级仅一项（如北京→市辖区）时自动选中，让区县列直接可用
+    if (cities.value.length === 1) {
+      cityCode.value = cities.value[0].code
+    }
     regionIndexes.value = [value, 0, 0]
   } else if (column === 1) {
     cityCode.value = cities.value[value]?.code || ''
@@ -129,6 +141,7 @@ const save = async () => {
   const parts = region.split(/\s+/).filter(Boolean)
   const data = {
     receiverName: name.trim(),
+    gender: form.value.gender,
     receiverPhone: phone.trim(),
     province: parts[0] || '',
     city: parts[1] || '',
@@ -218,6 +231,29 @@ const save = async () => {
   color: #fff;
 }
 .form-check.on { background: $cozy-primary; border-color: $cozy-primary; }
+
+/* 性别选择：轻选中态（暖底 + 棕描边） */
+.gender-options { margin-left: auto; display: flex; gap: 16rpx; }
+.gender-option {
+  min-width: 120rpx;
+  height: 72rpx;
+  padding: 0 36rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid $cozy-border;
+  border-radius: $cozy-radius-md;
+  background: $bg-white;
+  color: $cozy-muted;
+  font-size: 26rpx;
+
+  &.selected {
+    background: #F1E4DA;
+    border-color: $cozy-primary;
+    color: $cozy-primary;
+    font-weight: 650;
+  }
+}
 
 /* ── 保存 ── */
 .save-btn {
