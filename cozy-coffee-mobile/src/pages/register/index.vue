@@ -1,73 +1,79 @@
 <!--
-  注册页 - 手机号密码注册
+  注册页 - 品牌徽章 + 字段表单 + 墨黑主按钮
 -->
 <template>
   <view class="register-page">
-    <!-- Logo 区域 -->
-    <view class="logo-section">
-      <view class="logo">COZY</view>
-      <text class="brand-name cozy-display">创建会员账户</text>
-      <text class="brand-slogan">保存订单、积分与券包，继续每一次咖啡日常</text>
+    <!-- 品牌区 -->
+    <view class="auth-hero">
+      <view class="brand-emblem">
+        <CozyIcon name="bean" :size="44" color="#753A22" />
+      </view>
+      <text class="brand-word">COZY COFFEE</text>
+      <text class="hero-title">创建会员账户</text>
+      <text class="hero-sub">保存订单、积分与券包，继续每一次咖啡日常</text>
     </view>
 
-    <!-- 表单区域 -->
-    <view class="form-section">
-      <view class="form-item">
-        <text class="form-icon">账号</text>
-        <input
-          v-model="form.username"
-          type="text"
-          placeholder="请输入手机号或邮箱"
-          class="form-input"
-        />
+    <!-- 表单卡 -->
+    <view class="auth-card">
+      <view class="field">
+        <text class="field-label">账号</text>
+        <view class="field-input-wrap">
+          <input
+            v-model="form.username"
+            type="text"
+            placeholder="手机号 / 邮箱"
+            placeholder-class="field-placeholder"
+            class="field-input"
+          />
+        </view>
       </view>
+      <view class="field">
+        <text class="field-label">密码</text>
+        <view class="field-input-wrap">
+          <input
+            v-model="form.password"
+            :password="!showPassword"
+            placeholder="至少 6 位"
+            placeholder-class="field-placeholder"
+            class="field-input"
+          />
+          <text class="field-toggle" @click="showPassword = !showPassword">{{ showPassword ? '隐藏' : '显示' }}</text>
+        </view>
+      </view>
+      <view class="field">
+        <text class="field-label">确认密码</text>
+        <view class="field-input-wrap">
+          <input
+            v-model="form.confirmPassword"
+            :password="!showConfirmPassword"
+            placeholder="请再次确认密码"
+            placeholder-class="field-placeholder"
+            class="field-input"
+          />
+          <text class="field-toggle" @click="showConfirmPassword = !showConfirmPassword">{{ showConfirmPassword ? '隐藏' : '显示' }}</text>
+        </view>
+      </view>
+      <view class="field">
+        <text class="field-label">邀请码</text>
+        <view class="field-input-wrap">
+          <input
+            v-model="form.inviterCode"
+            type="text"
+            placeholder="选填，首单后按规则奖励"
+            maxlength="8"
+            placeholder-class="field-placeholder"
+            class="field-input invite-input"
+          />
+        </view>
+      </view>
+      <view v-if="form.inviterCode" class="invite-hint">绑定邀请关系后，首单完成时按后端规则发放奖励</view>
 
-      <view class="form-item">
-        <text class="form-icon">密码</text>
-        <input
-          v-model="form.password"
-          :password="!showPassword"
-          placeholder="请输入密码 (至少6位)"
-          class="form-input"
-        />
-        <text class="toggle-password" @click="showPassword = !showPassword">
-          {{ showPassword ? '隐藏' : '显示' }}
-        </text>
-      </view>
+      <button class="submit-btn" :class="{ disabled: !canRegister }" :loading="isLoading" :disabled="isLoading" @click="handleRegister">
+        {{ isLoading ? '注册中…' : '注册' }}
+      </button>
 
-      <view class="form-item">
-        <text class="form-icon">确认</text>
-        <input
-          v-model="form.confirmPassword"
-          :password="!showConfirmPassword"
-          placeholder="请再次确认密码"
-          class="form-input"
-        />
-        <text class="toggle-password" @click="showConfirmPassword = !showConfirmPassword">
-          {{ showConfirmPassword ? '隐藏' : '显示' }}
-        </text>
-      </view>
-
-      <view class="form-item">
-        <text class="form-icon">邀请</text>
-        <input
-          v-model="form.inviterCode"
-          type="text"
-          placeholder="邀请码（选填，首单后按规则奖励）"
-          maxlength="8"
-          class="form-input invite-input"
-        />
-      </view>
-      <view v-if="form.inviterCode" class="invite-hint">
-        绑定邀请关系后，首单完成时按后端规则发放奖励
-      </view>
-
-      <view class="register-btn" :class="{ disabled: !canRegister }" @click="handleRegister">
-        {{ isLoading ? '注册中...' : '注册' }}
-      </view>
-
-      <view class="form-footer">
-        <text class="link" @click="goToLogin">已有账号？立即登录</text>
+      <view class="auth-links">
+        <text class="auth-link" @click="goToLogin">已有账号？立即登录</text>
       </view>
     </view>
 
@@ -86,6 +92,7 @@
 <script setup>
 import { ref, reactive, computed } from 'vue'
 import { register } from '@/api/auth'
+import CozyIcon from '@/components/CozyIcon.vue'
 
 const form = reactive({
   username: '',
@@ -138,19 +145,11 @@ const handleRegister = async () => {
         uni.navigateBack()
       }, 1000)
     } else {
-      uni.showToast({
-        title: res.message || res.msg || '注册失败',
-        icon: 'none',
-        duration: 3000
-      })
+      uni.showToast({ title: res.message || res.msg || '注册失败', icon: 'none', duration: 3000 })
     }
   } catch (error) {
     console.error('注册失败', error)
-    uni.showToast({
-      title: error.message || '注册失败，请检查网络后重试',
-      icon: 'none',
-      duration: 3000
-    })
+    uni.showToast({ title: error.message || '注册失败，请检查网络后重试', icon: 'none', duration: 3000 })
   } finally {
     isLoading.value = false
   }
@@ -165,147 +164,160 @@ const goToLogin = () => {
 .register-page {
   min-height: 100vh;
   background: $cozy-surface;
-  padding: 0 $spacing-lg $spacing-xl;
+  padding: 0 48rpx calc(48rpx + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
 }
 
-.logo-section {
+/* ── 品牌区 ── */
+.auth-hero {
   text-align: center;
   padding: 100rpx 0 56rpx;
-
-  .logo {
-    color: $cozy-ink;
-    font-size: 38rpx;
-    font-weight: 850;
-    letter-spacing: .22em;
-    margin-bottom: 28rpx;
-  }
-
-  .brand-name {
-    font-size: 42rpx;
-    font-weight: 600;
-    color: $cozy-ink;
-    display: block;
-    margin-bottom: $spacing-xs;
-  }
-
-  .brand-slogan {
-    font-size: $font-size-sm;
-    color: $text-placeholder;
-  }
 }
-
-.form-section {
+.brand-emblem {
+  width: 120rpx;
+  height: 120rpx;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
   background: $bg-white;
-  border-radius: $cozy-radius-lg;
-  padding: $spacing-lg;
-  box-shadow: none;
+  border: 1rpx solid $cozy-border;
 }
-
-.form-item {
-  display: flex;
-  align-items: center;
-  padding: $spacing-md 0;
-  border-bottom: 1rpx solid $border-color;
-
-  .form-icon {
-    width: 68rpx;
-    color: $cozy-primary;
-    font-size: 19rpx;
-    font-weight: 700;
-    margin-right: $spacing-md;
-  }
-
-  .form-input {
-    flex: 1;
-    font-size: $font-size-md;
-  }
-
-  .invite-input {
-    text-transform: uppercase;
-    letter-spacing: 2rpx;
-  }
-
-  .toggle-password {
-    color: $cozy-primary;
-    font-size: 21rpx;
-    padding: 16rpx 0 16rpx 16rpx;
-  }
+.brand-word {
+  display: block;
+  margin-top: 24rpx;
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: .3em;
+  color: $cozy-ink;
 }
-
-.invite-hint {
-  text-align: center;
-  color: $primary-color;
-  font-size: $font-size-xs;
-  margin-top: $spacing-xs;
-}
-
-.register-btn {
-  min-height: 88rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: $cozy-primary;
-  color: white;
-  text-align: center;
-  padding: 0 $spacing-md;
-  border-radius: $cozy-radius-md;
-  font-size: $font-size-lg;
+.hero-title {
+  display: block;
+  margin-top: 24rpx;
+  font-family: $font-display;
+  font-size: 48rpx;
   font-weight: 600;
-  margin-top: $spacing-lg;
-
-  &.disabled {
-    opacity: 0.5;
-  }
+  color: $cozy-ink;
+}
+.hero-sub {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 24rpx;
+  color: $cozy-muted;
 }
 
-.form-footer {
+/* ── 表单卡 ── */
+.auth-card {
+  background: $bg-white;
+  border-radius: 28rpx;
+  padding: 40rpx 40rpx 32rpx;
+}
+.field {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid $cozy-border;
+}
+.field-label {
+  display: block;
+  font-size: 22rpx;
+  font-weight: 650;
+  color: $cozy-muted;
+}
+.field-input-wrap {
+  margin-top: 12rpx;
   display: flex;
-  justify-content: center;
   align-items: center;
-  margin-top: $spacing-md;
+  gap: 16rpx;
+}
+.field-input {
+  min-width: 0;
+  flex: 1;
+  font-size: 30rpx;
+  color: $cozy-ink;
+}
+.field-placeholder { color: $cozy-placeholder; }
+.field-toggle {
+  flex: none;
+  font-size: 22rpx;
+  color: $cozy-muted;
 
-  .link {
-    font-size: $font-size-sm;
-    color: $primary-color;
-  }
+  &:active { opacity: .6; }
+}
+.invite-input {
+  text-transform: uppercase;
+  letter-spacing: 2rpx;
+}
+.invite-hint {
+  margin-top: 20rpx;
+  font-size: 20rpx;
+  color: $cozy-accent;
 }
 
+.submit-btn {
+  width: 100%;
+  height: 92rpx;
+  margin-top: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  background: $cozy-ink;
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 600;
+
+  &:active { opacity: .85; }
+  &.disabled { opacity: .4; }
+}
+.submit-btn::after { border: 0; }
+
+.auth-links {
+  margin-top: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.auth-link {
+  font-size: 24rpx;
+  color: $cozy-muted;
+
+  &:active { opacity: .6; }
+}
+
+/* ── 协议 ── */
 .agreement {
   display: flex;
   align-items: flex-start;
   margin-top: auto;
-  padding-top: $spacing-xl;
+  padding-top: 48rpx;
+}
+.checkbox {
+  width: 36rpx;
+  height: 36rpx;
+  border: 2rpx solid $cozy-border;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16rpx;
+  margin-top: 4rpx;
+  flex-shrink: 0;
 
-  .checkbox {
-    width: 36rpx;
-    height: 36rpx;
-    border: 2rpx solid $border-color;
-    border-radius: 6rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: $spacing-sm;
-    margin-top: 4rpx;
-    flex-shrink: 0;
-
-    &.checked {
-      background: $primary-color;
-      border-color: $primary-color;
-      color: white;
-      font-size: 24rpx;
-    }
+  &.checked {
+    background: $cozy-ink;
+    border-color: $cozy-ink;
+    color: #fff;
+    font-size: 24rpx;
   }
+}
+.agreement-text {
+  font-size: 22rpx;
+  color: $cozy-placeholder;
+  line-height: 1.6;
 
-  .agreement-text {
-    font-size: $font-size-xs;
-    color: $text-placeholder;
-    line-height: 1.6;
-
-    .link {
-      color: $primary-color;
-    }
+  .link {
+    color: $cozy-muted;
   }
 }
 </style>
