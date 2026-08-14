@@ -51,27 +51,39 @@
             }
         },
         {
+            "path": "pages/profile/invite",
+            "style": {
+                "navigationBarTitleText": "邀请好友"
+            }
+        },
+        {
             "path": "pages/mall/index",
             "style": {
                 "navigationBarTitleText": "积分商城"
             }
         },
         {
+            "path": "pages/mall/detail",
+            "style": {
+                "navigationBarTitleText": "商品详情"
+            }
+        },
+        {
             "path": "pages/login/index",
             "style": {
-                "navigationBarTitleText": "登录"
+                "navigationBarTitleText": ""
             }
         },
         {
             "path": "pages/register/index",
             "style": {
-                "navigationBarTitleText": "注册"
+                "navigationBarTitleText": ""
             }
         },
         {
             "path": "pages/login/reset",
             "style": {
-                "navigationBarTitleText": "重置密码"
+                "navigationBarTitleText": ""
             }
         },
         {
@@ -89,7 +101,7 @@
         {
             "path": "pages/address/list",
             "style": {
-                "navigationBarTitleText": "地址管理"
+                "navigationBarTitleText": "收货地址"
             }
         },
         {
@@ -113,7 +125,7 @@
         {
             "path": "pages/signin/index",
             "style": {
-                "navigationBarTitleText": "每日签到"
+                "navigationBarTitleText": ""
             }
         },
         {
@@ -125,13 +137,19 @@
         {
             "path": "pages/challenge/index",
             "style": {
-                "navigationBarTitleText": "月度挑战"
+                "navigationBarTitleText": ""
             }
         },
         {
             "path": "pages/points/redemptions",
             "style": {
                 "navigationBarTitleText": "兑换记录"
+            }
+        },
+        {
+            "path": "pages/points/rules",
+            "style": {
+                "navigationBarTitleText": "积分规则"
             }
         },
         {
@@ -155,7 +173,7 @@
         {
             "path": "pages/settings/index",
             "style": {
-                "navigationBarTitleText": "设置"
+                "navigationBarTitleText": "账户设置"
             }
         },
         {
