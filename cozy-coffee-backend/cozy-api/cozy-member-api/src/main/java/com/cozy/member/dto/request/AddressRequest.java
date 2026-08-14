@@ -15,6 +15,8 @@ public class AddressRequest implements Serializable {
     @NotBlank(message = "收货人姓名不能为空")
     private String receiverName;
 
+    private String gender = "MALE"; // MALE男 / FEMALE女
+
     @NotBlank(message = "收货人电话不能为空")
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String receiverPhone;

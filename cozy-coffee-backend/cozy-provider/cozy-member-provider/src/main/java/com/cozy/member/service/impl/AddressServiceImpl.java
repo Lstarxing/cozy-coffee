@@ -66,6 +66,7 @@ public class AddressServiceImpl implements AddressService {
         UserAddress address = new UserAddress();
         address.setUserId(userId);
         address.setReceiverName(request.getReceiverName());
+        address.setGender(request.getGender() != null ? request.getGender() : "MALE");
         address.setReceiverPhone(request.getReceiverPhone());
         address.setProvince(request.getProvince());
         address.setCity(request.getCity());
@@ -98,6 +99,9 @@ public class AddressServiceImpl implements AddressService {
         }
 
         address.setReceiverName(request.getReceiverName());
+        if (request.getGender() != null) {
+            address.setGender(request.getGender());
+        }
         address.setReceiverPhone(request.getReceiverPhone());
         address.setProvince(request.getProvince());
         address.setCity(request.getCity());
@@ -197,6 +201,7 @@ public class AddressServiceImpl implements AddressService {
         dto.setId(entity.getId());
         dto.setUserId(entity.getUserId());
         dto.setReceiverName(entity.getReceiverName());
+        dto.setGender(entity.getGender() != null ? entity.getGender() : "MALE");
         dto.setReceiverPhone(entity.getReceiverPhone());
         dto.setProvince(entity.getProvince());
         dto.setCity(entity.getCity());

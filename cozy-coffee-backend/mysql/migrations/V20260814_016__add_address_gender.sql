@@ -1,0 +1,2 @@
+ALTER TABLE user_addresses
+    ADD COLUMN gender VARCHAR(10) NULL DEFAULT 'MALE' COMMENT '性别：MALE男 FEMALE女' AFTER receiver_name;
