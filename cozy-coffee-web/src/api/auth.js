@@ -24,6 +24,10 @@ export function updateProfile(data) {
     return request.put('/auth/profile', data)
 }
 
+export function changePassword(oldPassword, newPassword) {
+    return request.post('/auth/password/change', { oldPassword, newPassword })
+}
+
 export function applyInviteCode(code) {
     return request.post('/auth/invite/apply', { inviterCode: code })
 }

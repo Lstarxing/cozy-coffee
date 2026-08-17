@@ -107,6 +107,35 @@ class="save-btn verify-btn" :disabled="isApplyingInviteCode || inputInviteCode.l
       </div>
     </div>
 
+    <!-- 修改密码 -->
+    <div class="password-section">
+      <div class="section-header">
+        <h4>修改密码</h4>
+      </div>
+      <div class="form-group">
+        <label>原密码</label>
+        <div class="input-wrapper">
+          <input v-model="pwdOld" type="password" class="modern-input" placeholder="请输入当前密码">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>新密码</label>
+        <div class="input-wrapper">
+          <input v-model="pwdNew" type="password" class="modern-input" placeholder="6-20 位新密码">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>确认新密码</label>
+        <div class="input-wrapper">
+          <input v-model="pwdConfirm" type="password" class="modern-input" placeholder="再次输入新密码">
+        </div>
+      </div>
+      <button class="password-save-btn" :disabled="changingPassword" @click="submitChangePassword">
+        {{ changingPassword ? '修改中...' : '确认修改' }}
+      </button>
+      <p class="field-hint">修改成功后需重新登录</p>
+    </div>
+
     <!-- 收货地址管理 -->
     <div class="address-management">
       <div class="section-header">
@@ -200,7 +229,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import chinaRegions from '@/data/china-regions.json'
-import { updateProfile, applyInviteCode as applyInviteCodeApi } from '@/api/auth'
+import { updateProfile, applyInviteCode as applyInviteCodeApi, changePassword } from '@/api/auth'
 import { useAddresses } from '@/composables/useAddresses'
 
 const userStore = useUserStore()
@@ -236,6 +265,12 @@ const selectedDistrictCode = ref('')
 // Invite code
 const inputInviteCode = ref('')
 const isApplyingInviteCode = ref(false)
+
+// Password change
+const pwdOld = ref('')
+const pwdNew = ref('')
+const pwdConfirm = ref('')
+const changingPassword = ref(false)
 
 const newAddress = ref({
   receiverName: '', receiverPhone: '',
@@ -383,6 +418,23 @@ async function applyInviteCode() {
   } finally { isApplyingInviteCode.value = false }
 }
 
+async function submitChangePassword() {
+  if (!pwdOld.value) { ElMessage.warning('请输入原密码'); return }
+  if (pwdNew.value.length < 6 || pwdNew.value.length > 20) { ElMessage.warning('新密码需为 6-20 位'); return }
+  if (pwdNew.value === pwdOld.value) { ElMessage.warning('新密码不能与原密码相同'); return }
+  if (pwdNew.value !== pwdConfirm.value) { ElMessage.warning('两次输入的新密码不一致'); return }
+  changingPassword.value = true
+  try {
+    const data = await changePassword(pwdOld.value, pwdNew.value)
+    ElMessage.success(data.message || '密码修改成功，请重新登录')
+    pwdOld.value = ''; pwdNew.value = ''; pwdConfirm.value = ''
+  } catch (error) {
+    ElMessage.error(error.message || '修改失败，请重试')
+  } finally {
+    changingPassword.value = false
+  }
+}
+
 onMounted(() => {
   userStore.fetchUserInfo()
   loadAddresses()
@@ -485,6 +537,19 @@ onMounted(() => {
 .address-management { margin-top: 40px; background: white; border-radius: 12px; padding: 25px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.02); }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .section-header h4 { margin: 0; font-size: 18px; font-weight: 500; }
+
+/* Password Change */
+.password-section { margin-top: 40px; background: white; border-radius: 12px; padding: 25px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.02); max-width: 600px; }
+.password-save-btn {
+  margin-top: 8px;
+  background: #d4a762; color: white;
+  border: none; padding: 8px 24px; border-radius: 6px;
+  cursor: pointer; min-width: 110px; height: 42px;
+  font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; justify-content: center;
+}
+.password-save-btn:hover:not(:disabled) { background: #c39651; }
+.password-save-btn:disabled { background: #e0e0e0; cursor: not-allowed; }
 
 .add-btn { background: #C69C6D; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; }
 .add-btn:hover { background: #B88A5A; }
