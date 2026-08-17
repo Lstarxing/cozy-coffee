@@ -1,7 +1,7 @@
 <template>
   <view class="submit-shell safe-area-bottom">
     <view class="submit-price">
-      <text class="submit-label">合计</text>
+      <text class="submit-label">待支付</text>
       <text class="submit-amount">¥{{ Number(amount || 0).toFixed(2) }}</text>
     </view>
     <view class="submit-button" :class="{ disabled }" @click="onSubmit">{{ buttonText }}</view>
@@ -30,6 +30,6 @@ function onSubmit() { if (!props.disabled) emit('submit') }
 .submit-price { min-width: 0; flex: 1; }
 .submit-label { margin-right: 10rpx; color: $cozy-muted; font-size: 23rpx; }
 .submit-amount { color: $cozy-primary; font-size: 38rpx; font-weight: 750; }
-.submit-button { min-width: 270rpx; height: 88rpx; display: flex; align-items: center; justify-content: center; border-radius: $cozy-radius-md; background: $cozy-primary; color: #fff; font-size: 28rpx; font-weight: 700; }
+.submit-button { min-width: 270rpx; height: 88rpx; display: flex; align-items: center; justify-content: center; border-radius: 44rpx; background: $cozy-ink; color: #fff; font-size: 28rpx; font-weight: 600; }
 .submit-button.disabled { background: #bdb4ae; color: #f7f5f3; }
 </style>

@@ -45,6 +45,7 @@ export class OrderService {
       storeId: context.storeId,
       pickupTime: context.pickupTime,
       remark: context.remark || '',
+      receiverPhone: context.phone || '',
       previewToken: context.preview?.previewToken || context.preview?.previewVersion
     }, {
       header: { 'Idempotency-Key': idempotencyKey }

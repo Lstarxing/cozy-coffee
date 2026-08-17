@@ -47,6 +47,7 @@ export class CheckoutWorkflow {
       pickupTime: this.checkoutStore.pickupTime,
       selectedCouponId: this.checkoutStore.selectedCouponId,
       remark: this.checkoutStore.remark,
+      phone: this.checkoutStore.phone,
       ...overrides
     }
   }

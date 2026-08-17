@@ -12,6 +12,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
   const pickupTime = ref('ASAP')
   const selectedCouponId = ref(null)
   const remark = ref('')
+  const phone = ref('')
   const status = ref(CHECKOUT_STATUS.IDLE)
   const idempotencyKey = ref('')
   const latestPreview = ref(null)
@@ -60,6 +61,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
       pickupTime.value = 'ASAP'
       selectedCouponId.value = null
       remark.value = ''
+      phone.value = ''
     }
   }
 
@@ -68,6 +70,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
     pickupTime,
     selectedCouponId,
     remark,
+    phone,
     status,
     idempotencyKey,
     latestPreview,

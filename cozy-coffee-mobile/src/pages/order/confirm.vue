@@ -3,20 +3,6 @@
     <view v-if="cartStore.items.length" class="confirm-content">
       <StoreSummary />
 
-      <view class="section-block pickup-block">
-        <view class="section-heading">
-          <text class="section-title">取餐时间</text>
-          <text class="section-note">固定门店自提</text>
-        </view>
-        <view class="pickup-option selected">
-          <view class="pickup-radio"><view class="pickup-radio-dot" /></view>
-          <view>
-            <text class="pickup-title">尽快取餐</text>
-            <text class="pickup-description">下单后约 15 分钟可取，以门店进度为准</text>
-          </view>
-        </view>
-      </view>
-
       <view class="section-block">
         <view class="section-heading">
           <text class="section-title">商品明细</text>
@@ -33,28 +19,39 @@
         </view>
       </view>
 
-      <view class="section-block form-block">
-        <view class="form-row" @click="couponVisible = true">
-          <text class="form-label">优惠券</text>
-          <view class="form-value-wrap">
-            <text class="form-value" :class="{ accent: selectedCoupon }">{{ selectedCoupon ? couponTitle(selectedCoupon) : couponHint }}</text>
-            <text class="chevron">›</text>
-          </view>
-        </view>
-        <view class="form-divider" />
-        <view class="remark-row">
-          <text class="form-label">订单备注</text>
-          <textarea v-model="checkoutStore.remark" class="remark-input" maxlength="80" placeholder="如：少冰、到店后制作" placeholder-class="remark-placeholder" />
-        </view>
-      </view>
-
       <OfflineState v-if="checkoutStore.status === 'offline'" @retry="recoverPreview" />
       <RetryState v-else-if="previewError" title="金额核对失败" :description="previewError" @retry="loadPreview" />
       <view v-else>
         <LoadingState v-if="checkoutStore.status === 'previewing' && !checkoutStore.latestPreview" text="正在核对商品与优惠…" />
-        <CheckoutPriceSummary v-else :preview="checkoutStore.latestPreview" />
+        <CheckoutPriceSummary
+          v-else
+          :preview="checkoutStore.latestPreview"
+          :coupon-text="couponDisplayText"
+          :coupon-selected="Boolean(selectedCoupon)"
+          @coupon-click="couponVisible = true"
+        />
       </view>
 
+      <!-- 订单备注 + 预留电话（底部） -->
+      <view class="section-block form-block bottom-fields">
+        <view class="form-row" @click="goToRemark">
+          <text class="form-label">订单备注</text>
+          <view class="form-value-wrap">
+            <text class="form-value" :class="{ filled: checkoutStore.remark }">{{ checkoutStore.remark || '请在这里写您的备注' }}</text>
+            <text class="chevron">›</text>
+          </view>
+        </view>
+        <view class="form-divider" />
+        <view class="form-row" @click="openPhone">
+          <text class="form-label">预留电话</text>
+          <view class="form-value-wrap">
+            <text class="form-value" :class="{ filled: checkoutStore.phone }">{{ checkoutStore.phone || '选填' }}</text>
+            <CozyIcon name="pencil" :size="20" color="#756A63" />
+          </view>
+        </view>
+      </view>
+
+      <!-- 模拟支付提示（最底部） -->
       <view class="mock-tip">
         <text class="mock-tip-title">开发阶段使用模拟支付</text>
         <text class="mock-tip-copy">不会产生真实扣款；确认成功后将创建一张真实测试订单。</text>
@@ -92,6 +89,27 @@
         </scroll-view>
       </view>
     </view>
+
+    <!-- 预留电话编辑 -->
+    <view v-if="phoneVisible" class="phone-layer">
+      <view class="phone-mask" @click="phoneVisible = false" />
+      <view class="phone-sheet safe-area-bottom">
+        <view class="phone-header">
+          <text class="phone-title">预留电话</text>
+          <view class="phone-close" @click="phoneVisible = false">×</view>
+        </view>
+        <input
+          v-model="phoneDraft"
+          type="number"
+          maxlength="11"
+          class="phone-input"
+          placeholder="请输入联系电话"
+          placeholder-class="phone-placeholder"
+          focus
+        />
+        <view class="phone-save" :class="{ disabled: !phoneDraft.trim() }" @click="savePhone">保存</view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -101,6 +119,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import { getCouponList } from '@/api/coupon'
 import { useCartStore } from '@/stores/cart'
 import { useCheckoutStore } from '@/stores/checkout'
+import { useUserStore } from '@/stores/user'
 import { createDefaultCheckoutWorkflow } from '@/services/checkout/CheckoutWorkflow'
 import { AuthError, NetworkError } from '@/services/errors/AppError'
 import StoreSummary from '@/components/order/StoreSummary.vue'
@@ -110,17 +129,22 @@ import LoadingState from '@/components/states/LoadingState.vue'
 import EmptyState from '@/components/states/EmptyState.vue'
 import RetryState from '@/components/states/RetryState.vue'
 import OfflineState from '@/components/states/OfflineState.vue'
+import CozyIcon from '@/components/CozyIcon.vue'
 
 const cartStore = useCartStore()
 const checkoutStore = useCheckoutStore()
+const userStore = useUserStore()
 const workflow = createDefaultCheckoutWorkflow()
 const coupons = ref([])
 const selectedCoupon = ref(null)
 const couponVisible = ref(false)
+const phoneVisible = ref(false)
+const phoneDraft = ref('')
 const previewError = ref('')
 let loaded = false
 
 const couponHint = computed(() => coupons.value.length ? `${coupons.value.length} 张可用` : '暂无可用')
+const couponDisplayText = computed(() => selectedCoupon.value ? couponTitle(selectedCoupon.value) : couponHint.value)
 const submitDisabled = computed(() => (
   checkoutStore.isBusy ||
   checkoutStore.status === 'offline' ||
@@ -139,6 +163,9 @@ onShow(async () => {
   if (!loaded) {
     loaded = true
     await loadCoupons()
+  }
+  if (!checkoutStore.phone && userStore.userInfo?.phone) {
+    checkoutStore.phone = userStore.userInfo.phone
   }
   await loadPreview()
 })
@@ -182,6 +209,25 @@ function selectCoupon(coupon) {
   checkoutStore.invalidatePreview()
   couponVisible.value = false
   loadPreview()
+}
+
+function goToRemark() {
+  uni.navigateTo({ url: '/pages/order/remark' })
+}
+
+function openPhone() {
+  phoneDraft.value = checkoutStore.phone || ''
+  phoneVisible.value = true
+}
+
+function savePhone() {
+  const phone = phoneDraft.value.trim()
+  if (phone && !/^1\d{10}$/.test(phone)) {
+    uni.showToast({ title: '请输入正确的手机号', icon: 'none' })
+    return
+  }
+  checkoutStore.phone = phone
+  phoneVisible.value = false
 }
 
 async function submitOrder() {
@@ -250,47 +296,57 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 
 <style lang="scss" scoped>
 .confirm-page { min-height: 100vh; background: $cozy-surface; }
-.confirm-content { padding: 24rpx 24rpx 0; }
-.section-block { margin-top: 20rpx; padding: 28rpx; border-radius: $cozy-radius-lg; background: #fff; }
-.section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18rpx; }
+.confirm-content { padding: 32rpx 32rpx 0; }
+.section-block { margin-top: 24rpx; padding: 32rpx; border-radius: 28rpx; background: #fff; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20rpx; }
 .section-title { color: $cozy-ink; font-family: $font-display; font-size: 30rpx; font-weight: 600; }
 .section-note { color: $cozy-muted; font-size: 22rpx; }
 .pickup-option { min-height: 96rpx; display: flex; align-items: center; gap: 18rpx; }
 .pickup-radio { width: 38rpx; height: 38rpx; display: flex; align-items: center; justify-content: center; border: 2rpx solid $cozy-primary; border-radius: 50%; }
 .pickup-radio-dot { width: 20rpx; height: 20rpx; border-radius: 50%; background: $cozy-primary; }
-.pickup-title { display: block; color: $cozy-ink; font-size: 27rpx; font-weight: 650; }
+.pickup-title { display: block; color: $cozy-ink; font-size: 28rpx; font-weight: 650; }
 .pickup-description { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 22rpx; }
-.checkout-line { display: flex; gap: 18rpx; padding: 22rpx 0; border-bottom: 1rpx solid $cozy-border; }
+.checkout-line { display: flex; align-items: center; gap: 24rpx; padding: 24rpx 0; border-bottom: 1rpx solid $cozy-border; }
 .checkout-line:last-child { border-bottom: 0; }
-.line-image { width: 108rpx; height: 108rpx; flex: none; border-radius: $cozy-radius-md; background: $cozy-surface; }
+.line-image { width: 116rpx; height: 116rpx; flex: none; border-radius: 16rpx; background: linear-gradient(135deg, #E8DDD2, #D8C8B4); }
 .line-content { min-width: 0; flex: 1; }
-.line-name { display: block; overflow: hidden; color: $cozy-ink; font-size: 26rpx; font-weight: 650; white-space: nowrap; text-overflow: ellipsis; }
-.line-spec, .line-quantity { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 21rpx; }
-.line-price { flex: none; color: $cozy-ink; font-size: 26rpx; font-weight: 700; }
+.line-name { display: block; overflow: hidden; color: $cozy-ink; font-size: 28rpx; font-weight: 650; white-space: nowrap; text-overflow: ellipsis; }
+.line-spec, .line-quantity { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 22rpx; }
+.line-price { flex: none; color: $cozy-ink; font-size: 28rpx; font-weight: 700; }
 .form-row { min-height: 88rpx; display: flex; align-items: center; justify-content: space-between; gap: 24rpx; }
-.form-label { flex: none; color: $cozy-ink; font-size: 26rpx; font-weight: 650; }
+.form-label { flex: none; color: $cozy-ink; font-size: 27rpx; font-weight: 650; }
 .form-value-wrap { min-width: 0; flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 12rpx; }
-.form-value { overflow: hidden; color: $cozy-muted; font-size: 24rpx; white-space: nowrap; text-overflow: ellipsis; }
+.form-value { overflow: hidden; color: $cozy-placeholder; font-size: 24rpx; white-space: nowrap; text-overflow: ellipsis; }
+.form-value.filled { color: $cozy-ink; }
 .form-value.accent { color: $cozy-primary; }
 .chevron { color: $cozy-placeholder; font-size: 42rpx; font-weight: 300; }
 .form-divider { height: 1rpx; background: $cozy-border; }
-.remark-row { padding-top: 24rpx; }
-.remark-input { width: 100%; min-height: 120rpx; margin-top: 18rpx; padding: 20rpx; border-radius: $cozy-radius-md; background: $cozy-surface; color: $cozy-ink; font-size: 24rpx; line-height: 1.5; box-sizing: border-box; }
-.remark-placeholder { color: #8d837d; }
-.mock-tip { margin-top: 20rpx; padding: 24rpx 28rpx; border-radius: $cozy-radius-md; background: $cozy-accent-soft; }
+.mock-tip { margin-top: 24rpx; padding: 24rpx 28rpx; border-radius: 16rpx; background: $cozy-accent-soft; }
 .mock-tip-title { display: block; color: $cozy-accent; font-size: 25rpx; font-weight: 700; }
 .mock-tip-copy { display: block; margin-top: 8rpx; color: #53604b; font-size: 21rpx; line-height: 1.5; }
 .bottom-spacer { height: 180rpx; }
 .coupon-layer { position: fixed; inset: 0; z-index: 120; }
 .coupon-mask { position: absolute; inset: 0; background: rgba(25, 18, 14, .46); }
-.coupon-sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 72vh; padding: 20rpx 28rpx max(20rpx, env(safe-area-inset-bottom)); border-radius: 24rpx 24rpx 0 0; background: #fff; }
+.coupon-sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 72vh; padding: 20rpx 28rpx max(20rpx, env(safe-area-inset-bottom)); border-radius: 32rpx 32rpx 0 0; background: #fff; }
 .coupon-header { display: flex; align-items: center; justify-content: space-between; padding: 8rpx 0 20rpx; border-bottom: 1rpx solid $cozy-border; }
-.coupon-title { color: $cozy-ink; font-size: 32rpx; font-weight: 750; }
+.coupon-title { color: $cozy-ink; font-family: $font-display; font-size: 32rpx; font-weight: 600; }
 .coupon-close { width: 72rpx; height: 72rpx; display: flex; align-items: center; justify-content: center; color: $cozy-muted; font-size: 44rpx; }
 .coupon-scroll { max-height: 56vh; }
 .coupon-option { min-height: 112rpx; padding: 22rpx 10rpx; display: flex; align-items: center; justify-content: space-between; gap: 24rpx; border-bottom: 1rpx solid $cozy-border; }
 .coupon-option.selected { color: $cozy-primary; }
-.coupon-name { display: block; color: $cozy-ink; font-size: 27rpx; font-weight: 650; }
+.coupon-name { display: block; color: $cozy-ink; font-size: 28rpx; font-weight: 650; }
 .coupon-description { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 21rpx; }
 .coupon-check { color: $cozy-primary; font-size: 34rpx; font-weight: 750; }
+
+/* ── 预留电话编辑 sheet ── */
+.phone-layer { position: fixed; inset: 0; z-index: 120; }
+.phone-mask { position: absolute; inset: 0; background: rgba(25, 18, 14, .46); }
+.phone-sheet { position: absolute; left: 0; right: 0; bottom: 0; padding: 24rpx 32rpx max(24rpx, env(safe-area-inset-bottom)); border-radius: 32rpx 32rpx 0 0; background: #fff; }
+.phone-header { display: flex; align-items: center; justify-content: space-between; padding: 4rpx 4rpx 20rpx; }
+.phone-title { color: $cozy-ink; font-family: $font-display; font-size: 32rpx; font-weight: 600; }
+.phone-close { width: 72rpx; height: 72rpx; display: flex; align-items: center; justify-content: center; color: $cozy-muted; font-size: 44rpx; }
+.phone-input { height: 92rpx; padding: 0 28rpx; border-radius: $cozy-radius-md; background: $cozy-surface; color: $cozy-ink; font-size: 30rpx; }
+.phone-placeholder { color: $cozy-placeholder; }
+.phone-save { margin-top: 24rpx; height: 92rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; background: $cozy-ink; color: #fff; font-size: 30rpx; font-weight: 600; }
+.phone-save.disabled { opacity: .4; }
 </style>
