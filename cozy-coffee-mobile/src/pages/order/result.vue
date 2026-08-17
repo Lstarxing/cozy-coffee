@@ -8,7 +8,10 @@
       <text class="result-subtitle">模拟支付已完成，请留意门店制作进度</text>
 
       <view class="pickup-card">
-        <text class="pickup-label">取餐码</text>
+        <view class="pickup-top">
+          <text class="pickup-label">取餐码</text>
+          <text class="pickup-store">CozyCoffee 中心店</text>
+        </view>
         <text class="pickup-code">{{ order.pickupCode || '生成中' }}</text>
         <text class="pickup-hint">请在门店出示取餐码</text>
       </view>
@@ -21,8 +24,8 @@
       </view>
 
       <view class="action-group">
-        <view class="secondary-button" @click="goToOrders">查看全部订单</view>
         <view class="primary-button" @click="goToDetail">查看订单详情</view>
+        <view class="secondary-button" @click="goToOrders">查看全部订单</view>
       </view>
     </view>
   </view>
@@ -113,19 +116,26 @@ function goToDetail() { uni.navigateTo({ url: `/pages/order/detail?id=${encodeUR
 <style lang="scss" scoped>
 .result-page { min-height: 100vh; background: $cozy-surface; }
 .result-content { padding: 72rpx 28rpx 48rpx; text-align: center; }
-.success-mark { width: 116rpx; height: 116rpx; margin: 0 auto 28rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: $cozy-accent; color: #fff; font-size: 62rpx; font-weight: 750; }
-.result-title { display: block; color: $cozy-ink; font-size: 42rpx; font-weight: 750; }
-.result-subtitle { display: block; margin-top: 12rpx; color: $cozy-muted; font-size: 24rpx; }
-.pickup-card { margin-top: 42rpx; padding: 34rpx; border-radius: $cozy-radius-lg; background: $cozy-surface-alt; color: #fff; }
-.pickup-label, .pickup-hint { display: block; color: $cozy-muted-on-dark; font-size: 22rpx; }
-.pickup-code { display: block; margin: 12rpx 0; font-size: 72rpx; font-weight: 800; letter-spacing: .12em; }
-.order-info { margin-top: 20rpx; padding: 20rpx 28rpx; border-radius: $cozy-radius-lg; background: #fff; text-align: left; }
+.success-mark { width: 120rpx; height: 120rpx; margin: 0 auto 32rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: $cozy-accent; color: #fff; font-size: 64rpx; font-weight: 750; }
+.result-title { display: block; color: $cozy-ink; font-family: $font-display; font-size: 44rpx; font-weight: 600; }
+.result-subtitle { display: block; margin-top: 14rpx; color: $cozy-muted; font-size: 24rpx; }
+
+/* 取餐码（深色卡） */
+.pickup-card { margin-top: 48rpx; padding: 40rpx; border-radius: 28rpx; background: $cozy-surface-alt; color: #fff; }
+.pickup-top { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; }
+.pickup-label, .pickup-store { color: $cozy-muted-on-dark; font-size: 22rpx; }
+.pickup-code { display: block; margin: 20rpx 0; font-size: 76rpx; font-weight: 800; letter-spacing: .14em; }
+.pickup-hint { display: block; color: $cozy-muted-on-dark; font-size: 22rpx; }
+
+/* 订单信息 */
+.order-info { margin-top: 24rpx; padding: 20rpx 28rpx; border-radius: 28rpx; background: #fff; text-align: left; }
 .info-row { min-height: 72rpx; display: flex; align-items: center; justify-content: space-between; gap: 24rpx; color: $cozy-muted; font-size: 24rpx; }
 .info-row text:last-child { color: $cozy-ink; text-align: right; }
 .info-row.total { margin-top: 8rpx; border-top: 1rpx solid $cozy-border; color: $cozy-ink; font-weight: 700; }
 .info-row.total text:last-child { color: $cozy-primary; font-size: 32rpx; }
-.action-group { display: flex; gap: 18rpx; margin-top: 30rpx; }
-.secondary-button, .primary-button { flex: 1; height: 88rpx; display: flex; align-items: center; justify-content: center; border-radius: $cozy-radius-md; font-size: 25rpx; font-weight: 650; }
-.secondary-button { border: 2rpx solid $cozy-primary; color: $cozy-primary; }
-.primary-button { background: $cozy-primary; color: #fff; }
+
+/* 操作 */
+.action-group { display: flex; gap: 20rpx; margin-top: 40rpx; }
+.primary-button { flex: 1.4; height: 92rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; background: $cozy-ink; color: #fff; font-size: 28rpx; font-weight: 600; }
+.secondary-button { flex: 1; height: 92rpx; display: flex; align-items: center; justify-content: center; border-radius: 12rpx; border: 1rpx solid $cozy-border; background: #fff; color: $cozy-ink; font-size: 28rpx; font-weight: 600; }
 </style>

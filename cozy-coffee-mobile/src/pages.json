@@ -33,6 +33,12 @@
             }
         },
         {
+            "path": "pages/order/remark",
+            "style": {
+                "navigationBarTitleText": "订单备注"
+            }
+        },
+        {
             "path": "pages/origins/index",
             "style": {
                 "navigationBarTitleText": "产区探索"
@@ -71,19 +77,19 @@
         {
             "path": "pages/login/index",
             "style": {
-                "navigationBarTitleText": ""
+                "navigationBarTitleText": "登录"
             }
         },
         {
             "path": "pages/register/index",
             "style": {
-                "navigationBarTitleText": ""
+                "navigationBarTitleText": "注册"
             }
         },
         {
             "path": "pages/login/reset",
             "style": {
-                "navigationBarTitleText": ""
+                "navigationBarTitleText": "修改密码"
             }
         },
         {
@@ -119,13 +125,13 @@
         {
             "path": "pages/menu/spec",
             "style": {
-                "navigationBarTitleText": ""
+                "navigationBarTitleText": "选择规格"
             }
         },
         {
             "path": "pages/signin/index",
             "style": {
-                "navigationBarTitleText": ""
+                "navigationBarTitleText": "每日签到"
             }
         },
         {
@@ -137,7 +143,7 @@
         {
             "path": "pages/challenge/index",
             "style": {
-                "navigationBarTitleText": ""
+                "navigationBarTitleText": "月度挑战"
             }
         },
         {
