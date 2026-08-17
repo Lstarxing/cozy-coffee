@@ -1,13 +1,10 @@
 <!--
-  注册页 - 品牌徽章 + 字段表单 + 墨黑主按钮
+  注册页 - 品牌字标 + 字段表单（密码眼睛开关）+ 墨黑主按钮
 -->
 <template>
   <view class="register-page">
     <!-- 品牌区 -->
     <view class="auth-hero">
-      <view class="brand-emblem">
-        <CozyIcon name="bean" :size="44" color="#753A22" />
-      </view>
       <text class="brand-word">COZY COFFEE</text>
       <text class="hero-title">创建会员账户</text>
       <text class="hero-sub">保存订单、积分与券包，继续每一次咖啡日常</text>
@@ -37,7 +34,9 @@
             placeholder-class="field-placeholder"
             class="field-input"
           />
-          <text class="field-toggle" @click="showPassword = !showPassword">{{ showPassword ? '隐藏' : '显示' }}</text>
+          <view class="field-toggle" @click="showPassword = !showPassword">
+            <CozyIcon :name="showPassword ? 'eye-off' : 'eye'" :size="20" color="#756A63" />
+          </view>
         </view>
       </view>
       <view class="field">
@@ -50,7 +49,9 @@
             placeholder-class="field-placeholder"
             class="field-input"
           />
-          <text class="field-toggle" @click="showConfirmPassword = !showConfirmPassword">{{ showConfirmPassword ? '隐藏' : '显示' }}</text>
+          <text class="field-toggle" @click="showConfirmPassword = !showConfirmPassword">
+            <CozyIcon :name="showConfirmPassword ? 'eye-off' : 'eye'" :size="20" color="#756A63" />
+          </text>
         </view>
       </view>
       <view class="field">
@@ -172,18 +173,7 @@ const goToLogin = () => {
 /* ── 品牌区 ── */
 .auth-hero {
   text-align: center;
-  padding: 100rpx 0 56rpx;
-}
-.brand-emblem {
-  width: 120rpx;
-  height: 120rpx;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: $bg-white;
-  border: 1rpx solid $cozy-border;
+  padding: 56rpx 0 40rpx;
 }
 .brand-word {
   display: block;
@@ -239,7 +229,11 @@ const goToLogin = () => {
 .field-placeholder { color: $cozy-placeholder; }
 .field-toggle {
   flex: none;
-  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56rpx;
+  height: 56rpx;
   color: $cozy-muted;
 
   &:active { opacity: .6; }

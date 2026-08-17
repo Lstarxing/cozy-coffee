@@ -1,13 +1,10 @@
 <!--
-  登录页 - 品牌徽章 + 字段表单 + 墨黑主按钮 + 瓷器微信登录
+  登录页 - 品牌字标 + 字段表单（密码眼睛开关）+ 墨黑主按钮 + 瓷器微信登录
 -->
 <template>
   <view class="login-page">
     <!-- 品牌区 -->
     <view class="auth-hero">
-      <view class="brand-emblem">
-        <CozyIcon name="bean" :size="44" color="#753A22" />
-      </view>
       <text class="brand-word">COZY COFFEE</text>
       <text class="hero-title">欢迎回来</text>
       <text class="hero-sub">登录后继续你的点单与会员日常</text>
@@ -38,9 +35,9 @@
             placeholder-class="field-placeholder"
             class="field-input"
           />
-          <text class="field-toggle" @click="showPassword = !showPassword">
-            {{ showPassword ? '隐藏' : '显示' }}
-          </text>
+          <view class="field-toggle" @click="showPassword = !showPassword">
+            <CozyIcon :name="showPassword ? 'eye-off' : 'eye'" :size="20" color="#756A63" />
+          </view>
         </view>
       </view>
 
@@ -194,18 +191,7 @@ const goToForget = () => {
 /* ── 品牌区 ── */
 .auth-hero {
   text-align: center;
-  padding: 120rpx 0 64rpx;
-}
-.brand-emblem {
-  width: 120rpx;
-  height: 120rpx;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: $bg-white;
-  border: 1rpx solid $cozy-border;
+  padding: 64rpx 0 48rpx;
 }
 .brand-word {
   display: block;
@@ -261,7 +247,11 @@ const goToForget = () => {
 .field-placeholder { color: $cozy-placeholder; }
 .field-toggle {
   flex: none;
-  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56rpx;
+  height: 56rpx;
   color: $cozy-muted;
 
   &:active { opacity: .6; }

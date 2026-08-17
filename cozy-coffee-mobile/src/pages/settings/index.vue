@@ -20,7 +20,7 @@
         <view class="settings-row" @click="goToPage('/pages/login/reset')">
           <view class="row-copy">
             <text class="row-label">修改密码</text>
-            <text class="row-desc">开发环境账号可在此重置密码</text>
+            <text class="row-desc">验证原密码后设置新密码</text>
           </view>
           <view class="row-right"><text class="row-arrow">›</text></view>
         </view>

@@ -17,6 +17,10 @@ export const resetPasswordDev = (username, newPassword) => {
     return post('/auth/password/reset-dev', { username, newPassword })
 }
 
+export const changePassword = (oldPassword, newPassword) => {
+    return post('/auth/password/change', { oldPassword, newPassword })
+}
+
 export const getCurrentSession = () => {
     return get('/auth/me')
 }
