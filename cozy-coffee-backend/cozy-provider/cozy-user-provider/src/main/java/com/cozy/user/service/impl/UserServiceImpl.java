@@ -274,6 +274,31 @@ public class UserServiceImpl implements UserService {
         clearUserSessions(user.getId());
     }
 
+    @Override
+    @Transactional
+    public void changePassword(Long userId, String oldPassword, String newPassword) {
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
+        }
+        if (oldPassword == null || oldPassword.isBlank()) {
+            throw new BusinessException("原密码不能为空");
+        }
+        if (newPassword == null || newPassword.length() < 6 || newPassword.length() > 20) {
+            throw new BusinessException("新密码长度需在 6-20 位之间");
+        }
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new BusinessException("原密码不正确");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setTokenVersion((user.getTokenVersion() == null ? 0 : user.getTokenVersion()) + 1);
+        userMapper.updateById(user);
+        clearUserSessions(user.getId());
+    }
+
     private String issueToken(User user) {
         String token = JwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole(), user.getTokenVersion());
         try {

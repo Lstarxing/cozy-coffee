@@ -27,6 +27,11 @@ public interface UserService {
     void resetPasswordDev(String username, String newPassword);
 
     /**
+     * 修改登录密码：校验原密码后更新为新密码，并使既有会话失效。
+     */
+    void changePassword(Long userId, String oldPassword, String newPassword);
+
+    /**
      * 登出并使当前 token 会话失效。
      */
     void logout(String token);

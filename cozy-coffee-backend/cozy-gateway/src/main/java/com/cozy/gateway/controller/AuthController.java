@@ -3,6 +3,7 @@ package com.cozy.gateway.controller;
 import com.cozy.common.context.UserContext;
 import com.cozy.common.result.Result;
 import com.cozy.gateway.dto.ApplyInviteCodeRequest;
+import com.cozy.gateway.dto.ChangePasswordRequest;
 import com.cozy.gateway.dto.DevPasswordResetRequest;
 import com.cozy.gateway.dto.InviteCodeValidationResult;
 import com.cozy.gateway.dto.WechatDevSessionRequest;
@@ -73,6 +74,12 @@ public class AuthController {
         }
         authService.resetPasswordDev(request.getUsername(), request.getNewPassword());
         return Result.success(null, "开发环境密码已重置");
+    }
+
+    @PostMapping("/password/change")
+    public Result<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(AuthUtil.requireUserId(), request.getOldPassword(), request.getNewPassword());
+        return Result.success(null, "密码修改成功，请重新登录");
     }
 
     @PostMapping("/logout")

@@ -55,6 +55,10 @@ public class AuthService {
         userService.resetPasswordDev(username, newPassword);
     }
 
+    public void changePassword(Long userId, String oldPassword, String newPassword) {
+        userService.changePassword(userId, oldPassword, newPassword);
+    }
+
     public void register(RegisterRequest request) {
         userService.register(request);
     }
