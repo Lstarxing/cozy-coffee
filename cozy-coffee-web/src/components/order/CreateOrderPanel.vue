@@ -8,15 +8,10 @@
       <div class="form-item">
         <label>用餐方式</label>
         <div class="dining-method-selector">
-          <label class="method-option" :class="{ active: diningMethod === 'DINE_IN' }">
-            <input v-model="diningMethod" type="radio" value="DINE_IN" />
-            <span class="icon">🍽️</span>
-            <span>堂食</span>
-          </label>
           <label class="method-option" :class="{ active: diningMethod === 'TAKEOUT' }">
             <input v-model="diningMethod" type="radio" value="TAKEOUT" />
             <span class="icon">🥤</span>
-            <span>外带</span>
+            <span>自提</span>
           </label>
           <label class="method-option" :class="{ active: diningMethod === 'DELIVERY' }">
             <input v-model="diningMethod" type="radio" value="DELIVERY" />
@@ -100,7 +95,7 @@ import { ElMessage } from 'element-plus'
 const emit = defineEmits(['order-success'])
 
 const orderAmount = ref(30) // 默认值
-const diningMethod = ref('DINE_IN') // v5.0: 用餐方式 (DINE_IN/TAKEOUT/DELIVERY)
+const diningMethod = ref('TAKEOUT') // v5.0: 用餐方式 (TAKEOUT/DELIVERY)
 const showCouponPicker = ref(false)
 const selectedCoupon = ref(null)
 const submitting = ref(false)

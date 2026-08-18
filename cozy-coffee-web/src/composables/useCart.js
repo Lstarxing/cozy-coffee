@@ -5,19 +5,19 @@ const STORAGE_KEY = 'cozy_coffee_cart'
 function loadFromStorage() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (!saved) return { items: [], selectedCouponCode: '', selectedAddonCoupons: [], diningMethod: 'DINE_IN' }
+    if (!saved) return { items: [], selectedCouponCode: '', selectedAddonCoupons: [], diningMethod: 'TAKEOUT' }
     const data = JSON.parse(saved)
-    if (Array.isArray(data)) return { items: data, selectedCouponCode: '', selectedAddonCoupons: [], diningMethod: 'DINE_IN' }
+    if (Array.isArray(data)) return { items: data, selectedCouponCode: '', selectedAddonCoupons: [], diningMethod: 'TAKEOUT' }
     return {
       items: data.items || [],
       selectedCouponCode: data.selectedCouponCode || '',
       selectedAddonCoupons: data.selectedAddonCoupons || [],
-      diningMethod: data.diningMethod || 'DINE_IN'
+      diningMethod: data.diningMethod || 'TAKEOUT'
     }
   } catch (e) {
     console.error('Failed to parse cart from localStorage', e)
     localStorage.removeItem(STORAGE_KEY)
-    return { items: [], selectedCouponCode: '', selectedAddonCoupons: [], diningMethod: 'DINE_IN' }
+    return { items: [], selectedCouponCode: '', selectedAddonCoupons: [], diningMethod: 'TAKEOUT' }
   }
 }
 
@@ -77,7 +77,7 @@ export function useCart() {
     cartItems.value = []
     couponCode.value = ''
     addonCouponCodes.value = []
-    diningMethod.value = 'DINE_IN'
+    diningMethod.value = 'TAKEOUT'
   }
 
   return {

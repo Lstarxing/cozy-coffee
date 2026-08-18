@@ -2,15 +2,10 @@
   <div class="dining-method-section">
     <label class="section-label">用餐方式</label>
     <div class="dining-options">
-      <label class="dining-option" :class="{ active: modelValue === 'DINE_IN' }">
-        <input type="radio" value="DINE_IN" :checked="modelValue === 'DINE_IN'" @change="$emit('update:modelValue', 'DINE_IN')" />
-        <UtensilsCrossed :size="18" :stroke-width="1.8" />
-        <span>堂食</span>
-      </label>
       <label class="dining-option" :class="{ active: modelValue === 'TAKEOUT' }">
         <input type="radio" value="TAKEOUT" :checked="modelValue === 'TAKEOUT'" @change="$emit('update:modelValue', 'TAKEOUT')" />
         <CupSoda :size="18" :stroke-width="1.8" />
-        <span>外带</span>
+        <span>自提</span>
       </label>
       <label class="dining-option" :class="{ active: modelValue === 'DELIVERY' }">
         <input type="radio" value="DELIVERY" :checked="modelValue === 'DELIVERY'" @change="$emit('update:modelValue', 'DELIVERY')" />
@@ -23,7 +18,7 @@
 </template>
 
 <script setup>
-import { UtensilsCrossed, CupSoda, Truck } from 'lucide-vue-next'
+import { CupSoda, Truck } from 'lucide-vue-next'
 
 defineProps({
   modelValue: { type: String, required: true },

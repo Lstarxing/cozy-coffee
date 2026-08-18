@@ -332,10 +332,9 @@ const handleCancel = async (row) => {
 const getOrderStatusText = (status) => ORDER_STATUS_MAP[status]?.label || status
 const getOrderStatusTagType = (status) => ORDER_STATUS_MAP[status]?.tagType || 'info'
 
-const getDiningMethodText = (method) => DINING_METHOD_MAP[method] || '外带'
+const getDiningMethodText = (method) => DINING_METHOD_MAP[method] || '自提'
 const getDiningMethodTagType = (method) => {
   if (method === 'DELIVERY') return 'danger'
-  if (method === 'DINE_IN') return 'warning'
   return 'success'
 }
 

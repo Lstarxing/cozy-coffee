@@ -236,7 +236,7 @@ const getItemSpecsText = (item) => {
 
 const getDiningMethodText = (method) => {
   if (!method) return '-'
-  const map = { 'DINE_IN': '堂食', 'TAKEOUT': '自提', 'DELIVERY': '外卖' }
+  const map = { 'TAKEOUT': '自提', 'DELIVERY': '外卖' }
   return map[method] || method
 }
 

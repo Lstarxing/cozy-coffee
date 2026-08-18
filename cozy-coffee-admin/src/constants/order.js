@@ -13,14 +13,12 @@ export const ORDER_STATUS_MAP = {
 }
 
 export const DINING_METHOD = {
-  DINE_IN: 'DINE_IN',
   TAKEOUT: 'TAKEOUT',
   DELIVERY: 'DELIVERY'
 }
 
 export const DINING_METHOD_MAP = {
-  [DINING_METHOD.DINE_IN]: '堂食',
-  [DINING_METHOD.TAKEOUT]: '外带',
+  [DINING_METHOD.TAKEOUT]: '自提',
   [DINING_METHOD.DELIVERY]: '外卖'
 }
 

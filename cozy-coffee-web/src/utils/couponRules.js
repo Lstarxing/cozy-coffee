@@ -55,7 +55,7 @@ export function filterCoupons(coupons) {
  * @param {Array}  cartItems
  * @param {Object} context
  * @param {boolean} context.hasExtraShot
- * @param {string}  context.diningMethod  - DINE_IN | TAKEOUT | DELIVERY
+ * @param {string}  context.diningMethod  - TAKEOUT | DELIVERY
  * @returns {{ valid: boolean, reason: string }}
  */
 export function validateCouponForCart(coupon, cartItems, context) {

@@ -35,7 +35,7 @@ public class ShopOrder {
     private String status;
     private String remark;
 
-    // v5.0: 用餐方式 (DINE_IN / TAKEOUT / DELIVERY)
+    // v5.0: 用餐方式 (TAKEOUT 自提 / DELIVERY 外送)
     private String diningMethod;
 
     // v5.3: 配送费相关

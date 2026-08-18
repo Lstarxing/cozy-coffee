@@ -20,7 +20,7 @@ public class CreateOrderRequest implements Serializable {
 
     private String couponCode;
 
-    @Pattern(regexp = "DINE_IN|TAKEOUT|DELIVERY", message = "用餐方式不合法")
+    @Pattern(regexp = "TAKEOUT|DELIVERY", message = "用餐方式不合法")
     private String diningMethod;
 
     private List<String> addonCouponCodes;

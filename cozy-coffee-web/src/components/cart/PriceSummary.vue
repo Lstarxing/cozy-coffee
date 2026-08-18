@@ -53,7 +53,7 @@ import { ref } from 'vue'
 
 defineProps({
   subtotal: { type: Number, default: 0 },
-  diningMethod: { type: String, default: 'DINE_IN' },
+  diningMethod: { type: String, default: 'TAKEOUT' },
   isBlackGoldMember: { type: Boolean, default: false },
   deliveryFee: { type: Number, default: 3 },
   memberDiscount: { type: Number, default: 0 },

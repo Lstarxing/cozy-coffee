@@ -44,7 +44,7 @@ import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useCheckoutStore } from '@/stores/checkout'
 
-const QUICK = ['少冰', '去冰', '多冰', '少糖', '无糖', '不要杯套', '打包带走', '堂食']
+const QUICK = ['少冰', '去冰', '多冰', '少糖', '无糖', '不要杯套', '打包带走']
 
 const checkoutStore = useCheckoutStore()
 const focused = ref(true)
