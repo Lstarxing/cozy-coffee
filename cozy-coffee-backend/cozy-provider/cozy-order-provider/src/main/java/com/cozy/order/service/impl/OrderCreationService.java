@@ -472,9 +472,8 @@ public class OrderCreationService {
                 baseTotalAmount, addonsTotalAmount, totalAmount, memberDiscount, discountAmount, addonDiscount,
                 deliveryFee, deliveryFeeDiscount, payAmount);
 
-        // 生成取餐码 (外卖订单也要生成)
+        // 取餐码在支付/接单时生成（待支付订单不生成取餐码）
         LocalDateTime now = LocalDateTime.now();
-        String pickupCode = pickupCodeService.generatePickupCode(1L, now);
         LocalDate businessDate = pickupCodeService.calculateBusinessDate(now);
 
         // ============================================================
@@ -576,8 +575,6 @@ public class OrderCreationService {
         order.setRemark(request.getRemark());
         order.setStoreId(1L);
         order.setBusinessDate(businessDate);
-        order.setPickupCode(pickupCode);
-        order.setPickupCodeGeneratedAt(now);
         order.setDiningMethod(request.getDiningMethod()); // v5.0: 用餐方式
         // v5.3: 配送费相关字段
         order.setDeliveryFee(deliveryFee);
