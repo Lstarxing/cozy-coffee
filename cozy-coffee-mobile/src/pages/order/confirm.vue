@@ -1,15 +1,10 @@
 <template>
   <view class="confirm-page">
     <view v-if="cartStore.items.length" class="confirm-content">
-      <!-- 自提/外送切换 -->
-      <view class="fulfillment-switch">
-        <view class="fulfillment-opt" :class="{ active: diningMethod === 'TAKEOUT' }" @click="setDining('TAKEOUT')">自提</view>
-        <view class="fulfillment-opt" :class="{ active: diningMethod === 'DELIVERY' }" @click="setDining('DELIVERY')">外送</view>
-      </view>
-
       <StoreSummary
         :mode="diningMethod === 'DELIVERY' ? 'delivery' : 'pickup'"
-        :delivery-address="deliveryAddressText"
+        :delivery-address="checkoutStore.deliveryAddress"
+        :delivery-eta="deliveryEtaText"
         @tap="onStoreTap"
       />
 
@@ -27,19 +22,25 @@
           </view>
           <text class="line-price">¥{{ lineAmount(line) }}</text>
         </view>
+
+        <OfflineState v-if="checkoutStore.status === 'offline'" @retry="recoverPreview" />
+        <RetryState v-else-if="previewError" title="金额核对失败" :description="previewError" @retry="loadPreview" />
+        <view v-else>
+          <LoadingState v-if="checkoutStore.status === 'previewing' && !checkoutStore.latestPreview" text="正在核对商品与优惠…" />
+          <CheckoutPriceSummary
+            v-else
+            :preview="checkoutStore.latestPreview"
+          />
+        </view>
       </view>
 
-      <OfflineState v-if="checkoutStore.status === 'offline'" @retry="recoverPreview" />
-      <RetryState v-else-if="previewError" title="金额核对失败" :description="previewError" @retry="loadPreview" />
-      <view v-else>
-        <LoadingState v-if="checkoutStore.status === 'previewing' && !checkoutStore.latestPreview" text="正在核对商品与优惠…" />
-        <CheckoutPriceSummary
-          v-else
-          :preview="checkoutStore.latestPreview"
-          :coupon-text="couponDisplayText"
-          :coupon-selected="Boolean(selectedCoupon)"
-          @coupon-click="couponVisible = true"
-        />
+      <!-- 优惠券（独立一块） -->
+      <view class="coupon-block" @click="goToCoupon">
+        <text class="coupon-label">优惠券</text>
+        <view class="coupon-value-wrap">
+          <text class="coupon-value" :class="{ accent: Boolean(selectedCoupon) }">{{ couponDisplayText }}</text>
+          <text class="coupon-chevron">›</text>
+        </view>
       </view>
 
       <!-- 订单备注 + 预留电话（底部） -->
@@ -79,27 +80,6 @@
       @submit="submitOrder"
     />
 
-    <view v-if="couponVisible" class="coupon-layer">
-      <view class="coupon-mask" @click="couponVisible = false" />
-      <view class="coupon-sheet safe-area-bottom">
-        <view class="coupon-header">
-          <text class="coupon-title">选择优惠券</text>
-          <view class="coupon-close" @click="couponVisible = false">×</view>
-        </view>
-        <scroll-view scroll-y class="coupon-scroll">
-          <view class="coupon-option" :class="{ selected: !selectedCoupon }" @click="selectCoupon(null)">
-            <view><text class="coupon-name">不使用优惠券</text><text class="coupon-description">按商品原价结算</text></view>
-            <text v-if="!selectedCoupon" class="coupon-check">✓</text>
-          </view>
-          <view v-for="coupon in coupons" :key="couponKey(coupon)" class="coupon-option" :class="{ selected: couponKey(selectedCoupon) === couponKey(coupon) }" @click="selectCoupon(coupon)">
-            <view><text class="coupon-name">{{ couponTitle(coupon) }}</text><text class="coupon-description">{{ couponDescription(coupon) }}</text></view>
-            <text v-if="couponKey(selectedCoupon) === couponKey(coupon)" class="coupon-check">✓</text>
-          </view>
-          <EmptyState v-if="!coupons.length" icon="券" title="暂无可用优惠券" description="本单将按商品原价结算" />
-        </scroll-view>
-      </view>
-    </view>
-
     <!-- 预留电话编辑 -->
     <view v-if="phoneVisible" class="phone-layer">
       <view class="phone-mask" @click="phoneVisible = false" />
@@ -126,11 +106,11 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
-import { getCouponList } from '@/api/coupon'
 import { useCartStore } from '@/stores/cart'
 import { useCheckoutStore } from '@/stores/checkout'
 import { useUserStore } from '@/stores/user'
 import { createDefaultCheckoutWorkflow } from '@/services/checkout/CheckoutWorkflow'
+import { resolveDeliveryAddress } from '@/services/address/DeliveryAddressResolver'
 import { AuthError, NetworkError } from '@/services/errors/AppError'
 import StoreSummary from '@/components/order/StoreSummary.vue'
 import CheckoutPriceSummary from '@/components/order/CheckoutPriceSummary.vue'
@@ -145,24 +125,21 @@ const cartStore = useCartStore()
 const checkoutStore = useCheckoutStore()
 const userStore = useUserStore()
 const workflow = createDefaultCheckoutWorkflow()
-const coupons = ref([])
 const selectedCoupon = ref(null)
-const couponVisible = ref(false)
 const phoneVisible = ref(false)
 const phoneDraft = ref('')
-const diningMethod = ref(checkoutStore.diningMethod || 'TAKEOUT')
-const deliveryAddress = ref(null)
+const diningMethod = computed(() => checkoutStore.diningMethod || 'TAKEOUT')
 const previewError = ref('')
-let loaded = false
 
-const deliveryAddressText = computed(() => {
-  const a = deliveryAddress.value
-  if (!a) return ''
-  return [a.region, a.detail].filter(Boolean).join(' ')
+// 预计送达：当前本地时间 + 50~60 分钟区间
+const deliveryEtaText = computed(() => {
+  const pad = n => String(n).padStart(2, '0')
+  const start = new Date(Date.now() + 50 * 60 * 1000)
+  const end = new Date(Date.now() + 60 * 60 * 1000)
+  return `现在下单，预计 ${pad(start.getHours())}:${pad(start.getMinutes())}-${pad(end.getHours())}:${pad(end.getMinutes())} 送达`
 })
 
-const couponHint = computed(() => coupons.value.length ? `${coupons.value.length} 张可用` : '暂无可用')
-const couponDisplayText = computed(() => selectedCoupon.value ? couponTitle(selectedCoupon.value) : couponHint.value)
+const couponDisplayText = computed(() => selectedCoupon.value ? couponTitle(selectedCoupon.value) : '选择优惠券')
 const submitDisabled = computed(() => (
   checkoutStore.isBusy ||
   checkoutStore.status === 'offline' ||
@@ -174,24 +151,21 @@ onLoad(() => {
   checkoutStore.start()
   checkoutStore.pickupTime = 'ASAP'
   checkoutStore.storeId = 1
-  diningMethod.value = checkoutStore.diningMethod || 'TAKEOUT'
   uni.$on('addressSelected', handleAddressSelected)
+  uni.$on('couponSelected', handleCouponSelected)
 })
 
 onUnload(() => {
   uni.$off('addressSelected', handleAddressSelected)
+  uni.$off('couponSelected', handleCouponSelected)
 })
-
-function setDining(value) {
-  if (diningMethod.value === value) return
-  diningMethod.value = value
-  checkoutStore.diningMethod = value
-  checkoutStore.invalidatePreview()
-  loadPreview()
-}
 
 function onStoreTap() {
   if (diningMethod.value === 'DELIVERY') {
+    if (!checkoutStore.deliveryAddress) {
+      uni.navigateTo({ url: '/pages/address/edit' })
+      return
+    }
     uni.navigateTo({ url: '/pages/address/list' })
     return
   }
@@ -200,7 +174,7 @@ function onStoreTap() {
 
 function handleAddressSelected(address) {
   if (!address) return
-  deliveryAddress.value = address
+  checkoutStore.deliveryAddress = address
   checkoutStore.deliveryAddressId = address.id || null
   if (address.phone && !checkoutStore.phone) checkoutStore.phone = address.phone
   checkoutStore.invalidatePreview()
@@ -209,29 +183,15 @@ function handleAddressSelected(address) {
 
 onShow(async () => {
   if (!cartStore.items.length) return
-  if (!loaded) {
-    loaded = true
-    await loadCoupons()
-  }
   if (!checkoutStore.phone && userStore.userInfo?.phone) {
     checkoutStore.phone = userStore.userInfo.phone
   }
+  // 外送：无地址时解析默认地址，仍无则卡片引导添加
+  if (diningMethod.value === 'DELIVERY' && !checkoutStore.deliveryAddressId) {
+    await resolveDeliveryAddress(checkoutStore)
+  }
   await loadPreview()
 })
-
-async function loadCoupons() {
-  try {
-    const response = await getCouponList('available')
-    const source = response?.data ?? response
-    coupons.value = (Array.isArray(source) ? source : []).filter(coupon => {
-      const status = String(coupon.status || '').toUpperCase()
-      return !status || ['AVAILABLE', 'ISSUED'].includes(status)
-    })
-  } catch (error) {
-    if (!(error instanceof AuthError)) console.warn('加载优惠券失败', error)
-    coupons.value = []
-  }
-}
 
 async function loadPreview() {
   if (!cartStore.items.length || checkoutStore.isBusy) return
@@ -252,11 +212,18 @@ async function recoverPreview() {
   await loadPreview()
 }
 
-function selectCoupon(coupon) {
+function goToCoupon() {
+  uni.setStorageSync('cozy_coupon_cart', JSON.stringify({
+    items: cartStore.items,
+    diningMethod: checkoutStore.diningMethod || 'TAKEOUT'
+  }))
+  uni.navigateTo({ url: '/pages/coupon/list?select=1' })
+}
+
+function handleCouponSelected(coupon) {
   selectedCoupon.value = coupon
   checkoutStore.selectedCouponId = coupon ? couponKey(coupon) : null
   checkoutStore.invalidatePreview()
-  couponVisible.value = false
   loadPreview()
 }
 
@@ -329,12 +296,6 @@ function promptLogin() {
 
 function couponKey(coupon) { return coupon?.couponCode || coupon?.code || coupon?.id || '' }
 function couponTitle(coupon) { return coupon?.name || coupon?.couponName || coupon?.title || coupon?.typeName || '优惠券' }
-function couponDescription(coupon) {
-  if (coupon?.description) return coupon.description
-  if (coupon?.discountAmount) return `可减 ¥${Number(coupon.discountAmount).toFixed(2)}`
-  if (coupon?.minAmount) return `满 ¥${Number(coupon.minAmount).toFixed(0)} 可用`
-  return '具体优惠以结算试算为准'
-}
 
 const optionLabels = {
   STANDARD: '标准杯', MEDIUM: '中杯', LARGE: '大杯', SMALL: '小杯',
@@ -355,33 +316,26 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 .confirm-page { min-height: 100vh; background: $cozy-surface; }
 .confirm-content { padding: 32rpx 32rpx 0; }
 
-/* ── 自提/外送切换 ── */
-.fulfillment-switch {
-  display: flex;
-  padding: 8rpx;
-  border: 1rpx solid $cozy-border;
-  border-radius: 999rpx;
-  background: $bg-white;
-  margin-bottom: 24rpx;
-}
-.fulfillment-opt {
-  flex: 1;
-  height: 64rpx;
+.section-block { margin-top: 24rpx; padding: 32rpx; border-radius: 28rpx; background: #fff; }
+
+/* ── 优惠券（独立一块） ── */
+.coupon-block {
+  margin-top: 24rpx;
+  padding: 32rpx;
+  border-radius: 28rpx;
+  background: #fff;
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 999rpx;
-  font-size: 26rpx;
-  color: $cozy-muted;
+  justify-content: space-between;
+  gap: 20rpx;
 
-  &.active {
-    background: $cozy-ink;
-    color: #fff;
-    font-weight: 600;
-  }
+  &:active { opacity: .85; }
 }
-
-.section-block { margin-top: 24rpx; padding: 32rpx; border-radius: 28rpx; background: #fff; }
+.coupon-label { flex: none; color: $cozy-ink; font-size: 27rpx; font-weight: 650; }
+.coupon-value-wrap { min-width: 0; flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 12rpx; }
+.coupon-value { overflow: hidden; color: $cozy-muted; font-size: 24rpx; white-space: nowrap; text-overflow: ellipsis; }
+.coupon-value.accent { color: $cozy-primary; }
+.coupon-chevron { color: $cozy-placeholder; font-size: 42rpx; font-weight: 300; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20rpx; }
 .section-title { color: $cozy-ink; font-family: $font-display; font-size: 30rpx; font-weight: 600; }
 .section-note { color: $cozy-muted; font-size: 22rpx; }
@@ -390,8 +344,7 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 .pickup-radio-dot { width: 20rpx; height: 20rpx; border-radius: 50%; background: $cozy-primary; }
 .pickup-title { display: block; color: $cozy-ink; font-size: 28rpx; font-weight: 650; }
 .pickup-description { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 22rpx; }
-.checkout-line { display: flex; align-items: center; gap: 24rpx; padding: 24rpx 0; border-bottom: 1rpx solid $cozy-border; }
-.checkout-line:last-child { border-bottom: 0; }
+.checkout-line { display: flex; align-items: center; gap: 24rpx; padding: 20rpx 0; }
 .line-image { width: 116rpx; height: 116rpx; flex: none; border-radius: 16rpx; background: linear-gradient(135deg, #E8DDD2, #D8C8B4); }
 .line-content { min-width: 0; flex: 1; }
 .line-name { display: block; overflow: hidden; color: $cozy-ink; font-size: 28rpx; font-weight: 650; white-space: nowrap; text-overflow: ellipsis; }
@@ -409,18 +362,6 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 .mock-tip-title { display: block; color: $cozy-accent; font-size: 25rpx; font-weight: 700; }
 .mock-tip-copy { display: block; margin-top: 8rpx; color: #53604b; font-size: 21rpx; line-height: 1.5; }
 .bottom-spacer { height: 180rpx; }
-.coupon-layer { position: fixed; inset: 0; z-index: 120; }
-.coupon-mask { position: absolute; inset: 0; background: rgba(25, 18, 14, .46); }
-.coupon-sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 72vh; padding: 20rpx 28rpx max(20rpx, env(safe-area-inset-bottom)); border-radius: 32rpx 32rpx 0 0; background: #fff; }
-.coupon-header { display: flex; align-items: center; justify-content: space-between; padding: 8rpx 0 20rpx; border-bottom: 1rpx solid $cozy-border; }
-.coupon-title { color: $cozy-ink; font-family: $font-display; font-size: 32rpx; font-weight: 600; }
-.coupon-close { width: 72rpx; height: 72rpx; display: flex; align-items: center; justify-content: center; color: $cozy-muted; font-size: 44rpx; }
-.coupon-scroll { max-height: 56vh; }
-.coupon-option { min-height: 112rpx; padding: 22rpx 10rpx; display: flex; align-items: center; justify-content: space-between; gap: 24rpx; border-bottom: 1rpx solid $cozy-border; }
-.coupon-option.selected { color: $cozy-primary; }
-.coupon-name { display: block; color: $cozy-ink; font-size: 28rpx; font-weight: 650; }
-.coupon-description { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 21rpx; }
-.coupon-check { color: $cozy-primary; font-size: 34rpx; font-weight: 750; }
 
 /* ── 预留电话编辑 sheet ── */
 .phone-layer { position: fixed; inset: 0; z-index: 120; }

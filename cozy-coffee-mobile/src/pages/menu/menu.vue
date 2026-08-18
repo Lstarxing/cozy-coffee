@@ -50,7 +50,6 @@
           @click="selectCategory(index)"
         >
           <text class="category-name">{{ category.name }}</text>
-          <text v-if="categoryCount(category.id) > 0" class="cat-count">{{ categoryCount(category.id) }}</text>
         </view>
       </scroll-view>
 
@@ -187,6 +186,7 @@ import LoadingState from '@/components/states/LoadingState.vue'
 import EmptyState from '@/components/states/EmptyState.vue'
 import RetryState from '@/components/states/RetryState.vue'
 import OfflineState from '@/components/states/OfflineState.vue'
+import { resolveDeliveryAddress } from '@/services/address/DeliveryAddressResolver'
 
 const cartStore = useCartStore()
 const checkoutStore = useCheckoutStore()
@@ -200,10 +200,14 @@ const errorMessage = ref('')
 const cartVisible = ref(false)
 const storeSheetVisible = ref(false)
 const fulfillment = ref('pickup')
-function setFulfillment(value) {
+async function setFulfillment(value) {
   if (fulfillment.value === value) return
   fulfillment.value = value
   checkoutStore.diningMethod = value === 'delivery' ? 'DELIVERY' : 'TAKEOUT'
+  if (value === 'delivery') {
+    const addr = await resolveDeliveryAddress(checkoutStore)
+    if (!addr) uni.navigateTo({ url: '/pages/address/edit' })
+  }
 }
 const sysInfo = uni.getSystemInfoSync()
 const statusBarHeight = ref(sysInfo.statusBarHeight || 20)
@@ -224,7 +228,7 @@ onLoad((options) => {
   loadMenu()
 })
 
-onShow(() => {
+onShow(async () => {
   // 首页自提/外送按钮传入的选择优先
   const presetDining = uni.getStorageSync('cozy_dining_method')
   if (presetDining) {
@@ -234,6 +238,10 @@ onShow(() => {
   } else {
     // 否则恢复结算 store 中的选择
     fulfillment.value = checkoutStore.diningMethod === 'DELIVERY' ? 'delivery' : 'pickup'
+  }
+  // 外送：静默解析默认地址（无地址时由确认页引导添加）
+  if (checkoutStore.diningMethod === 'DELIVERY' && !checkoutStore.deliveryAddressId) {
+    await resolveDeliveryAddress(checkoutStore)
   }
   const preset = uni.getStorageSync('cozy_menu_category')
   if (preset) {
@@ -354,12 +362,6 @@ function onProductScroll() {
   setTimeout(() => { scrollSpyTick = false }, 16)
 }
 
-function categoryCount(categoryId) {
-  return cartStore.items
-    .filter(l => String(l.category || 'other').toLowerCase() === categoryId)
-    .reduce((sum, l) => sum + Number(l.quantity || 0), 0)
-}
-
 function productCount(productId) {
   return cartStore.items
     .filter(l => String(l.productId) === String(productId))
@@ -473,7 +475,6 @@ function closeOffShelf() {
 .category-sidebar { flex: none; width: 180rpx; height: 100%; background: $cozy-surface; border-right: 1rpx solid $cozy-border; }
 .category-item { position: relative; padding: 40rpx 16rpx; text-align: center; font-size: 26rpx; color: $cozy-muted; }
 .category-item.active { background: #fff; color: $cozy-ink; font-weight: 700; }
-.cat-count { position: absolute; right: 10rpx; top: 50%; transform: translateY(-50%); min-width: 30rpx; height: 30rpx; padding: 0 6rpx; border-radius: 999rpx; background: $cozy-ink; color: #fff; font-size: 18rpx; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
 
 /* 右商品区 */
 .product-scroll { min-width: 0; flex: 1; height: 100%; background: #fff; }

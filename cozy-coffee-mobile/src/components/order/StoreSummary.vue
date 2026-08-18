@@ -1,19 +1,40 @@
 <template>
   <view class="store-summary">
-    <view class="store-main" @click="$emit('tap')">
-      <view class="store-copy">
-        <view class="store-title-row">
-          <text class="store-name">{{ isDelivery ? '配送至' : name }}</text>
-          <text class="pickup-tag">{{ isDelivery ? '外送' : '自提' }}</text>
+    <!-- 外送：外送 tag + 地址 + 联系人 + 预计送达 -->
+    <template v-if="isDelivery">
+      <view class="store-main" @click="$emit('tap')">
+        <view class="store-copy">
+          <view class="store-title-row">
+            <text class="pickup-tag">外送</text>
+            <text class="store-address" :class="{ placeholder: !deliveryAddress }">{{ addressText }}</text>
+          </view>
+          <view v-if="deliveryAddress" class="contact-row">
+            <text class="contact-name">{{ contactName }}</text>
+            <text class="contact-phone">{{ deliveryAddress.phone }}</text>
+          </view>
         </view>
-        <text class="store-address" :class="{ placeholder: isDelivery && !deliveryAddress }">{{ isDelivery ? (deliveryAddress || '请选择配送地址') : address }}</text>
+        <text class="store-arrow">›</text>
       </view>
-      <text class="store-arrow">›</text>
-    </view>
-    <view class="pickup-row">
-      <text class="pickup-label">{{ isDelivery ? '预计送达' : '取餐时间' }}</text>
-      <text class="pickup-value">{{ isDelivery ? deliveryEta : pickupLabel }}</text>
-    </view>
+      <text class="delivery-eta">{{ deliveryEta }}</text>
+    </template>
+
+    <!-- 自提：门店名 + 地址 + 取餐时间 -->
+    <template v-else>
+      <view class="store-main" @click="$emit('tap')">
+        <view class="store-copy">
+          <view class="store-title-row">
+            <text class="store-name">{{ name }}</text>
+            <text class="pickup-tag">自提</text>
+          </view>
+          <text class="store-address">{{ address }}</text>
+        </view>
+        <text class="store-arrow">›</text>
+      </view>
+      <view class="pickup-row">
+        <text class="pickup-label">取餐时间</text>
+        <text class="pickup-value">{{ pickupLabel }}</text>
+      </view>
+    </template>
   </view>
 </template>
 
@@ -26,12 +47,23 @@ const props = defineProps({
   address: { type: String, default: FIXED_STORE.address },
   pickupLabel: { type: String, default: FIXED_STORE.pickupLabel },
   mode: { type: String, default: 'pickup' }, // pickup / delivery
-  deliveryAddress: { type: String, default: '' },
-  deliveryEta: { type: String, default: '约 30 分钟' }
+  deliveryAddress: { type: Object, default: null },
+  deliveryEta: { type: String, default: '现在下单，预计 30-40 分钟送达' }
 })
 defineEmits(['tap'])
 
 const isDelivery = computed(() => props.mode === 'delivery')
+
+const addressText = computed(() => {
+  if (!props.deliveryAddress) return '请添加收货地址'
+  return [props.deliveryAddress.region, props.deliveryAddress.detail].filter(Boolean).join(' ')
+})
+
+const contactName = computed(() => {
+  const a = props.deliveryAddress || {}
+  const honorific = String(a.gender || '').toUpperCase() === 'FEMALE' ? '女士' : '先生'
+  return `${a.name || ''}（${honorific}）`
+})
 </script>
 
 <style lang="scss" scoped>
@@ -62,11 +94,14 @@ const isDelivery = computed(() => props.mode === 'delivery')
   font-weight: 650;
 }
 .store-address {
-  display: block;
-  margin-top: 12rpx;
-  color: $cozy-ink;
-  font-size: 24rpx;
+  min-width: 0;
+  flex: 1;
+  font-size: 26rpx;
   line-height: 1.5;
+  color: $cozy-ink;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .store-address.placeholder { color: $cozy-placeholder; }
 .store-arrow {
@@ -76,6 +111,22 @@ const isDelivery = computed(() => props.mode === 'delivery')
   font-weight: 300;
   line-height: 1;
   margin-top: 4rpx;
+}
+.contact-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-top: 16rpx;
+}
+.contact-name { color: $cozy-ink; font-size: 26rpx; font-weight: 650; }
+.contact-phone { color: $cozy-muted; font-size: 24rpx; }
+.delivery-eta {
+  display: block;
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid $cozy-border;
+  color: $cozy-ink;
+  font-size: 24rpx;
 }
 .pickup-row {
   margin-top: 24rpx;

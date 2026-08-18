@@ -89,7 +89,10 @@
 import { ref } from 'vue'
 import CozyIcon from '@/components/CozyIcon.vue'
 import { imageUrl } from '@/config/image'
+import { useCheckoutStore } from '@/stores/checkout'
+import { resolveDeliveryAddress } from '@/services/address/DeliveryAddressResolver'
 
+const checkoutStore = useCheckoutStore()
 const currentSlide = ref(0)
 
 const entries = [
@@ -178,6 +181,16 @@ const origins = [
 
 function goMenu(fulfillment) {
   uni.setStorageSync('cozy_dining_method', fulfillment === 'delivery' ? 'delivery' : 'pickup')
+  if (fulfillment === 'delivery') {
+    resolveDeliveryAddress(checkoutStore).then(addr => {
+      if (!addr) {
+        uni.navigateTo({ url: '/pages/address/edit' })
+        return
+      }
+      uni.switchTab({ url: '/pages/menu/menu' })
+    })
+    return
+  }
   uni.switchTab({ url: '/pages/menu/menu' })
 }
 function goPage(url) { uni.navigateTo({ url }) }
