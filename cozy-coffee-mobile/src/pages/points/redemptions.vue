@@ -1,10 +1,10 @@
 <!--
-  兑换记录页 - 精确复现 prototype/points-redemptions.html：自取/外送筛选 + 订单卡片 + 取消/确认收货
+  兑换记录页 - 精确复现 prototype/points-redemptions.html：全部/虚拟/自提/快递筛选 + 订单卡片 + 取消/确认收货 + 查看详情
   数据源: /member/mall/orders (PointsOrderDTO)
 -->
 <template>
   <view class="redemptions-page">
-    <!-- 顶部白色筛选条（自取/外送，对齐订单页） -->
+    <!-- 顶部白色筛选条（全部/虚拟/自提/快递） -->
     <view class="order-top">
       <view class="filter-tabs">
         <view
@@ -49,8 +49,10 @@
             <text>{{ getFulfillmentText(order) }}</text>
             <text v-if="order.pickupCode" class="fulfill-code">取货码 {{ order.pickupCode }}</text>
             <text v-else-if="order.trackingNumber" class="fulfill-code">物流 {{ order.trackingNumber }}</text>
+            <text v-else-if="order.fulfillmentType === 'VIRTUAL' && order.virtualCode" class="fulfill-code">兑换码 {{ order.virtualCode }}</text>
           </view>
           <view class="order-actions" @click.stop>
+            <view class="mini-btn" @click="goToDetail(order)">查看详情</view>
             <view v-if="canCancel(order)" class="mini-btn" @click="askCancel(order)">取消兑换</view>
             <view v-if="canConfirm(order)" class="mini-btn primary" @click="askConfirm(order)">确认收货</view>
           </view>
@@ -61,7 +63,7 @@
     <!-- 空状态 -->
     <view v-else class="empty-state">
       <view class="empty-mark"><CozyIcon name="gift" :size="36" color="#753A22" /></view>
-      <text class="empty-text">暂无{{ activeFilter === 'pickup' ? '自取' : '外送' }}兑换记录</text>
+      <text class="empty-text">{{ emptyText }}</text>
       <text class="empty-hint">去积分商城兑换你的第一份心意</text>
     </view>
 
@@ -88,11 +90,13 @@ import RetryState from '@/components/states/RetryState.vue'
 import CozyIcon from '@/components/CozyIcon.vue'
 
 const filters = [
-  { value: 'pickup', label: '自取' },
-  { value: 'delivery', label: '外送' }
+  { value: 'all', label: '全部' },
+  { value: 'virtual', label: '虚拟' },
+  { value: 'pickup', label: '自提' },
+  { value: 'delivery', label: '快递' }
 ]
 
-const activeFilter = ref('pickup')
+const activeFilter = ref('all')
 const orders = ref([])
 const loading = ref(false)
 const errorMessage = ref('')
@@ -102,9 +106,16 @@ const confirmTitle = ref('')
 const confirmContent = ref('')
 let pendingAction = null // { type, order }
 
-const shownOrders = computed(() => orders.value.filter(o => activeFilter.value === 'pickup'
-  ? (o.fulfillmentType === 'PICKUP' || o.fulfillmentType === 'VIRTUAL')
-  : o.fulfillmentType === 'DELIVERY'))
+const FULFILL_FILTER = { virtual: 'VIRTUAL', pickup: 'PICKUP', delivery: 'DELIVERY' }
+const shownOrders = computed(() => {
+  if (activeFilter.value === 'all') return orders.value
+  const key = FULFILL_FILTER[activeFilter.value]
+  return orders.value.filter(o => o.fulfillmentType === key)
+})
+const emptyText = computed(() => {
+  const label = filters.find(f => f.value === activeFilter.value)?.label
+  return label && label !== '全部' ? `暂无${label}兑换记录` : '暂无兑换记录'
+})
 
 const STATUS_TEXT = { pending: '待处理', processing: '处理中', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
 const FULFILL_TEXT = { PICKUP: '到店自提', DELIVERY: '快递配送', VIRTUAL: '已发放至券包' }
