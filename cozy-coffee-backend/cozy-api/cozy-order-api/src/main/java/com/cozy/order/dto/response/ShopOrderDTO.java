@@ -49,6 +49,7 @@ public class ShopOrderDTO implements Serializable {
 
     // 券信息
     private Long appliedCouponId;
+    private List<String> appliedCouponNames; // 本单使用的优惠券名称（主券 + 附加券）
 
     // 商品摘要（列表展示用，如"美式x2,拿铁x1"）
     private String itemsSummary;

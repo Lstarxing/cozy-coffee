@@ -785,9 +785,9 @@ public class PointsMallServiceImpl implements PointsMallService {
         // 计算折扣金额
         BigDecimal discountAmount = calculateCouponDiscount(coupon, orderAmount, items);
 
-        // 更新券状态
+        // 更新券状态：订单创建（待支付）时冻结，支付/接单后转 USED，取消则回滚
         LocalDateTime now = LocalDateTime.now();
-        coupon.setStatus("USED");
+        coupon.setStatus("FROZEN");
         coupon.setUsedAt(now);
         userCouponMapper.updateById(coupon);
 
@@ -2254,8 +2254,8 @@ public class PointsMallServiceImpl implements PointsMallService {
             return;
         }
 
-        if (!"USED".equals(coupon.getStatus())) {
-            log.warn("针对非使用状态的券无需回滚: status={}", coupon.getStatus());
+        if (!"USED".equals(coupon.getStatus()) && !"FROZEN".equals(coupon.getStatus())) {
+            log.warn("针对非使用/冻结状态的券无需回滚: status={}", coupon.getStatus());
             return;
         }
 
@@ -2264,6 +2264,45 @@ public class PointsMallServiceImpl implements PointsMallService {
         coupon.setUsedAt(null);
         userCouponMapper.updateById(coupon);
         log.info("优惠券已归还为 ISSUED 状态: couponId={}", couponId);
+    }
+
+    @Override
+    @Transactional
+    public void confirmCoupon(Long couponId, Long userId) {
+        log.info("确认优惠券(FROZEN→USED): couponId={}, userId={}", couponId, userId);
+        if (couponId == null)
+            return;
+
+        UserCoupon coupon = userCouponMapper.selectById(couponId);
+        if (coupon == null) {
+            log.warn("确认优惠券失败，券不存在: id={}", couponId);
+            return;
+        }
+        if (userId != null && !coupon.getUserId().equals(userId)) {
+            log.warn("确认优惠券失败，用户不匹配: couponUserId={}, requestUserId={}", coupon.getUserId(), userId);
+            return;
+        }
+
+        if (!"FROZEN".equals(coupon.getStatus())) {
+            log.warn("券状态不是 FROZEN，跳过确认: status={}", coupon.getStatus());
+            return;
+        }
+
+        coupon.setStatus("USED");
+        userCouponMapper.updateById(coupon);
+        log.info("优惠券已确认核销: couponId={}", couponId);
+    }
+
+    @Override
+    public List<UserCouponDTO> getCouponsByIds(List<Long> couponIds) {
+        if (couponIds == null || couponIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        LambdaQueryWrapper<UserCoupon> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(UserCoupon::getId, couponIds);
+        return userCouponMapper.selectList(wrapper).stream()
+                .map(this::toCouponDTO)
+                .collect(Collectors.toList());
     }
 
     /**

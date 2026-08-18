@@ -5,6 +5,7 @@ import com.cozy.common.mq.MqTags;
 import com.cozy.common.mq.MqTopics;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.dto.response.MemberDTO;
+import com.cozy.mall.api.PointsMallService;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.order.dto.response.ShopOrderDTO;
 import com.cozy.order.dto.response.ShopOrderItemDTO;
@@ -51,6 +52,9 @@ public class OrderCommandService {
     @DubboReference(check = false)
     private MemberService memberService;
 
+    @DubboReference(check = false)
+    private PointsMallService pointsMallService;
+
     public ShopOrderDTO updateOrderStatus(Long orderId, String status) {
         if (orderId == null) {
             throw new BusinessException("订单ID不能为空");
@@ -92,6 +96,7 @@ public class OrderCommandService {
         orderMapper.updateById(order);
         orderInfraService.syncPendingTimeoutIndex(order);
         log.info("订单接单: orderId={}, orderNo={}", orderId, order.getOrderNo());
+        confirmOrderCoupon(order);
         return orderDtoEnricher.toOrderDTO(order, null);
     }
 
@@ -130,7 +135,19 @@ public class OrderCommandService {
         orderMapper.updateById(order);
         orderInfraService.syncPendingTimeoutIndex(order);
         log.info("订单支付后自动接单: orderId={}, orderNo={}", orderId, order.getOrderNo());
+        confirmOrderCoupon(order);
         return orderDtoEnricher.toOrderDTO(order, null);
+    }
+
+    /** 订单支付/接单成功后确认优惠券（FROZEN → USED），失败不阻塞接单。 */
+    private void confirmOrderCoupon(ShopOrder order) {
+        if (order == null || order.getAppliedCouponId() == null) return;
+        try {
+            pointsMallService.confirmCoupon(order.getAppliedCouponId(), order.getUserId());
+        } catch (Exception e) {
+            log.warn("确认优惠券失败(不影响接单): orderId={}, couponId={}, error={}",
+                    order.getId(), order.getAppliedCouponId(), e.getMessage());
+        }
     }
 
     /**

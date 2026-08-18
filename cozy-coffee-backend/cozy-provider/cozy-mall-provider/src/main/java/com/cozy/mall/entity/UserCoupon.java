@@ -18,7 +18,7 @@ public class UserCoupon {
     private String couponCode;
     private String couponType; // EXCHANGE/DISCOUNT/FULL_REDUCE
     private String ruleJson;
-    private String status; // ISSUED/USED/EXPIRED
+    private String status; // ISSUED(可使用) / FROZEN(待支付冻结) / USED(已核销) / EXPIRED(已过期)
     private LocalDateTime issuedAt;
     private LocalDateTime expiresAt;
     private LocalDateTime usedAt;

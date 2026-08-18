@@ -1,6 +1,8 @@
 package com.cozy.order.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.mall.api.PointsMallService;
+import com.cozy.mall.dto.response.UserCouponDTO;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
@@ -15,7 +17,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +40,9 @@ public class OrderDtoEnricher {
 
     @DubboReference(check = false)
     private MemberService memberService;
+
+    @DubboReference(check = false)
+    private PointsMallService pointsMallService;
 
     @Value("${cozy.order.timeout-cancel.timeout-minutes:1}")
     private int orderTimeoutMinutes;
@@ -133,8 +141,46 @@ public class OrderDtoEnricher {
         dto.setDeliveryFeeWaived(entity.getDeliveryFeeWaived());
         dto.setDeliveryFeeWaivedReason(entity.getDeliveryFeeWaivedReason());
         populateExpiryInfo(entity, dto);
+        enrichCouponNames(dto, entity);
 
         return dto;
+    }
+
+    /** 解析本单使用的优惠券名称（主券 + 附加券），失败不影响订单装配。 */
+    private void enrichCouponNames(ShopOrderDTO dto, ShopOrder entity) {
+        List<Long> ids = new ArrayList<>();
+        if (entity.getAppliedCouponId() != null) {
+            ids.add(entity.getAppliedCouponId());
+        }
+        String addon = entity.getAppliedAddonCouponIds();
+        if (addon != null && !addon.isBlank()) {
+            for (String part : addon.split(",")) {
+                try {
+                    Long id = Long.parseLong(part.trim());
+                    if (!ids.contains(id)) ids.add(id);
+                } catch (NumberFormatException ignored) {
+                    // 忽略非法 id
+                }
+            }
+        }
+        if (ids.isEmpty()) return;
+        try {
+            Map<Long, String> names = pointsMallService.getCouponsByIds(ids).stream()
+                    .collect(Collectors.toMap(UserCouponDTO::getId, c -> couponDisplayName(c), (a, b) -> a));
+            dto.setAppliedCouponNames(ids.stream().map(names::get).filter(Objects::nonNull).collect(Collectors.toList()));
+        } catch (Exception e) {
+            log.warn("解析优惠券名称失败(不影响订单): orderId={}, error={}", entity.getId(), e.getMessage());
+        }
+    }
+
+    private String couponDisplayName(UserCouponDTO coupon) {
+        if (coupon.getDisplayTitle() != null && !coupon.getDisplayTitle().isEmpty()) {
+            return coupon.getDisplayTitle();
+        }
+        if (coupon.getProductName() != null && !coupon.getProductName().isEmpty()) {
+            return coupon.getProductName();
+        }
+        return "优惠券";
     }
 
     /**

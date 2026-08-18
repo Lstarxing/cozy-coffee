@@ -158,6 +158,22 @@ public interface PointsMallService {
         void rollbackCoupon(Long couponId, Long userId);
 
         /**
+         * 确认优惠券（订单支付/接单成功后调用）：FROZEN → USED
+         *
+         * @param couponId 券ID
+         * @param userId   用户ID
+         */
+        void confirmCoupon(Long couponId, Long userId);
+
+        /**
+         * 按券 ID 批量查询优惠券（订单详情展示券名用）
+         *
+         * @param couponIds 券ID列表
+         * @return 优惠券 DTO 列表
+         */
+        List<UserCouponDTO> getCouponsByIds(List<Long> couponIds);
+
+        /**
          * v5.0: 发放优惠券给用户（用于签到奖励等场景）
          *
          * @param userId         用户ID
