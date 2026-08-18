@@ -27,12 +27,12 @@
 
           <view class="service">
             <view class="pickup-row">
-              <view class="pickup-half" @click="goMenu">
+              <view class="pickup-half" @click="goMenu('pickup')">
                 <text class="pickup-cn">自提</text>
                 <text class="pickup-en">PICK UP</text>
               </view>
               <view class="pickup-divider" />
-              <view class="pickup-half" @click="goMenu">
+              <view class="pickup-half" @click="goMenu('delivery')">
                 <text class="pickup-cn">外送</text>
                 <text class="pickup-en">DELIVERY</text>
               </view>
@@ -176,7 +176,10 @@ const origins = [
   }
 ]
 
-function goMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
+function goMenu(fulfillment) {
+  uni.setStorageSync('cozy_dining_method', fulfillment === 'delivery' ? 'delivery' : 'pickup')
+  uni.switchTab({ url: '/pages/menu/menu' })
+}
 function goPage(url) { uni.navigateTo({ url }) }
 
 function onSwiperChange(e) {

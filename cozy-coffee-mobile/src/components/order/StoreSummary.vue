@@ -1,34 +1,37 @@
 <template>
   <view class="store-summary">
-    <view class="store-main" @click="goStore">
+    <view class="store-main" @click="$emit('tap')">
       <view class="store-copy">
         <view class="store-title-row">
-          <text class="store-name">{{ name }}</text>
-          <text class="pickup-tag">自提</text>
+          <text class="store-name">{{ isDelivery ? '配送至' : name }}</text>
+          <text class="pickup-tag">{{ isDelivery ? '外送' : '自提' }}</text>
         </view>
-        <text class="store-address">{{ address }}</text>
+        <text class="store-address" :class="{ placeholder: isDelivery && !deliveryAddress }">{{ isDelivery ? (deliveryAddress || '请选择配送地址') : address }}</text>
       </view>
       <text class="store-arrow">›</text>
     </view>
     <view class="pickup-row">
-      <text class="pickup-label">取餐时间</text>
-      <text class="pickup-value">{{ pickupLabel }}</text>
+      <text class="pickup-label">{{ isDelivery ? '预计送达' : '取餐时间' }}</text>
+      <text class="pickup-value">{{ isDelivery ? deliveryEta : pickupLabel }}</text>
     </view>
   </view>
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { FIXED_STORE } from '@/config/store'
 
-defineProps({
+const props = defineProps({
   name: { type: String, default: FIXED_STORE.name },
   address: { type: String, default: FIXED_STORE.address },
-  pickupLabel: { type: String, default: FIXED_STORE.pickupLabel }
+  pickupLabel: { type: String, default: FIXED_STORE.pickupLabel },
+  mode: { type: String, default: 'pickup' }, // pickup / delivery
+  deliveryAddress: { type: String, default: '' },
+  deliveryEta: { type: String, default: '约 30 分钟' }
 })
+defineEmits(['tap'])
 
-function goStore() {
-  uni.navigateTo({ url: '/pages/store/list' })
-}
+const isDelivery = computed(() => props.mode === 'delivery')
 </script>
 
 <style lang="scss" scoped>
@@ -65,6 +68,7 @@ function goStore() {
   font-size: 24rpx;
   line-height: 1.5;
 }
+.store-address.placeholder { color: $cozy-placeholder; }
 .store-arrow {
   flex: none;
   color: $cozy-muted;

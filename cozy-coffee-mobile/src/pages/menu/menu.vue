@@ -27,8 +27,8 @@
           <text class="store-name">{{ fixedStore.name }}</text>
         </view>
         <view class="pickup-switch">
-          <view class="pickup-opt" :class="{ active: fulfillment === 'pickup' }" @click="fulfillment = 'pickup'">自提</view>
-          <view class="pickup-opt" :class="{ active: fulfillment === 'delivery' }" @click="fulfillment = 'delivery'">外送</view>
+          <view class="pickup-opt" :class="{ active: fulfillment === 'pickup' }" @click="setFulfillment('pickup')">自提</view>
+          <view class="pickup-opt" :class="{ active: fulfillment === 'delivery' }" @click="setFulfillment('delivery')">外送</view>
         </view>
       </view>
       <view class="store-meta">距离您 1.2km</view>
@@ -177,6 +177,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import { FIXED_STORE } from '@/config/store'
 import { getMenuData } from '@/api/product'
 import { useCartStore } from '@/stores/cart'
+import { useCheckoutStore } from '@/stores/checkout'
 import { NetworkError } from '@/services/errors/AppError'
 import { restoreOrderToCart } from '@/services/order/ReorderService'
 import CartBar from '@/components/order/CartBar.vue'
@@ -188,6 +189,7 @@ import RetryState from '@/components/states/RetryState.vue'
 import OfflineState from '@/components/states/OfflineState.vue'
 
 const cartStore = useCartStore()
+const checkoutStore = useCheckoutStore()
 const fixedStore = FIXED_STORE
 const categories = ref([])
 const currentCategoryIndex = ref(0)
@@ -198,6 +200,11 @@ const errorMessage = ref('')
 const cartVisible = ref(false)
 const storeSheetVisible = ref(false)
 const fulfillment = ref('pickup')
+function setFulfillment(value) {
+  if (fulfillment.value === value) return
+  fulfillment.value = value
+  checkoutStore.diningMethod = value === 'delivery' ? 'DELIVERY' : 'TAKEOUT'
+}
 const sysInfo = uni.getSystemInfoSync()
 const statusBarHeight = ref(sysInfo.statusBarHeight || 20)
 const navRight = ref(100)
@@ -218,6 +225,16 @@ onLoad((options) => {
 })
 
 onShow(() => {
+  // 首页自提/外送按钮传入的选择优先
+  const presetDining = uni.getStorageSync('cozy_dining_method')
+  if (presetDining) {
+    uni.removeStorageSync('cozy_dining_method')
+    fulfillment.value = presetDining === 'delivery' ? 'delivery' : 'pickup'
+    checkoutStore.diningMethod = fulfillment.value === 'delivery' ? 'DELIVERY' : 'TAKEOUT'
+  } else {
+    // 否则恢复结算 store 中的选择
+    fulfillment.value = checkoutStore.diningMethod === 'DELIVERY' ? 'delivery' : 'pickup'
+  }
   const preset = uni.getStorageSync('cozy_menu_category')
   if (preset) {
     uni.removeStorageSync('cozy_menu_category')

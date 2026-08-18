@@ -16,7 +16,7 @@ function fixture(overrides = {}) {
   const networkService = { ensureOnline: vi.fn().mockResolvedValue(true) }
   const sessionService = { ensureCheckoutIdentity: vi.fn().mockResolvedValue(true), clearOnAuthFailure: vi.fn() }
   const previewService = { preview: vi.fn().mockResolvedValue({ subtotal: 20, discount: 0, payable: 20, previewVersion: 'p1' }) }
-  const orderService = { create: vi.fn().mockResolvedValue({ id: 9, payAmount: 20 }) }
+  const orderService = { create: vi.fn().mockResolvedValue({ id: 9, payAmount: 20 }), accept: vi.fn().mockResolvedValue({ id: 9, status: 'preparing' }) }
   const paymentService = { pay: vi.fn().mockResolvedValue({ status: 'success', transactionId: 't1' }) }
   const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
   const dependencies = { cartStore, checkoutStore, networkService, sessionService, previewService, orderService, paymentService, logger, platform: () => 'test', ...overrides }

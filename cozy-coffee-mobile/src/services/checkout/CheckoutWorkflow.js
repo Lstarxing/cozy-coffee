@@ -45,6 +45,8 @@ export class CheckoutWorkflow {
       items: this.cartStore.items,
       storeId: this.checkoutStore.storeId,
       pickupTime: this.checkoutStore.pickupTime,
+      diningMethod: this.checkoutStore.diningMethod,
+      deliveryAddressId: this.checkoutStore.deliveryAddressId,
       selectedCouponId: this.checkoutStore.selectedCouponId,
       remark: this.checkoutStore.remark,
       phone: this.checkoutStore.phone,
@@ -166,6 +168,12 @@ export class CheckoutWorkflow {
       }
 
       this.checkoutStore.transition('PAYMENT_SUCCEEDED')
+      // 支付成功后自动接单：待支付 pending → 制作中 preparing
+      if (order?.id) {
+        this.orderService.accept(order.id).catch(error => {
+          this.log('warn', 'Auto Accept Failed', startedAt, { traceId, orderId: order?.id, error: error?.message })
+        })
+      }
       this.cartStore.clearCart()
       this.lastResult = { status: 'success', order, payment }
       this.log('info', 'Payment Success', startedAt, { traceId, orderId: order?.id })

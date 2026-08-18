@@ -10,6 +10,8 @@ function newIdempotencyKey() {
 export const useCheckoutStore = defineStore('checkout', () => {
   const storeId = ref(1)
   const pickupTime = ref('ASAP')
+  const diningMethod = ref('TAKEOUT') // TAKEOUT 自提 / DELIVERY 外送
+  const deliveryAddressId = ref(null)
   const selectedCouponId = ref(null)
   const remark = ref('')
   const phone = ref('')
@@ -59,6 +61,8 @@ export const useCheckoutStore = defineStore('checkout', () => {
     if (!preserveIntent) {
       storeId.value = 1
       pickupTime.value = 'ASAP'
+      diningMethod.value = 'TAKEOUT'
+      deliveryAddressId.value = null
       selectedCouponId.value = null
       remark.value = ''
       phone.value = ''
@@ -68,6 +72,8 @@ export const useCheckoutStore = defineStore('checkout', () => {
   return {
     storeId,
     pickupTime,
+    diningMethod,
+    deliveryAddressId,
     selectedCouponId,
     remark,
     phone,

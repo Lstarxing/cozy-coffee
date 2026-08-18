@@ -29,3 +29,8 @@ export const getOrderDetail = (orderId) => {
 export const cancelOrder = (orderId) => {
     return post(`/order/${orderId}/cancel`)
 }
+
+// 支付成功后自动接单
+export const acceptOrder = (orderId) => {
+    return post(`/order/${orderId}/accept`)
+}

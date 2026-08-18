@@ -1,7 +1,17 @@
 <template>
   <view class="confirm-page">
     <view v-if="cartStore.items.length" class="confirm-content">
-      <StoreSummary />
+      <!-- 自提/外送切换 -->
+      <view class="fulfillment-switch">
+        <view class="fulfillment-opt" :class="{ active: diningMethod === 'TAKEOUT' }" @click="setDining('TAKEOUT')">自提</view>
+        <view class="fulfillment-opt" :class="{ active: diningMethod === 'DELIVERY' }" @click="setDining('DELIVERY')">外送</view>
+      </view>
+
+      <StoreSummary
+        :mode="diningMethod === 'DELIVERY' ? 'delivery' : 'pickup'"
+        :delivery-address="deliveryAddressText"
+        @tap="onStoreTap"
+      />
 
       <view class="section-block">
         <view class="section-heading">
@@ -115,7 +125,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { getCouponList } from '@/api/coupon'
 import { useCartStore } from '@/stores/cart'
 import { useCheckoutStore } from '@/stores/checkout'
@@ -140,8 +150,16 @@ const selectedCoupon = ref(null)
 const couponVisible = ref(false)
 const phoneVisible = ref(false)
 const phoneDraft = ref('')
+const diningMethod = ref(checkoutStore.diningMethod || 'TAKEOUT')
+const deliveryAddress = ref(null)
 const previewError = ref('')
 let loaded = false
+
+const deliveryAddressText = computed(() => {
+  const a = deliveryAddress.value
+  if (!a) return ''
+  return [a.region, a.detail].filter(Boolean).join(' ')
+})
 
 const couponHint = computed(() => coupons.value.length ? `${coupons.value.length} 张可用` : '暂无可用')
 const couponDisplayText = computed(() => selectedCoupon.value ? couponTitle(selectedCoupon.value) : couponHint.value)
@@ -156,7 +174,38 @@ onLoad(() => {
   checkoutStore.start()
   checkoutStore.pickupTime = 'ASAP'
   checkoutStore.storeId = 1
+  diningMethod.value = checkoutStore.diningMethod || 'TAKEOUT'
+  uni.$on('addressSelected', handleAddressSelected)
 })
+
+onUnload(() => {
+  uni.$off('addressSelected', handleAddressSelected)
+})
+
+function setDining(value) {
+  if (diningMethod.value === value) return
+  diningMethod.value = value
+  checkoutStore.diningMethod = value
+  checkoutStore.invalidatePreview()
+  loadPreview()
+}
+
+function onStoreTap() {
+  if (diningMethod.value === 'DELIVERY') {
+    uni.navigateTo({ url: '/pages/address/list' })
+    return
+  }
+  uni.navigateTo({ url: '/pages/store/list' })
+}
+
+function handleAddressSelected(address) {
+  if (!address) return
+  deliveryAddress.value = address
+  checkoutStore.deliveryAddressId = address.id || null
+  if (address.phone && !checkoutStore.phone) checkoutStore.phone = address.phone
+  checkoutStore.invalidatePreview()
+  loadPreview()
+}
 
 onShow(async () => {
   if (!cartStore.items.length) return
@@ -232,6 +281,10 @@ function savePhone() {
 
 async function submitOrder() {
   if (submitDisabled.value) return
+  if (diningMethod.value === 'DELIVERY' && !checkoutStore.deliveryAddressId) {
+    uni.showToast({ title: '请先选择配送地址', icon: 'none' })
+    return
+  }
   previewError.value = ''
   try {
     const result = ['awaiting_auth', 'offline', 'failed', 'cancelled'].includes(checkoutStore.status)
@@ -239,7 +292,8 @@ async function submitOrder() {
       : await workflow.submit({ coupon: selectedCoupon.value })
 
     if (result.status === 'cancelled') {
-      uni.showToast({ title: '已取消模拟支付，购物车已保留', icon: 'none' })
+      const orderId = result.order?.id || result.order?.orderId
+      uni.redirectTo({ url: `/pages/order/detail?id=${encodeURIComponent(orderId || '')}` })
       return
     }
 
@@ -297,6 +351,33 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 <style lang="scss" scoped>
 .confirm-page { min-height: 100vh; background: $cozy-surface; }
 .confirm-content { padding: 32rpx 32rpx 0; }
+
+/* ── 自提/外送切换 ── */
+.fulfillment-switch {
+  display: flex;
+  padding: 8rpx;
+  border: 1rpx solid $cozy-border;
+  border-radius: 999rpx;
+  background: $bg-white;
+  margin-bottom: 24rpx;
+}
+.fulfillment-opt {
+  flex: 1;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  color: $cozy-muted;
+
+  &.active {
+    background: $cozy-ink;
+    color: #fff;
+    font-weight: 600;
+  }
+}
+
 .section-block { margin-top: 24rpx; padding: 32rpx; border-radius: 28rpx; background: #fff; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20rpx; }
 .section-title { color: $cozy-ink; font-family: $font-display; font-size: 30rpx; font-weight: 600; }
