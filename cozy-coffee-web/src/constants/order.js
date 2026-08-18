@@ -6,7 +6,7 @@ export const ORDER_STATUS = {
 }
 
 export const ORDER_STATUS_MAP = {
-  [ORDER_STATUS.PENDING]: '待处理',
+  [ORDER_STATUS.PENDING]: '待支付',
   [ORDER_STATUS.PREPARING]: '制作中',
   [ORDER_STATUS.COMPLETED]: '已完成',
   [ORDER_STATUS.CANCELLED]: '已取消'

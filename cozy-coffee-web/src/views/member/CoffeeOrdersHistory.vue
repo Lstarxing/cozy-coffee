@@ -36,14 +36,16 @@
 
             <div class="order-meta-row">
               <p class="order-amount">实付: ¥{{ order.payAmount }}</p>
-              <p v-if="order.pointsEarned" class="points-earned">获得积分: +{{ order.pointsEarned }}</p>
+              <p v-if="order.pointsEarned && order.status === 'completed'" class="points-earned">获得积分: +{{ order.pointsEarned }}</p>
             </div>
             <div class="order-meta-secondary">
               <div class="meta-left">
                 <p class="order-time">{{ formatDate(order.createdAt) }}</p>
                 <p v-if="order.pickupCode" class="pickup-code">取餐码: <strong>{{ order.pickupCode }}</strong></p>
+                <p v-if="order.status === 'pending'" class="expire-countdown" :class="{ urgent: isAboutToExpire(order) }">{{ formatRemaining(order) }}</p>
               </div>
               <div v-if="order.status === 'pending'" class="meta-right">
+                <button class="pay-btn-small" @click.stop="payCoffeeOrder(order)">去支付</button>
                 <button class="cancel-btn-small" @click.stop="cancelCoffeeOrder(order.id)">取消订单</button>
               </div>
             </div>
@@ -59,17 +61,55 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { RefreshCw } from 'lucide-vue-next'
-import { cancelOrder, listOrders } from '@/api/order'
+import { cancelOrder, listOrders, acceptOrder } from '@/api/order'
 import { getImageUrl } from '@/utils/image'
 
 const router = useRouter()
 
 const coffeeOrders = ref([])
 const isRefreshingOrders = ref(false)
+const nowTs = ref(Date.now())
+let countdownTimer = null
+
+function startCountdown() {
+  stopCountdown()
+  countdownTimer = setInterval(() => { nowTs.value = Date.now() }, 1000)
+}
+function stopCountdown() {
+  if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null }
+}
+
+function getOrderExpireMs(order) {
+  if (order?.expireAt) {
+    const t = new Date(order.expireAt).getTime()
+    if (!Number.isNaN(t)) return t
+  }
+  if (order?.createdAt) {
+    const ct = new Date(order.createdAt).getTime()
+    if (!Number.isNaN(ct)) return ct + 15 * 60 * 1000
+  }
+  return null
+}
+
+function formatRemaining(order) {
+  const expireMs = getOrderExpireMs(order)
+  if (expireMs == null) return '等待支付'
+  const remain = Math.max(0, Math.floor((expireMs - nowTs.value) / 1000))
+  if (remain <= 0) return '即将自动取消'
+  const mm = String(Math.floor(remain / 60)).padStart(2, '0')
+  const ss = String(remain % 60).padStart(2, '0')
+  return `剩余 ${mm}:${ss} 自动取消`
+}
+
+function isAboutToExpire(order) {
+  const expireMs = getOrderExpireMs(order)
+  if (expireMs == null) return false
+  return Math.max(0, Math.floor((expireMs - nowTs.value) / 1000)) <= 30
+}
 
 async function loadCoffeeOrders() {
   try {
@@ -90,6 +130,28 @@ async function handleRefreshOrders() {
     ElMessage.error('刷新失败')
   } finally {
     isRefreshingOrders.value = false
+  }
+}
+
+async function payCoffeeOrder(order) {
+  try {
+    await ElMessageBox.confirm(`订单金额 ¥${Number(order?.payAmount ?? order?.totalAmount ?? 0).toFixed(2)}，确认模拟支付？`, '模拟支付', {
+      confirmButtonText: '确认支付',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    const res = await acceptOrder(order.id)
+    if (res.success || res.status === 200) {
+      ElMessage.success('支付成功，商家已接单')
+      loadCoffeeOrders()
+    } else {
+      ElMessage.error(res.message || '支付失败')
+    }
+  } catch (e) {
+    if (e !== 'cancel') {
+      console.error(e)
+      ElMessage.error('支付失败')
+    }
   }
 }
 
@@ -117,7 +179,8 @@ async function cancelCoffeeOrder(orderId) {
 
 function getStatusText(status) {
   const map = {
-    pending: '待处理',
+    pending: '待支付',
+    preparing: '制作中',
     processing: '处理中',
     shipped: '已发货',
     completed: '已完成',
@@ -169,7 +232,9 @@ function formatSpecs(item) {
 
 onMounted(() => {
   loadCoffeeOrders()
+  startCountdown()
 })
+onUnmounted(stopCountdown)
 </script>
 
 <style scoped>
@@ -409,6 +474,18 @@ onMounted(() => {
   border: 1px dashed #fdba74;
 }
 
+.expire-countdown {
+  display: inline-block;
+  margin-top: 6px;
+  color: #d97706;
+  font-size: 13px;
+  font-weight: 600;
+}
+.expire-countdown.urgent {
+  color: #ef4444;
+  font-weight: 700;
+}
+
 .cancel-btn-small {
   background: #fff;
   border: 1px solid #d1d5db;
@@ -419,6 +496,21 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.2s;
   margin-left: auto;
+}
+
+.pay-btn-small {
+  background: #8b4513;
+  border: 1px solid #8b4513;
+  color: #fff;
+  padding: 4px 14px;
+  border-radius: 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pay-btn-small:hover {
+  background: #6d3610;
 }
 
 .cancel-btn-small:hover {

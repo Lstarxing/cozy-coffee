@@ -33,3 +33,8 @@ export function getOrderDetail(orderId) {
 export function cancelOrder(orderId) {
     return request.post(`/order/${orderId}/cancel`)
 }
+
+// 支付成功后自动接单
+export function acceptOrder(orderId) {
+    return request.post(`/order/${orderId}/accept`)
+}

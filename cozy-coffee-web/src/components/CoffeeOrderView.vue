@@ -86,12 +86,12 @@ v-if="showCustomizer" :product="selectedProduct" @close="showCustomizer = false"
 
 <script setup>
 import { ref, computed, onMounted, markRaw } from 'vue'
-import { getCoffeeProducts, createOrder } from '@/api/order'
+import { getCoffeeProducts, createOrder, acceptOrder } from '@/api/order'
 import { getImageUrl, handleImageError } from '@/utils/image'
 import { useCart } from '@/composables/useCart'
 import ProductCustomizer from './ProductCustomizer.vue'
 import ShoppingCart from './cart/ShoppingCart.vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Coffee, Sparkles, ShoppingCart as ShoppingCartIcon,
   Tag, Flame, Star, Cake, Plus
@@ -211,10 +211,39 @@ const handleCheckout = async (orderData) => {
     const res = await createOrder(payload, checkoutIdempotencyKey)
     if (res.success) {
       checkoutIdempotencyKey = ''
-      ElMessage.success(res.message || '订单创建成功！')
+      const order = res.data || {}
+      const amount = Number(order?.payAmount ?? order?.totalAmount ?? 0).toFixed(2)
+
+      // 模拟支付：确认支付 → 自动接单；取消 → 订单保持待支付（15 分钟自动取消）
+      let paid = false
+      try {
+        await ElMessageBox.confirm(
+          `订单金额 ¥${amount}，确认模拟支付？`,
+          '模拟支付',
+          {
+            confirmButtonText: '确认支付',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+        paid = true
+        if (order.id) {
+          await acceptOrder(order.id).catch(error => {
+            console.warn('自动接单失败', error)
+          })
+        }
+      } catch (_) {
+        // 用户取消支付，订单保持待支付
+      }
+
+      if (paid) {
+        ElMessage.success('支付成功，商家已接单')
+      } else {
+        ElMessage.warning('订单已创建，15 分钟内未支付将自动取消')
+      }
       clearCart()
       showCart.value = false
-      emit('order-created', res.data)
+      emit('order-created', order)
       emit('refresh-user')
     } else {
       ElMessage.error(res.message || '订单创建失败')
