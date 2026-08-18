@@ -8,15 +8,24 @@
     <RetryState v-else-if="errorMessage" :description="errorMessage" @retry="loadOrder" />
 
     <view v-else-if="order" class="detail-content">
+      <!-- 未支付：等待支付卡（无取餐码，取消/立即支付 CTA） -->
+      <view v-if="isPendingPay" class="pending-card">
+        <text class="pending-title">等待支付，剩余 {{ pendingRemain }}</text>
+        <text class="pending-sub">超过15分钟未支付，订单将自动取消</text>
+        <view class="pending-actions">
+          <view class="pending-btn ghost" @click="cancelPendingOrder">取消订单</view>
+          <view class="pending-btn solid" @click="payPendingOrder">{{ paying ? '支付中…' : '立即支付' }}</view>
+        </view>
+      </view>
+
       <!-- 状态卡（白卡：取餐号在上居中 + 三节点进度 已下单/制作中/待取餐） -->
-      <view class="status-card">
+      <view v-else class="status-card">
         <text v-if="statusText && (isRedeem || isCancelled)" class="status-line">{{ statusText }}</text>
         <view class="pickup-code-block">
           <text class="pickup-label">{{ codeCaption }}</text>
           <text class="pickup-code" :class="{ long: codeText.length > 6 }">{{ codeText }}</text>
         </view>
-        <text v-if="pendingCountdown" class="pickup-eta urgent">{{ pendingCountdown }}</text>
-        <text v-else-if="codeEta" class="pickup-eta">{{ codeEta }}</text>
+        <text v-if="codeEta" class="pickup-eta">{{ codeEta }}</text>
 
         <view v-if="!isRedeem" class="progress">
           <view class="progress-seg seg-a" :class="{ on: reachedIndex >= 1 }"></view>
@@ -65,12 +74,55 @@
           </view>
         </view>
 
-        <view class="sp-divider" />
+        <!-- 金额（商品小计 + 可折叠配送费/优惠合计 + 实付 + 订单信息） -->
+        <view class="sp-amount">
+          <template v-if="isRedeem">
+            <view class="sp-amount-row"><text>消耗积分</text><text>{{ formatPoints(consumePoints) }} 积分</text></view>
+            <view class="sp-amount-row"><text>兑换后剩余</text><text>{{ formatPoints(remainingPoints) }} 积分</text></view>
+          </template>
+          <template v-else>
+            <view class="sp-amount-row"><text>商品小计</text><text>¥{{ money(order.totalAmount) }}</text></view>
 
-        <view class="sp-total">
-          <text class="sp-total-count">共 {{ totalCount }} 份</text>
-          <text v-if="isRedeem" class="sp-total-price">实付 {{ formatPoints(consumePoints) }} 积分</text>
-          <text v-else class="sp-total-price">实付 ¥{{ money(payAmount) }}</text>
+            <!-- 可折叠：配送费 / 优惠合计 → 展开券明细 -->
+            <view v-if="deliveryFee || discount" class="sp-collapse" @click="amountExpanded = !amountExpanded">
+              <view v-if="deliveryFee" class="sp-amount-row"><text>配送费</text><text>¥{{ money(deliveryFee) }}</text></view>
+              <view v-if="discount" class="sp-amount-row discount">
+                <view class="collapse-left">
+                  <text>优惠合计</text>
+                  <text class="collapse-arrow" :class="{ open: amountExpanded }">›</text>
+                </view>
+                <text>-¥{{ money(order.discountAmount) }}</text>
+              </view>
+            </view>
+            <view class="sp-collapse-body" :class="{ open: amountExpanded }">
+              <view v-for="(name, idx) in couponNames" :key="idx" class="sp-coupon-line">
+                <text>{{ name }}</text>
+                <text>-¥{{ money(order.discountAmount) }}</text>
+              </view>
+            </view>
+          </template>
+
+          <view class="sp-total-line">
+            <text class="total-muted">共 {{ totalCount }} 件商品，实付</text>
+            <text v-if="isRedeem" class="total-value">{{ formatPoints(consumePoints) }} 积分</text>
+            <text v-else class="total-value">¥{{ money(payAmount) }}</text>
+          </view>
+
+          <!-- 订单信息（实付下方，分隔线分隔；配送方式/地址仅外送） -->
+          <view class="sp-divider" />
+          <view class="meta-row"><text>下单时间</text><text>{{ formatFullTime(order.createdAt) }}</text></view>
+          <view class="meta-row">
+            <text>订单编号</text>
+            <view class="meta-value"><text selectable>{{ order.orderNo }}</text><text class="copy-btn" @click="copyOrderNo">复制</text></view>
+          </view>
+          <template v-if="isDelivery">
+            <view class="sp-divider" />
+            <view class="meta-row"><text>配送方式</text><text>外送</text></view>
+            <view class="meta-row">
+              <text>配送地址</text>
+              <view class="meta-value"><text class="addr-text">{{ deliveryMetaText }}</text></view>
+            </view>
+          </template>
         </view>
 
         <view v-if="rewards" class="sp-reward">
@@ -89,40 +141,6 @@
         </view>
       </view>
 
-      <!-- 金额（优惠总结） -->
-      <view class="amount-block">
-        <template v-if="isRedeem">
-          <view class="amount-row"><text>消耗积分</text><text>{{ formatPoints(consumePoints) }} 积分</text></view>
-          <view class="amount-row"><text>兑换后剩余</text><text>{{ formatPoints(remainingPoints) }} 积分</text></view>
-        </template>
-        <template v-else>
-          <view v-if="Number(order.discountAmount || 0)" class="amount-row discount">
-            <text>优惠 <text class="coupon-tag">{{ couponLabel }}</text></text>
-            <text>-¥{{ money(order.discountAmount) }}</text>
-          </view>
-          <view v-if="deliveryFee" class="amount-row"><text>配送费</text><text>{{ money(deliveryFee) }}</text></view>
-        </template>
-      </view>
-
-      <!-- 订单信息（低权重） -->
-      <view class="meta-block">
-        <view class="meta-row"><text>下单时间</text><text>{{ formatFullTime(order.createdAt) }}</text></view>
-        <view class="meta-row">
-          <text>订单编号</text>
-          <view class="meta-value"><text selectable>{{ order.orderNo }}</text><text class="copy-btn" @click="copyOrderNo">复制</text></view>
-        </view>
-      </view>
-
-      <view class="detail-spacer" />
-    </view>
-
-    <!-- 底部操作 -->
-    <view v-if="order && canAction" class="detail-footer safe-area-bottom">
-      <view class="reorder-btn" :class="{ disabled: paying || reordering }" @click="footerAction">
-        <template v-if="isPendingPay">{{ paying ? '支付中…' : '去支付' }}</template>
-        <template v-else-if="isRedeem">{{ reordering ? '跳转中…' : '再次兑换' }}</template>
-        <template v-else>{{ reordering ? '恢复中…' : '再来一单' }}</template>
-      </view>
     </view>
   </view>
 </template>
@@ -130,11 +148,9 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
-import { getOrderDetail, acceptOrder } from '@/api/order'
+import { getOrderDetail, acceptOrder, cancelOrder } from '@/api/order'
 import { getRedemptionDetail } from '@/api/member'
-import { useCartStore } from '@/stores/cart'
 import { useSessionStore } from '@/stores/session'
-import { restoreOrderToCart } from '@/services/order/ReorderService'
 import { refreshMemberProfile } from '@/services/session/MemberProfileService'
 import { FIXED_STORE } from '@/config/store'
 import { formatCoffeeSpec } from '@/utils/spec'
@@ -147,11 +163,9 @@ const type = ref('coffee')
 const order = ref(null)
 const loading = ref(true)
 const errorMessage = ref('')
-const reordering = ref(false)
 const paying = ref(false)
 const nowTs = ref(Date.now())
 let countdownTicker = null
-const cartStore = useCartStore()
 const sessionStore = useSessionStore()
 
 const isRedeem = computed(() => type.value === 'redeem')
@@ -211,16 +225,20 @@ const codeEta = computed(() => {
 })
 
 const isPendingPay = computed(() => ['pending', 'pending_payment'].includes(normalizedStatus.value))
-const pendingCountdown = computed(() => {
-  if (!isPendingPay.value) return ''
+const pendingRemain = computed(() => {
+  if (!isPendingPay.value) return '--:--'
   const raw = order.value?.expireAt
   const expireMs = raw ? new Date(raw).getTime() : NaN
-  if (Number.isNaN(expireMs)) return '等待支付'
+  if (Number.isNaN(expireMs)) return '--:--'
   const remain = Math.max(0, Math.floor((expireMs - nowTs.value) / 1000))
-  if (remain <= 0) return '即将自动取消'
   const mm = String(Math.floor(remain / 60)).padStart(2, '0')
   const ss = String(remain % 60).padStart(2, '0')
-  return `剩余 ${mm}:${ss} 自动取消`
+  return `${mm}:${ss}`
+})
+const amountExpanded = ref(false)
+const deliveryMetaText = computed(() => {
+  const parts = [order.value?.receiverAddress, order.value?.receiverName, order.value?.receiverPhone].filter(Boolean)
+  return parts.join(' · ') || '—'
 })
 const statusText = computed(() => {
   const status = normalizedStatus.value
@@ -284,13 +302,15 @@ const rewards = computed(() => {
 const totalCount = computed(() => orderItems.value.reduce((sum, item) => sum + Number(item.quantity || 1), 0))
 const payAmount = computed(() => Number(order.value?.payAmount ?? order.value?.totalAmount ?? 0))
 const remainingPoints = computed(() => Number(sessionStore.memberInfo?.currentPoints) || 0)
-const couponLabel = computed(() => order.value?.couponName || order.value?.couponLabel || '优惠')
-const deliveryFee = computed(() => Number(order.value?.deliveryFee || 0))
-
-const canAction = computed(() => {
-  if (isRedeem.value) return true
-  return Boolean(order.value?.items?.length)
+const couponName = computed(() => order.value?.couponName || order.value?.couponLabel || '')
+const couponNames = computed(() => {
+  const names = order.value?.appliedCouponNames || []
+  if (names.length) return names
+  if (couponName.value) return [couponName.value]
+  return ['优惠券']
 })
+const deliveryFee = computed(() => Number(order.value?.deliveryFee || 0))
+const discount = computed(() => Number(order.value?.discountAmount || 0))
 
 onLoad(options => {
   orderId.value = options.id || options.orderId || ''
@@ -361,53 +381,6 @@ function navigateStore() {
   uni.showToast({ title: '打开导航', icon: 'none' })
 }
 
-async function footerAction() {
-  if (reordering.value || paying.value) return
-  if (isPendingPay.value) {
-    await payPendingOrder()
-    return
-  }
-  reordering.value = true
-  if (isRedeem.value) {
-    uni.navigateTo({ url: '/pages/mall/index' })
-    reordering.value = false
-    return
-  }
-  uni.showLoading({ title: '正在恢复商品', mask: true })
-  try {
-    const result = await restoreOrderToCart({ order: order.value, cartStore })
-    uni.hideLoading()
-    if (!result.restoredQuantity) {
-      uni.showToast({ title: '原订单商品均已下架，请重新选择', icon: 'none', duration: 2200 })
-      return
-    }
-    const notices = []
-    if (result.invalidItems.length) notices.push(`${result.invalidItems.length} 款商品已下架，未加入购物车`)
-    if (result.adjustedItems.length) notices.push(`${result.adjustedItems.length} 款商品规格已按当前菜单调整`)
-    if (notices.length) {
-      uni.showModal({
-        title: '部分商品有变动',
-        content: notices.join('\n'),
-        showCancel: false,
-        confirmText: '查看购物车',
-        success: openRestoredCart
-      })
-    } else {
-      openRestoredCart()
-    }
-  } catch (error) {
-    uni.hideLoading()
-    uni.showToast({ title: error?.message || '恢复商品失败，请稍后重试', icon: 'none', duration: 2200 })
-  } finally {
-    reordering.value = false
-  }
-}
-
-function openRestoredCart() {
-  uni.setStorageSync('cozy_open_cart_on_menu', '1')
-  uni.switchTab({ url: '/pages/menu/menu' })
-}
-
 async function payPendingOrder() {
   paying.value = true
   try {
@@ -433,11 +406,71 @@ async function payPendingOrder() {
     paying.value = false
   }
 }
+
+async function cancelPendingOrder() {
+  const confirmed = await new Promise(resolve => {
+    uni.showModal({
+      title: '取消订单',
+      content: '订单取消后，如使用优惠券会退回到卡包中',
+      confirmText: '确定取消',
+      cancelText: '再想想',
+      success: res => resolve(res.confirm)
+    })
+  })
+  if (!confirmed) return
+  try {
+    await cancelOrder(orderId.value)
+    uni.showToast({ title: '订单已取消', icon: 'none' })
+    loadOrder()
+  } catch (error) {
+    uni.showToast({ title: error?.message || '取消失败，请稍后重试', icon: 'none' })
+  }
+}
 </script>
 
 <style lang="scss" scoped>
 .detail-page { min-height: 100vh; background: $cozy-surface; }
 .detail-content { padding: 12rpx 40rpx 0; }
+
+/* ── 未支付：等待支付卡（无取餐码，取消/立即支付 CTA） ── */
+.pending-card {
+  margin-top: 24rpx;
+  padding: 40rpx 32rpx 32rpx;
+  border-radius: 28rpx;
+  background: $bg-white;
+}
+.pending-title {
+  display: block;
+  font-family: $font-display;
+  font-size: 40rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.pending-sub {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: $cozy-muted;
+}
+.pending-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 36rpx;
+}
+.pending-btn {
+  flex: 1;
+  height: 84rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  font-size: 27rpx;
+  font-weight: 650;
+
+  &.ghost { border: 1rpx solid $cozy-border; background: $bg-white; color: $cozy-ink; }
+  &.solid { background: $cozy-ink; color: #fff; }
+  &:active { opacity: .85; }
+}
 
 /* ── 状态卡（白卡：取餐号在上居中 + 三节点进度） ── */
 .status-card {
@@ -516,7 +549,7 @@ async function payPendingOrder() {
 /* ── 门店 + 商品（白卡，合并为一个板块） ── */
 .store-products {
   margin-top: 24rpx;
-  padding: 8rpx 32rpx;
+  padding: 8rpx 32rpx 40rpx;
   border-radius: 28rpx;
   background: $bg-white;
 }
@@ -560,7 +593,7 @@ async function payPendingOrder() {
 
   &:active { opacity: .6; }
 }
-.sp-divider { height: 1rpx; background: $cozy-border; }
+.sp-divider { height: 1rpx; margin: 20rpx 0; background: $cozy-border; }
 .sp-product {
   display: flex;
   align-items: center;
@@ -593,15 +626,69 @@ async function payPendingOrder() {
 .sp-price { display: block; font-size: 28rpx; font-weight: 650; color: $cozy-ink; }
 .sp-qty { display: block; margin-top: 8rpx; font-size: 22rpx; color: $cozy-muted; }
 .sp-points { display: block; font-size: 26rpx; font-weight: 700; color: $cozy-primary; }
-.sp-total {
+/* ── 金额（商品小计/配送费/优惠合计/实付 + 订单信息，商品详情模块内） ── */
+.sp-amount { padding: 8rpx 4rpx 0; }
+.sp-amount-row {
+  min-height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+  font-size: 25rpx;
+  color: $cozy-ink;
+
+  &.discount { color: $cozy-primary; }
+}
+.collapse-left {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.collapse-arrow {
+  font-size: 30rpx;
+  line-height: 1;
+  color: $cozy-placeholder;
+  transform: rotate(90deg);
+  transition: transform .3s $cozy-ease-out;
+}
+.collapse-arrow.open { transform: rotate(270deg); }
+.sp-collapse-body {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height .3s $cozy-ease-out, opacity .25s ease;
+}
+.sp-collapse-body.open {
+  max-height: 200rpx;
+  opacity: 1;
+}
+.sp-coupon-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+  margin: 4rpx 4rpx 4rpx 24rpx;
+  padding: 14rpx 4rpx 14rpx 20rpx;
+  border-left: 2rpx solid $cozy-border;
+  font-size: 24rpx;
+  color: $cozy-ink;
+}
+.sp-coupon-line text:last-child { color: $cozy-primary; font-weight: 650; }
+
+/* 实付（右对齐 + 共X件商品） */
+.sp-total-line {
   display: flex;
   align-items: baseline;
   justify-content: flex-end;
-  gap: 16rpx;
-  padding: 28rpx 4rpx 20rpx;
+  gap: 8rpx;
+  margin-top: 8rpx;
+  padding-top: 20rpx;
+  font-size: 25rpx;
 }
-.sp-total-count { font-size: 24rpx; color: $cozy-muted; }
-.sp-total-price { font-size: 28rpx; font-weight: 700; color: $cozy-ink; }
+.total-muted { color: $cozy-muted; }
+.total-value { color: $cozy-primary; font-size: 32rpx; font-weight: 750; }
+
+.addr-text { max-width: 440rpx; }
 
 /* ── 本次获得（完成订单，位于实付下方，对齐确认页可得积分样式） ── */
 .sp-reward {
@@ -617,26 +704,7 @@ async function payPendingOrder() {
 .sp-reward-text { color: $cozy-primary; font-size: 22rpx; font-weight: 650; }
 .sp-reward-sep { color: $cozy-border; font-size: 22rpx; }
 
-/* ── 金额 ── */
-.amount-block { padding: 12rpx 4rpx 20rpx; }
-.amount-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 24rpx;
-  padding: 18rpx 0;
-  font-size: 26rpx;
-  color: $cozy-ink;
-
-  .coupon-tag { font-size: 20rpx; color: $cozy-muted; }
-  &.discount { color: $cozy-primary; }
-}
-
-/* ── 订单信息（低权重） ── */
-.meta-block {
-  padding: 28rpx 4rpx 8rpx;
-  border-top: 1rpx solid $cozy-border;
-}
+/* ── 订单信息（低权重，位于商品卡实付下方） ── */
 .meta-row {
   display: flex;
   align-items: baseline;
@@ -659,31 +727,5 @@ async function payPendingOrder() {
   font-weight: 600;
 
   &:active { opacity: .6; }
-}
-
-.detail-spacer { height: 150rpx; }
-
-/* ── 底部操作 ── */
-.detail-footer {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 24rpx 40rpx max(24rpx, env(safe-area-inset-bottom));
-  background: transparent;
-}
-.reorder-btn {
-  height: 96rpx;
-  border-radius: 20rpx;
-  background: $cozy-ink;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 30rpx;
-  font-weight: 600;
-
-  &:active { opacity: .85; }
-  &.disabled { opacity: .55; }
 }
 </style>
