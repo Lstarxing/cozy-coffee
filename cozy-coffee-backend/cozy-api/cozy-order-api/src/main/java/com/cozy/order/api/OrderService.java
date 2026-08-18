@@ -82,6 +82,11 @@ public interface OrderService {
     ShopOrderDTO acceptOrder(Long orderId);
 
     /**
+     * 用户支付成功后自动接单（校验订单归属，状态改为preparing）
+     */
+    ShopOrderDTO acceptUserOrder(Long orderId, Long userId);
+
+    /**
      * 完成订单
      */
     ShopOrderDTO completeOrder(Long orderId);

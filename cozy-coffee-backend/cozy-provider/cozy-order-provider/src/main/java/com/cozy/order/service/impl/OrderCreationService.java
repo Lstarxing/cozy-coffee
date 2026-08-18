@@ -572,7 +572,7 @@ public class OrderCreationService {
         order.setPointsEarned(estimatedPoints); // 【预估】积分（实际发放在completeOrder）
         order.setPointsMultiplier(effectiveRate); // 记录实际生效的积分倍率
         order.setRewardsGranted(false); // 标记：奖励尚未发放
-        order.setStatus("pending");
+        order.setStatus("pending"); // 待支付：支付成功后由 accept 自动接单转 preparing
         order.setRemark(request.getRemark());
         order.setStoreId(1L);
         order.setBusinessDate(businessDate);

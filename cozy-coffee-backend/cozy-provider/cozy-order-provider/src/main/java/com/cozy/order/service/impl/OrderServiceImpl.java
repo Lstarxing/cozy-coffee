@@ -106,6 +106,11 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public ShopOrderDTO acceptUserOrder(Long orderId, Long userId) {
+        return commandService.acceptUserOrder(orderId, userId);
+    }
+
+    @Override
     public ShopOrderDTO completeOrder(Long orderId) {
         return commandService.completeOrder(orderId);
     }

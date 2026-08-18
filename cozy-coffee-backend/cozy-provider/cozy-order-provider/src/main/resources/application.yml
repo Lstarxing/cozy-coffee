@@ -61,7 +61,7 @@ cozy:
   order:
     timeout-cancel:
       enabled: true
-      timeout-minutes: 1
+      timeout-minutes: 15
       batch-size: 200
       max-rounds: 5
       scan-interval-ms: 15000

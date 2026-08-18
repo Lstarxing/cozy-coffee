@@ -96,6 +96,44 @@ public class OrderCommandService {
     }
 
     /**
+     * 用户支付成功后自动接单：校验订单归属后复用接单逻辑。
+     */
+    @Transactional
+    public ShopOrderDTO acceptUserOrder(Long orderId, Long userId) {
+        if (orderId == null) {
+            throw new BusinessException("订单ID不能为空");
+        }
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
+        }
+        ShopOrder order = orderMapper.selectById(orderId);
+        if (order == null) {
+            throw new BusinessException("订单不存在");
+        }
+        if (!order.getUserId().equals(userId)) {
+            throw new BusinessException("无权操作该订单");
+        }
+        OrderStateMachine current = OrderStateMachine.from(order.getStatus());
+        current.assertCanTransition(OrderStateMachine.PREPARING);
+
+        if (order.getPickupCode() == null || order.getPickupCode().isEmpty()) {
+            LocalDateTime now = LocalDateTime.now();
+            String pickupCode = pickupCodeService.generatePickupCode(1L, now);
+            LocalDate businessDate = pickupCodeService.calculateBusinessDate(now);
+            order.setPickupCode(pickupCode);
+            order.setBusinessDate(businessDate);
+            order.setPickupCodeGeneratedAt(now);
+            order.setStoreId(1L);
+        }
+
+        order.setStatus(OrderStateMachine.PREPARING.value());
+        orderMapper.updateById(order);
+        orderInfraService.syncPendingTimeoutIndex(order);
+        log.info("订单支付后自动接单: orderId={}, orderNo={}", orderId, order.getOrderNo());
+        return orderDtoEnricher.toOrderDTO(order, null);
+    }
+
+    /**
      * 完成订单 - v6.2 积分/EXP/首单奖励/月度任务已解耦到 MQ 消费者
      * C2 修复：Dubbo 远程调用移出 @Transactional，事务仅保护状态更新。
      */

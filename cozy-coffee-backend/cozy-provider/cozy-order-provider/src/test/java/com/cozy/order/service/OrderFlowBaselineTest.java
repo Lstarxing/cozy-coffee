@@ -33,10 +33,10 @@ import static org.junit.jupiter.api.Assertions.*;
  *   pickup_code_counter), preventing order DB pollution across runs.
  *
  * Status flow (verified against current OrderServiceImpl):
- *   createOrder  -> "pending"
- *   acceptOrder  -> "preparing"  (required before completeOrder; completeOrder
- *                                 throws "只有制作中的订单可以完成" if status != preparing)
+ *   createOrder  -> "pending"    (待支付，15 分钟超时自动取消)
+ *   acceptOrder  -> "preparing"  (支付成功后自动接单；completeOrder 前必须为 preparing)
  *   completeOrder -> "completed"
+ *   pending/preparing -> cancelOrder -> "cancelled"
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -75,12 +75,12 @@ public class OrderFlowBaselineTest {
 
         CreateOrderRequest request = buildBogoOrderRequest();
 
-        // Act: create order -> status "pending"
+        // Act: create order -> status "pending"（待支付）
         ShopOrderDTO created = orderService.createOrder(userId, memberLevel, null, request);
         assertNotNull(created.getId(), "Order should have an ID after creation");
-        assertEquals("pending", created.getStatus(), "New order should be pending");
+        assertEquals("pending", created.getStatus(), "New order should be pending (awaiting payment)");
 
-        // Act: accept order -> status "preparing" (gate before completeOrder)
+        // Act: accept order -> status "preparing"（支付成功后自动接单）
         ShopOrderDTO accepted = orderService.acceptOrder(created.getId());
         assertEquals("preparing", accepted.getStatus(), "Order should be preparing after accept");
 
@@ -106,7 +106,7 @@ public class OrderFlowBaselineTest {
 
         ShopOrderDTO created = orderService.createOrder(userId, memberLevel, null, request);
         assertNotNull(created.getId());
-        assertEquals("pending", created.getStatus());
+        assertEquals("pending", created.getStatus(), "New order should be pending (awaiting payment)");
 
         // Cancel (admin side)
         ShopOrderDTO cancelled = orderService.cancelOrder(created.getId());
@@ -128,9 +128,9 @@ public class OrderFlowBaselineTest {
         request.setDiningMethod("TAKEOUT");
 
         ShopOrderDTO created = orderService.createOrder(userId, memberLevel, null, request);
-        assertEquals("pending", created.getStatus());
+        assertEquals("pending", created.getStatus(), "New order should be pending (awaiting payment)");
 
-        // Accept -> "preparing"
+        // Accept -> "preparing"（支付成功后自动接单）
         ShopOrderDTO accepted = orderService.acceptOrder(created.getId());
         assertEquals("preparing", accepted.getStatus());
 

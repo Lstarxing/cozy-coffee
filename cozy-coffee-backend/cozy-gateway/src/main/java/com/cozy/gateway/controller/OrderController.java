@@ -71,7 +71,7 @@ public class OrderController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody CreateOrderRequest request) {
         ShopOrderDTO order = orderCoordinatorService.createOrder(AuthUtil.requireUserId(), idempotencyKey, request);
-        return Result.success(order, "下单成功！获得 " + order.getPointsEarned() + " 积分");
+        return Result.success(order, "下单成功");
     }
 
     @PostMapping("/cart/check")
@@ -92,5 +92,10 @@ public class OrderController {
     @PostMapping("/{id}/cancel")
     public Result<ShopOrderDTO> cancelOrder(@PathVariable Long id) {
         return Result.success(orderService.cancelUserOrder(id, AuthUtil.requireUserId()), "订单已取消");
+    }
+
+    @PostMapping("/{id}/accept")
+    public Result<ShopOrderDTO> acceptOrder(@PathVariable Long id) {
+        return Result.success(orderService.acceptUserOrder(id, AuthUtil.requireUserId()), "已接单");
     }
 }
