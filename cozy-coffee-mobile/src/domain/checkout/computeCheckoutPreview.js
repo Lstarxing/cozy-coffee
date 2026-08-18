@@ -25,7 +25,7 @@ function fnv1a(value) {
   return (hash >>> 0).toString(16).padStart(8, '0')
 }
 
-function canonicalInput(input, subtotal, discount) {
+function canonicalInput(input, subtotal, discount, deliveryFee) {
   const lines = [...(input.items || [])]
     .map(item => ({
       lineKey: item.lineKey || item.id || '',
@@ -42,7 +42,8 @@ function canonicalInput(input, subtotal, discount) {
     couponValue: discount,
     storeId: input.storeId ?? '',
     pickupTime: input.pickupTime ?? '',
-    subtotal
+    subtotal,
+    deliveryFee
   })
 }
 
@@ -51,12 +52,14 @@ export function computeCheckoutPreview(input = {}) {
     sum + Number(item.price ?? item.unitPrice ?? 0) * Number(item.quantity || 0)
   ), 0))
   const discount = Math.min(subtotal, couponDiscount(input.coupon, subtotal))
-  const payable = money(Math.max(0, subtotal - discount))
-  const previewVersion = `local-v1:${fnv1a(canonicalInput(input, subtotal, discount))}`
+  const deliveryFee = money(input.deliveryFee ?? 0)
+  const payable = money(Math.max(0, subtotal - discount + deliveryFee))
+  const previewVersion = `local-v1:${fnv1a(canonicalInput(input, subtotal, discount, deliveryFee))}`
 
   return Object.freeze({
     subtotal,
     discount,
+    deliveryFee,
     payable,
     previewVersion,
     previewToken: previewVersion,

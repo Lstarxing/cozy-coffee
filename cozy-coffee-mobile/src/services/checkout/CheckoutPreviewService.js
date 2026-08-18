@@ -4,6 +4,16 @@ import { Logger } from '@/services/logging/Logger'
 
 const FALLBACK_CODES = new Set([404, '404', 'NOT_FOUND', 'PREVIEW_NOT_IMPLEMENTED', 'CHECKOUT_PREVIEW_UNAVAILABLE'])
 
+const DELIVERY_FEE = 3
+
+function money(value) {
+  return Math.round((Number(value) || 0) * 100) / 100
+}
+
+function deliveryFeeFor(diningMethod) {
+  return String(diningMethod || '').toUpperCase() === 'DELIVERY' ? DELIVERY_FEE : 0
+}
+
 function canUseLocalFallback(error) {
   return error instanceof BusinessError && (error.status === 404 || FALLBACK_CODES.has(error.code))
 }
@@ -15,7 +25,8 @@ export class CheckoutPreviewService {
   }
 
   async preview(context) {
-    const local = computeCheckoutPreview(context)
+    const deliveryFee = deliveryFeeFor(context?.diningMethod)
+    const local = computeCheckoutPreview({ ...context, deliveryFee })
     try {
       const result = await this.orderService.checkCart(context)
       if (result?.invalidItems?.length) {
@@ -34,10 +45,13 @@ export class CheckoutPreviewService {
         throw new BusinessError('结算预览响应不完整', { code: 'INVALID_PREVIEW_RESPONSE' })
       }
 
+      const subtotal = Number(result.preview.subtotal ?? local.subtotal)
+      const discount = Number(result.preview.discount ?? local.discount)
       return Object.freeze({
-        subtotal: Number(result.preview.subtotal ?? local.subtotal),
-        discount: Number(result.preview.discount ?? local.discount),
-        payable: Number(result.preview.payable ?? local.payable),
+        subtotal,
+        discount,
+        deliveryFee,
+        payable: money(Math.max(0, subtotal - discount + deliveryFee)),
         previewToken: result.preview.previewToken,
         previewVersion: result.preview.previewToken || local.previewVersion,
         expiresAt: result.preview.expiresAt || null,

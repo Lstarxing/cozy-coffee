@@ -298,7 +298,10 @@ async function submitOrder() {
     }
 
     const orderId = result.order?.id || result.order?.orderId
-    uni.redirectTo({ url: `/pages/order/result?orderId=${encodeURIComponent(orderId || '')}` })
+    uni.redirectTo({
+      url: `/pages/order/detail?id=${encodeURIComponent(orderId || '')}`,
+      success: () => uni.showToast({ title: '下单成功', icon: 'success' })
+    })
   } catch (error) {
     if (error instanceof AuthError) {
       promptLogin()

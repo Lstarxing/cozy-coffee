@@ -27,12 +27,6 @@
             }
         },
         {
-            "path": "pages/order/result",
-            "style": {
-                "navigationBarTitleText": "下单成功"
-            }
-        },
-        {
             "path": "pages/order/remark",
             "style": {
                 "navigationBarTitleText": "订单备注"

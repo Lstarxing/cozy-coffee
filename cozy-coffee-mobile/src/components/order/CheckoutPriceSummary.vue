@@ -12,6 +12,7 @@
 
     <view class="summary-row"><text>商品小计</text><text>¥{{ money(preview?.subtotal) }}</text></view>
     <view v-if="Number(preview?.discount || 0) > 0" class="summary-row discount"><text>优惠</text><text>-¥{{ money(preview.discount) }}</text></view>
+    <view v-if="Number(preview?.deliveryFee || 0) > 0" class="summary-row"><text>配送费</text><text>¥{{ money(preview.deliveryFee) }}</text></view>
 
     <!-- 可得积分 / 成长值 -->
     <view class="earned-row">
@@ -45,7 +46,8 @@ const props = defineProps({
 const emit = defineEmits(['coupon-click'])
 
 const money = value => Number(value || 0).toFixed(2)
-const earnedPoints = computed(() => Math.floor(Number(props.preview?.payable || 0)))
+// 积分/成长值按商品实付金额计算（实付 - 配送费），配送费不计入
+const earnedPoints = computed(() => Math.floor(Math.max(0, Number(props.preview?.payable || 0) - Number(props.preview?.deliveryFee || 0))))
 const earnedExp = computed(() => earnedPoints.value)
 </script>
 

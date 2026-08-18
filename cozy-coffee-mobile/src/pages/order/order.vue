@@ -27,7 +27,7 @@
         <view class="receipt-head">
           <view>
             <text class="store-name">CozyCoffee 中心店</text>
-            <text class="order-meta">{{ formatTime(order.createdAt) }} · {{ fulfillmentLabel(order) }}<text v-if="order.pickupCode && !isDeliveryOrder(order)" class="meta-em">取餐码 {{ order.pickupCode }}</text></text>
+            <text class="order-meta">{{ formatTime(order.createdAt) }} · <text v-if="order.pickupCode && !isDeliveryOrder(order)" class="meta-em">取餐码 {{ order.pickupCode }}</text></text>
           </view>
           <view class="status-block">
             <text class="order-status" :class="statusClass(order.status)">{{ getStatusText(order.status) }}</text>
@@ -56,7 +56,7 @@
           <text class="summary-label">共 {{ order.totalQty }} 件 · {{ fulfillmentLabel(order) }}</text>
           <view class="summary-actions">
             <view v-if="isCompleted(order.status)" class="order-action" @click.stop="reOrder(order)">再来一单</view>
-            <text v-else class="detail-link">查看详情 →</text>
+            <view v-else class="mini-btn" @click.stop="goToDetail(order.id)">查看详情</view>
           </view>
         </view>
       </view>
@@ -79,6 +79,7 @@
 import { computed, ref } from 'vue'
 import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { getOrderList } from '@/api/order'
+import { formatCoffeeSpec } from '@/utils/spec'
 import { useCartStore } from '@/stores/cart'
 import { restoreOrderToCart } from '@/services/order/ReorderService'
 import LoadingState from '@/components/states/LoadingState.vue'
@@ -145,7 +146,7 @@ async function loadCurrent() {
         totalQty: order.totalQuantity || 0,
         items: (order.items || []).map(item => ({
           ...item,
-          spec: [item.cupSize, item.temperature, item.sugarLevel].filter(Boolean).join(' · ')
+          spec: formatCoffeeSpec(item)
         }))
       }))
     } else {
@@ -411,27 +412,33 @@ function openRestoredCart() {
   justify-content: space-between;
   align-items: center;
   gap: 24rpx;
-  background: $cozy-surface;
+  background: $bg-white;
 }
 .summary-label { font-size: 22rpx; color: $cozy-muted; }
 .summary-actions { flex: none; display: flex; align-items: center; }
 .order-action {
   flex: none;
   padding: 16rpx 28rpx;
-  border: 1rpx solid $cozy-primary;
+  border: 1rpx solid $cozy-ink;
   border-radius: 16rpx;
-  color: $cozy-primary;
-  font-size: 22rpx;
+  background: $cozy-ink;
+  color: #fff;
+  font-size: 24rpx;
   font-weight: 650;
 
-  &:active { background: $bg-white; }
+  &:active { opacity: .85; }
 }
-.detail-link {
+.mini-btn {
   flex: none;
-  padding-bottom: 8rpx;
-  color: $cozy-primary;
-  font-size: 22rpx;
-  font-weight: 650;
+  padding: 14rpx 28rpx;
+  border: 1rpx solid $cozy-border;
+  border-radius: 12rpx;
+  background: $bg-white;
+  color: $cozy-ink;
+  font-size: 24rpx;
+  font-weight: 600;
+
+  &:active { background: $cozy-surface; }
 }
 
 /* ── 空状态 ── */

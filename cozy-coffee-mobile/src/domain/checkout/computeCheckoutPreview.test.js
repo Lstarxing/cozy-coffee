@@ -13,6 +13,13 @@ describe('computeCheckoutPreview', () => {
     expect(computeCheckoutPreview({ items, coupon: { value: 999 } }).payable).toBe(0)
   })
 
+  it('adds delivery fee into payable and invalidates the version', () => {
+    const base = computeCheckoutPreview({ items })
+    const withFee = computeCheckoutPreview({ items, deliveryFee: 3 })
+    expect(withFee).toMatchObject({ subtotal: 55, deliveryFee: 3, payable: 58 })
+    expect(base.previewVersion).not.toBe(withFee.previewVersion)
+  })
+
   it('does not add a second large-size surcharge', () => {
     expect(computeCheckoutPreview({ items: [{ price: 23, quantity: 1, cupSize: 'LARGE' }] }).subtotal).toBe(23)
   })
