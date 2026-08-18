@@ -159,12 +159,15 @@ public class OrderCommandService {
 
         // ===== 事务外：所有计算和远程调用 =====
         BigDecimal payAmount = order.getPayAmount() != null ? order.getPayAmount() : order.getTotalAmount();
-        int expEarned = payAmount.setScale(0, RoundingMode.HALF_UP).intValue();
+        // 配送费不计入积分/成长值：奖励以商品实付金额为基数
+        BigDecimal deliveryFee = order.getDeliveryFee() != null ? order.getDeliveryFee() : BigDecimal.ZERO;
+        BigDecimal rewardBase = payAmount.subtract(deliveryFee).max(BigDecimal.ZERO);
+        int expEarned = rewardBase.setScale(0, RoundingMode.HALF_UP).intValue();
 
         // C2: Dubbo 远程调用移出 @Transactional
         String memberLevel = resolveMemberLevel(order.getUserId());
 
-        int pointsEarned = resolvePointsEarned(order, payAmount, memberLevel);
+        int pointsEarned = resolvePointsEarned(order, rewardBase, memberLevel);
         boolean isFirstOrder = checkFirstOrder(order);
         boolean hasNewProduct = checkNewProduct(order);
         boolean isDelivery = "DELIVERY".equals(order.getDiningMethod());
