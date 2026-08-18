@@ -4,8 +4,8 @@
 -->
 <template>
   <view class="coupon-page">
-    <!-- 筛选 tabs（顶部固定条，对齐订单页） -->
-    <view class="filter-tabs">
+    <!-- 筛选 tabs（选择模式隐藏，仅展示可使用） -->
+    <view v-if="!selectMode" class="filter-tabs">
       <view
         class="filter-tab"
         :class="{ active: currentTab === 'available' }"
@@ -13,37 +13,25 @@
       >可使用</view>
       <view
         class="filter-tab"
-        :class="{ active: currentTab === 'used' }"
-        @click="switchTab('used')"
-      >已使用</view>
-      <view
-        class="filter-tab"
-        :class="{ active: currentTab === 'expired' }"
-        @click="switchTab('expired')"
-      >已过期</view>
+        :class="{ active: currentTab === 'unavailable' }"
+        @click="switchTab('unavailable')"
+      >不可使用</view>
+    </view>
+
+    <!-- 选择模式：不使用优惠券（灰色提示） -->
+    <view v-if="selectMode" class="none-hint" @click="pickCoupon(null)">
+      <text>不使用优惠券，按商品原价结算</text>
     </view>
 
     <!-- 券列表 -->
-    <view v-if="filteredCoupons.length" class="coupon-list">
+    <view v-if="displayCoupons.length" class="coupon-list">
       <view
-        v-for="item in filteredCoupons"
+        v-for="item in displayCoupons"
         :key="item.id"
-        class="coupon-card"
-        :class="item.status"
+        class="coupon-tap"
+        @click="onCardTap(item)"
       >
-        <view class="coupon-left">
-          <text class="coupon-value">{{ item.displayTitle }}</text>
-          <text class="coupon-condition">{{ item.displaySubTitle }}</text>
-        </view>
-        <view class="coupon-right">
-          <text class="coupon-name">{{ item.name }}</text>
-          <text class="coupon-scope">{{ item.scope }}</text>
-          <text class="coupon-expire">{{ item.expireText }}</text>
-        </view>
-        <view class="coupon-action">
-          <view v-if="item.status === 'available'" class="use-btn" @click="useCoupon(item)">去使用</view>
-          <text v-else class="status-tag">{{ statusText(item.status) }}</text>
-        </view>
+        <CouponCard :coupon="item" :selectable="selectMode" :disabled="item.disabled" :reason="item.reason" @use="handleUse(item)" />
       </view>
     </view>
 
@@ -58,14 +46,48 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { getCouponList } from '@/api/coupon'
+import { validateCouponForCart } from '@/utils/couponRules'
 import CozyIcon from '@/components/CozyIcon.vue'
+import CouponCard from '@/components/coupon/CouponCard.vue'
 
 const currentTab = ref('available')
 const coupons = ref([])
+const selectMode = ref(false)
+const cartContext = ref(null)
 
-const TAB_TEXT = { available: '可使用', used: '已使用', expired: '已过期' }
-const STATUS_TEXT = { available: '可使用', used: '已使用', expired: '已过期' }
+function parseRule(coupon) {
+  try { return JSON.parse(coupon.ruleJson || '{}') } catch (_) { return {} }
+}
+
+function computeHasExtraShot(items) {
+  return (items || []).some(item => String(item.coffeeStrength || '').toUpperCase() === 'STRONG')
+}
+
+onLoad((options) => {
+  if (options?.select === '1') {
+    selectMode.value = true
+    currentTab.value = 'available'
+    try {
+      const raw = uni.getStorageSync('cozy_coupon_cart')
+      if (raw) {
+        const cart = typeof raw === 'string' ? JSON.parse(raw) : raw
+        cartContext.value = {
+          items: cart.items || [],
+          hasExtraShot: computeHasExtraShot(cart.items),
+          diningMethod: cart.diningMethod || 'TAKEOUT'
+        }
+        uni.removeStorageSync('cozy_coupon_cart')
+      }
+    } catch (_) {
+      cartContext.value = null
+    }
+  }
+})
+
+const TAB_TEXT = { available: '可使用', unavailable: '不可使用' }
+const STATUS_TEXT = { available: '可使用', frozen: '冻结中', used: '已使用', expired: '已过期' }
 
 const TYPE_NAME = {
   EXCHANGE: '咖啡兑换券',
@@ -108,9 +130,10 @@ onMounted(async () => {
   }
 })
 
-// 后端返回 ISSUED/USED/EXPIRED + available，映射为前端三态
+// 后端返回 ISSUED/FROZEN/USED/EXPIRED + available，映射为前端状态
 function mapStatus(item) {
   if (item.status === 'USED') return 'used'
+  if (item.status === 'FROZEN') return 'frozen'
   if (item.status === 'EXPIRED' || item.available === false) return 'expired'
   return 'available'
 }
@@ -129,14 +152,40 @@ function formatExpire(item, status) {
   }
 }
 
-const filteredCoupons = computed(() => coupons.value.filter(c => c.status === currentTab.value))
+const filteredCoupons = computed(() => {
+  if (currentTab.value === 'unavailable') {
+    return coupons.value.filter(c => ['frozen', 'used', 'expired'].includes(c.status))
+  }
+  return coupons.value.filter(c => c.status === 'available')
+})
+const displayCoupons = computed(() => filteredCoupons.value.map(c => {
+  if (!cartContext.value) return { ...c, disabled: false, reason: '' }
+  const result = validateCouponForCart({ ...c, parsedRule: parseRule(c) }, cartContext.value.items, {
+    hasExtraShot: cartContext.value.hasExtraShot,
+    diningMethod: cartContext.value.diningMethod
+  })
+  return { ...c, disabled: !result.valid, reason: result.reason || '' }
+}))
 const tabText = computed(() => TAB_TEXT[currentTab.value])
-
-const statusText = (status) => STATUS_TEXT[status] || status
 
 function switchTab(value) {
   if (currentTab.value === value) return
   currentTab.value = value
+}
+
+function onCardTap(item) {
+  if (selectMode.value && item.status === 'available') pickCoupon(item)
+}
+
+function handleUse(item) {
+  if (selectMode.value) pickCoupon(item)
+  else useCoupon(item)
+}
+
+function pickCoupon(coupon) {
+  if (coupon && coupon.disabled) return
+  uni.$emit('couponSelected', coupon)
+  uni.navigateBack()
 }
 
 function useCoupon(coupon) {
@@ -192,105 +241,20 @@ function useCoupon(coupon) {
   gap: 24rpx;
   margin: 32rpx 40rpx 0;
 }
-.coupon-card {
-  display: flex;
-  align-items: stretch;
-  border-radius: 28rpx;
-  background: $bg-white;
-  border: 1rpx solid $cozy-border;
-  overflow: hidden;
+.coupon-tap { border-radius: 28rpx; }
 
-  &:not(.used):not(.expired) { border-color: #E3CDB6; }
-}
-
-.coupon-left {
-  flex: none;
-  width: 208rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12rpx;
-  padding: 36rpx 12rpx;
-  border-right: 1rpx dashed $cozy-border;
-}
-.coupon-value {
-  font-family: $font-display;
-  font-size: 44rpx;
-  font-weight: 700;
-  color: $cozy-primary;
-  line-height: 1;
-  text-align: center;
-}
-.coupon-condition {
-  font-size: 20rpx;
-  color: $cozy-muted;
-  text-align: center;
-  line-height: 1.4;
-}
-
-.coupon-right {
-  flex: 1;
-  min-width: 0;
-  padding: 32rpx 28rpx;
-}
-.coupon-name {
-  display: block;
-  font-size: 28rpx;
-  font-weight: 600;
-  color: $cozy-ink;
-}
-.coupon-scope {
-  display: block;
-  margin-top: 10rpx;
-  font-size: 22rpx;
-  color: $cozy-muted;
-}
-.coupon-expire {
-  display: block;
-  margin-top: 8rpx;
-  font-size: 22rpx;
-  color: $cozy-placeholder;
-}
-
-.coupon-action {
-  flex: none;
-  width: 148rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 20rpx;
-}
-.use-btn {
-  width: 100%;
-  height: 68rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12rpx;
-  background: $cozy-primary;
-  color: #fff;
-  font-size: 24rpx;
-  font-weight: 600;
-
-  &:active { background: $cozy-primary-hover; }
-}
-.status-tag {
-  font-size: 24rpx;
-  font-weight: 600;
-  color: $cozy-placeholder;
-}
-
-/* 已使用 / 已过期 */
-.coupon-card.used,
-.coupon-card.expired {
+/* ── 选择模式：不使用优惠券（灰色提示） ── */
+.none-hint {
+  margin: 36rpx 40rpx 0;
+  padding: 22rpx 24rpx;
+  border-radius: 16rpx;
   background: $cozy-surface;
-  border-color: $cozy-border;
+  color: $cozy-muted;
+  font-size: 24rpx;
+  text-align: center;
+
+  &:active { opacity: .8; }
 }
-.coupon-card.used .coupon-value,
-.coupon-card.expired .coupon-value { color: $cozy-placeholder; }
-.coupon-card.used .coupon-name,
-.coupon-card.expired .coupon-name { color: $cozy-muted; }
 
 /* ── 空状态 ── */
 .empty-state {
