@@ -107,7 +107,7 @@ function clearMemberRefreshTimer() {
   memberRefreshTimer = null
 }
 
-function statusText(status) { return ({ pending: '待接单', pending_payment: '待处理', preparing: '制作中', processing: '制作中', completed: '已完成', cancelled: '已取消' })[String(status || '').toLowerCase()] || '已提交' }
+function statusText(status) { return ({ pending: '待支付', pending_payment: '待支付', preparing: '制作中', processing: '制作中', completed: '已完成', cancelled: '已取消' })[String(status || '').toLowerCase()] || '已提交' }
 function money(value) { return Number(value || 0).toFixed(2) }
 function goToOrders() { uni.switchTab({ url: '/pages/order/order' }) }
 function goToDetail() { uni.navigateTo({ url: `/pages/order/detail?id=${encodeURIComponent(orderId.value)}` }) }

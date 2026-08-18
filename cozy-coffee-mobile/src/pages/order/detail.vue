@@ -8,12 +8,16 @@
     <RetryState v-else-if="errorMessage" :description="errorMessage" @retry="loadOrder" />
 
     <view v-else-if="order" class="detail-content">
-      <!-- 状态区 -->
-      <view class="pickup-panel" :class="statusClass">
-        <text class="pickup-eyebrow">{{ eyebrow }}</text>
-        <text class="pickup-code">{{ codeText }}</text>
-        <text class="code-caption">{{ codeCaption }}</text>
-        <text class="pickup-status">{{ statusText }}</text>
+      <!-- 状态区（线性：眉标 + 状态 + 取餐码 + 预计时间） -->
+      <view class="status-head">
+        <text class="status-eyebrow">{{ eyebrow }}</text>
+        <text class="status-text">{{ statusText }}</text>
+        <view class="code-row">
+          <text class="code-label">{{ codeCaption }}</text>
+          <text class="code-value">{{ codeText }}</text>
+        </view>
+        <text v-if="pendingCountdown" class="code-eta urgent">{{ pendingCountdown }}</text>
+        <text v-else-if="codeEta" class="code-eta">{{ codeEta }}</text>
       </view>
 
       <!-- 门店/配送（第一主体） -->
@@ -93,7 +97,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { getOrderDetail } from '@/api/order'
 import { getRedemptionDetail } from '@/api/member'
 import { useCartStore } from '@/stores/cart'
@@ -111,6 +115,8 @@ const order = ref(null)
 const loading = ref(true)
 const errorMessage = ref('')
 const reordering = ref(false)
+const nowTs = ref(Date.now())
+let countdownTicker = null
 const cartStore = useCartStore()
 const sessionStore = useSessionStore()
 
@@ -136,12 +142,6 @@ const orderItems = computed(() => {
   return order.value?.items || []
 })
 
-const statusClass = computed(() => ({
-  completed: 'completed',
-  cancelled: 'cancelled',
-  canceled: 'cancelled'
-})[normalizedStatus.value] || 'active')
-
 const eyebrow = computed(() => isDelivery.value ? 'COZY DELIVERY' : 'COZY PICKUP')
 const codeCaption = computed(() => {
   if (isDelivery.value) return '物流单号'
@@ -151,6 +151,27 @@ const codeCaption = computed(() => {
 const codeText = computed(() => {
   if (isDelivery.value) return order.value?.trackingNumber || order.value?.deliveryNo || '待出库'
   return order.value?.pickupCode || order.value?.virtualCode || '—'
+})
+const codeEta = computed(() => {
+  const raw = order.value?.estimatedPickupAt || order.value?.expectReadyTime || order.value?.readyAt || order.value?.estimatedReadyAt
+  if (!raw) return ''
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = n => String(n).padStart(2, '0')
+  return `预计 ${pad(d.getHours())}:${pad(d.getMinutes())} 可取`
+})
+
+const isPendingPay = computed(() => ['pending', 'pending_payment'].includes(normalizedStatus.value))
+const pendingCountdown = computed(() => {
+  if (!isPendingPay.value) return ''
+  const raw = order.value?.expireAt
+  const expireMs = raw ? new Date(raw).getTime() : NaN
+  if (Number.isNaN(expireMs)) return '等待支付'
+  const remain = Math.max(0, Math.floor((expireMs - nowTs.value) / 1000))
+  if (remain <= 0) return '即将自动取消'
+  const mm = String(Math.floor(remain / 60)).padStart(2, '0')
+  const ss = String(remain % 60).padStart(2, '0')
+  return `剩余 ${mm}:${ss} 自动取消`
 })
 const statusText = computed(() => {
   const status = normalizedStatus.value
@@ -162,8 +183,8 @@ const statusText = computed(() => {
     cancelled: '已取消 · 积分已退还'
   }
   const coffee = {
-    pending: '等待门店接单',
-    pending_payment: '订单待处理',
+    pending: '待支付',
+    pending_payment: '待支付',
     preparing: '咖啡制作中',
     processing: '咖啡制作中',
     completed: '订单已完成',
@@ -196,7 +217,19 @@ onLoad(options => {
   orderId.value = options.id || options.orderId || ''
   if (options.type === 'redeem') type.value = 'redeem'
 })
-onShow(() => { if (orderId.value) loadOrder() })
+onShow(() => {
+  if (orderId.value) loadOrder()
+  startCountdownTicker()
+})
+onUnload(stopCountdownTicker)
+
+function startCountdownTicker() {
+  stopCountdownTicker()
+  countdownTicker = setInterval(() => { nowTs.value = Date.now() }, 1000)
+}
+function stopCountdownTicker() {
+  if (countdownTicker) { clearInterval(countdownTicker); countdownTicker = null }
+}
 
 async function loadOrder(silent = false) {
   if (!silent) loading.value = true
@@ -302,31 +335,54 @@ function openRestoredCart() {
 .detail-page { min-height: 100vh; background: $cozy-surface; }
 .detail-content { padding: 12rpx 40rpx 0; }
 
-/* ── 状态区（品牌色，紧凑） ── */
-.pickup-panel {
-  margin-top: 12rpx;
-  padding: 36rpx 48rpx 32rpx;
-  border-radius: 28rpx;
-  text-align: center;
-  color: #fff;
-
-  &.active { background: $cozy-primary; }
-  &.completed { background: $cozy-accent; }
-  &.cancelled { background: $cozy-muted; }
+/* ── 状态区（线性，无卡片：眉标 + 状态 + 取餐码 + 预计） ── */
+.status-head {
+  padding: 16rpx 4rpx 36rpx;
+  border-bottom: 1rpx solid $cozy-border;
 }
-.pickup-eyebrow { display: block; font-size: 20rpx; font-weight: 700; letter-spacing: .24em; opacity: .8; }
-.pickup-code {
+.status-eyebrow {
   display: block;
-  margin-top: 16rpx;
+  font-size: 22rpx;
+  font-weight: 700;
+  letter-spacing: .24em;
+  color: $cozy-muted;
+}
+.status-text {
+  display: block;
+  margin-top: 14rpx;
   font-family: $font-display;
-  font-size: 68rpx;
-  font-weight: 800;
+  font-size: 44rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
+.code-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24rpx;
+  margin-top: 28rpx;
+}
+.code-label {
+  flex: none;
+  font-size: 26rpx;
+  color: $cozy-muted;
+}
+.code-value {
+  font-family: $font-display;
+  font-size: 48rpx;
+  font-weight: 700;
+  color: $cozy-ink;
   letter-spacing: .06em;
-  line-height: 1;
   word-break: break-all;
 }
-.code-caption { display: block; margin-top: 16rpx; font-size: 20rpx; letter-spacing: .16em; opacity: .75; }
-.pickup-status { display: block; margin-top: 16rpx; font-size: 24rpx; opacity: .85; }
+.code-eta {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: $cozy-muted;
+  text-align: right;
+}
+.code-eta.urgent { color: $error-color; font-weight: 650; }
 
 /* ── 门店/配送 ── */
 .store-block {

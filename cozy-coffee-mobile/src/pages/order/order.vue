@@ -181,7 +181,7 @@ function getExpireMs(order) {
   }
   if (order?.createdAt) {
     const createdTimestamp = new Date(order.createdAt).getTime()
-    if (!Number.isNaN(createdTimestamp)) return createdTimestamp + 60 * 1000
+    if (!Number.isNaN(createdTimestamp)) return createdTimestamp + 15 * 60 * 1000
   }
   return null
 }
@@ -194,7 +194,7 @@ function getRemainingSeconds(order) {
 
 function formatCountdown(order) {
   const remain = getRemainingSeconds(order)
-  if (remain == null) return '等待门店确认'
+  if (remain == null) return '等待支付'
   if (remain <= 0) return '即将自动取消'
   const minutes = String(Math.floor(remain / 60)).padStart(2, '0')
   const seconds = String(remain % 60).padStart(2, '0')
@@ -208,7 +208,7 @@ function isExpiringSoon(order) {
 
 function getStatusText(status) {
   return ({
-    pending: '等待接单', pending_payment: '待处理', preparing: '制作中', processing: '制作中',
+    pending: '待支付', pending_payment: '待支付', preparing: '制作中', processing: '制作中',
     completed: '已完成', cancelled: '已取消', canceled: '已取消'
   })[normalizeStatus(status)] || '已提交'
 }
