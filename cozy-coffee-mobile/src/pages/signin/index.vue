@@ -64,12 +64,14 @@
       </view>
     </view>
 
-    <!-- 顶部成功消息 -->
-    <view class="top-banner" :class="{ open: showBanner }">
-      <view class="banner-icon"><text class="banner-check">✓</text></view>
-      <view class="banner-copy">
-        <text class="banner-title">签到成功 +{{ earnedPoints }} 积分</text>
-        <text class="banner-sub">已连续签到 {{ consecutiveDays }} 天</text>
+    <!-- 签到成功浮层 -->
+    <view class="toast-mask" :class="{ open: showBanner }" :style="{ top: (statusBarHeight + 16) + 'px' }">
+      <view class="signin-toast">
+        <view class="toast-check"><CozyIcon name="check" :size="18" stroke-width="3" color="#FFFFFF" /></view>
+        <view class="toast-copy">
+          <text class="toast-title">签到成功 +{{ earnedPoints }} 积分</text>
+          <text class="toast-sub">已连续签到 {{ consecutiveDays }} 天</text>
+        </view>
       </view>
     </view>
   </view>
@@ -90,6 +92,7 @@ const currentPoints = ref(0)
 const earnedPoints = ref(0)
 const signing = ref(false)
 const showBanner = ref(false)
+const statusBarHeight = uni.getSystemInfoSync().statusBarHeight || 20
 
 const weekDays = Array.from({ length: 7 }, () => ({}))
 
@@ -352,43 +355,50 @@ const handleSignin = async () => {
   color: $cozy-muted;
 }
 
-/* ── 顶部成功消息 ── */
-.top-banner {
+/* ── 签到成功浮层（居中悬浮卡） ── */
+.toast-mask {
   position: fixed;
-  top: 0; left: 0; right: 0;
-  padding: 32rpx 40rpx;
-  background: $cozy-surface-alt;
-  color: #fff;
+  left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-220%);
+  transition: opacity .3s ease, transform .45s $cozy-ease-out;
+}
+.toast-mask.open { opacity: 1; transform: translateY(0); }
+.signin-toast {
   display: flex;
   align-items: center;
   gap: 24rpx;
-  z-index: 50;
-  transform: translateY(-100%);
-  transition: transform .35s cubic-bezier(.32,.72,.32,1);
+  padding: 26rpx 40rpx;
+  border-radius: 24rpx;
+  background: $cozy-ink;
+  box-shadow: $cozy-shadow-raised;
 }
-.top-banner.open { transform: translateY(0); }
-.banner-icon {
+.toast-check {
   flex: none;
-  width: 44rpx;
-  height: 44rpx;
+  width: 48rpx;
+  height: 48rpx;
   border-radius: 50%;
-  background: rgba(255,255,255,.14);
+  background: $cozy-accent;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.banner-check { font-size: 24rpx; font-weight: 700; }
-.banner-copy { flex: 1; min-width: 0; }
-.banner-title {
+.toast-copy { flex: none; min-width: 0; }
+.toast-title {
   display: block;
   font-size: 28rpx;
   font-weight: 650;
   line-height: 1.3;
+  color: #fff;
 }
-.banner-sub {
+.toast-sub {
   display: block;
   margin-top: 4rpx;
-  font-size: 24rpx;
-  color: rgba(255,255,255,.6);
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, .7);
 }
 </style>

@@ -9,7 +9,7 @@
 // ==================== 品牌色 (oklch → hex) ====================
 $cozy-primary: #753A22;        // 深烘咖啡棕，替代旧 #C69C6D
 $cozy-primary-hover: #5E2E1B;
-$cozy-accent: #526C43;         // 釉面绿 — 仅用于: 积分到账数字、进度填充、已解锁状态
+$cozy-accent: #526C43;         // 釉面绿 — 仅用于: 积分到账数字、已解锁状态
 $cozy-accent-soft: #E8EDE5;
 
 // ==================== 背景色 ====================
@@ -30,23 +30,14 @@ $cozy-border: #E3DED8;        // (旧 #EEE)
 $cozy-border-on-dark: rgba(255, 255, 255, 0.16);
 
 // ==================== 功能色 ====================
-$cozy-success: #52C41A;
-$cozy-warning: #FAAD14;
-$cozy-error: #FF4D4F;
-$cozy-info: #1890FF;
-$cozy-warning-soft: #FFF5E8;
-$cozy-error-soft: #FFF0EE;
-$cozy-info-soft: #EDF6FA;
-
-// ==================== 深色区 CTA (反色按钮) ====================
-$cozy-cta-alt-bg: #F2EDE8;
-$cozy-cta-alt-text: #4D3028;
+$cozy-error: #FF4D4F;         // 告警/错误（倒计时即将过期、失败态）
 
 // ==================== 圆角 ====================
 $cozy-radius-sm: 4rpx;
 $cozy-radius: 8rpx;           // 图片、标签
 $cozy-radius-md: 12rpx;       // 容器
-$cozy-radius-lg: 16rpx;       // 卡片上限
+$cozy-radius-lg: 16rpx;       // 小卡上限
+$cozy-radius-card: 28rpx;     // 卡片（全站统一）
 
 // ==================== 间距 (4px 网格, 1px ≈ 2rpx) ====================
 $spacing-xs: 8rpx;
@@ -97,10 +88,7 @@ $text-white: $cozy-on-dark;
 $text-primary: $cozy-ink;       // 别名 (旧页面使用)
 $text-secondary: $cozy-muted;   // 别名 (旧页面使用)
 
-$success-color: $cozy-success;
-$warning-color: $cozy-warning;
 $error-color: $cozy-error;
-$info-color: $cozy-info;
 
 $border-color: $cozy-border;
 $card-radius: $cozy-radius-md;
