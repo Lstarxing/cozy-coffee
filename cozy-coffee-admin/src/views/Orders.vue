@@ -59,7 +59,7 @@
          :class="{ active: filters.status === 'pending' }"
          @click="handleQuickFilter('pending')"
        >
-         待处理
+         待支付
          <span v-if="orderCounts.pending > 0" class="tab-badge red">{{ orderCounts.pending }}</span>
        </button>
        <button

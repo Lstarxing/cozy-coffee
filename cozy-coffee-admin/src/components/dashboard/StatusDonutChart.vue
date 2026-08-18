@@ -27,7 +27,7 @@ const statusColors = {
 }
 
 const statusLabels = {
-  pending: '待处理',
+  pending: '待支付',
   preparing: '制作中',
   processing: '配货中',
   shipped: '已发货',

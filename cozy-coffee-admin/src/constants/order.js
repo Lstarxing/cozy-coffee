@@ -6,7 +6,7 @@ export const ORDER_STATUS = {
 }
 
 export const ORDER_STATUS_MAP = {
-  [ORDER_STATUS.PENDING]: { label: '待处理', tagType: 'danger' },
+  [ORDER_STATUS.PENDING]: { label: '待支付', tagType: 'danger' },
   [ORDER_STATUS.PREPARING]: { label: '制作中', tagType: 'warning' },
   [ORDER_STATUS.COMPLETED]: { label: '已完成', tagType: 'success' },
   [ORDER_STATUS.CANCELLED]: { label: '已取消', tagType: 'info' }

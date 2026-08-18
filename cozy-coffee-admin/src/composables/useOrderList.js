@@ -85,7 +85,7 @@ export function useOrderList() {
     if (row.createdAt) {
       const createdTs = new Date(row.createdAt).getTime()
       if (!Number.isNaN(createdTs)) {
-        return createdTs + 60 * 1000
+        return createdTs + 15 * 60 * 1000
       }
     }
     return null
