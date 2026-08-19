@@ -24,7 +24,7 @@
     <!-- 绑定好友邀请码 -->
     <view class="invite-card">
       <view v-if="userInfo.hasAppliedInviteCode" class="bound-state">
-        <text class="bound-mark">✓</text>
+        <view class="bound-mark"><CozyIcon name="link" :size="12" color="#fff" /></view>
         <view class="bound-copy">
           <text class="bound-title">已绑定好友邀请码</text>
           <text class="bound-sub">邀请关系只能绑定一次，当前账户已完成绑定。</text>
@@ -47,6 +47,7 @@ import { computed, ref } from 'vue'
 import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
 import { getUserInfo, applyInviteCode } from '@/api/auth'
+import CozyIcon from '@/components/CozyIcon.vue'
 
 const userStore = useUserStore()
 const userInfo = computed(() => userStore.userInfo || {})
@@ -210,9 +211,8 @@ onShareAppMessage(() => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: $cozy-accent;
+  background: $cozy-primary;
   color: #fff;
-  font-size: 20rpx;
 }
 .bound-copy { min-width: 0; flex: 1; }
 .bound-title { display: block; color: $cozy-ink; font-size: 24rpx; font-weight: 680; }
