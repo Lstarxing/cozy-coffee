@@ -211,13 +211,13 @@ function isExpiringSoon(order) {
 function getStatusText(status) {
   return ({
     pending: '待支付', pending_payment: '待支付', preparing: '制作中', processing: '制作中',
-    completed: '已完成', cancelled: '已取消', canceled: '已取消'
+    delivering: '配送中', completed: '已完成', cancelled: '已取消', canceled: '已取消'
   })[normalizeStatus(status)] || '已提交'
 }
 
 function statusClass(status) {
   const normalized = normalizeStatus(status)
-  if (['preparing', 'processing'].includes(normalized)) return 'processing'
+  if (['preparing', 'processing', 'delivering'].includes(normalized)) return 'processing'
   if (['cancelled', 'canceled'].includes(normalized)) return 'cancelled'
   if (normalized === 'completed') return 'completed'
   return 'pending'

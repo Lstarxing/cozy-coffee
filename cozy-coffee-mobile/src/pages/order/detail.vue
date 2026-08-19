@@ -36,7 +36,7 @@
 
       <!-- 状态卡（白卡：取餐号在上居中 + 三节点进度 已下单/制作中/待取餐） -->
       <view v-else class="status-card">
-        <text v-if="statusText && (isRedeem || isCancelled)" class="status-line">{{ statusText }}</text>
+        <text v-if="statusText && (isRedeem || isCancelled || isDelivering)" class="status-line">{{ statusText }}</text>
         <view v-if="!isCancelled" class="pickup-code-block">
           <text class="pickup-label">{{ codeCaption }}</text>
           <text class="pickup-code" :class="{ long: codeText.length > 6 }">{{ codeText }}</text>
@@ -160,6 +160,8 @@
         </view>
       </view>
 
+      <!-- 确认收货（兑换快递单 · 已发货） -->
+      <view v-if="canConfirmReceipt" class="confirm-receipt" @click="confirmReceipt">确认收货</view>
     </view>
   </view>
 </template>
@@ -168,7 +170,7 @@
 import { computed, ref } from 'vue'
 import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { getOrderDetail, acceptOrder, cancelOrder } from '@/api/order'
-import { getRedemptionDetail } from '@/api/member'
+import { getRedemptionDetail, confirmRedemptionReceipt } from '@/api/member'
 import { useSessionStore } from '@/stores/session'
 import { refreshMemberProfile } from '@/services/session/MemberProfileService'
 import { FIXED_STORE } from '@/config/store'
@@ -195,6 +197,7 @@ const isDelivery = computed(() => {
   return String(order.value?.diningMethod || '').toUpperCase() === 'DELIVERY'
 })
 const isVirtual = computed(() => isRedeem.value && order.value?.fulfillmentType === 'VIRTUAL')
+const canConfirmReceipt = computed(() => isRedeem.value && normalizedStatus.value === 'shipped' && order.value?.fulfillmentType === 'DELIVERY')
 
 const orderItems = computed(() => {
   if (isRedeem.value) {
@@ -212,8 +215,9 @@ const orderItems = computed(() => {
 })
 
 const isCoffeeDelivery = computed(() => isDelivery.value && !isRedeem.value)
+const isDelivering = computed(() => normalizedStatus.value === 'delivering')
 const deliveryEtaTime = computed(() => {
-  const raw = order.value?.estimatedPickupAt || order.value?.expectReadyTime || order.value?.readyAt || order.value?.estimatedReadyAt
+  const raw = order.value?.expectedDeliveryAt || order.value?.estimatedPickupAt || order.value?.expectReadyTime || order.value?.readyAt || order.value?.estimatedReadyAt
   if (!raw) return ''
   const d = new Date(raw)
   if (Number.isNaN(d.getTime())) return ''
@@ -235,7 +239,7 @@ const codeText = computed(() => {
 })
 const codeEta = computed(() => {
   if (isCoffeeDelivery.value) return ''
-  const raw = order.value?.estimatedPickupAt || order.value?.expectReadyTime || order.value?.readyAt || order.value?.estimatedReadyAt
+  const raw = order.value?.expectedDeliveryAt || order.value?.estimatedPickupAt || order.value?.expectReadyTime || order.value?.readyAt || order.value?.estimatedReadyAt
   if (!raw) return ''
   const d = new Date(raw)
   if (Number.isNaN(d.getTime())) return ''
@@ -274,6 +278,7 @@ const statusText = computed(() => {
     pending_payment: '待支付',
     preparing: '咖啡制作中',
     processing: '咖啡制作中',
+    delivering: '配送中',
     completed: '订单已完成',
     cancelled: '订单已取消'
   }
@@ -285,7 +290,7 @@ const reachedIndex = computed(() => {
   const s = normalizedStatus.value
   if (['cancelled', 'canceled'].includes(s)) return -1
   if (['preparing', 'processing'].includes(s)) return 1
-  if (['completed'].includes(s)) return 2
+  if (['delivering', 'completed'].includes(s)) return 2
   return 0
 })
 const progressSteps = computed(() => {
@@ -399,6 +404,26 @@ function callStore() {
 }
 function navigateStore() {
   uni.showToast({ title: '打开导航', icon: 'none' })
+}
+
+async function confirmReceipt() {
+  const confirmed = await new Promise(resolve => {
+    uni.showModal({
+      title: '确认收货',
+      content: '请确认已收到商品。确认后订单将标记为已完成。',
+      confirmText: '确认',
+      cancelText: '再等等',
+      success: res => resolve(res.confirm)
+    })
+  })
+  if (!confirmed) return
+  try {
+    await confirmRedemptionReceipt(orderId.value)
+    uni.showToast({ title: '已确认收货，感谢支持', icon: 'none' })
+    loadOrder()
+  } catch (error) {
+    uni.showToast({ title: error?.message || '确认收货失败，请稍后重试', icon: 'none' })
+  }
 }
 
 async function payPendingOrder() {
@@ -760,5 +785,21 @@ async function cancelPendingOrder() {
   font-weight: 600;
 
   &:active { opacity: .6; }
+}
+
+/* ── 确认收货（兑换快递单 · 已发货） ── */
+.confirm-receipt {
+  margin-top: 24rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  background: $cozy-ink;
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 650;
+
+  &:active { opacity: .85; }
 }
 </style>
