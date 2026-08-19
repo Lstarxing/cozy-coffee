@@ -34,11 +34,12 @@
 
   /* ── 未支付：等待支付卡（无取餐码，取消/立即支付 CTA） ── */
   .pending-card {
-    margin-top:12px; padding:20px 16px 16px;
-    border-radius:14px; background:var(--card);
+    margin-top:12px; padding:22px 16px 20px;
+    border-radius:14px; background:var(--card); text-align:center;
   }
   .pending-title { display:block; font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink); }
-  .pending-sub { display:block; margin-top:6px; font-size:12px; color:var(--muted); }
+  .pending-countdown { display:block; margin-top:8px; font-family:var(--serif); font-size:17px; font-weight:700; color:var(--primary); }
+  .pending-sub { display:block; margin-top:8px; font-size:12px; color:var(--muted); }
   .pending-card .progress { margin-top:16px; }
   .pending-actions { display:flex; gap:10px; margin-top:18px; }
   .pending-btn {
@@ -192,9 +193,10 @@
     <span class="nav-right"></span>
   </div>
 
-  <!-- 未支付（仅咖啡单）：等待支付卡（含「已下单」首节点进度） -->
+  <!-- 未支付（仅咖啡单）：等待支付卡（居中三行 + 首节点进度） -->
   <div class="pending-card" id="pendingCard" style="display:none">
-    <span class="pending-title" id="pendingTitle">等待支付，剩余 09:08</span>
+    <span class="pending-title">等待支付</span>
+    <span class="pending-countdown" id="pendingCountdown">剩余 09:08</span>
     <span class="pending-sub">超过15分钟未支付，订单将自动取消</span>
 
     <div class="progress" id="pendingProgress">
@@ -392,7 +394,7 @@
   function renderCountdown() {
     if (!currentOrder || currentOrder.status !== 'pending') return;
     const remain = Math.max(0, Math.floor((currentOrder.expireAt - Date.now()) / 1000));
-    document.getElementById('pendingTitle').textContent = '等待支付，剩余 ' + pad(Math.floor(remain / 60)) + ':' + pad(remain % 60);
+    document.getElementById('pendingCountdown').textContent = '剩余 ' + pad(Math.floor(remain / 60)) + ':' + pad(remain % 60);
   }
 
   (function init() {
