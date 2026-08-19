@@ -10,12 +10,16 @@
  * 
  * 环境变量配置:
  *   API_BASE - 后端API地址 (默认: http://localhost:8080/api)
+ *   VITE_API_BASE_URL - 兼容前端 .env.development 的约定变量 (自动读取 .env / .env.development)
  *   TIMEOUT_MS - 请求超时时间 (默认: 10000ms)
  *   ALLOW_MUTATIONS - 允许状态流转测试 (默认: false)
- * 
+ *
+ * CI 行为: 存在失败用例或登录失败时进程以非零码退出 (exitCode=1)，适合接入 CI。
+ *
  * 示例:
  *   ALLOW_MUTATIONS=true node tests/admin-api-test.js
  *   API_BASE=http://other-host:8080/api TIMEOUT_MS=5000 node tests/admin-api-test.js
+ *   VITE_API_BASE_URL=http://other-host:8080/api node tests/admin-api-test.js
  * 
  * 测试账号:
  *   管理员: testadmin / admin123
@@ -41,9 +45,34 @@
  * - 边界测试：缺少参数、零值、负值等异常情况
  */
 
+import { readFileSync, existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+
+// Load Vite-style env files (.env / .env.development) if present, without
+// overriding variables already set in the real process environment.
+// This lets `VITE_API_BASE_URL=...` in .env.development work when the script
+// is run from the admin project root.
+function loadEnvFiles() {
+  const root = dirname(fileURLToPath(import.meta.url)) + '/..'
+  for (const file of ['.env', '.env.development']) {
+    const path = join(root, file)
+    if (!existsSync(path)) continue
+    for (const line of readFileSync(path, 'utf8').split('\n')) {
+      const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/)
+      if (!m) continue
+      const [, key, raw] = m
+      const value = raw.replace(/^["']|["']$/g, '')
+      if (!(key in process.env)) process.env[key] = value
+    }
+  }
+}
+loadEnvFiles()
+
 // Configuration via environment variables
 const MIN_TIMEOUT_MS = 1000; // Minimum timeout to prevent too-fast failures
-const API_BASE = process.env.API_BASE || 'http://localhost:8080/api';
+// 优先级: API_BASE(脚本专用) > VITE_API_BASE_URL(Vite 约定) > 默认值
+const API_BASE = process.env.API_BASE || process.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 const TIMEOUT_MS = Math.max(MIN_TIMEOUT_MS, parseInt(process.env.TIMEOUT_MS || '10000', 10));
 const ALLOW_MUTATIONS = process.env.ALLOW_MUTATIONS === 'true';
 
@@ -690,6 +719,7 @@ async function runTests() {
         console.log('1. 后端服务是否启动 (http://localhost:8080)');
         console.log('2. 是否在 cozy_user 数据库执行了 test_accounts.sql');
         console.log('3. 数据库连接是否正常');
+        process.exitCode = 1;
         return;
     }
 
@@ -731,6 +761,18 @@ async function runTests() {
     console.log('• 使用 TIMEOUT_MS=<ms> 配置请求超时');
     console.log('• 使用 ALLOW_MUTATIONS=true 启用状态流转测试');
     console.log('\n例如: ALLOW_MUTATIONS=true node tests/admin-api-test.js');
+
+    // CI 友好: 存在失败用例时以非零码退出
+    if (failed > 0) {
+        console.error('\n❌ 存在 ' + failed + ' 个失败用例，进程退出码为 1 (CI 将判定失败)');
+        process.exitCode = 1;
+    } else {
+        console.log('\n✅ 全部用例通过，进程退出码为 0');
+        process.exitCode = 0;
+    }
 }
 
-runTests();
+runTests().catch((err) => {
+    console.error('\n❌ 测试脚本发生未捕获异常:', err);
+    process.exitCode = 1;
+});

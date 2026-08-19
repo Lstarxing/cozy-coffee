@@ -8,7 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext .vue,.js --fix",
-    "format": "prettier --write src"
+    "format": "prettier --write src",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:integration": "node tests/admin-api-test.js"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -26,8 +29,10 @@
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^9.33.0",
+    "jsdom": "^26.1.0",
     "prettier": "^3.9.4",
     "sass": "^1.97.1",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vitest": "^3.2.4"
   }
 }
