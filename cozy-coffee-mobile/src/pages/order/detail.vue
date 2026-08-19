@@ -124,6 +124,22 @@
             <text v-else class="total-value">¥{{ money(payAmount) }}</text>
           </view>
 
+          <!-- 本次获得（完成订单，紧贴实付下方） -->
+          <view v-if="rewards" class="sp-reward">
+            <text class="sp-reward-label">本次获得</text>
+            <view class="sp-reward-values">
+              <view v-if="rewards.points" class="sp-reward-item">
+                <CozyIcon name="star" :size="20" color="#753A22" />
+                <text class="sp-reward-text">积分 +{{ rewards.points }}</text>
+              </view>
+              <text v-if="rewards.points && rewards.exp" class="sp-reward-sep">|</text>
+              <view v-if="rewards.exp" class="sp-reward-item">
+                <CozyIcon name="sparkle" :size="20" color="#753A22" />
+                <text class="sp-reward-text">成长值 +{{ rewards.exp }}</text>
+              </view>
+            </view>
+          </view>
+
           <!-- 订单信息（实付下方，分隔线分隔；配送方式/地址仅外送） -->
           <view class="sp-divider" />
           <view class="meta-row"><text>下单时间</text><text>{{ formatFullTime(order.createdAt) }}</text></view>
@@ -142,21 +158,6 @@
               </view>
             </view>
           </template>
-        </view>
-
-        <view v-if="rewards" class="sp-reward">
-          <text class="sp-reward-label">本次获得</text>
-          <view class="sp-reward-values">
-            <view v-if="rewards.points" class="sp-reward-item">
-              <CozyIcon name="star" :size="20" color="#753A22" />
-              <text class="sp-reward-text">积分 +{{ rewards.points }}</text>
-            </view>
-            <text v-if="rewards.points && rewards.exp" class="sp-reward-sep">|</text>
-            <view v-if="rewards.exp" class="sp-reward-item">
-              <CozyIcon name="sparkle" :size="20" color="#753A22" />
-              <text class="sp-reward-text">成长值 +{{ rewards.exp }}</text>
-            </view>
-          </view>
         </view>
       </view>
 
@@ -754,7 +755,8 @@ async function cancelPendingOrder() {
   align-items: center;
   justify-content: flex-end;
   gap: 16rpx;
-  padding: 0 4rpx 24rpx;
+  margin-top: 12rpx;
+  padding: 0 4rpx;
 }
 .sp-reward-label { flex: none; color: $cozy-muted; font-size: 22rpx; }
 .sp-reward-values { display: flex; align-items: center; gap: 16rpx; }
