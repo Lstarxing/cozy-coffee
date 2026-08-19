@@ -466,9 +466,9 @@
     }
 
     // 门店 + 商品
-    document.getElementById('storeName').textContent = o.storeName || (delivery ? '配送至' : 'CozyCoffee 中心店');
-    document.getElementById('storeAddr').textContent = o.storeAddr || (delivery ? '配送至 · ' + (o.addr || '') : '杭州 · 文三路 128 号');
-    document.getElementById('storeActions').style.display = (delivery || virtual) ? 'none' : 'flex';
+    document.getElementById('storeName').textContent = o.storeName || (redeem && delivery ? '配送至' : 'CozyCoffee 中心店');
+    document.getElementById('storeAddr').textContent = o.storeAddr || (redeem && delivery ? '配送至 · ' + (o.addr || '') : '杭州 · 文三路 128 号');
+    document.getElementById('storeActions').style.display = ((delivery && redeem) || virtual) ? 'none' : 'flex';
 
     const productName = o.productName || '';
     document.getElementById('productList').innerHTML = (o.items || [{
