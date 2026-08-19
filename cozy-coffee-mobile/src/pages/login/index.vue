@@ -60,7 +60,7 @@
         <view class="divider-line" />
       </view>
       <button class="alt-btn" @click="handleWechatLogin">
-        <CozyIcon name="wechat" :size="26" color="#526C43" />
+        <CozyIcon name="wechat" :size="26" color="#753A22" />
         <text class="alt-label">微信登录</text>
       </button>
     </view>

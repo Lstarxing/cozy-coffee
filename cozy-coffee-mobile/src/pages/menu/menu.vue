@@ -465,7 +465,7 @@ function closeOffShelf() {
 .pickup-opt.active { background: $cozy-ink; color: #fff; }
 .store-meta { margin-top: 10rpx; font-size: 22rpx; color: $cozy-muted; }
 .store-foot { margin-top: 12rpx; display: flex; align-items: center; justify-content: space-between; font-size: 22rpx; color: $cozy-muted; }
-.status-icon { color: $cozy-accent; }
+.status-icon { color: $cozy-muted; }
 .store-more { color: $cozy-muted; }
 
 /* ── 主体 ── */
@@ -489,7 +489,7 @@ function closeOffShelf() {
 .product-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .product-title-row { display: flex; align-items: center; gap: 10rpx; }
 .product-name { font-family: $font-display; font-size: 30rpx; font-weight: 600; color: $cozy-ink; line-height: 1.3; }
-.product-tag { flex: none; padding: 4rpx 10rpx; border-radius: 6rpx; background: $cozy-accent-soft; color: $cozy-accent; font-size: 18rpx; font-weight: 600; }
+.product-tag { flex: none; padding: 4rpx 10rpx; border-radius: 6rpx; background: $cozy-surface; color: $cozy-ink; font-size: 18rpx; font-weight: 600; }
 .product-desc { display: -webkit-box; overflow: hidden; margin-top: 6rpx; color: $cozy-muted; font-size: 21rpx; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
 .product-extra { margin-top: 6rpx; font-size: 19rpx; color: $cozy-placeholder; }
 .product-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }

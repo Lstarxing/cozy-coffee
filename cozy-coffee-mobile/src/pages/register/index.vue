@@ -245,7 +245,7 @@ const goToLogin = () => {
 .invite-hint {
   margin-top: 20rpx;
   font-size: 20rpx;
-  color: $cozy-accent;
+  color: $cozy-muted;
 }
 
 .submit-btn {

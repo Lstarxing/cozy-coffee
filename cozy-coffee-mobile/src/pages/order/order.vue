@@ -370,7 +370,7 @@ function openRestoredCart() {
   font-weight: 700;
 }
 .order-status.processing { background: #EAF0F2; color: #285B70; }
-.order-status.completed { background: $cozy-accent-soft; color: $cozy-accent; }
+.order-status.completed { background: #E6F1EB; color: #059669; }
 .order-status.pending { background: #F4EBDD; color: #8A4D10; }
 .order-status.cancelled { background: $cozy-border; color: $cozy-muted; }
 .expire-countdown {

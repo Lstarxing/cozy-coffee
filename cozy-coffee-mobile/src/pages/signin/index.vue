@@ -67,7 +67,7 @@
     <!-- 签到成功浮层 -->
     <view class="toast-mask" :class="{ open: showBanner }" :style="{ top: (statusBarHeight + 16) + 'px' }">
       <view class="signin-toast">
-        <view class="toast-check"><CozyIcon name="check" :size="18" stroke-width="3" color="#FFFFFF" /></view>
+        <view class="toast-check"><CozyIcon name="check" :size="18" stroke-width="3" color="#2B1E16" /></view>
         <view class="toast-copy">
           <text class="toast-title">签到成功 +{{ earnedPoints }} 积分</text>
           <text class="toast-sub">已连续签到 {{ consecutiveDays }} 天</text>
@@ -382,7 +382,7 @@ const handleSignin = async () => {
   width: 48rpx;
   height: 48rpx;
   border-radius: 50%;
-  background: $cozy-accent;
+  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;

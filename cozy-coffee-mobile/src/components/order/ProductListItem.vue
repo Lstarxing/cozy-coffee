@@ -77,8 +77,8 @@ const formatPrice = value => Number(value || 0).toFixed(0)
   flex: none;
   padding: 4rpx 10rpx;
   border-radius: 999rpx;
-  background: $cozy-accent-soft;
-  color: $cozy-accent;
+  background: $cozy-surface;
+  color: $cozy-ink;
   font-size: 20rpx;
   font-weight: 600;
 }

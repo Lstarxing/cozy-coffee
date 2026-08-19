@@ -48,14 +48,14 @@ function goToMenu() {
 <style lang="scss" scoped>
 .store-page { min-height: 100vh; padding: 30rpx 28rpx 170rpx; background: $cozy-surface; }
 .store-hero { padding: 52rpx 34rpx; border-radius: 28rpx; background: $bg-white; color: $cozy-ink; }
-.eyebrow { display: block; color: $cozy-accent; font-size: 18rpx; font-weight: 800; letter-spacing: .14em; }
+.eyebrow { display: block; color: $cozy-muted; font-size: 18rpx; font-weight: 800; letter-spacing: .14em; }
 .store-name { display: block; margin-top: 18rpx; font-size: 46rpx; }
 .store-description { display: block; max-width: 580rpx; margin-top: 16rpx; color: $cozy-muted; font-size: 23rpx; line-height: 1.65; }
 .store-panel { margin-top: 24rpx; padding: 8rpx 30rpx; border-radius: 28rpx; background: $bg-white; }
 .status-row, .info-row { min-height: 96rpx; display: flex; align-items: center; justify-content: space-between; gap: 30rpx; border-bottom: 1rpx solid $cozy-border; }
 .info-row:last-child { border-bottom: 0; }
-.open-status { display: flex; align-items: center; gap: 10rpx; color: $cozy-accent; font-size: 24rpx; font-weight: 700; }
-.status-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: $cozy-accent; }
+.open-status { display: flex; align-items: center; gap: 10rpx; color: $cozy-primary; font-size: 24rpx; font-weight: 700; }
+.status-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: $cozy-primary; }
 .hours { color: $cozy-ink; font-size: 24rpx; font-weight: 650; }
 .info-label { flex: none; color: $cozy-muted; font-size: 22rpx; }
 .info-value { color: $cozy-ink; font-size: 23rpx; line-height: 1.5; text-align: right; }

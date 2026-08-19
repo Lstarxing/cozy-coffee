@@ -358,9 +358,9 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 .form-value.accent { color: $cozy-primary; }
 .chevron { color: $cozy-placeholder; font-size: 42rpx; font-weight: 300; }
 .form-divider { height: 1rpx; background: $cozy-border; }
-.mock-tip { margin-top: 24rpx; padding: 24rpx 28rpx; border-radius: 16rpx; background: $cozy-accent-soft; }
-.mock-tip-title { display: block; color: $cozy-accent; font-size: 25rpx; font-weight: 700; }
-.mock-tip-copy { display: block; margin-top: 8rpx; color: #53604b; font-size: 21rpx; line-height: 1.5; }
+.mock-tip { margin-top: 24rpx; padding: 24rpx 28rpx; border-radius: 16rpx; background: $cozy-surface; }
+.mock-tip-title { display: block; color: $cozy-muted; font-size: 25rpx; font-weight: 700; }
+.mock-tip-copy { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 21rpx; line-height: 1.5; }
 .bottom-spacer { height: 180rpx; }
 
 /* ── 预留电话编辑 sheet ── */

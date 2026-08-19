@@ -557,7 +557,7 @@ function goInvite() {
   &:active { opacity: .8; }
 }
 .invite-banner-left { flex: 1; min-width: 0; }
-.invite-banner-kicker { display: block; font-size: 18rpx; font-weight: 700; letter-spacing: .18em; color: $cozy-accent; }
+.invite-banner-kicker { display: block; font-size: 18rpx; font-weight: 700; letter-spacing: .18em; color: $cozy-muted; }
 .invite-banner-title { display: block; margin-top: 10rpx; font-family: $font-display; font-size: 30rpx; font-weight: 600; color: $cozy-ink; }
 .invite-banner-note { display: block; margin-top: 8rpx; font-size: 20rpx; color: $cozy-muted; }
 .invite-banner-arrow { flex: none; font-size: 40rpx; color: $cozy-placeholder; line-height: 1; }

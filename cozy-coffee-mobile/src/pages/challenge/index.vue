@@ -30,7 +30,7 @@
       <template v-else>
         <view v-for="task in tasks" :key="task.key" class="task-row" :class="{ done: isDone(task) }">
           <view class="task-icon" :class="{ done: isDone(task) }">
-            <CozyIcon :name="task.icon" :size="22" :color="isDone(task) ? '#526C43' : '#753A22'" />
+            <CozyIcon :name="task.icon" :size="22" color="#753A22" />
           </view>
           <view class="task-main">
             <view class="task-top">
@@ -186,7 +186,7 @@ onShow(loadTasks)
 .hero-track-fill {
   height: 100%;
   border-radius: 4rpx;
-  background: $cozy-accent;
+  background: $cozy-ink;
   transform-origin: left;
   transition: transform .5s ease;
 }
@@ -226,7 +226,7 @@ onShow(loadTasks)
   align-items: center;
   justify-content: center;
 
-  &.done { background: $cozy-accent-soft; }
+  &.done { background: $cozy-primary-soft; }
 }
 .task-main { flex: 1; min-width: 0; }
 .task-top {
@@ -247,7 +247,7 @@ onShow(loadTasks)
   color: $cozy-primary;
 
   &.claimed {
-    color: $cozy-accent;
+    color: $cozy-caramel;
     font-weight: 650;
   }
 }
@@ -270,7 +270,7 @@ onShow(loadTasks)
   background: $cozy-primary;
   transition: width .5s ease;
 }
-.task-row.done .task-progress-fill { background: $cozy-accent; }
+.task-row.done .task-progress-fill { background: $cozy-ink; }
 .task-status {
   flex: none;
   min-width: 88rpx;
@@ -282,6 +282,6 @@ onShow(loadTasks)
   font-size: 22rpx;
   font-weight: 700;
 
-  &.done { background: $cozy-accent-soft; color: $cozy-accent; }
+  &.done { background: $cozy-primary-soft; color: $cozy-primary; }
 }
 </style>

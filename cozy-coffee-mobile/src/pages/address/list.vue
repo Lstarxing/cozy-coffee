@@ -197,8 +197,8 @@ const selectAddress = (item) => {
   margin-left: 16rpx;
   padding: 6rpx 18rpx;
   border-radius: 12rpx;
-  background: $cozy-accent-soft;
-  color: $cozy-accent;
+  background: $cozy-primary-soft;
+  color: $cozy-primary;
   font-size: 20rpx;
   font-weight: 700;
   letter-spacing: .04em;

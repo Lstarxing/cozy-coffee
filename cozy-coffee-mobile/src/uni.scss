@@ -2,15 +2,16 @@
  * 全局 SCSS 变量定义 — 余白の温度 (Warm Reserve)
  *
  * 设计方向: Web 品牌语言在移动端的克制延伸
- * 纯白底色、深烘咖啡棕主色、釉面绿语义色、影像主导
+ * 纯白底色、深烘咖啡棕主色、焦糖金语义色、影像主导
  * 禁用: 渐变文字、奶油底、Glassmorphism、卡片套卡片
  */
 
 // ==================== 品牌色 (oklch → hex) ====================
 $cozy-primary: #753A22;        // 深烘咖啡棕，替代旧 #C69C6D
 $cozy-primary-hover: #5E2E1B;
-$cozy-accent: #526C43;         // 釉面绿 — 仅用于: 积分到账数字、已解锁状态
-$cozy-accent-soft: #E8EDE5;
+$cozy-primary-soft: #F3E9DF;   // 烤棕浅底 — 已完成/已解锁/营业中 chip
+$cozy-caramel: #A9712F;        // 焦糖金 — 仅用于: 积分/兑换/奖励
+$cozy-caramel-soft: #F6EAD9;   // 焦糖金浅底 — 积分浅底 chip
 
 // ==================== 背景色 ====================
 $cozy-bg: #FFFFFF;             // 纯白底 (旧 #F8F5F2 暖白已废弃)
