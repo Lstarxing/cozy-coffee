@@ -40,39 +40,22 @@
 
   .page { padding:20px 20px 110px; }
 
-  /* ── 页头 ── */
-  .settings-intro {
-    padding:10px 8px 20px;
-  }
-  .intro-kicker {
+  /* ── 章节式分组：衬线一级标题锚点（页面背景上）+ 白卡设置项 ── */
+  .settings-section { margin-top:20px; }
+  .settings-section:first-of-type { margin-top:0; }
+  .section-head { padding:0 4px; }
+  .section-title {
     display:block;
-    font-size:10px; font-weight:700; letter-spacing:.2em; color:var(--muted);
+    font-family:var(--serif); font-size:19px; font-weight:600; color:var(--ink);
   }
-  .intro-title {
-    display:block; margin-top:8px;
-    font-family:var(--serif); font-size:24px; font-weight:600; color:var(--ink);
+  .section-note {
+    display:block; margin-top:4px;
+    font-size:11px; color:var(--muted);
   }
-  .intro-copy {
-    display:block; margin-top:8px;
-    font-size:12px; color:var(--muted);
-  }
-
-  /* ── 分组卡 ── */
   .settings-card {
-    margin-top:16px;
+    margin-top:10px;
     border-radius:14px; background:var(--card);
     overflow:hidden;
-  }
-  .card-heading {
-    padding:20px 20px 4px;
-  }
-  .card-title {
-    display:block;
-    font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink);
-  }
-  .card-note {
-    display:block; margin-top:3px;
-    font-size:11px; color:var(--muted);
   }
   .settings-row {
     display:flex; align-items:center; justify-content:space-between; gap:12px;
@@ -81,30 +64,30 @@
     border-bottom:1px solid var(--border); cursor:pointer;
   }
   .settings-row:last-child { border-bottom:0; }
-  .row-copy { min-width:0; flex:1; padding:14px 0; }
+  .row-copy { min-width:0; flex:1; padding:13px 0; }
   .row-label {
     display:block;
-    font-size:14px; font-weight:600; color:var(--ink);
+    font-size:15px; font-weight:600; color:var(--ink);
   }
   .row-desc {
     display:block; margin-top:3px;
-    font-size:11px; line-height:1.45; color:var(--muted);
+    font-size:12px; line-height:1.45; color:var(--muted);
   }
   .row-right { flex:none; display:flex; align-items:center; gap:10px; }
   .row-value {
     font-size:13px; color:var(--muted);
   }
   .row-value.quiet { color:var(--placeholder); }
-  .row-arrow { font-size:16px; color:var(--placeholder); }
+  .row-arrow { font-size:17px; color:var(--placeholder); }
 
-  /* 开关 */
+  /* 自定义胶囊开关（开态 = ink） */
   .switch {
     position:relative; width:44px; height:26px; flex:none;
-    border-radius:13px;
+    border-radius:999px;
     background:var(--hairline);
     transition:background .25s; cursor:pointer;
   }
-  .switch.on { background:var(--roast-brown); }
+  .switch.on { background:var(--ink); }
   .switch::after {
     content:''; position:absolute; top:3px; left:3px;
     width:20px; height:20px; border-radius:50%;
@@ -118,16 +101,16 @@
     margin-top:20px; height:48px;
     display:flex; align-items:center; justify-content:center;
     border-radius:10px;
-    border:1px solid rgba(180,60,48,.3);
-    background:rgba(180,60,48,.06);
-    color:#B03A2E;
+    border:1px solid rgba(43,30,22,.3);
+    background:rgba(43,30,22,.06);
+    color:var(--ink);
     font-size:14px; font-weight:650; cursor:pointer;
   }
   .logout-btn:active { opacity:.8; }
 
   /* ── Footer ── */
   .page-signoff {
-    display:block; margin-top:26px;
+    display:block; margin-top:24px;
     font-size:9px; font-weight:650; letter-spacing:.16em; color:var(--placeholder);
     text-align:center;
   }
@@ -148,109 +131,107 @@
 
   <a class="back-btn" onclick="goBack('profile.html')">‹</a>
 
-  <!-- 页头 -->
-  <div class="settings-intro">
-    <span class="intro-kicker">COZY SETTINGS</span>
-    <span class="intro-title">账户设置</span>
-    <span class="intro-copy">管理登录方式、必要提醒与本机数据。</span>
-  </div>
-
   <!-- 账号与安全 -->
-  <div class="settings-card">
-    <div class="card-heading">
-      <span class="card-title">账号与安全</span>
-      <span class="card-note">登录信息与密码维护</span>
+  <div class="settings-section">
+    <div class="section-head">
+      <span class="section-title">账号与安全</span>
+      <span class="section-note">登录信息与密码维护</span>
     </div>
-    <div class="settings-row" onclick="toast('绑定手机')">
-      <div class="row-copy">
-        <span class="row-label">绑定手机</span>
-        <span class="row-desc">用于登录与接收必要的订单提醒</span>
+    <div class="settings-card">
+      <div class="settings-row" onclick="go('profile-edit.html')">
+        <div class="row-copy">
+          <span class="row-label">个人资料</span>
+          <span class="row-desc">昵称、头像、生日与联系方式</span>
+        </div>
+        <div class="row-right"><span class="row-arrow">›</span></div>
       </div>
-      <div class="row-right">
-        <span class="row-value">138****0421</span>
-        <span class="row-arrow">›</span>
+      <div class="settings-row" onclick="go('reset.html')">
+        <div class="row-copy">
+          <span class="row-label">修改密码</span>
+          <span class="row-desc">验证原密码后设置新密码</span>
+        </div>
+        <div class="row-right"><span class="row-arrow">›</span></div>
       </div>
-    </div>
-    <div class="settings-row" onclick="toast('修改密码')">
-      <div class="row-copy">
-        <span class="row-label">修改密码</span>
-        <span class="row-desc">开发环境账号可在此重置密码</span>
-      </div>
-      <div class="row-right"><span class="row-arrow">›</span></div>
     </div>
   </div>
 
   <!-- 消息提醒 -->
-  <div class="settings-card">
-    <div class="card-heading">
-      <span class="card-title">消息提醒</span>
-      <span class="card-note">仅保留与当前体验相关的通知</span>
+  <div class="settings-section">
+    <div class="section-head">
+      <span class="section-title">消息提醒</span>
+      <span class="section-note">仅保留与当前体验相关的通知</span>
     </div>
-    <div class="settings-row">
-      <div class="row-copy">
-        <span class="row-label">订单状态</span>
-        <span class="row-desc">门店接单、制作与取餐状态</span>
+    <div class="settings-card">
+      <div class="settings-row">
+        <div class="row-copy">
+          <span class="row-label">订单状态</span>
+          <span class="row-desc">门店接单、制作与取餐状态</span>
+        </div>
+        <div class="switch on" onclick="toggle(this)"></div>
       </div>
-      <div class="switch on" onclick="toggle(this)"></div>
-    </div>
-    <div class="settings-row">
-      <div class="row-copy">
-        <span class="row-label">会员活动</span>
-        <span class="row-desc">签到、券包与会员权益更新</span>
+      <div class="settings-row">
+        <div class="row-copy">
+          <span class="row-label">会员活动</span>
+          <span class="row-desc">签到、券包与会员权益更新</span>
+        </div>
+        <div class="switch on" onclick="toggle(this)"></div>
       </div>
-      <div class="switch on" onclick="toggle(this)"></div>
-    </div>
-    <div class="settings-row">
-      <div class="row-copy">
-        <span class="row-label">积分变动</span>
-        <span class="row-desc">积分获得、使用与到期提示</span>
+      <div class="settings-row">
+        <div class="row-copy">
+          <span class="row-label">积分变动</span>
+          <span class="row-desc">积分获得、使用与到期提示</span>
+        </div>
+        <div class="switch on" onclick="toggle(this)"></div>
       </div>
-      <div class="switch on" onclick="toggle(this)"></div>
     </div>
   </div>
 
   <!-- 本机与版本 -->
-  <div class="settings-card">
-    <div class="card-heading">
-      <span class="card-title">本机与版本</span>
-      <span class="card-note">当前设备上的应用信息</span>
+  <div class="settings-section">
+    <div class="section-head">
+      <span class="section-title">本机与版本</span>
+      <span class="section-note">当前设备上的应用信息</span>
     </div>
-    <div class="settings-row" onclick="toast('清除缓存')">
-      <div class="row-copy">
-        <span class="row-label">清除缓存</span>
-        <span class="row-desc">不会删除账户、订单或积分记录</span>
+    <div class="settings-card">
+      <div class="settings-row" onclick="clearCache()">
+        <div class="row-copy">
+          <span class="row-label">清除缓存</span>
+          <span class="row-desc">不会删除账户、订单或积分记录</span>
+        </div>
+        <div class="row-right">
+          <span class="row-value" id="cacheValue">12.5MB</span>
+          <span class="row-arrow">›</span>
+        </div>
       </div>
-      <div class="row-right">
-        <span class="row-value">12.5MB</span>
-        <span class="row-arrow">›</span>
+      <div class="settings-row">
+        <div class="row-copy">
+          <span class="row-label">当前版本</span>
+          <span class="row-desc">CozyCoffee 小程序</span>
+        </div>
+        <div class="row-right"><span class="row-value">v1.0.0</span></div>
       </div>
-    </div>
-    <div class="settings-row">
-      <div class="row-copy">
-        <span class="row-label">当前版本</span>
-        <span class="row-desc">CozyCoffee 小程序</span>
-      </div>
-      <div class="row-right"><span class="row-value">v1.0.0</span></div>
     </div>
   </div>
 
   <!-- 关于与支持 -->
-  <div class="settings-card">
-    <div class="card-heading">
-      <span class="card-title">关于与支持</span>
-      <span class="card-note">正式内容上线后可在此查看</span>
+  <div class="settings-section">
+    <div class="section-head">
+      <span class="section-title">关于与支持</span>
+      <span class="section-note">正式内容上线后可在此查看</span>
     </div>
-    <div class="settings-row" onclick="toast('用户协议')">
-      <div class="row-copy"><span class="row-label">用户协议</span></div>
-      <div class="row-right"><span class="row-value quiet">待开放</span></div>
-    </div>
-    <div class="settings-row" onclick="toast('隐私政策')">
-      <div class="row-copy"><span class="row-label">隐私政策</span></div>
-      <div class="row-right"><span class="row-value quiet">待开放</span></div>
-    </div>
-    <div class="settings-row" onclick="toast('意见反馈')">
-      <div class="row-copy"><span class="row-label">意见反馈</span></div>
-      <div class="row-right"><span class="row-value quiet">待开放</span></div>
+    <div class="settings-card">
+      <div class="settings-row">
+        <div class="row-copy"><span class="row-label">用户协议</span></div>
+        <div class="row-right"><span class="row-value quiet">待开放</span></div>
+      </div>
+      <div class="settings-row">
+        <div class="row-copy"><span class="row-label">隐私政策</span></div>
+        <div class="row-right"><span class="row-value quiet">待开放</span></div>
+      </div>
+      <div class="settings-row">
+        <div class="row-copy"><span class="row-label">意见反馈</span></div>
+        <div class="row-right"><span class="row-value quiet">待开放</span></div>
+      </div>
     </div>
   </div>
 
@@ -263,6 +244,13 @@
 
 <script>
   function toggle(el) { el.classList.toggle('on'); }
+
+  function clearCache() {
+    if (confirm('确定要清除缓存吗？')) {
+      document.getElementById('cacheValue').textContent = '0MB';
+      toast('清除成功');
+    }
+  }
 
   function logout() {
     if (confirm('确定要退出登录吗？')) {

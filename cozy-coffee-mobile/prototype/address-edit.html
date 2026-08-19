@@ -111,11 +111,10 @@
     margin-top:24px; height:48px;
     display:flex; align-items:center; justify-content:center;
     border-radius:10px;
-    background:var(--roast-brown); color:#fff;
+    background:var(--ink); color:#fff;
     font-size:15px; font-weight:600; cursor:pointer;
-    transition:background .25s;
   }
-  .save-btn:active { background:var(--roast-brown-deep); }
+  .save-btn:active { opacity:.85; }
 
   /* ── Toast ── */
   .toast {
@@ -147,13 +146,13 @@
     <div class="form-row">
       <span class="form-label">性别</span>
       <div class="gender-group">
-        <div class="gender-opt active" data-g="男" onclick="pickGender(this)">男</div>
-        <div class="gender-opt" data-g="女" onclick="pickGender(this)">女</div>
+        <div class="gender-opt active" data-g="MALE" onclick="pickGender(this)">男</div>
+        <div class="gender-opt" data-g="FEMALE" onclick="pickGender(this)">女</div>
       </div>
     </div>
     <div class="form-row">
       <span class="form-label">手机号</span>
-      <input class="form-input" id="fPhone" type="tel" placeholder="请填写收货手机号">
+      <input class="form-input" id="fPhone" type="number" maxlength="11" placeholder="请填写收货手机号">
     </div>
     <div class="form-row tap" onclick="cycleRegion()">
       <span class="form-label">收货地址</span>
@@ -193,7 +192,7 @@
         document.getElementById('pageTitle').textContent = '编辑地址';
         document.getElementById('fName').value = a.name;
         document.getElementById('fPhone').value = a.phone;
-        pickGender(document.querySelector('.gender-opt[data-g="' + (a.gender || '男') + '"]'));
+        pickGender(document.querySelector('.gender-opt[data-g="' + (a.gender || 'MALE') + '"]'));
         regionIdx = REGIONS.indexOf(a.region);
         const r = document.getElementById('fRegion');
         r.textContent = a.region;
@@ -228,6 +227,7 @@
     const detail = document.getElementById('fDetail').value.trim();
     const region = regionIdx >= 0 ? REGIONS[regionIdx] : '';
     if (!name || !phone || !region || !detail) { toast('请填写完整信息'); return; }
+    if (!/^1\d{10}$/.test(phone)) { toast('请输入正确的手机号'); return; }
 
     const gender = document.querySelector('.gender-opt.active').dataset.g;
     const list = getAddresses();

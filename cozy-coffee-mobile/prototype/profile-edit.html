@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>个人资料 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F3EE; color:#2C2723;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
+    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
+    --cask-brown:#2C1E18;
+    --roastery-ink:#2B1E16; --quiet-ink:#756A63;
+    --placeholder:#9E948E; --hairline:#E3DED8;
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  /* ── 顶部原生式导航：返回 + 居中标题 ── */
+  .top-nav {
+    position:relative;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px;
+  }
+  .nav-back {
+    font-size:26px; line-height:1; color:var(--ink);
+    cursor:pointer; padding:6px 4px; width:32px;
+  }
+  .nav-back:active { opacity:.5; }
+  .nav-title {
+    position:absolute; left:50%; transform:translateX(-50%);
+    font-size:16px; font-weight:600; color:var(--ink);
+    white-space:nowrap;
+  }
+  .nav-right { width:32px; }
+
+  .page { padding:0 20px 120px; }
+
+  /* ── 头像卡 ── */
+  .profile-hero {
+    margin-top:6px; padding:14px 18px;
+    border-radius:14px; background:var(--card); color:var(--ink);
+  }
+  .avatar-row { display:flex; align-items:center; gap:12px; }
+  .avatar {
+    flex:none; width:62px; height:62px; border-radius:50%;
+    border:1px solid var(--border); background:var(--porcelain-muted);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--placeholder); overflow:hidden;
+  }
+  .avatar svg { width:34px; height:34px; }
+  .avatar-copy { min-width:0; flex:1; }
+  .avatar-title { display:block; font-size:13px; font-weight:700; color:var(--ink); }
+  .avatar-note { display:block; margin-top:3px; font-size:9px; color:var(--muted); }
+  .avatar-button {
+    display:inline-flex; align-items:center; justify-content:center;
+    margin-top:7px; height:28px; padding:0 10px;
+    border:1px solid var(--border); border-radius:10px;
+    background:transparent; color:var(--ink);
+    font-size:10px; cursor:pointer; font-family:inherit;
+  }
+  .avatar-button:active { opacity:.8; }
+
+  /* ── 基础资料 ── */
+  .section { margin-top:14px; padding:14px; border-radius:14px; background:var(--card); }
+  .section-heading { padding-bottom:10px; border-bottom:1px solid var(--border); }
+  .section-title { display:block; font-size:14.5px; font-weight:720; color:var(--ink); }
+  .section-note { display:block; margin-top:3px; font-size:9px; color:var(--muted); }
+
+  .field-row {
+    min-height:52px; display:flex; align-items:center; gap:10px;
+    border-bottom:1px solid var(--border);
+  }
+  .field-row:last-of-type { border-bottom:0; }
+  .field-row.readonly { color:var(--muted); }
+  .field-label { flex:none; width:60px; font-size:11px; color:var(--muted); }
+  .field-input {
+    flex:1; min-width:0;
+    border:none; background:transparent; text-align:right;
+    font-size:12px; color:var(--ink); font-family:inherit;
+    padding:4px 0;
+  }
+  .field-input::placeholder { color:var(--placeholder); }
+  .field-input:focus { outline:none; }
+  .field-value {
+    flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-size:11.5px; color:var(--ink); text-align:right;
+  }
+  .field-value.placeholder { color:var(--placeholder); }
+  .field-arrow { flex:none; color:var(--placeholder); font-size:18px; }
+  .birthday-tip {
+    display:block; margin-top:8px;
+    font-size:9px; line-height:1.55; color:var(--muted);
+  }
+
+  /* ── 保存 ── */
+  .primary-button {
+    margin-top:14px; height:44px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:999px; background:var(--ink); color:#fff;
+    font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;
+  }
+  .primary-button:active { opacity:.85; }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(44,39,35,.88); color:#F7F3EE;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- 顶部导航 -->
+  <div class="top-nav">
+    <span class="nav-back" onclick="goBack('profile.html')">‹</span>
+    <span class="nav-title">个人资料</span>
+    <span class="nav-right"></span>
+  </div>
+
+  <!-- 头像 -->
+  <div class="profile-hero">
+    <div class="avatar-row">
+      <div class="avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
+      </div>
+      <div class="avatar-copy">
+        <span class="avatar-title">会员头像</span>
+        <span class="avatar-note">最大 5MB</span>
+        <div class="avatar-button" onclick="pickAvatar()">更换头像</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 基础资料 -->
+  <div class="section">
+    <div class="section-heading">
+      <span class="section-title">基础资料</span>
+      <span class="section-note">昵称 2～20 个字符</span>
+    </div>
+
+    <div class="field-row readonly">
+      <span class="field-label">登录账号</span>
+      <span class="field-value" style="color:var(--muted)">微信开发账号</span>
+    </div>
+    <div class="field-row">
+      <span class="field-label">昵称</span>
+      <input class="field-input" id="fNickname" maxlength="20" placeholder="请输入昵称" value="咖啡本咖">
+    </div>
+    <div class="field-row">
+      <span class="field-label">手机号</span>
+      <input class="field-input" id="fPhone" type="number" maxlength="11" placeholder="请输入手机号">
+    </div>
+    <div class="field-row">
+      <span class="field-label">邮箱</span>
+      <input class="field-input" id="fEmail" maxlength="100" placeholder="请输入邮箱" value="coffee@cozy.cc">
+    </div>
+    <div class="field-row" onclick="pickBirthday()" style="cursor:pointer">
+      <span class="field-label">生日</span>
+      <span class="field-value placeholder" id="fBirthday">请选择生日</span>
+      <span class="field-arrow">›</span>
+    </div>
+    <input type="date" id="birthdayPicker" style="display:none" onchange="applyBirthday(this)">
+    <span class="birthday-tip">生日首次设置后，每年只能修改一次；保存生日可能触发生日会员权益。</span>
+  </div>
+
+  <div class="primary-button" onclick="save()">保存资料</div>
+
+</div>
+
+<script>
+  function pickAvatar() { toast('已打开相册 / 相机选择'); }
+
+  function pickBirthday() { document.getElementById('birthdayPicker').showPicker && document.getElementById('birthdayPicker').showPicker(); }
+
+  function applyBirthday(el) {
+    if (!el.value) return;
+    const v = document.getElementById('fBirthday');
+    v.textContent = el.value;
+    v.classList.remove('placeholder');
+  }
+
+  function save() {
+    const nickname = document.getElementById('fNickname').value.trim();
+    const phone = document.getElementById('fPhone').value.trim();
+    const email = document.getElementById('fEmail').value.trim();
+    if (!phone && !email) { toast('手机号或邮箱至少保留一项'); return; }
+    if (nickname.length < 2 || nickname.length > 20) { toast('昵称长度需在 2～20 个字符之间'); return; }
+    if (phone && !/^1[3-9]\d{9}$/.test(phone)) { toast('请输入正确的手机号'); return; }
+    if (email && !/^[\w.-]+@[\w.-]+\.\w+$/.test(email)) { toast('请输入正确的邮箱地址'); return; }
+    toast('资料已更新');
+  }
+
+  function goBack(fallback) {
+    if (document.referrer && window.history.length > 1) { history.back(); }
+    else { location.href = fallback; }
+  }
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
+  }
+</script>
+</body>
+</html>

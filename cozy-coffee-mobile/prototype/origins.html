@@ -17,7 +17,6 @@
     --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
     --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
     --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
-    --cask-brown:#2C1E18;
     --roastery-ink:#2B1E16; --quiet-ink:#756A63;
     --placeholder:#9E948E; --hairline:#E3DED8;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
@@ -26,98 +25,99 @@
   .back-btn {
     display:inline-flex; align-items:center; justify-content:center;
     width:36px; height:36px;
-    margin-bottom:14px;
+    margin:20px 0 0 20px;
     font-size:26px; line-height:1;
     color:var(--roastery-ink);
     text-decoration:none; cursor:pointer;
     border-radius:50%;
-    background:rgba(255,255,255,.6);
-    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    background:#FFFFFF;
+    border:1px solid var(--hairline);
+    box-shadow:0 1px 3px rgba(0,0,0,.05);
   }
   .back-btn:active { opacity:.55; }
 
-  .page { padding:20px 20px 120px; }
+  .page { padding:0 0 120px; }
 
   /* ── 世界产区地图 ── */
   .map-section {
-    border-radius:14px; overflow:hidden;
-    background:var(--cask-brown);
+    margin-top:16px;
+    background:var(--porcelain-muted);
   }
   .map-image {
     display:block; width:100%;
-    background:var(--cask-brown);
   }
   .map-label {
-    display:block; padding:16px 20px 20px;
-    font-size:13px; letter-spacing:.06em;
-    color:rgba(255,255,255,.65); text-align:center;
+    display:block; padding:8px 15px 10px;
+    font-size:12.5px; text-align:center;
+    color:var(--quiet-ink);
   }
 
   /* ── 产区详情卡片 ── */
-  .origins-list { padding:8px 0; }
-  .origin-card { padding:32px 0 48px; }
+  .origins-list { padding:0 15px; }
+  .origin-card { padding:17px 0 29px; }
   .card-rule {
-    width:80px; height:3px; background:var(--hairline);
+    width:42px; height:3px; background:var(--hairline);
     margin-top:8px;
   }
-  .card-rule--hz { width:120px; }
+  .card-rule--hz { width:62px; }
   .card-counter {
     display:block;
-    font-size:12px; letter-spacing:.06em; color:var(--quiet-ink);
-    margin-bottom:20px;
+    font-size:12.5px; letter-spacing:.06em; color:var(--quiet-ink);
+    margin-bottom:10px;
   }
   .card-name {
     display:block;
-    font-family:var(--serif); font-size:30px; font-weight:600;
-    color:var(--roastery-ink); line-height:1.15;
+    font-family:var(--serif); font-size:25px; font-weight:600;
+    color:var(--roastery-ink); line-height:1.12;
   }
   .card-region {
-    display:block; margin-top:10px;
-    font-size:15px; font-weight:650; color:var(--roast-brown);
+    display:block; margin-top:6px;
+    font-size:13.5px; font-weight:650; color:var(--roast-brown);
   }
   .section-rule {
-    width:48px; height:2px; margin-top:20px;
+    width:25px; height:2px; margin-top:12.5px;
     background:var(--hairline);
   }
   .card-story {
-    display:block; margin-top:24px;
-    font-size:14px; line-height:1.8; color:var(--quiet-ink);
+    display:block; margin-top:14.5px;
+    font-size:14.5px; line-height:1.75; color:var(--quiet-ink);
   }
   .facts-rule {
-    width:56px; height:2px; margin-top:28px;
+    width:29px; height:2px; margin-top:17px;
     background:var(--hairline);
   }
   .card-facts {
-    display:grid; grid-template-columns:1fr 1fr; gap:18px 24px;
-    margin-top:28px;
+    display:grid; grid-template-columns:1fr 1fr; gap:10px 12.5px;
+    margin-top:17px;
   }
   .fact-label {
-    display:block; font-size:12px; color:var(--placeholder);
+    display:block; font-size:11.5px; color:var(--placeholder);
   }
   .fact-value {
-    display:block; margin-top:6px;
-    font-size:13px; color:var(--roastery-ink);
+    display:block; margin-top:4px;
+    font-size:13.5px; color:var(--roastery-ink);
   }
   .fact-role .fact-value { color:var(--roast-brown); font-weight:700; }
   .card-flavors {
-    display:flex; flex-wrap:wrap; gap:8px; margin-top:24px;
+    display:flex; flex-wrap:wrap; gap:6px; margin-top:14.5px;
   }
   .flavor-tag {
-    padding:6px 12px; border-radius:6px;
+    padding:6px 11.5px; border-radius:999px;
     background:var(--porcelain-muted); color:var(--roastery-ink);
-    font-size:12px;
+    font-size:12.5px;
   }
   .card-route {
-    display:block; margin-top:24px;
-    font-size:13px; font-weight:600; color:var(--roast-brown);
+    display:block; margin-top:14.5px;
+    font-size:12.5px; font-weight:600; color:var(--roast-brown);
   }
-  .card-roastery { display:flex; gap:12px 28px; margin-top:28px; }
+  .card-roastery { display:flex; gap:6px 14.5px; margin-top:17px; }
   .roastery-step {
-    font-size:14px; font-weight:650; color:var(--roastery-ink);
+    font-size:13.5px; font-weight:650; color:var(--roastery-ink);
   }
   .roastery-step:not(:last-child)::after {
-    content:' →'; color:var(--quiet-ink); margin-left:28px;
+    content:' →'; color:var(--quiet-ink); margin-left:14.5px;
   }
+  .card-summary { padding-bottom:0; }
 </style>
 </head>
 <body>
@@ -224,7 +224,7 @@
       </div>
     `).join('') + `
       <div class="card-rule card-rule--hz"></div>
-      <div class="origin-card">
+      <div class="origin-card card-summary">
         <span class="card-counter">09 / 09 · ${hangzhou.en}</span>
         <span class="card-name">${hangzhou.name}</span>
         <span class="card-region">${hangzhou.region}</span>

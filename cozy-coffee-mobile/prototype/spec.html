@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>选择规格 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#FFFFFF; color:#2B1E16;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --primary:#753A22; --accent:#526C43;
+    --ink:#2B1E16; --muted:#756A63; --placeholder:#9E948E;
+    --border:#E3DED8; --surface:#F7F5F3; --card:#FFFFFF;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  /* ── 顶部导航 ── */
+  .top-nav {
+    position:relative; display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; background:#fff;
+    border-bottom:1px solid var(--border);
+  }
+  .nav-back { font-size:26px; line-height:1; color:var(--ink); cursor:pointer; padding:6px 4px; width:32px; text-decoration:none; }
+  .nav-title { position:absolute; left:50%; transform:translateX(-50%); font-size:16px; font-weight:600; color:var(--ink); white-space:nowrap; }
+  .nav-right { width:32px; }
+
+  .spec-content { padding-bottom:220px; }
+
+  /* ── 商品图 ── */
+  .spec-hero { position:relative; }
+  .spec-image {
+    width:100%; height:270px; display:block;
+    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
+  }
+  .spec-hero-info { padding:20px 20px 6px; }
+  .spec-tag {
+    display:inline-block; margin-bottom:9px; padding:3px 9px; border-radius:4px;
+    background:var(--ink); color:#fff;
+    font-size:11px; font-weight:700; letter-spacing:.06em;
+  }
+  .spec-eyebrow { display:block; font-size:10px; font-weight:700; letter-spacing:.24em; color:var(--muted); }
+  .spec-name { display:block; margin-top:7px; font-family:var(--serif); font-size:22px; font-weight:600; color:var(--ink); line-height:1.2; }
+  .spec-notes { display:block; margin-top:8px; font-family:var(--serif); font-size:12px; color:var(--muted); letter-spacing:.02em; }
+
+  /* ── 规格选择 ── */
+  .spec-section { border-top:1px solid var(--border); padding:18px 20px 4px; }
+  .spec-group { margin-top:14px; }
+  .spec-group:first-child { margin-top:0; }
+  .spec-title { display:block; margin-bottom:10px; font-size:13px; font-weight:600; color:var(--ink); }
+  .spec-options { display:flex; flex-wrap:wrap; gap:7px; }
+  .spec-option {
+    height:28px; padding:0 13px; display:flex; align-items:center; justify-content:center; gap:3px;
+    font-size:12px; color:var(--ink); border-radius:4px;
+    border:1px solid var(--border); background:#fff; cursor:pointer; user-select:none;
+  }
+  .spec-option.active { background:var(--surface); border-color:var(--ink); font-weight:600; }
+  .spec-extra { color:var(--muted); font-size:9px; }
+  .spec-option.active .spec-extra { color:var(--ink); }
+
+  /* ── 商品详情 ── */
+  .spec-card { border-top:1px solid var(--border); margin-top:20px; padding:18px 20px 2px; }
+  .spec-card-title { display:block; margin-bottom:10px; font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink); }
+  .spec-row { display:flex; align-items:flex-start; gap:16px; padding:8px 0; }
+  .spec-row-label { flex:none; width:52px; font-size:11px; font-weight:700; letter-spacing:.1em; color:var(--muted); }
+  .spec-row-value { flex:1; font-size:13px; line-height:1.6; color:var(--ink); }
+  .spec-disclaimer { border-top:1px solid var(--border); margin-top:20px; padding:14px 20px 24px; font-size:11px; line-height:1.7; color:var(--placeholder); }
+
+  /* ── 底部加购栏 ── */
+  .spec-bottom {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:390px; padding:10px 16px;
+    background:#fff; border-top:1px solid var(--border); z-index:80;
+  }
+  .spec-bottom-top { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .spec-price-col { flex:1; min-width:0; }
+  .spec-bottom-price { font-size:22px; font-weight:700; color:var(--ink); line-height:1.1; }
+  .spec-selected { display:block; margin-top:4px; font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .spec-qty { display:flex; align-items:center; gap:8px; border:1px solid var(--border); border-radius:6px; padding:4px 9px; }
+  .qty-btn { width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--ink); cursor:pointer; user-select:none; }
+  .qty-value { min-width:18px; text-align:center; font-size:14px; font-weight:600; color:var(--ink); }
+  .spec-add {
+    width:100%; height:46px; display:flex; align-items:center; justify-content:center;
+    border-radius:6px; background:var(--ink); color:#fff;
+    font-size:15px; font-weight:650; cursor:pointer;
+  }
+  .spec-add:active { background:#241a14; }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(43,30,22,.88); color:#F7F5F3;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease; white-space:nowrap;
+  }
+</style>
+</head>
+<body>
+
+  <!-- 顶部导航（原生标题：选择规格） -->
+  <div class="top-nav">
+    <a class="nav-back" href="menu.html">‹</a>
+    <span class="nav-title">选择规格</span>
+    <span class="nav-right"></span>
+  </div>
+
+  <div class="spec-content">
+
+    <!-- 商品图 + 基本信息 -->
+    <div class="spec-hero">
+      <div class="spec-image"></div>
+      <div class="spec-hero-info">
+        <span class="spec-tag">双份浓缩</span>
+        <span class="spec-eyebrow">ESPRESSO</span>
+        <span class="spec-name">浓缩咖啡</span>
+        <span class="spec-notes">双份浓缩基底，浓郁醇厚</span>
+      </div>
+    </div>
+
+    <!-- 规格选择 -->
+    <div class="spec-section">
+      <div class="spec-group">
+        <span class="spec-title">杯型</span>
+        <div class="spec-options" data-key="cupSize">
+          <span class="spec-option active" data-v="STANDARD" data-label="标准杯">标准杯</span>
+          <span class="spec-option" data-v="LARGE" data-label="大杯">大杯 <span class="spec-extra">+¥3</span></span>
+        </div>
+      </div>
+
+      <div class="spec-group">
+        <span class="spec-title">温度</span>
+        <div class="spec-options" data-key="temperature">
+          <span class="spec-option active" data-v="HOT" data-label="热">热</span>
+          <span class="spec-option" data-v="COLD" data-label="冰">冰</span>
+        </div>
+      </div>
+
+      <div class="spec-group">
+        <span class="spec-title">甜度</span>
+        <div class="spec-options" data-key="sugarLevel">
+          <span class="spec-option active" data-v="STANDARD" data-label="标准糖">标准糖</span>
+          <span class="spec-option" data-v="LESS" data-label="少糖">少糖</span>
+          <span class="spec-option" data-v="HALF" data-label="半糖">半糖</span>
+          <span class="spec-option" data-v="NONE" data-label="无糖">无糖</span>
+        </div>
+      </div>
+
+      <div class="spec-group">
+        <span class="spec-title">咖啡浓度</span>
+        <div class="spec-options" data-key="coffeeStrength">
+          <span class="spec-option active" data-v="NORMAL" data-label="标准">标准</span>
+          <span class="spec-option" data-v="STRONG" data-label="加浓">加浓 <span class="spec-extra">+¥5</span></span>
+        </div>
+      </div>
+
+      <div class="spec-group">
+        <span class="spec-title">基底奶</span>
+        <div class="spec-options" data-key="milkType">
+          <span class="spec-option active" data-v="WHOLE" data-label="标准牛乳">标准牛乳</span>
+          <span class="spec-option" data-v="OAT" data-label="换燕麦奶">换燕麦奶 <span class="spec-extra">+¥4</span></span>
+          <span class="spec-option" data-v="COCONUT" data-label="换椰奶">换椰奶 <span class="spec-extra">+¥4</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 商品详情 -->
+    <div class="spec-card">
+      <span class="spec-card-title">商品详情</span>
+      <div class="spec-row"><span class="spec-row-label">产地</span><span class="spec-row-value">杭州 烘焙中心</span></div>
+      <div class="spec-row"><span class="spec-row-label">处理法</span><span class="spec-row-value">意式拼配 · Blend</span></div>
+      <div class="spec-row"><span class="spec-row-label">风味</span><span class="spec-row-value">双份浓缩基底，浓郁醇厚</span></div>
+      <div class="spec-row"><span class="spec-row-label">烘焙度</span><span class="spec-row-value">中深烘焙 · Medium Dark</span></div>
+    </div>
+
+    <div class="spec-disclaimer">本商品按所选规格现制，出品以门店实物为准。</div>
+  </div>
+
+  <!-- 底部固定加购栏 -->
+  <div class="spec-bottom">
+    <div class="spec-bottom-top">
+      <div class="spec-price-col">
+        <span class="spec-bottom-price" id="price">¥18.00</span>
+        <span class="spec-selected" id="selected">标准杯 · 热 · 标准糖 · 标准 · 标准牛乳</span>
+      </div>
+      <div class="spec-qty">
+        <span class="qty-btn" onclick="changeQty(-1)">−</span>
+        <span class="qty-value" id="qty">1</span>
+        <span class="qty-btn" onclick="changeQty(1)">＋</span>
+      </div>
+    </div>
+    <div class="spec-add" onclick="addToCart()">加入购物车</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  // 与 spec.vue unitPrice 一致：杯型/浓度/奶基底加价
+  const SIZE_PRICE = { STANDARD:0, LARGE:3 };
+  const STRONG_PRICE = 5;
+  const MILK_PRICE = { WHOLE:0, OAT:4, COCONUT:4 };
+  const BASE = 18;
+
+  const form = {
+    cupSize:'STANDARD', temperature:'HOT', sugarLevel:'STANDARD',
+    coffeeStrength:'NORMAL', milkType:'WHOLE', quantity:1
+  };
+
+  // 点击规格选项
+  document.querySelectorAll('.spec-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const group = opt.closest('.spec-options');
+      const key = group.dataset.key;
+      group.querySelectorAll('.spec-option').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      form[key] = opt.dataset.v;
+      refresh();
+    });
+  });
+
+  function changeQty(delta) {
+    form.quantity = Math.max(1, Math.min(10, form.quantity + delta));
+    document.getElementById('qty').textContent = form.quantity;
+    refresh();
+  }
+
+  function refresh() {
+    const size = SIZE_PRICE[form.cupSize] || 0;
+    const strength = form.coffeeStrength === 'STRONG' ? STRONG_PRICE : 0;
+    const milk = (MILK_PRICE[form.milkType] || 0);
+    const unit = BASE + size + strength + milk;
+    const total = (unit * form.quantity).toFixed(2);
+    document.getElementById('price').textContent = '¥' + total;
+
+    const labelOf = { STANDARD:'标准杯', LARGE:'大杯', HOT:'热', COLD:'冰',
+      STANDARD2:'标准糖', LESS:'少糖', HALF:'半糖', NONE:'无糖',
+      NORMAL:'标准', STRONG:'加浓', WHOLE:'标准牛乳', OAT:'换燕麦奶', COCONUT:'换椰奶' };
+    const parts = [
+      labelOf[form.cupSize], labelOf[form.temperature],
+      form.sugarLevel === 'NONE' ? '无糖' : labelOf[form.sugarLevel],
+      form.coffeeStrength === 'STRONG' ? '加浓' : '标准',
+      labelOf[form.milkType]
+    ];
+    document.getElementById('selected').textContent = parts.join(' · ');
+  }
+
+  function addToCart() {
+    const selected = document.getElementById('selected').textContent;
+    toast('已加入购物车 · 浓缩咖啡（' + selected + '）×' + form.quantity);
+    setTimeout(() => { location.href = 'menu.html'; }, 600);
+  }
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1400);
+  }
+
+  refresh();
+</script>
+</body>
+</html>

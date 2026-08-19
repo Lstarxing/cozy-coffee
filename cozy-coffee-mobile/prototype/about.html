@@ -10,15 +10,14 @@
   html { -webkit-font-smoothing:antialiased; }
   body {
     font-family:'Inter',-apple-system,sans-serif;
-    background:#F7F3EE; color:#2C2723;
+    background:#F7F5F3; color:#2B1E16;
     max-width:390px; margin:0 auto; min-height:100vh;
   }
   :root {
-    --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
-    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
-
 
   .back-btn {
     display:inline-flex; align-items:center; justify-content:center;
@@ -28,134 +27,133 @@
     color:var(--ink);
     text-decoration:none; cursor:pointer;
     border-radius:50%;
-    background:rgba(255,255,255,.6);
-    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    background:#FFFFFF;
+    border:1px solid var(--border);
+    box-shadow:0 1px 3px rgba(0,0,0,.05);
   }
   .back-btn:active { opacity:.55; }
 
-  .page { padding:20px 20px 160px; }
+  .page { padding:20px 0 160px; }
 
   /* ── 通用 ── */
-  .section { padding:48px 24px; }
+  .section { padding:37px 17px; }
   .eyebrow {
-    display:block; font-size:10px; font-weight:700; letter-spacing:.18em; color:var(--muted);
+    display:block; font-size:9.5px; font-weight:700; letter-spacing:.16em; color:var(--muted);
   }
   .eyebrow--center { text-align:center; }
   .section-title {
-    display:block; margin-top:10px;
-    font-family:var(--serif); font-size:26px; font-weight:600; color:var(--ink);
+    display:block; margin-top:7px;
+    font-family:var(--serif); font-size:21px; font-weight:600; color:var(--ink);
   }
   .section-lead {
-    display:block; margin-top:10px;
-    font-size:14px; line-height:1.7; color:var(--muted);
+    display:block; margin-top:7px;
+    font-size:12.5px; line-height:1.7; color:var(--muted);
   }
-  .section-head { margin-bottom:32px; }
+  .section-head { margin-bottom:23px; }
   .section-head--center { text-align:center; }
-  .section-divider {
-    width:48px; height:1px; margin-top:18px;
-    background:var(--primary); opacity:.3;
-  }
 
   /* ── 为什么开始 ── */
   .story { background:var(--card); }
   .story-lead {
-    display:block; margin-top:18px;
-    font-family:var(--serif); font-size:19px; font-weight:600; color:var(--ink);
+    display:block; margin-top:11px;
+    font-family:var(--serif); font-size:14.5px; font-weight:600; color:var(--ink);
   }
   .story-body {
-    display:block; margin-top:12px;
-    font-size:14px; line-height:1.8; color:var(--muted);
+    display:block; margin-top:8px;
+    font-size:12.5px; line-height:1.8; color:var(--muted);
   }
   .story-media {
-    margin-top:24px; overflow:hidden; border-radius:12px;
-    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
+    margin-top:21px; overflow:hidden; border-radius:8px;
+    background:var(--surface);
   }
-  .story-media img { width:100%; height:auto; object-fit:cover; }
+  .story-media img {
+    width:100%; height:239px; object-fit:cover; display:block;
+  }
 
   /* ── 从土地到杯中 ── */
   .journey { background:var(--surface); }
   .journey-step {
-    display:flex; gap:16px; padding:20px 0;
+    display:flex; gap:15px; padding:15px 0;
     border-bottom:1px solid var(--border);
   }
   .journey-step:last-child { border-bottom:0; }
   .journey-num {
-    flex:none; width:34px;
-    font-size:13px; font-weight:700; color:var(--primary); letter-spacing:.08em;
+    flex:none; width:33px;
+    font-size:11.5px; font-weight:700; color:var(--primary); letter-spacing:.08em;
   }
   .journey-body { min-width:0; flex:1; }
   .journey-name {
-    display:block; font-family:var(--serif); font-size:17px; font-weight:600; color:var(--ink);
+    display:block; font-family:var(--serif); font-size:15px; font-weight:650; color:var(--ink);
   }
   .journey-en {
     display:block; margin-top:2px;
-    font-size:10px; letter-spacing:.14em; color:var(--muted);
+    font-size:9.5px; letter-spacing:.12em; color:var(--muted);
   }
   .journey-desc {
-    display:block; margin-top:6px;
-    font-size:13px; line-height:1.7; color:var(--muted);
+    display:block; margin-top:5px;
+    font-size:11.5px; line-height:1.7; color:var(--muted);
   }
 
   /* ── 我们坚持的事情 ── */
   .values { background:var(--card); }
   .value-item {
-    padding:24px 0; text-align:left;
+    padding-bottom:19px; margin-bottom:19px; text-align:left;
     border-bottom:1px solid var(--border);
   }
-  .value-item:last-child { border-bottom:0; }
+  .value-item:last-child { border-bottom:0; margin-bottom:0; padding-bottom:0; }
   .value-num {
-    display:block; font-size:12px; font-weight:700; color:var(--primary); letter-spacing:.1em;
+    display:block; font-size:10.5px; font-weight:700; color:var(--primary); letter-spacing:.1em;
   }
   .value-en {
-    display:block; margin-top:8px;
-    font-size:16px; font-weight:700; letter-spacing:.06em; color:var(--ink);
+    display:block; margin-top:6px;
+    font-size:13.5px; font-weight:700; letter-spacing:.06em; color:var(--ink);
   }
   .value-zh {
-    display:block; margin-top:4px;
-    font-family:var(--serif); font-size:15px; color:var(--muted);
+    display:block; margin-top:3px;
+    font-family:var(--serif); font-size:11.5px; color:var(--muted);
   }
   .value-desc {
-    display:block; margin-top:10px;
-    font-size:13px; line-height:1.7; color:var(--muted);
+    display:block; margin-top:7px;
+    font-size:11.5px; line-height:1.7; color:var(--muted);
   }
 
   /* ── 咖啡幕后 ── */
   .behind { background:var(--surface); }
   .behind-list {
-    display:grid; grid-template-columns:1fr 1fr; gap:12px;
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
   }
-  .behind-cell { overflow:hidden; border-radius:10px; background:var(--card); }
+  .behind-cell { overflow:hidden; border-radius:6px; background:var(--card); }
   .behind-image {
     width:100%; aspect-ratio:3/4; object-fit:cover;
     display:block;
   }
   .behind-caption {
-    display:block; padding:10px 12px 12px;
-    font-size:11px; color:var(--muted);
+    display:block; padding:7px 8px 9px;
+    font-size:10.5px; color:var(--muted);
   }
 
   /* ── 品牌宣言 ── */
   .manifesto {
-    padding:64px 24px;
+    padding:52px 17px;
     background:var(--card);
     text-align:center;
   }
   .manifesto .eyebrow { color:var(--muted); }
   .manifesto-title {
-    display:block; margin-top:20px;
-    font-family:var(--serif); font-size:26px; font-weight:500;
-    line-height:1.7; color:var(--ink);
+    display:block; margin-top:16px;
+    font-family:var(--serif); font-size:23px; font-weight:500;
+    line-height:1.5; color:var(--ink);
   }
   .manifesto-sign {
-    display:block; margin-top:24px;
-    font-size:12px; letter-spacing:.22em; color:var(--muted);
+    display:block; margin-top:21px;
+    font-size:10.5px; letter-spacing:.2em; color:var(--muted);
   }
 
   /* ── Toast ── */
   .toast {
     position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
     padding:10px 22px; border-radius:20px;
-    background:rgba(44,39,35,.88); color:#F7F3EE;
+    background:rgba(43,30,22,.88); color:#F7F5F3;
     font-size:12px; pointer-events:none; z-index:99;
     opacity:0; transition:opacity .3s ease;
   }
@@ -184,7 +182,7 @@
       <div class="section-head">
         <span class="eyebrow">FROM ORIGIN TO CUP</span>
         <span class="section-title">从土地，到杯中</span>
-        <span class="section-lead">一颗咖啡豆，要走过很远的路，才能成为你面前这一杯。</span>
+        <span class="section-lead">一颗咖啡豆，要走过很远的路，<br>才能成为你面前这一杯。</span>
       </div>
       <div id="journeyRail"></div>
     </div>
@@ -195,7 +193,6 @@
         <span class="eyebrow">WHAT WE BELIEVE</span>
         <span class="section-title">我们坚持的事情</span>
         <span class="section-lead">不强调规模，只回应每一杯。</span>
-        <div class="section-divider"></div>
       </div>
       <div id="valuesList"></div>
     </div>

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>搜索 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:var(--surface); color:var(--ink);
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --ink:#2B1E16; --muted:#756A63; --placeholder:#9E948E;
+    --primary:#753A22; --primary-deep:#5E2E1B;
+    --accent:#526C43; --accent-soft:#E8EDE5;
+    --border:#E3DED8; --surface:#F7F5F3; --card:#FFFFFF;
+    --input:#F1EEE9;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  /* ── 搜索头部 ── */
+  .search-header {
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; gap:12px;
+    padding:12px 16px; background:var(--card);
+    border-bottom:1px solid var(--border);
+  }
+  .search-input-wrapper {
+    flex:1; display:flex; align-items:center; gap:8px;
+    background:var(--input); border-radius:12px;
+    padding:10px 13px;
+  }
+  .search-icon { flex:none; width:15px; height:15px; color:var(--muted); }
+  .search-input {
+    flex:1; border:0; outline:0; background:transparent;
+    font-family:inherit; font-size:14px; color:var(--ink);
+  }
+  .search-input::placeholder { color:var(--placeholder); }
+  .clear-btn { font-size:22px; line-height:1; color:var(--placeholder); cursor:pointer; padding:0 2px; visibility:hidden; }
+  .cancel-btn { flex:none; font-size:14px; color:var(--primary); cursor:pointer; }
+
+  /* ── 卡片区块 ── */
+  .section-card {
+    background:var(--card); border-radius:14px;
+    margin:14px 12px 0; padding:18px 16px;
+  }
+  .section-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .section-title { font-family:var(--serif); font-size:15px; font-weight:600; color:var(--ink); }
+  .section-action { font-size:12px; color:var(--placeholder); cursor:pointer; }
+
+  /* ── 搜索历史 ── */
+  .history-tags { display:flex; flex-wrap:wrap; gap:10px; }
+  .history-tag {
+    padding:7px 15px; background:var(--input); border-radius:999px;
+    font-size:13px; color:var(--ink); cursor:pointer;
+  }
+  .history-tag:active { opacity:.6; }
+
+  /* ── 热门搜索 ── */
+  .hot-item {
+    display:flex; align-items:center; gap:13px;
+    padding:9px 2px; cursor:pointer;
+  }
+  .hot-item:active { opacity:.6; }
+  .hot-rank {
+    flex:none; width:22px; height:22px; display:flex; align-items:center; justify-content:center;
+    border-radius:7px; background:var(--input);
+    font-size:11px; font-weight:600; color:var(--muted);
+  }
+  .hot-rank.top { background:var(--primary); color:#fff; }
+  .hot-text { font-size:14px; color:var(--ink); }
+
+  /* ── 搜索结果 ── */
+  .result-section { padding:14px 12px 30px; }
+  .result-header { padding:2px 4px 12px; }
+  .result-count { font-size:12px; color:var(--muted); }
+  .result-list { display:flex; flex-direction:column; gap:10px; }
+  .product-card {
+    display:flex; align-items:center; gap:14px;
+    background:var(--card); border-radius:14px; padding:12px;
+    cursor:pointer;
+  }
+  .product-card:active { opacity:.85; }
+  .product-image {
+    flex:none; width:76px; height:76px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+  }
+  .product-image svg { width:58%; height:58%; color:rgba(255,255,255,.94); }
+  .product-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+  .product-name { font-size:15px; font-weight:600; color:var(--ink); }
+  .product-desc { font-size:12px; color:var(--placeholder); line-height:1.5; }
+  .product-price { font-size:17px; font-weight:700; color:var(--primary); }
+
+  /* ── 空状态 ── */
+  .empty-state {
+    display:flex; flex-direction:column; align-items:center;
+    padding:64px 0 40px;
+  }
+  .empty-icon {
+    width:64px; height:64px; display:flex; align-items:center; justify-content:center;
+    border-radius:50%; background:var(--card);
+    color:var(--primary); font-size:18px; font-weight:700;
+    margin-bottom:16px;
+  }
+  .empty-text { font-size:14px; color:var(--muted); margin-bottom:6px; }
+  .empty-hint { font-size:12px; color:var(--placeholder); }
+</style>
+</head>
+<body>
+
+  <!-- 搜索头部 -->
+  <div class="search-header">
+    <div class="search-input-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg>
+      <input id="searchInput" class="search-input" placeholder="搜索咖啡、茶饮" value="" />
+      <span class="clear-btn" id="clearBtn" onclick="clearKeyword()">×</span>
+    </div>
+    <span class="cancel-btn" onclick="goBack()">取消</span>
+  </div>
+
+  <!-- 默认态：搜索历史 + 热门搜索 -->
+  <div id="defaultView">
+    <div class="section-card" id="historyCard">
+      <div class="section-header">
+        <span class="section-title">搜索历史</span>
+        <span class="section-action" onclick="clearHistory()">清空</span>
+      </div>
+      <div class="history-tags" id="historyTags"></div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header">
+        <span class="section-title">热门搜索</span>
+      </div>
+      <div class="hot-list" id="hotList"></div>
+    </div>
+  </div>
+
+  <!-- 结果态：结果列表 / 空状态 -->
+  <div class="result-section" id="resultView" style="display:none">
+    <div class="result-header">
+      <span class="result-count" id="resultCount"></span>
+    </div>
+    <div class="result-list" id="resultList"></div>
+    <div class="empty-state" id="emptyState" style="display:none">
+      <span class="empty-icon">搜</span>
+      <span class="empty-text">没有找到相关商品</span>
+      <span class="empty-hint">换个关键词试试</span>
+    </div>
+  </div>
+
+<script>
+  const ICONS = {
+    cup: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20h28v20a8 8 0 0 1-8 8H26a8 8 0 0 1-8-8z"/><path d="M46 26h6a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4h-6"/><path d="M24 13c0 2 2 2 2 4s-2 2-2 4M32 13c0 2 2 2 2 4s-2 2-2 4M40 13c0 2 2 2 2 4s-2 2-2 4"/></svg>',
+    tea: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 22h28v16a8 8 0 0 1-8 8H26a8 8 0 0 1-8-8z"/><path d="M18 28h28"/><path d="M40 8c0 9-13 11-13 19"/><path d="M40 8c-10 0-14 7-13 14"/></svg>'
+  };
+
+  const hotKeywords = ['拿铁', '美式咖啡', '生椰拿铁', '卡布奇诺', '摩卡', '茉莉奶绿'];
+
+  const products = [
+    { id: 1, name: '经典拿铁', desc: '浓缩 · 蒸汽牛奶 · 丝滑', price: '28.00', icon: 'cup', gradient: 'linear-gradient(135deg,#C69C6D,#8B6E45)', tags: ['拿铁', '咖啡', 'latte'] },
+    { id: 2, name: '美式咖啡', desc: '阿拉比卡 · 清爽提神', price: '22.00', icon: 'cup', gradient: 'linear-gradient(135deg,#7A8580,#4A5650)', tags: ['美式', '咖啡'] },
+    { id: 3, name: '生椰拿铁', desc: '椰乳 · 浓缩 · 热带气息', price: '32.00', icon: 'cup', gradient: 'linear-gradient(135deg,#B88859,#6E4E33)', tags: ['生椰', '拿铁'] },
+    { id: 4, name: '卡布奇诺', desc: '绵密奶泡 · 意式经典', price: '26.00', icon: 'cup', gradient: 'linear-gradient(135deg,#8B6E45,#4A3220)', tags: ['卡布奇诺', '咖啡'] },
+    { id: 5, name: '摩卡', desc: '可可 · 浓缩 · 奶油顶', price: '30.00', icon: 'cup', gradient: 'linear-gradient(135deg,#8B5E3C,#4A2F1D)', tags: ['摩卡', '咖啡'] },
+    { id: 6, name: '茉莉奶绿', desc: '茉莉花茶 · 鲜牛乳', price: '24.00', icon: 'tea', gradient: 'linear-gradient(135deg,#9DBB8B,#5F7D4E)', tags: ['茉莉', '茶'] }
+  ];
+
+  let searchHistory = ['拿铁', '美式', '生椰'];
+
+  const input = document.getElementById('searchInput');
+  const defaultView = document.getElementById('defaultView');
+  const resultView = document.getElementById('resultView');
+  const clearBtn = document.getElementById('clearBtn');
+
+  // 执行搜索
+  function doSearch() {
+    const kw = input.value.trim();
+    if (!kw) { showDefault(); return; }
+    const results = products.filter(p =>
+      p.tags.some(t => t.toLowerCase().includes(kw.toLowerCase())) || p.name.includes(kw)
+    );
+    renderResults(kw, results);
+    addHistory(kw);
+    defaultView.style.display = 'none';
+    resultView.style.display = 'block';
+  }
+
+  function renderResults(kw, results) {
+    document.getElementById('resultCount').textContent = `找到 ${results.length} 个结果`;
+    const empty = document.getElementById('emptyState');
+    const list = document.getElementById('resultList');
+    if (results.length === 0) {
+      empty.style.display = 'flex';
+      list.style.display = 'none';
+    } else {
+      empty.style.display = 'none';
+      list.style.display = 'flex';
+      list.innerHTML = results.map(p => `
+        <div class="product-card" onclick="goDetail()">
+          <div class="product-image" style="background:${p.gradient}">${ICONS[p.icon]}</div>
+          <div class="product-info">
+            <span class="product-name">${p.name}</span>
+            <span class="product-desc">${p.desc}</span>
+            <span class="product-price">¥${p.price}</span>
+          </div>
+        </div>`).join('');
+    }
+  }
+
+  // 回到默认态（历史 + 热门）
+  function showDefault() {
+    defaultView.style.display = 'block';
+    resultView.style.display = 'none';
+    clearBtn.style.visibility = 'hidden';
+    renderHistory();
+  }
+
+  // 清空输入
+  function clearKeyword() {
+    input.value = '';
+    input.focus();
+    showDefault();
+  }
+
+  // 搜索历史
+  function renderHistory() {
+    const card = document.getElementById('historyCard');
+    const tags = document.getElementById('historyTags');
+    if (searchHistory.length === 0) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    tags.innerHTML = searchHistory.map(k => `<span class="history-tag" onclick="pick('${k}')">${k}</span>`).join('');
+  }
+  function addHistory(kw) {
+    if (!searchHistory.includes(kw)) {
+      searchHistory.unshift(kw);
+      if (searchHistory.length > 10) searchHistory.pop();
+    }
+  }
+  function clearHistory() {
+    searchHistory = [];
+    renderHistory();
+  }
+
+  // 热门搜索
+  function renderHot() {
+    document.getElementById('hotList').innerHTML = hotKeywords.map((k, i) => `
+      <div class="hot-item" onclick="pick('${k}')">
+        <span class="hot-rank ${i < 3 ? 'top' : ''}">${i + 1}</span>
+        <span class="hot-text">${k}</span>
+      </div>`).join('');
+  }
+
+  // 点击历史 / 热门词
+  function pick(kw) {
+    input.value = kw;
+    doSearch();
+  }
+
+  // 输入 & 回车搜索
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doSearch();
+  });
+  input.addEventListener('input', () => {
+    clearBtn.style.visibility = input.value ? 'visible' : 'hidden';
+  });
+
+  function goDetail() { location.href = 'menu-detail.html'; }
+  function goBack() {
+    if (history.length > 1) history.back();
+    else location.href = 'menu.html';
+  }
+
+  renderHistory();
+  renderHot();
+</script>
+</body>
+</html>

@@ -144,6 +144,66 @@
   .preview-chip:active { opacity:.6; }
 
   /* ═══════════════════════════════════════
+     登录入口卡（未登录态）
+     ═══════════════════════════════════════ */
+  .member-card.login-card { background:var(--card); color:var(--ink); cursor:pointer; }
+  .login-card .brand-text { color:var(--muted); }
+  .login-identity {
+    display:flex; align-items:center; gap:14px;
+    margin-top:18px;
+  }
+  .login-emblem {
+    width:44px; height:44px; flex:none;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:50%;
+    background:var(--surface);
+    color:var(--roast-brown);
+  }
+  .login-copy { flex:1; min-width:0; }
+  .login-title {
+    display:block;
+    font-size:15px; font-weight:650; color:var(--ink);
+  }
+  .login-desc {
+    display:block; margin-top:5px;
+    font-size:11px; line-height:1.5; color:var(--muted);
+  }
+  .login-btn {
+    margin-top:18px; height:40px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:999px;
+    background:var(--ink); color:#fff;
+    font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .login-btn:active { opacity:.85; }
+
+  /* ═══════════════════════════════════════
+     邀请好友（会员增长 Banner）
+     ═══════════════════════════════════════ */
+  .invite-banner {
+    margin-top:14px;
+    padding:16px 18px;
+    display:flex; align-items:center; gap:10px;
+    border-radius:14px;
+    background:var(--surface);
+    cursor:pointer;
+  }
+  .invite-banner:active { opacity:.8; }
+  .invite-banner-left { flex:1; min-width:0; }
+  .invite-banner-kicker {
+    display:block; font-size:9px; font-weight:700; letter-spacing:.18em; color:var(--accent);
+  }
+  .invite-banner-title {
+    display:block; margin-top:5px;
+    font-family:var(--serif); font-size:15px; font-weight:600; color:var(--ink);
+  }
+  .invite-banner-note {
+    display:block; margin-top:4px;
+    font-size:10px; color:var(--muted);
+  }
+  .invite-banner-arrow { flex:none; font-size:20px; color:var(--placeholder); line-height:1; }
+
+  /* ═══════════════════════════════════════
      卡片容器
      ═══════════════════════════════════════ */
   .entry-card {
@@ -314,6 +374,41 @@
     </div>
   </div>
 
+  <!-- 登录入口卡（未登录态） -->
+  <div class="member-card login-card" id="loginCard" style="display:none" onclick="go('login.html')">
+    <div class="card-top">
+      <div class="brand-row">
+        <span class="brand-logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.5,8H19C20.66,8 22,9.34 22,11V13C22,14.66 20.66,16 19,16H18.28C17.76,18.29 15.63,20 13,20H7C4.24,20 2,17.76 2,15V8H18.5ZM19,10H18V14H19C19.55,14 20,13.55 20,13V11C20,10.45 19.55,10 19,10ZM7,3H9V6H7V3ZM11,3H13V6H11V3ZM15,3H17V6H15V3Z"/></svg></span>
+        <span class="brand-text" style="color:var(--muted)">COZY MEMBER</span>
+      </div>
+    </div>
+    <div class="login-identity">
+      <div class="login-emblem">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M18.5,8H19C20.66,8 22,9.34 22,11V13C22,14.66 20.66,16 19,16H18.28C17.76,18.29 15.63,20 13,20H7C4.24,20 2,17.76 2,15V8H18.5ZM19,10H18V14H19C19.55,14 20,13.55 20,13V11C20,10.45 19.55,10 19,10ZM7,3H9V6H7V3ZM11,3H13V6H11V3ZM15,3H17V6H15V3Z"/></svg>
+      </div>
+      <div class="login-copy">
+        <span class="login-title">登录 Cozy 会员</span>
+        <span class="login-desc">登录后可查看会员等级、积分与订单记录</span>
+      </div>
+    </div>
+    <div class="login-btn">登录 / 注册</div>
+  </div>
+
+  <!-- 登录态预览（原型工具） -->
+  <div class="level-preview">
+    <span class="preview-label">登录态</span>
+    <div class="preview-chips">
+      <div class="preview-chip active" data-auth="in" onclick="switchAuth('in')">
+        <span class="chip-emblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 19c.8-3.4 3.7-5.2 7-5.2s6.2 1.8 7 5.2"/></svg></span>
+        <span>已登录</span>
+      </div>
+      <div class="preview-chip" data-auth="out" onclick="switchAuth('out')">
+        <span class="chip-emblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg></span>
+        <span>未登录</span>
+      </div>
+    </div>
+  </div>
+
   <!-- 等级预览（原型工具） -->
   <div class="level-preview">
     <span class="preview-label">预览</span>
@@ -366,6 +461,16 @@
         <span class="f-label">月度挑战</span>
       </div>
     </div>
+  </div>
+
+  <!-- 邀请好友（会员增长 Banner） -->
+  <div class="invite-banner" id="inviteBanner" onclick="go('invite.html')">
+    <div class="invite-banner-left">
+      <span class="invite-banner-kicker">COZY REFERRAL</span>
+      <span class="invite-banner-title">邀请一位朋友，共享会员礼遇</span>
+      <span class="invite-banner-note">好友首单完成，双方均可获得奖励</span>
+    </div>
+    <span class="invite-banner-arrow">›</span>
   </div>
 
   <!-- 服务 -->
@@ -446,7 +551,7 @@
     gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="17" height="12" rx="1.5"/><path d="M3.5 13h17"/><path d="M12 8v12"/><path d="M12 8c-3.5 0-6-1.8-6-3.5S8.5 2.5 10 4c1 1 1 4 2 4z"/><path d="M12 8c3.5 0 6-1.8 6-3.5S15.5 2.5 14 4c-1 1-1 4-2 4z"/></svg>',
     calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 9.5h17"/><path d="M8 3v4M16 3v4"/><path d="M9 15l2 2 4-4"/></svg>',
     shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 18.5V8.5l1.3-1.5L9.2 11 12 5l2.8 6 3.4-4L19.5 8.5V18.5z"/><path d="M6.5 13.5h11"/></svg>',
-    challenge: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11.5" cy="11.5" r="7.2"/><circle cx="11.5" cy="11.5" r="4"/><circle cx="11.5" cy="11.5" r="1" fill="currentColor" stroke="none"/><path d="M20.5 3.5L12 12"/><path d="M17.5 5.5L20.5 3.5L19.5 1.5"/></svg>'
+    target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>'
   };
 
   let currentLevel = 'silver';
@@ -499,8 +604,18 @@
 
   function switchLevel(level) { currentLevel = level; applyTheme(level); }
 
+  // 登录态切换（原型工具）—— 对应移动端 profile.vue 的 isLoggedIn 分支
+  function switchAuth(state) {
+    const loggedIn = (state === 'in');
+    document.getElementById('memberCard').style.display = loggedIn ? '' : 'none';
+    document.getElementById('loginCard').style.display = loggedIn ? 'none' : '';
+    const banner = document.getElementById('inviteBanner');
+    if (banner) banner.style.display = loggedIn ? '' : 'none';
+    document.querySelectorAll('[data-auth]').forEach(c => c.classList.toggle('active', c.dataset.auth === state));
+  }
+
   function mountIcons() {
-    const map = { icOrder:'bag', icRedeem:'swap', icMall:'gift', icCoupon:'coupon', icSignin:'calendar', icBenefits:'shield', icChallenge:'challenge' };
+    const map = { icOrder:'bag', icRedeem:'swap', icMall:'gift', icCoupon:'coupon', icSignin:'calendar', icBenefits:'shield', icChallenge:'target' };
     Object.keys(map).forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = ICONS[map[id]];

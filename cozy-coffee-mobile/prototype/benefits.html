@@ -10,76 +10,93 @@
   html { -webkit-font-smoothing:antialiased; }
   body {
     font-family:'Inter',-apple-system,sans-serif;
-    background:#F7F3EE; color:#2C2723;
+    background:#F7F5F3; color:#2B1E16;
     max-width:390px; margin:0 auto; min-height:100vh;
   }
   :root {
-    --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
-    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
+    --primary:#753A22; --primary-deep:#5E2E1B;
+    --accent:#526C43; --accent-soft:#E8EDE5;
+    --ink:#2B1E16; --muted:#756A63; --placeholder:#9E948E;
+    --border:#E3DED8; --surface:#F7F5F3; --card:#FFFFFF; --cask:#2C1E18;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
 
   .back-btn {
     display:inline-flex; align-items:center; justify-content:center;
     width:36px; height:36px;
-    margin-bottom:18px;
+    margin-bottom:14px;
     font-size:26px; line-height:1;
     color:var(--ink);
     text-decoration:none; cursor:pointer;
     border-radius:50%;
-    background:rgba(255,255,255,.6);
-    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    background:var(--card);
+    border:1px solid var(--border);
   }
   .back-btn:active { opacity:.55; }
 
   .page { padding:20px 22px 40px; }
 
   /* ── 页头（安静身份行，非卡） ── */
-  .page-head { padding:6px 2px 26px; }
-  .page-title {
-    display:block;
-    font-family:var(--serif); font-size:24px; font-weight:600; color:var(--ink);
+  .page-head { padding:6px 2px 20px; }
+  .head-identity { display:flex; align-items:center; gap:10px; }
+  .head-badge {
+    flex:none; width:44px; height:44px;
+    display:flex; align-items:center; justify-content:center;
+    color:#857F78;
   }
-  .page-sub {
-    display:block; margin-top:8px;
-    font-size:12px; color:var(--muted);
+  .head-badge svg { width:100%; height:100%; filter: drop-shadow(0 3px 5px rgba(0,0,0,.18)); }
+  .head-level { display:flex; align-items:baseline; gap:6px; }
+  .head-level-name {
+    font-size:15px;
+    font-weight:650;
+    color:var(--ink);
   }
-  .page-sub em { font-style:normal; color:var(--primary); font-weight:650; }
+  .head-level-en {
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.12em;
+    color:var(--muted);
+  }
 
   /* ── Editorial section：线性分隔 + 留白 ── */
-  .section { margin-top:32px; }
+  .section { margin-top:16px; }
   .section-head {
     display:flex; align-items:baseline; justify-content:space-between; gap:12px;
     margin-bottom:4px;
   }
   .section-title {
-    font-size:11px; font-weight:700; letter-spacing:.18em; color:var(--muted);
+    font-size:10px; font-weight:700; letter-spacing:.18em; color:var(--muted);
   }
-  .section-sub { font-size:11px; color:var(--muted); }
+  .section-sub { font-size:10px; color:var(--muted); }
 
   /* 本月可用：行式 */
   .benefit-row {
-    display:flex; align-items:center; gap:16px;
-    padding:18px 2px;
+    display:flex; align-items:center; gap:12px;
+    padding:17px 2px;
     border-bottom:1px solid var(--border);
   }
   .benefit-row:last-child { border-bottom:0; }
   .b-icon {
-    flex:none; width:40px; height:40px;
+    flex:none; width:38px; height:38px;
     display:flex; align-items:center; justify-content:center;
+    border-radius:50%;
+    background:var(--surface);
     color:var(--primary);
+    font-family:var(--serif); font-size:13px; font-weight:700;
   }
-  .b-icon svg { width:22px; height:22px; }
   .b-copy { flex:1; min-width:0; }
   .b-name { display:block; font-size:14px; font-weight:600; color:var(--ink); }
-  .b-desc { display:block; margin-top:4px; font-size:12px; color:var(--muted); line-height:1.5; }
-  .b-state { flex:none; font-size:12px; font-weight:600; color:var(--accent); }
+  .b-desc { display:block; margin-top:4px; font-size:11px; color:var(--muted); line-height:1.5; }
   .b-btn {
-    flex:none; padding:7px 16px; border-radius:6px;
+    flex:none; padding:7px 15px; border-radius:6px;
     border:1px solid var(--primary); background:transparent; color:var(--primary);
-    font-size:12px; font-weight:600; cursor:pointer;
+    font-size:11px; font-weight:600; cursor:pointer;
   }
   .b-btn:active { background:var(--card); }
+  .b-btn.muted {
+    border-color:var(--border);
+    color:var(--muted);
+  }
 
   /* 权益对比：每级一行 */
   .compare-list { margin-top:6px; }
@@ -90,7 +107,7 @@
   }
   .compare-row:last-child { border-bottom:0; }
   .compare-name { font-size:14px; color:var(--ink); font-weight:500; }
-  .compare-text { font-size:12px; color:var(--muted); }
+  .compare-text { font-size:11px; color:var(--muted); }
   .compare-row.current .compare-name { color:var(--primary); font-weight:700; }
   .compare-row.current .compare-text { color:var(--primary); font-weight:600; }
   .compare-row.current .compare-name::before {
@@ -98,47 +115,72 @@
     background:var(--primary); margin-right:8px; vertical-align:2px;
   }
 
-  /* 升级规则：一行门槛 */
-  .rule-line {
-    padding:16px 2px 0;
-    font-size:13px; line-height:1.9; color:var(--ink);
+  /* 升级规则：门槛表 */
+  .rule-table {
+    margin-top:10px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    overflow:hidden;
   }
-  .rule-line em { font-style:normal; color:var(--primary); font-weight:650; }
+  .rule-row {
+    display:flex; align-items:center;
+    border-bottom:1px solid var(--border);
+  }
+  .rule-row:last-child { border-bottom:0; }
+  .rule-row.current { background:var(--surface); }
+  .rule-head { background:var(--surface); }
+  .rule-cell {
+    flex:1;
+    padding:11px 14px;
+    font-size:12px;
+    color:var(--ink);
+  }
+  .rule-cell:last-child { text-align:right; }
+  .rule-head .rule-cell {
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.06em;
+    color:var(--muted);
+  }
+  .rule-row.current .rule-cell {
+    color:var(--primary);
+    font-weight:650;
+  }
   .rule-note {
-    padding:10px 2px 0;
-    font-size:11px; line-height:1.7; color:var(--muted);
+    padding:8px 2px 0;
+    font-size:10px; line-height:1.7; color:var(--muted);
   }
 
   /* ── 会员进度（复用 web 端进度条，适配 Editorial） ── */
   .member-progress {
-    margin-top:40px;
-    padding:22px 2px 0;
+    margin-top:32px;
+    padding:18px 2px 0;
     border-top:1px solid var(--border);
   }
   .progress-top {
     display:flex; justify-content:space-between; align-items:baseline; gap:12px;
-    margin-bottom:14px;
+    margin-bottom:13px;
   }
   .progress-level {
     font-family:var(--serif); font-size:18px; font-weight:600; color:var(--ink);
   }
   .progress-level em {
-    font-style:normal; font-size:11px; font-weight:700; letter-spacing:.12em;
-    color:var(--muted); margin-left:8px;
+    font-style:normal; font-size:10px; font-weight:700; letter-spacing:.12em;
+    color:var(--muted); margin-left:6px;
   }
   .progress-exp { font-size:13px; font-weight:650; color:var(--ink); }
-  .progress-exp i { font-style:normal; font-size:11px; font-weight:400; color:var(--muted); }
+  .progress-exp i { font-style:normal; font-size:10px; font-weight:400; color:var(--muted); }
   .progress-track {
     height:3px; border-radius:2px;
     background:var(--border); overflow:hidden;
   }
   .progress-fill {
     height:100%; border-radius:2px;
-    background:var(--primary); transition:width .6s ease;
+    transition:width .6s ease;
   }
   .progress-motivation {
-    margin-top:10px;
-    font-size:11px; text-align:center; color:var(--muted);
+    margin-top:8px;
+    font-size:10px; text-align:center; color:var(--muted);
   }
   .progress-motivation em { font-style:normal; color:var(--primary); font-weight:650; }
 
@@ -146,7 +188,7 @@
   .toast {
     position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
     padding:10px 22px; border-radius:20px;
-    background:rgba(44,39,35,.88); color:#F7F3EE;
+    background:rgba(44,39,35,.88); color:#F7F5F3;
     font-size:12px; pointer-events:none; z-index:99;
     opacity:0; transition:opacity .3s ease;
   }
@@ -160,8 +202,15 @@
 
     <!-- 页头：安静身份行 -->
     <div class="page-head">
-      <span class="page-title">会员权益</span>
-      <span class="page-sub">白银会员 <em>· SILVER</em></span>
+      <div class="head-identity">
+        <span class="head-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.2"/></svg>
+        </span>
+        <div class="head-level">
+          <span class="head-level-name">白银会员</span>
+          <span class="head-level-en">· SILVER</span>
+        </div>
+      </div>
     </div>
 
     <!-- 本月可用 -->
@@ -171,24 +220,20 @@
         <span class="section-sub">白银会员专享</span>
       </div>
       <div class="benefit-row">
-        <span class="b-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v3.5a2 2 0 0 0 0 4V18H4v-3.5a2 2 0 0 0 0-4z"/><circle cx="9" cy="12" r=".8" fill="currentColor" stroke="none"/></svg>
-        </span>
+        <span class="b-icon">券</span>
         <div class="b-copy">
           <span class="b-name">月度兑换券</span>
-          <span class="b-desc">95 折兑换券 · 有效期 2026.08.01 - 08.31</span>
+          <span class="b-desc">95 折兑换券 · 本月有效</span>
         </div>
-        <span class="b-state">已领取 ✓</span>
+        <button class="b-btn" onclick="toast('权益已发放至券包')">去领取</button>
       </div>
       <div class="benefit-row">
-        <span class="b-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="17" height="12" rx="1.5"/><path d="M3.5 13h17"/><path d="M12 8v12"/><path d="M12 8c-3.5 0-6-1.8-6-3.5S8.5 2.5 10 4c1 1 1 4 2 4z"/><path d="M12 8c3.5 0 6-1.8 6-3.5S15.5 2.5 14 4c-1 1-1 4-2 4z"/></svg>
-        </span>
+        <span class="b-icon">礼</span>
         <div class="b-copy">
           <span class="b-name">生日礼遇</span>
           <span class="b-desc">生日当月赠送双倍积分</span>
         </div>
-        <button class="b-btn" onclick="toast('生日礼遇已领取')">去领取</button>
+        <button class="b-btn muted" onclick="toast('生日当月自动赠送双倍积分')">去领取</button>
       </div>
     </div>
 
@@ -205,8 +250,31 @@
       <div class="section-head">
         <span class="section-title">升级规则</span>
       </div>
-      <div class="rule-line">
-        基础 <em>0</em> · 白银 <em>500</em> · 黄金 <em>1,500</em> · 钻石 <em>4,000</em> · 黑金 <em>9,000</em> EXP
+      <div class="rule-table">
+        <div class="rule-row rule-head">
+          <span class="rule-cell">会员等级</span>
+          <span class="rule-cell">升级门槛</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-cell">基础会员</span>
+          <span class="rule-cell">0 EXP</span>
+        </div>
+        <div class="rule-row current">
+          <span class="rule-cell">白银会员</span>
+          <span class="rule-cell">500 EXP</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-cell">黄金会员</span>
+          <span class="rule-cell">1,500 EXP</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-cell">钻石会员</span>
+          <span class="rule-cell">4,000 EXP</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-cell">黑金会员</span>
+          <span class="rule-cell">9,000 EXP</span>
+        </div>
       </div>
       <div class="rule-note">消费 1 元 = 1 EXP，达到门槛自动升级，升级后权益永久生效。</div>
     </div>
@@ -218,7 +286,7 @@
         <span class="progress-exp">1,120 <i>/ 1,500 EXP</i></span>
       </div>
       <div class="progress-track">
-        <div class="progress-fill" style="width:62%"></div>
+        <div class="progress-fill" style="width:62%; background:#857F78"></div>
       </div>
       <div class="progress-motivation">再积 <em>380</em> EXP 升级至黄金会员</div>
     </div>
@@ -228,6 +296,7 @@
 <script>
   const USER_LEVEL = 'silver';
 
+  // 对齐 benefits/index.vue 的 compare 数组
   const compare = [
     { name:'基础会员', text:'1× 积分' },
     { name:'白银会员', text:'1.2× 积分 · 95 折兑换' },

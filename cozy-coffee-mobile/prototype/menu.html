@@ -51,7 +51,7 @@
   }
   .store-row { display:flex; justify-content:space-between; align-items:center; }
   .store-left { display:flex; align-items:center; gap:8px; }
-  .store-fav { color:var(--primary); }
+  .store-fav { color:var(--ink); }
   .store-name { font-size:15px; font-weight:650; color:var(--ink); }
   .pickup-switch {
     display:flex; border:1px solid var(--border); border-radius:6px; overflow:hidden;
@@ -59,12 +59,13 @@
   .pickup-opt {
     padding:5px 14px; font-size:11px; color:var(--muted); background:var(--surface);
   }
-  .pickup-opt.active { background:var(--primary); color:#fff; }
+  .pickup-opt.active { background:var(--ink); color:#fff; }
   .store-meta { margin-top:6px; font-size:11px; color:var(--muted); }
   .store-foot {
     margin-top:8px; display:flex; justify-content:space-between;
     font-size:11px; color:var(--muted);
   }
+  .status-icon { color:var(--accent); }
   .store-more { color:var(--muted); }
 
   /* ── 主体：左分类栏 + 右商品区 ── */
@@ -84,17 +85,8 @@
     transition:color .2s;
   }
   .category-item.active {
-    background:var(--porcelain); color:var(--roast-brown); font-weight:700;
+    background:var(--porcelain); color:var(--ink); font-weight:700;
   }
-  .cat-count {
-    position:absolute; right:8px; top:50%; transform:translateY(-50%);
-    min-width:18px; height:18px; padding:0 4px;
-    border-radius:9px;
-    background:var(--roast-brown); color:#fff;
-    font-size:10px; font-weight:600;
-    display:inline-flex; align-items:center; justify-content:center;
-  }
-
   .product-scroll {
     flex:1; min-width:0; height:100%; overflow-y:auto;
     background:var(--card); padding-bottom:240px;
@@ -105,22 +97,33 @@
     position:sticky; top:0; z-index:2;
     background:var(--card);
     padding:14px 16px 12px;
+    display:flex; align-items:baseline; justify-content:space-between;
   }
   .group-title {
-    display:block;
-    font-size:14px; font-weight:600; color:var(--ink);
+    font-size:14px; font-weight:700; color:var(--ink);
     letter-spacing:.02em;
+  }
+  .group-sub {
+    font-size:8.5px; font-weight:600; letter-spacing:.14em;
+    color:var(--placeholder);
   }
   .product-item {
     display:flex; gap:14px; padding:16px 16px;
+    border-bottom:1px solid var(--border);
   }
   .product-image {
     flex:none; width:96px; height:96px; border-radius:10px;
     background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
   }
   .product-info { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .product-title-row { display:flex; align-items:center; gap:6px; }
   .product-name {
     font-family:var(--serif); font-size:17px; font-weight:600; color:var(--ink);
+  }
+  .product-tag {
+    flex:none; padding:2px 6px; border-radius:4px;
+    background:#E8EDE5; color:#526C43;
+    font-size:9px; font-weight:600;
   }
   .product-desc {
     margin-top:4px; font-size:12px; line-height:1.5; color:var(--muted);
@@ -132,13 +135,26 @@
   .product-foot {
     margin-top:auto; display:flex; justify-content:space-between; align-items:center;
   }
-  .product-price { font-size:16px; font-weight:700; color:var(--primary); }
+  .product-price { display:flex; align-items:baseline; color:var(--ink); }
+  .currency { font-size:10px; font-weight:700; }
+  .price { font-size:16px; font-weight:750; line-height:1; }
   .add-btn {
-    width:26px; height:26px; border-radius:50%;
-    background:var(--primary); color:#fff;
+    position:relative;
+    width:24px; height:24px; border-radius:50%;
+    background:var(--ink); color:#fff;
     display:flex; align-items:center; justify-content:center;
-    font-size:18px; cursor:pointer;
+    cursor:pointer;
   }
+  .add-plus { font-size:17px; font-weight:600; line-height:24px; }
+  .add-count {
+    position:absolute; top:-4px; right:-3px;
+    min-width:16px; height:16px; padding:0 4px;
+    display:flex; align-items:center; justify-content:center;
+    border:2px solid #fff; border-radius:9px;
+    background:var(--ink); color:#fff;
+    font-size:9px; font-weight:700; box-sizing:border-box;
+  }
+  .add-count.hidden { display:none; }
 
   /* ── 门店详情抽屉 ── */
   .store-sheet {
@@ -205,7 +221,8 @@
     width:100%; max-width:390px; height:56px;
     display:flex; align-items:center;
     padding:0 16px;
-    background:rgba(61,42,32,.96); color:#fff;
+    background:var(--card); color:var(--ink);
+    border-top:1px solid var(--border);
     z-index:15;
   }
   .cart-total-block {
@@ -216,9 +233,10 @@
   }
   .cart-bag {
     position:relative;
-    width:36px; height:36px;
+    width:40px; height:40px;
     border-radius:50%;
-    background:var(--primary);
+    border:1px solid var(--border);
+    background:var(--card);
     display:inline-flex; align-items:center; justify-content:center;
   }
   .cart-bag svg { width:18px; height:18px; color:#fff; }
@@ -226,17 +244,17 @@
     position:absolute; top:-4px; right:-6px;
     min-width:18px; height:18px; padding:0 5px;
     border-radius:9px;
-    background:#fff; color:var(--primary);
+    background:var(--ink); color:#fff;
     font-size:11px; font-weight:700;
     display:inline-flex; align-items:center; justify-content:center;
   }
   .cart-bag-count.hidden { display:none; }
-  .cart-total-price { font-size:17px; font-weight:700; }
+  .cart-total-price { font-size:17px; font-weight:500; }
   .cart-checkout {
     height:40px; padding:0 22px;
     display:flex; align-items:center; justify-content:center;
     border-radius:20px;
-    background:var(--primary); color:#fff;
+    background:var(--ink); color:#fff;
     font-size:14px; font-weight:600;
     cursor:pointer;
   }
@@ -414,168 +432,6 @@
   }
   .off-shelf-btn:active { background:var(--roast-brown-deep); }
 
-  /* ── 商品详情：沉浸式滚动页 + 底部固定加购栏 ── */
-  .detail-overlay {
-    position:fixed; top:0; left:50%; transform:translateX(-50%);
-    width:100%; max-width:390px; height:100vh;
-    background:var(--porcelain); z-index:25;
-    display:none; flex-direction:column;
-  }
-  .detail-overlay.open { display:flex; }
-
-  /* 滚动区：Hero + 介绍 + 规格 */
-  .detail-scroll {
-    flex:1; min-height:0; overflow-y:auto;
-    background:var(--porcelain);
-  }
-  .detail-scroll::-webkit-scrollbar { display:none; }
-
-  /* Product Hero（随内容滚动离开） */
-  .detail-hero { position:relative; }
-  .detail-image {
-    width:100%; height:380px;
-    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
-  }
-  .detail-close {
-    position:absolute; top:16px; left:16px;
-    width:34px; height:34px; border-radius:50%;
-    background:rgba(255,255,255,.9);
-    display:flex; align-items:center; justify-content:center;
-    font-size:22px; color:var(--roastery-ink); cursor:pointer;
-    z-index:2;
-  }
-  .detail-fav {
-    position:absolute; top:16px; right:16px;
-    width:34px; height:34px; border-radius:50%;
-    background:rgba(255,255,255,.9);
-    display:flex; align-items:center; justify-content:center;
-    font-size:16px; color:var(--roastery-ink); cursor:pointer;
-    z-index:2;
-  }
-  .detail-hero-info { padding:28px 24px 8px; }
-  .detail-tag {
-    display:inline-block; margin-bottom:12px;
-    padding:3px 9px; border-radius:4px;
-    background:var(--roast-brown); color:#fff;
-    font-size:11px; font-weight:700; letter-spacing:.06em;
-  }
-  .detail-eyebrow {
-    display:block;
-    font-size:10px; font-weight:700; letter-spacing:.24em;
-    color:var(--quiet-ink); opacity:.72;
-  }
-  .detail-name {
-    display:block; margin-top:9px;
-    font-family:var(--serif); font-size:28px; font-weight:600;
-    color:var(--roastery-ink); line-height:1.2;
-  }
-  .detail-notes {
-    display:block; margin-top:12px;
-    font-family:var(--serif); font-size:14px;
-    color:var(--quiet-ink); letter-spacing:.02em;
-  }
-
-  /* 规格选择（线性分隔，紧跟 hero） */
-  .detail-spec-section {
-    border-top:1px solid var(--hairline);
-    padding:24px 24px 4px;
-  }
-  .detail-spec-group { margin-top:20px; }
-  .detail-spec-group:first-child { margin-top:0; }
-  .spec-title-row {
-    display:flex; justify-content:space-between; align-items:baseline;
-    margin-bottom:12px;
-  }
-  .spec-title {
-    font-size:13px; font-weight:600; color:var(--roastery-ink);
-  }
-  .spec-options { display:flex; flex-wrap:wrap; gap:10px; }
-  .spec-option {
-    height:36px; padding:0 20px;
-    display:flex; align-items:center; justify-content:center;
-    font-size:13px; color:var(--roastery-ink);
-    border-radius:5px;
-    border:1px solid var(--hairline); background:var(--porcelain);
-    cursor:pointer;
-    transition:all .2s;
-  }
-  .spec-option.active {
-    background:#F1E4DA;
-    border-color:var(--roast-brown); color:var(--roast-brown);
-    font-weight:600;
-  }
-
-  /* 商品详情（线性分隔） */
-  .detail-card {
-    border-top:1px solid var(--hairline);
-    margin-top:22px; padding:24px 24px 2px;
-  }
-  .detail-card-title {
-    display:block; margin-bottom:12px;
-    font-family:var(--serif); font-size:16px; font-weight:600;
-    color:var(--roastery-ink);
-  }
-  .detail-row {
-    display:flex; align-items:flex-start; gap:16px;
-    padding:9px 0;
-  }
-  .detail-row-label {
-    flex:none; width:52px;
-    font-size:11px; font-weight:700; letter-spacing:.1em;
-    color:var(--quiet-ink);
-  }
-  .detail-row-value {
-    flex:1; font-size:13px; line-height:1.6; color:var(--roastery-ink);
-  }
-
-  /* 说明 */
-  .detail-disclaimer {
-    border-top:1px solid var(--hairline);
-    margin-top:22px; padding:16px 24px 24px;
-    font-size:12px; line-height:1.7; color:var(--placeholder);
-  }
-
-  /* 底部固定加购栏：两行（价格+数量 / 加购按钮） */
-  .detail-bottom {
-    flex:none;
-    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
-    background:var(--porcelain);
-    border-top:1px solid var(--hairline);
-  }
-  .detail-bottom-top {
-    display:flex; align-items:center; gap:12px;
-    margin-bottom:12px;
-  }
-  .detail-price-col { flex:1; min-width:0; }
-  .detail-bottom-price {
-    font-size:22px; font-weight:700; color:var(--roast-brown);
-    line-height:1.1;
-  }
-  .detail-selected {
-    display:block; margin-top:4px;
-    font-size:11px; color:var(--quiet-ink);
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
-  .detail-qty {
-    display:flex; align-items:center; gap:10px;
-    border:1px solid var(--hairline); border-radius:6px;
-    padding:4px 10px;
-  }
-  .qty-btn {
-    width:24px; height:24px;
-    display:flex; align-items:center; justify-content:center;
-    font-size:16px; color:var(--roastery-ink); cursor:pointer;
-  }
-  .qty-btn:active { opacity:.5; }
-  .qty-value { min-width:18px; text-align:center; font-size:14px; font-weight:600; }
-  .detail-add {
-    width:100%; height:46px;
-    display:flex; align-items:center; justify-content:center;
-    border-radius:6px;
-    background:var(--roast-brown); color:#fff;
-    font-size:15px; font-weight:650; cursor:pointer;
-  }
-  .detail-add:active { background:var(--roast-brown-deep); }
 
   /* ── Toast ── */
   .toast {
@@ -594,7 +450,7 @@
     <div class="nav-capsule">
       <a href="index.html" title="首页">⌂</a>
       <span class="divider"></span>
-      <a href="#" onclick="toast('搜索')" title="搜索">⌕</a>
+      <a href="#" onclick="go('search.html')" title="搜索">⌕</a>
     </div>
   </div>
 
@@ -606,13 +462,13 @@
         <span class="store-name">CozyCoffee 中心店</span>
       </div>
       <div class="pickup-switch">
-        <div class="pickup-opt active">自提</div>
-        <div class="pickup-opt">外送</div>
+        <div class="pickup-opt active" id="optPickup" onclick="setFulfillment('pickup')">自提</div>
+        <div class="pickup-opt" id="optDelivery" onclick="setFulfillment('delivery')">外送</div>
       </div>
     </div>
     <div class="store-meta">距离您 1.2km</div>
     <div class="store-foot">
-      <span id="topMsg">☼ 精品咖啡每日新鲜烘焙</span>
+      <span class="store-status" id="topMsg"><span class="status-icon">☼</span> 精品咖啡每日新鲜烘焙</span>
       <span class="store-more" onclick="openStoreDetail()">详情 ›</span>
     </div>
   </div>
@@ -727,68 +583,6 @@
     </div>
   </div>
 
-  <!-- 商品详情覆盖层 -->
-  <div class="detail-overlay" id="detailOverlay">
-    <div class="detail-scroll">
-      <!-- Product Hero（随滚动离开） -->
-      <div class="detail-hero">
-        <span class="detail-close" onclick="closeDetail()">×</span>
-        <span class="detail-fav" onclick="toast('已收藏')">♡</span>
-        <div class="detail-image" id="detailImage"></div>
-        <div class="detail-hero-info">
-          <span class="detail-tag" id="detailTag"></span>
-          <span class="detail-eyebrow" id="detailEyebrow">HAND BREW</span>
-          <span class="detail-name" id="detailName">巴拿马 瑰夏</span>
-          <span class="detail-notes" id="detailNotes">花香 · 蜂蜜 · 精致余韵</span>
-        </div>
-      </div>
-
-      <!-- 规格选择（紧跟 hero，优先决策） -->
-      <div class="detail-spec-section">
-        <div id="specGroups"></div>
-      </div>
-
-      <!-- 商品详情（产地 / 处理法 / 风味 / 烘焙度） -->
-      <div class="detail-card">
-        <span class="detail-card-title">商品详情</span>
-        <div class="detail-row">
-          <span class="detail-row-label">产地</span>
-          <span class="detail-row-value" id="detailOrigin">Boquete, Panama · 巴拿马 博奎特</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-row-label">处理法</span>
-          <span class="detail-row-value" id="detailProcess">Washed · 水洗</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-row-label">风味</span>
-          <span class="detail-row-value" id="detailFlavor">花香 · 蜂蜜 · 精致余韵</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-row-label">烘焙度</span>
-          <span class="detail-row-value" id="detailRoast">浅烘焙 · Light</span>
-        </div>
-      </div>
-
-      <!-- 说明 -->
-      <div class="detail-disclaimer" id="detailDisclaimer">本商品按所选规格现制，出品以门店实物为准。</div>
-    </div>
-
-    <!-- 底部固定加购栏 -->
-    <div class="detail-bottom">
-      <div class="detail-bottom-top">
-        <div class="detail-price-col">
-          <span class="detail-bottom-price" id="detailPrice">¥28</span>
-          <span class="detail-selected" id="detailSelected">标准糖 · 大杯 · 热</span>
-        </div>
-        <div class="detail-qty">
-          <div class="qty-btn" onclick="changeQty(-1)">−</div>
-          <span class="qty-value" id="detailQty">1</span>
-          <div class="qty-btn" onclick="changeQty(1)">+</div>
-        </div>
-      </div>
-      <div class="detail-add" id="detailAdd" onclick="addToCart()">加入购物车</div>
-    </div>
-  </div>
 
 <script>
   const categories = [
@@ -867,24 +661,11 @@
 
   let activeIdx = 0;
 
-  // 商品名 → 分类 index
-  function findCategoryIdx(name) {
-    for (let i = 0; i < categories.length; i++) {
-      const cat = categories[i];
-      const list = products[cat.id] || [];
-      if (list.some(p => p.name === name)) return i;
-    }
-    return -1;
-  }
-
   function renderSidebar() {
     document.getElementById('categorySidebar').innerHTML = categories.map((c, i) => {
-      const count = cart.filter(item => findCategoryIdx(item.name) === i)
-        .reduce((s, item) => s + item.qty, 0);
       return `
         <div class="category-item ${i === activeIdx ? 'active' : ''}" onclick="selectCategory(${i})">
           <span>${c.name}</span>
-          ${count > 0 ? `<span class="cat-count">${count}</span>` : ''}
         </div>`;
     }).join('');
     const activeItem = document.querySelector('.category-item.active');
@@ -898,20 +679,27 @@
         <div class="category-section" data-cat-index="${i}">
           <div class="group-heading">
             <span class="group-title">${cat.name}</span>
+            <span class="group-sub">${cat.en}</span>
           </div>
           ${list.map(p => `
-            <div class="product-item">
+            <div class="product-item" data-name="${p.name}" onclick="go('spec.html')">
               <div class="product-image"></div>
               <div class="product-info">
-                <span class="product-name">${p.name}</span>
+                <div class="product-title-row">
+                  <span class="product-name">${p.name}</span>
+                  ${p.tag ? `<span class="product-tag">${p.tag}</span>` : ''}
+                </div>
                 <span class="product-desc">${p.desc}</span>
                 <span class="product-extra">
                   <span>月售 ${p.sold}</span>
                   <span>好评 ${p.praise}%</span>
                 </span>
                 <div class="product-foot">
-                  <span class="product-price">¥${p.price}</span>
-                  <div class="add-btn" onclick="openDetail('${p.name}')">+</div>
+                  <span class="product-price"><span class="currency">¥</span><span class="price">${p.price}</span></span>
+                  <div class="add-btn" onclick="go('spec.html')">
+                    <span class="add-plus">+</span>
+                    <span class="add-count hidden">0</span>
+                  </div>
                 </div>
               </div>
             </div>`).join('')}
@@ -996,6 +784,7 @@
   function goTab(href) {
     location.href = href;
   }
+  function go(href) { location.href = href; }
 
   function openStoreDetail() {
     document.getElementById('storeSheet').classList.add('open');
@@ -1004,164 +793,39 @@
     document.getElementById('storeSheet').classList.remove('open');
   }
 
+  // ── 自提 / 外送切换 ──
+  function setFulfillment(mode) {
+    const pickup = document.getElementById('optPickup');
+    const delivery = document.getElementById('optDelivery');
+    if (mode === 'delivery') {
+      pickup.classList.remove('active');
+      delivery.classList.add('active');
+      // 外送：解析默认地址，无地址跳添加页（与 menu.vue setFulfillment 一致）
+      if (!localStorage.getItem('cozy_default_address')) {
+        toast('未设置配送地址，请先添加');
+        setTimeout(() => { location.href = 'address.html'; }, 600);
+        return;
+      }
+      toast('已切换外送');
+      return;
+    }
+    delivery.classList.remove('active');
+    pickup.classList.add('active');
+    toast('已切换自提');
+  }
+
   // ── Cozy Day（每周五会员日）──
   function isCozyDay() { return new Date().getDay() === 5; }
   function applyCozyDay() {
     const cozy = isCozyDay();
     const top = document.getElementById('topMsg');
-    if (top) top.textContent = cozy ? '☼ 今天会员日 · 积分倍率提升0.5' : '☼ 精品咖啡每日新鲜烘焙';
+    if (top) top.innerHTML = cozy ? '<span class="status-icon">☼</span> 今天会员日 · 积分倍率提升0.5' : '<span class="status-icon">☼</span> 精品咖啡每日新鲜烘焙';
     const main = document.getElementById('cozydayMain');
     if (main) main.textContent = cozy ? '今天会员日·积分倍率提升0.5' : '每周五会员日·积分倍率提升0.5';
     const value = document.getElementById('cozydayValue');
     if (value) value.classList.toggle('cozy-today', cozy);
   }
   applyCozyDay();
-
-  // ── 商品详情 ──
-  let detailProduct = null, detailPrice = 0, detailQty = 1;
-
-  const SPEC_LABELS = {
-    size: {title:'杯型', map:{'标准杯':'标准杯','大杯':'大杯 +6'}},
-    temp: {title:'温度', map:{'热':'热饮','冰':'冰饮'}},
-    strength: {title:'浓度', map:{'标准':'标准','加强':'加强 +5'}},
-    milk: {title:'奶基', map:{'鲜奶':'鲜奶','燕麦奶':'燕麦奶 +6'}},
-    sugar: {title:'甜度', map:{'标准糖':'标准糖','微糖':'微糖','半糖':'半糖','无糖':'无糖'}}
-  };
-
-  function findProduct(name) {
-    for (const cat of Object.values(products)) {
-      const p = cat.find(x => x.name === name);
-      if (p) return p;
-    }
-    return null;
-  }
-
-  function renderSpecs(prod) {
-    let html = '';
-    const s = prod.specs;
-    if (!s) return;
-    for (const key of ['size','temp','strength','milk','sugar']) {
-      const values = s[key];
-      if (!values || values.length === 0) continue;
-      const cfg = SPEC_LABELS[key];
-      html += `<div class="detail-spec-group"><div class="spec-title-row"><span class="spec-title">${cfg.title}</span></div><div class="spec-options">`;
-      values.forEach((v, i) => {
-        html += `<span class="spec-option${i===0?' active':''}" data-spec="${key}" data-value="${v}">${cfg.map[v] || v}</span>`;
-      });
-      html += '</div></div>';
-    }
-    document.getElementById('specGroups').innerHTML = html;
-  }
-
-  function updateDetailPrice() {
-    let base = detailProduct.price;
-    const sizeActive = document.querySelector('.spec-option[data-spec="size"].active');
-    if (sizeActive && sizeActive.dataset.value === '大杯') base += 6;
-    const strengthActive = document.querySelector('.spec-option[data-spec="strength"].active');
-    if (strengthActive && strengthActive.dataset.value === '加强') base += 5;
-    const milkActive = document.querySelector('.spec-option[data-spec="milk"].active');
-    if (milkActive && milkActive.dataset.value === '燕麦奶') base += 6;
-    detailPrice = base;
-    updatePriceDisplay();
-    updateAddBtn();
-  }
-
-  // 左上角金额 = 单价 × 数量（数量加减时实时更新）
-  function updatePriceDisplay() {
-    document.getElementById('detailPrice').textContent = '¥' + (detailPrice * detailQty).toFixed(2);
-  }
-
-  function selectedSpecsText() {
-    const parts = [];
-    document.querySelectorAll('.spec-option.active').forEach(o => parts.push(o.dataset.value));
-    return parts.length ? parts.join(' · ') : '默认规格';
-  }
-
-  function updateAddBtn() {
-    document.getElementById('detailAdd').textContent = '加入购物车';
-    document.getElementById('detailSelected').textContent = selectedSpecsText();
-  }
-
-  function openDetail(name) {
-    const prod = findProduct(name);
-    if (!prod) return;
-
-    detailProduct = prod;
-    detailPrice = prod.price;
-    detailQty = 1;
-
-    const catIdx = findCategoryIdx(name);
-
-    document.getElementById('detailTag').textContent = prod.tag || '';
-    document.getElementById('detailEyebrow').textContent = (catIdx >= 0 ? categories[catIdx].en : 'COZY COFFEE');
-    document.getElementById('detailName').textContent = prod.name;
-    document.getElementById('detailNotes').textContent = prod.notes || prod.desc;
-    document.getElementById('detailOrigin').textContent = (prod.originEn ? prod.originEn + ' · ' : '') + (prod.origin || 'CozyCoffee 烘焙中心');
-    document.getElementById('detailProcess').textContent = prod.process || '—';
-    document.getElementById('detailFlavor').textContent = prod.notes || '—';
-    document.getElementById('detailRoast').textContent = prod.roast || '—';
-
-    document.getElementById('detailPrice').textContent = '¥' + prod.price;
-    document.getElementById('detailQty').textContent = '1';
-    document.getElementById('detailImage').style.background =
-      prod.specs && (prod.specs.size || prod.specs.temp || prod.specs.sugar)
-        ? 'linear-gradient(135deg, #6B4A2E, #3D2A1E)'
-        : 'linear-gradient(135deg, #E8DDD2, #D8C8B4)';
-    updateAddBtn();
-    renderSpecs(prod);
-    document.getElementById('detailOverlay').classList.add('open');
-  }
-
-  function closeDetail() {
-    document.getElementById('detailOverlay').classList.remove('open');
-    detailProduct = null;
-  }
-
-  function changeQty(d) {
-    detailQty += d;
-    if (detailQty < 1) detailQty = 1;
-    document.getElementById('detailQty').textContent = detailQty;
-    updatePriceDisplay();
-    updateAddBtn();
-  }
-
-  // 规格选择 — 事件委托
-  document.getElementById('detailOverlay').addEventListener('click', e => {
-    if (e.target.classList.contains('spec-option')) {
-      const opt = e.target;
-      const specKey = opt.dataset.spec;
-      document.querySelectorAll(`.spec-option[data-spec="${specKey}"]`).forEach(o => o.classList.remove('active'));
-      opt.classList.add('active');
-      updateDetailPrice();
-    }
-  });
-
-  function addToCart() {
-    if (!detailProduct) return;
-    const line = {
-      key: detailProduct.name + '|' + (detailProduct.specs
-        ? ['size','temp','sugar'].map(k => {
-            const a = document.querySelector('.spec-option[data-spec="'+k+'"].active');
-            return k + ':' + (a ? a.dataset.value : '');
-          }).filter(s => !s.endsWith(':')).join('·')
-        : ''),
-      name: detailProduct.name,
-      specs: (function(){
-        const s = [];
-        document.querySelectorAll('.spec-option.active').forEach(o => s.push(o.dataset.value));
-        return s;
-      })(),
-      price: detailPrice,
-      qty: detailQty
-    };
-    // 同 key 合并数量
-    const existing = cart.find(c => c.key === line.key);
-    if (existing) existing.qty += line.qty;
-    else cart.push(line);
-    updateCartUI();
-    closeDetail();
-    toast(`已加入购物车 · ${line.name}${line.specs.length ? ' (' + line.specs.join('·') + ')' : ''} ×${line.qty}`);
-  }
 
   // ── Cart 状态 ──
   const cart = [];
@@ -1173,12 +837,28 @@
     return cart.reduce((s, c) => s + c.qty, 0);
   }
 
+  // 商品列表加购角标：按商品名统计购物车数量（随购物车实时更新，保留商品加购角标）
+  function renderProductBadges() {
+    document.querySelectorAll('.product-item').forEach(el => {
+      const name = el.dataset.name;
+      const count = cart.filter(l => l.name === name).reduce((s, l) => s + l.qty, 0);
+      const badge = el.querySelector('.add-count');
+      if (badge) {
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      }
+    });
+  }
+
   function updateCartUI() {
     const total = cartTotal();
     const count = cartCount();
 
-    // 左侧分类角标
+    // 左侧分类（已去掉加购数量角标）
     renderSidebar();
+
+    // 商品列表加购角标
+    renderProductBadges();
 
     // 底部购物车条
     document.getElementById('cartTotalPrice').textContent = total.toFixed(2);
@@ -1252,7 +932,7 @@
     const total = cartTotal();
     const count = cartCount();
     toast(`结算 ${count} 件 · ¥${total.toFixed(2)}`);
-    setTimeout(() => { location.href = 'order.html'; }, 600);
+    setTimeout(() => { location.href = 'confirm.html'; }, 600);
   }
 
   // 初始化

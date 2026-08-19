@@ -45,7 +45,7 @@
     overflow:hidden;
   }
   .hero-img {
-    width:100%; height:100%; object-fit:cover; object-position:75% center;
+    width:100%; height:100%; object-fit:cover; object-position:bottom;
     display:block;
   }
   .hero-copy {
@@ -330,12 +330,12 @@
 
     <section class="service">
       <div class="pickup-row">
-        <div class="pickup-half" onclick="goMenu()">
+        <div class="pickup-half" onclick="goMenu('pickup')">
           <span class="pickup-cn">自提</span>
           <span class="pickup-en">PICK UP</span>
         </div>
         <div class="pickup-divider"></div>
-        <div class="pickup-half" onclick="goMenu()">
+        <div class="pickup-half" onclick="goMenu('delivery')">
           <span class="pickup-cn">外送</span>
           <span class="pickup-en">DELIVERY</span>
         </div>
@@ -365,7 +365,7 @@
     </section>
 
     <!-- 向下滚动提示 -->
-    <span class="scroll-hint">⌄</span>
+    <span class="scroll-hint" onclick="document.querySelector('.origin-archive').scrollIntoView({behavior:'smooth'})">⌄</span>
   </section>
 
   <!-- ═══ 第二屏：Origin Archive — 八个产区色块 ═══ -->
@@ -457,7 +457,19 @@
     const p = PAGES[name];
     location.href = (p && p.href) || 'index.html';
   }
-  function goMenu() {
+  function goMenu(mode) {
+    if (mode === 'delivery') {
+      // 外送 CTA：解析默认地址，无地址跳添加页（与 index.vue goMenu('delivery') 一致）
+      toast('正在解析默认地址…');
+      const addr = localStorage.getItem('cozy_default_address');
+      if (!addr) {
+        setTimeout(() => { toast('未设置配送地址，请先添加'); }, 300);
+        setTimeout(() => { location.href = 'address.html'; }, 1000);
+        return;
+      }
+      setTimeout(() => { location.href = 'menu.html'; }, 400);
+      return;
+    }
     location.href = 'menu.html';
   }
   function goTab(el, href) {

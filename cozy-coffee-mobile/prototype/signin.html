@@ -41,21 +41,6 @@
 
   .page { padding:20px 20px 120px; }
 
-  /* ── 积分头 ── */
-  .points-header {
-    padding:24px 8px 16px;
-    background:var(--surface);
-  }
-  .points-label {
-    display:block;
-    font-size:13px; color:var(--muted); letter-spacing:.04em;
-  }
-  .points-value {
-    display:block; margin-top:8px;
-    font-family:var(--serif); font-size:46px; font-weight:600;
-    color:var(--ink); line-height:1;
-  }
-
   /* ── 签到区 ── */
   .checkin-section {
     margin-top:20px; padding:28px 24px;
@@ -134,23 +119,23 @@
     background:var(--porcelain-muted); color:var(--roast-brown);
   }
 
-  /* 签到主操作按钮 */
+  /* 签到主操作按钮（Porcelain） */
   .signin-btn {
     width:100%; height:48px;
     margin-top:22px;
-    border:none; border-radius:10px;
-    background:var(--roast-brown); color:#fff;
+    border:1px solid var(--border); border-radius:10px;
+    background:var(--card); color:var(--ink);
     font-size:15px; font-weight:600; cursor:pointer;
     font-family:inherit;
-    transition:background .25s;
+    transition:border-color .25s;
   }
-  .signin-btn:active { background:var(--roast-brown-deep); }
+  .signin-btn:active { border-color:var(--ink); }
   .signin-btn.done {
-    background:var(--porcelain); color:var(--roast-brown);
-    border:1px solid var(--roast-brown);
+    background:var(--card); color:var(--muted);
+    border:1px solid var(--border);
     cursor:default;
   }
-  .signin-btn.done:active { background:var(--porcelain); }
+  .signin-btn.done:active { border-color:var(--border); }
   .checkin-hint {
     display:block; margin-top:12px;
     font-size:12px; color:var(--muted);
@@ -184,33 +169,31 @@
     font-size:13px; line-height:1.7; color:var(--muted);
   }
 
-  /* ── 顶部成功消息（模仿 web ElMessage） ── */
-  .top-banner {
-    position:fixed; top:0; left:50%; transform:translate(-50%,-100%);
-    width:100%; max-width:390px;
-    padding:16px 20px;
-    background:var(--cask-brown); color:#fff;
-    display:flex; align-items:center; gap:12px;
-    z-index:50;
-    transition:transform .35s cubic-bezier(.32,.72,.32,1);
+  /* ── 签到成功浮层（居中悬浮墨黑卡，釉绿对勾） ── */
+  .toast-mask {
+    position:fixed; left:50%; top:64px;
+    transform:translate(-50%,-150%);
+    z-index:50; pointer-events:none;
+    opacity:0;
+    transition:opacity .3s ease, transform .45s cubic-bezier(.22,1,.36,1);
   }
-  .top-banner.open { transform:translate(-50%,0); }
-  .banner-icon {
-    flex:none; width:22px; height:22px; border-radius:50%;
-    background:rgba(255,255,255,.14);
+  .toast-mask.open { opacity:1; transform:translate(-50%,0); }
+  .signin-toast {
+    display:flex; align-items:center; gap:10px;
+    padding:13px 20px;
+    border-radius:12px;
+    background:var(--cask); color:#fff;
+    box-shadow:0 4px 12px rgba(43,30,22,.1);
+  }
+  .toast-check {
+    flex:none; width:24px; height:24px; border-radius:50%;
+    background:var(--accent);
     display:flex; align-items:center; justify-content:center;
   }
-  .banner-icon svg { width:12px; height:12px; }
-  .banner-copy { flex:1; min-width:0; }
-  .banner-title {
-    display:block;
-    font-size:14px; font-weight:650;
-    line-height:1.3;
-  }
-  .banner-sub {
-    display:block; margin-top:2px;
-    font-size:12px; color:rgba(255,255,255,.6);
-  }
+  .toast-check svg { width:12px; height:12px; }
+  .toast-copy { flex:none; }
+  .toast-title { display:block; font-size:14px; font-weight:650; line-height:1.3; }
+  .toast-sub { display:block; margin-top:2px; font-size:11px; color:rgba(255,255,255,.7); }
 
   /* ── Toast ── */
   .toast {
@@ -227,12 +210,6 @@
 <div class="page">
 
   <a class="back-btn" onclick="goBack('index.html')">‹</a>
-
-  <!-- 积分头 -->
-  <div class="points-header">
-    <span class="points-label">当前可用积分</span>
-    <span class="points-value">3,280</span>
-  </div>
 
   <!-- 签到区 -->
   <div class="checkin-section">
@@ -276,19 +253,21 @@
 
 </div>
 
-<!-- 顶部成功消息 -->
-<div class="top-banner" id="topBanner">
-  <span class="banner-icon">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-  </span>
-  <div class="banner-copy">
-    <span class="banner-title" id="bannerTitle">签到成功</span>
-    <span class="banner-sub" id="bannerSub">+2 积分</span>
+<!-- 签到成功浮层（居中悬浮墨黑卡） -->
+<div class="toast-mask" id="toastMask">
+  <div class="signin-toast">
+    <span class="toast-check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </span>
+    <div class="toast-copy">
+      <span class="toast-title" id="bannerTitle">签到成功 +2 积分</span>
+      <span class="toast-sub" id="bannerSub">已连续签到 3 天</span>
+    </div>
   </div>
 </div>
 
 <script>
-  const BEAN_SVG = '<svg class="bean-svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2 C6.5,2 2,6.5 2,12 C2,17.5 6.5,22 12,22 C17.5,22 22,17.5 22,12 C2,6.5 17.5,2 12,2 Z M12.5,5 C12.5,5 14,8 14,12 C14,16 12.5,19 12.5,19 C11,19 8,16 8,12 C8,8 11,5 12.5,5 Z"/></svg>';
+  const BEAN_SVG = '<svg class="bean-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="7.8" ry="9.5"/><path d="M12 2.5c-2 3-1.6 7.5-.5 9.5 1.1 2 1.5 6.5-.5 9.5"/></svg>';
   const GIFT_SVG = '<svg class="bean-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>';
 
   let consecutive = 3; // 已连续签到 3 天
@@ -354,10 +333,10 @@
   function showBanner(title, sub) {
     document.getElementById('bannerTitle').textContent = title;
     document.getElementById('bannerSub').textContent = sub;
-    document.getElementById('topBanner').classList.add('open');
+    document.getElementById('toastMask').classList.add('open');
     clearTimeout(bannerTimer);
     bannerTimer = setTimeout(() => {
-      document.getElementById('topBanner').classList.remove('open');
+      document.getElementById('toastMask').classList.remove('open');
     }, 2200);
   }
 

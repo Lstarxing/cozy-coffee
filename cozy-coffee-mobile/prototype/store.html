@@ -28,8 +28,8 @@
     color:var(--ink);
     text-decoration:none; cursor:pointer;
     border-radius:50%;
-    background:rgba(255,255,255,.6);
-    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    background:var(--card);
+    border:1px solid var(--border);
   }
   .back-btn:active { opacity:.55; }
 
@@ -38,24 +38,24 @@
   /* ── 门店 Hero ── */
   .store-hero {
     padding:32px 24px;
-    border-radius:12px;
-    background:linear-gradient(135deg,#2C1E18,#3D2A20);
-    color:#fff;
+    border-radius:14px;
+    background:var(--card);
+    color:var(--ink);
   }
-  .eyebrow { display:block; font-size:11px; font-weight:600; letter-spacing:.18em; color:rgba(255,255,255,.55); }
+  .eyebrow { display:block; font-size:11px; font-weight:800; letter-spacing:.14em; color:var(--accent); }
   .store-name {
     display:block; margin-top:12px;
     font-family:var(--serif); font-size:28px; font-weight:600;
   }
   .store-description {
     display:block; margin-top:10px;
-    font-size:12px; line-height:1.7; color:rgba(255,255,255,.65);
+    font-size:12px; line-height:1.7; color:var(--muted);
   }
 
   /* ── 信息面板 ── */
   .store-panel {
     margin-top:16px; padding:4px 20px;
-    border-radius:12px; background:var(--card);
+    border-radius:14px; background:var(--card);
   }
   .status-row, .info-row {
     min-height:52px;
@@ -69,9 +69,7 @@
   }
   .status-dot {
     width:9px; height:9px; border-radius:50%; background:var(--accent);
-    animation:pulse 2.4s ease-in-out infinite;
   }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
   .hours { font-size:14px; font-weight:650; color:var(--ink); }
   .info-label { flex:none; font-size:13px; color:var(--muted); }
   .info-value { font-size:13px; line-height:1.5; text-align:right; color:var(--ink); }
@@ -79,7 +77,8 @@
   /* ── 服务范围 ── */
   .scope-note {
     margin-top:16px; padding:20px;
-    border:1px solid var(--border); border-radius:12px;
+    border:1px solid var(--border); border-radius:14px;
+    background:var(--card);
   }
   .note-title {
     display:block; font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink);
@@ -91,11 +90,12 @@
 
   /* ── 底部按钮 ── */
   .order-button {
-    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
-    width:calc(100% - 40px); max-width:350px; height:46px;
+    position:fixed; bottom:max(16px, env(safe-area-inset-bottom));
+    left:14px; right:14px; margin:0 auto;
+    max-width:362px; height:44px;
     display:flex; align-items:center; justify-content:center;
-    border-radius:8px;
-    background:var(--primary); color:#fff;
+    border-radius:22px;
+    background:var(--ink); color:#fff;
     font-size:15px; font-weight:600; cursor:pointer;
     text-decoration:none;
   }
@@ -150,7 +150,7 @@
     </div>
   </div>
 
-  <a class="order-button" href="index.html" onclick="toast('前往点单')">前往点单</a>
+  <a class="order-button" href="menu.html" onclick="toast('前往点单')">前往点单</a>
 
 <script>
   function toast(msg) {

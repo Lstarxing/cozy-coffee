@@ -10,12 +10,14 @@
   html { -webkit-font-smoothing:antialiased; }
   body {
     font-family:'Inter',-apple-system,sans-serif;
-    background:#F7F3EE; color:#2C2723;
+    background:#F7F5F3; color:#2B1E16;
     max-width:390px; margin:0 auto; min-height:100vh;
   }
   :root {
-    --ink:#2C2723; --muted:#8B8178; --primary:#753A22; --accent:#526C43;
-    --surface:#F7F3EE; --card:#FFFFFF; --border:#E3DED8;
+    --primary:#753A22; --primary-deep:#5E2E1B;
+    --accent:#526C43; --accent-soft:#E8EDE5;
+    --ink:#2B1E16; --muted:#756A63; --placeholder:#9E948E;
+    --border:#E3DED8; --surface:#F7F5F3; --card:#FFFFFF; --cask:#2C1E18;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
 
@@ -36,43 +38,63 @@
 
   .page { padding:0 20px 120px; }
 
-  /* ── Hero ── */
+  /* ── Hero（会员成长仪表盘 · 浅色卡） ── */
   .challenge-hero {
     margin-top:6px;
-    padding:26px 24px 22px;
-    border-radius:12px; color:#fff;
-    background:linear-gradient(135deg,#3A342E,#2C1E18);
-    text-align:center;
+    padding:26px 24px 24px;
+    border-radius:14px; background:var(--card); color:var(--ink);
+    text-align:left;
   }
   .hero-eyebrow {
     display:block;
     font-size:9px; font-weight:700; letter-spacing:.26em;
-    opacity:.7;
+    color:var(--muted);
   }
   .hero-title {
-    display:block; margin-top:10px;
+    display:block; margin-top:12px;
     font-family:var(--serif); font-size:24px; font-weight:600;
+    color:var(--ink);
   }
   .hero-sub {
-    display:block; margin-top:6px;
-    font-size:12px; color:rgba(255,255,255,.65);
+    display:block; margin-top:7px;
+    font-size:12px; color:var(--muted);
   }
-  .hero-stats {
-    display:flex; gap:12px;
-    margin-top:22px;
+  .hero-progress { margin-top:28px; }
+  .hero-count-row {
+    display:flex; align-items:baseline; gap:6px;
   }
-  .stat {
-    flex:1; padding:12px 0;
-    border-radius:8px;
-    background:rgba(255,255,255,.08);
+  .hero-count {
+    font-family:var(--serif); font-size:36px; font-weight:700; line-height:1;
+    color:var(--ink);
   }
-  .stat-val { display:block; font-size:18px; font-weight:700; }
-  .stat-lbl { display:block; margin-top:3px; font-size:10px; opacity:.7; }
+  .hero-count-total {
+    font-family:var(--serif); font-size:18px; font-weight:600;
+    color:var(--placeholder);
+  }
+  .hero-progress-label {
+    display:block; margin-top:8px;
+    font-size:11px; font-weight:650; letter-spacing:.12em;
+    color:var(--muted);
+  }
+  .hero-track {
+    margin-top:16px; height:3px; border-radius:2px;
+    background:var(--border); overflow:hidden;
+  }
+  .hero-track-fill {
+    height:100%; border-radius:2px;
+    background:var(--accent);
+    transition:width .5s ease;
+  }
+  .hero-earned {
+    display:block; margin-top:14px;
+    font-size:11px; letter-spacing:.04em;
+    color:var(--muted);
+  }
 
   /* ── 任务列表 ── */
   .task-section {
     margin-top:16px; padding:8px 20px 12px;
-    border-radius:12px; background:var(--card);
+    border-radius:14px; background:var(--card);
   }
   .task-row {
     display:flex; align-items:center; gap:14px;
@@ -80,12 +102,13 @@
     border-bottom:1px solid var(--border);
   }
   .task-row:last-child { border-bottom:0; }
-  .task-row.done { opacity:.62; }
+  .task-row.done { opacity:.72; }
   .task-icon {
     flex:none; width:44px; height:44px; border-radius:12px;
     background:var(--surface); color:var(--primary);
     display:flex; align-items:center; justify-content:center;
   }
+  .task-icon.done { background:var(--accent-soft); color:var(--accent); }
   .task-icon svg { width:22px; height:22px; }
   .task-main { flex:1; min-width:0; }
   .task-top {
@@ -103,23 +126,29 @@
     font-size:11px; color:var(--muted);
   }
   .task-progress {
-    margin-top:10px; height:3px; border-radius:2px;
+    margin-top:8px; height:3px; border-radius:2px;
     background:var(--border); overflow:hidden;
   }
   .task-progress-fill {
     height:100%; border-radius:2px;
     background:var(--primary); transition:width .5s ease;
   }
+  .task-row.done .task-progress-fill { background:var(--accent); }
   .task-status {
-    flex:none; font-size:13px; font-weight:650; color:var(--ink);
+    flex:none; min-width:44px;
+    padding:5px 9px; border-radius:999px;
+    text-align:center;
+    background:var(--surface);
+    color:var(--muted);
+    font-size:11px; font-weight:700;
   }
-  .task-status.done { color:var(--accent); }
+  .task-status.done { background:var(--accent-soft); color:var(--accent); }
 
   /* ── Toast ── */
   .toast {
     position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
     padding:10px 22px; border-radius:20px;
-    background:rgba(44,39,35,.88); color:#F7F3EE;
+    background:rgba(44,39,35,.88); color:#F7F5F3;
     font-size:12px; pointer-events:none; z-index:99;
     opacity:0; transition:opacity .3s ease;
   }
@@ -136,14 +165,21 @@
     <span class="nav-right"></span>
   </div>
 
-  <!-- Hero -->
+  <!-- Hero：会员成长仪表盘 -->
   <div class="challenge-hero">
     <span class="hero-eyebrow">COZY CHALLENGE</span>
     <span class="hero-title">8 月咖啡挑战</span>
-    <span class="hero-sub">达标自动发放积分，无需手动领取</span>
-    <div class="hero-stats">
-      <div class="stat"><span class="stat-val" id="heroDone">1/4</span><span class="stat-lbl">已完成挑战</span></div>
-      <div class="stat"><span class="stat-val" id="heroPoints">+40</span><span class="stat-lbl">本月已获积分</span></div>
+    <span class="hero-sub">完成挑战，积分自动到账</span>
+    <div class="hero-progress">
+      <div class="hero-count-row">
+        <span class="hero-count" id="heroDone">1</span>
+        <span class="hero-count-total" id="heroTotal">/ 4</span>
+      </div>
+      <span class="hero-progress-label">已完成挑战</span>
+      <div class="hero-track">
+        <div class="hero-track-fill" id="heroFill" style="width:25%"></div>
+      </div>
+      <span class="hero-earned" id="heroPoints">本月已获得 40 pts</span>
     </div>
   </div>
 
@@ -161,7 +197,7 @@
     bag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 13H6.2z"/><path d="M8.5 8V6a3.5 3.5 0 0 1 7 0v2"/></svg>'
   };
 
-  // claimed = 已达标并自动发放积分
+  // claimed = 已达标并自动发放积分（对齐 MonthlyTaskDTO 各 claimed 字段）
   const tasks = [
     { name:'打卡达人', desc:'本月完成订单 4 次', reward:40, cur:2, total:4, claimed:false, icon:'calendar' },
     { name:'晨间唤醒', desc:'10:00 前完成订单 3 次', reward:60, cur:3, total:3, claimed:true, icon:'sun' },
@@ -176,7 +212,7 @@
       const pct = Math.min(100, Math.round(t.cur / t.total * 100));
       return `
         <div class="task-row ${done ? 'done' : ''}">
-          <span class="task-icon">${ICONS[t.icon]}</span>
+          <span class="task-icon ${done ? 'done' : ''}">${ICONS[t.icon]}</span>
           <div class="task-main">
             <div class="task-top">
               <span class="task-name">${t.name}</span>
@@ -193,8 +229,11 @@
 
     const doneCount = tasks.filter(t => t.claimed || t.cur >= t.total).length;
     const earned = tasks.filter(t => t.claimed).reduce((s, t) => s + t.reward, 0);
-    document.getElementById('heroDone').textContent = doneCount + '/' + tasks.length;
-    document.getElementById('heroPoints').textContent = '+' + earned;
+    const pct = Math.round(doneCount / tasks.length * 100);
+    document.getElementById('heroDone').textContent = doneCount;
+    document.getElementById('heroTotal').textContent = '/ ' + tasks.length;
+    document.getElementById('heroFill').style.width = pct + '%';
+    document.getElementById('heroPoints').textContent = '本月已获得 ' + earned + ' pts';
   }
 
   function goBack(fallback) {

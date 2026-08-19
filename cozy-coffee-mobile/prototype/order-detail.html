@@ -10,147 +10,160 @@
   html { -webkit-font-smoothing:antialiased; }
   body {
     font-family:'Inter',-apple-system,sans-serif;
-    background:#F7F3EE; color:#2C2723;
+    background:#F7F5F3; color:#2B1E16;
     max-width:390px; margin:0 auto; min-height:100vh;
   }
   :root {
-    --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
-    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
-    --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
-    --cask-brown:#2C1E18;
-    --roastery-ink:#2B1E16; --quiet-ink:#756A63;
-    --placeholder:#9E948E; --hairline:#E3DED8;
-    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
-    --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
+    --primary:#753A22; --primary-deep:#5E2E1B;
+    --accent:#526C43; --accent-soft:#E8EDE5;
+    --ink:#2B1E16; --muted:#756A63; --placeholder:#9E948E;
+    --border:#E3DED8; --surface:#F7F5F3; --card:#FFFFFF; --cask:#2C1E18;
+    --error:#FF4D4F;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
 
-  /* ── 顶部原生式导航 ── */
+  /* ── 顶部导航 ── */
   .top-nav {
-    position:relative;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:12px 16px;
+    position:relative; display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; background:#fff;
   }
   .nav-back { font-size:26px; line-height:1; color:var(--ink); cursor:pointer; padding:6px 4px; width:32px; }
-  .nav-back:active { opacity:.5; }
-  .nav-title {
-    position:absolute; left:50%; transform:translateX(-50%);
-    font-size:16px; font-weight:600; color:var(--ink);
-    white-space:nowrap;
-  }
+  .nav-title { position:absolute; left:50%; transform:translateX(-50%); font-size:16px; font-weight:600; color:var(--ink); white-space:nowrap; }
   .nav-right { width:32px; }
 
-  .page { padding:0 20px 110px; }
+  .page { padding:8px 20px 60px; }
 
-  /* ── 状态区（品牌色，紧凑） ── */
-  .pickup-panel {
-    margin-top:6px;
-    padding:18px 24px 16px;
-    border-radius:14px;
-    text-align:center;
-    color:#fff;
+  /* ── 未支付：等待支付卡 ── */
+  .pending-card {
+    margin-top:12px; padding:26px 20px 20px;
+    border-radius:14px; background:var(--card);
   }
-  .pickup-panel.processing,
-  .pickup-panel.pending,
-  .pickup-panel.shipped { background:var(--roast-brown); }
-  .pickup-panel.completed { background:var(--glaze-green); }
-  .pickup-panel.cancelled { background:#756A63; }
-  .pickup-eyebrow { display:block; font-size:10px; font-weight:700; letter-spacing:.24em; opacity:.8; }
+  .pending-title { display:block; font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink); }
+  .pending-sub { display:block; margin-top:6px; font-size:12px; color:var(--muted); }
+  .pending-actions { display:flex; gap:10px; margin-top:18px; }
+  .pending-btn {
+    flex:1; height:42px; border-radius:999px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:650; cursor:pointer;
+  }
+  .pending-btn.ghost { border:1px solid var(--border); background:var(--card); color:var(--ink); }
+  .pending-btn.solid { background:var(--ink); color:#fff; }
+  .pending-btn:active { opacity:.85; }
+
+  /* ── 状态卡（白卡：取餐号居中 + 三节点进度） ── */
+  .status-card {
+    margin-top:12px; padding:26px 20px 22px;
+    border-radius:14px; background:var(--card); text-align:center;
+  }
+  .status-line { display:block; font-size:13px; color:var(--ink); }
+  .pickup-label { display:block; margin-top:14px; font-size:12px; color:var(--muted); }
   .pickup-code {
-    display:block; margin-top:8px;
-    font-family:var(--serif); font-size:34px; font-weight:800; letter-spacing:.06em; line-height:1;
-    word-break:break-all;
+    display:block; margin-top:6px;
+    font-family:var(--serif); font-size:36px; font-weight:700; letter-spacing:.06em; line-height:1;
   }
-  .code-caption { display:block; margin-top:8px; font-size:10px; letter-spacing:.16em; opacity:.75; }
-  .pickup-status { display:block; margin-top:8px; font-size:12px; opacity:.85; }
+  .pickup-eta { display:block; margin-top:10px; font-size:12px; color:var(--muted); }
 
-  /* ── 门店/配送（第一主体） ── */
-  .store-block {
-    display:flex; align-items:center; gap:12px;
-    padding:22px 2px 18px;
-    border-bottom:1px solid var(--border);
+  /* 三节点进度 */
+  .progress { position:relative; display:flex; margin-top:26px; }
+  .progress-track, .progress-fill { position:absolute; top:11px; height:2px; }
+  .progress-track { left:16.66%; right:16.66%; background:var(--border); }
+  .progress-fill { left:16.66%; background:var(--ink); }
+  .progress-step { flex:1; display:flex; flex-direction:column; align-items:center; gap:7px; }
+  .progress-icon { position:relative; z-index:1; width:24px; height:24px; }
+  .progress-icon svg { width:24px; height:24px; }
+  .progress-label { font-size:11px; color:var(--muted); }
+  .progress-step.current .progress-label { color:var(--ink); font-weight:650; }
+
+  /* ── 门店 + 商品（白卡） ── */
+  .store-products {
+    margin-top:12px; padding:8px 16px 24px;
+    border-radius:14px; background:var(--card);
   }
-  .store-copy { flex:1; min-width:0; }
-  .store-name { display:block; font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink); }
-  .store-addr { display:block; margin-top:5px; font-size:12px; color:var(--muted); }
-  .store-actions { flex:none; display:flex; gap:8px; }
+  .sp-store {
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:18px 2px 16px;
+  }
+  .sp-store-copy { flex:1; min-width:0; }
+  .sp-store-name { display:block; font-family:var(--serif); font-size:18px; font-weight:600; color:var(--ink); }
+  .sp-store-addr { display:block; margin-top:4px; font-size:12px; color:var(--muted); }
+  .sp-store-actions { flex:none; display:flex; gap:8px; }
   .store-act {
-    width:36px; height:36px; border-radius:50%;
+    width:34px; height:34px; border-radius:50%;
     border:1px solid var(--border); background:var(--card);
     display:flex; align-items:center; justify-content:center;
     color:var(--primary); cursor:pointer;
   }
-  .store-act svg { width:17px; height:17px; }
-  .store-act:active { opacity:.6; }
+  .store-act svg { width:16px; height:16px; }
 
-  /* ── 商品（缩略图 + 规格） ── */
-  .products { padding:4px 2px; }
-  .product-row {
-    display:flex; align-items:center; gap:14px;
-    padding:16px 0;
-    border-bottom:1px solid var(--border);
-  }
-  .product-row:last-child { border-bottom:0; }
-  .product-img {
-    flex:none; width:64px; height:64px; border-radius:12px;
+  .sp-divider { height:1px; background:var(--border); margin:10px 0; }
+
+  .sp-product { display:flex; align-items:center; gap:14px; padding:14px 0; }
+  .sp-product-img {
+    flex:none; width:56px; height:56px; border-radius:10px;
     background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
   }
-  .product-main { flex:1; min-width:0; }
-  .product-name { display:block; font-family:var(--serif); font-size:16px; font-weight:600; color:var(--ink); }
-  .product-spec { display:block; margin-top:5px; font-size:12px; color:var(--muted); line-height:1.5; }
-  .product-right { flex:none; text-align:right; }
-  .product-price { display:block; font-size:15px; font-weight:650; color:var(--ink); }
-  .product-qty { display:block; margin-top:4px; font-size:11px; color:var(--muted); }
-  .product-points { display:block; font-size:15px; font-weight:700; color:var(--primary); }
+  .sp-product-main { flex:1; min-width:0; }
+  .sp-name { display:block; font-size:14px; font-weight:650; color:var(--ink); }
+  .sp-spec { display:block; margin-top:4px; font-size:12px; color:var(--muted); line-height:1.5; }
+  .sp-right { flex:none; text-align:right; }
+  .sp-price { display:block; font-size:14px; font-weight:650; color:var(--ink); }
+  .sp-qty { display:block; margin-top:4px; font-size:11px; color:var(--muted); }
+  .sp-points { display:block; font-size:13px; font-weight:700; color:var(--primary); }
 
-  /* ── 金额（优惠总结） ── */
-  .amount-block { padding:6px 2px 10px; }
-  .amount-row {
-    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
-    padding:9px 0; font-size:13px; color:var(--ink);
+  /* ── 金额（商品小计/优惠合计可折叠/实付） ── */
+  .sp-amount { padding:8px 2px 0; }
+  .sp-amount-row {
+    min-height:28px; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    font-size:13px; color:var(--ink);
   }
-  .amount-row .coupon-tag { font-size:10px; color:var(--muted); }
-  .amount-row.discount { color:var(--roast-brown); }
-  .amount-divider { height:1px; background:var(--border); margin:8px 0 4px; }
-  .amount-row.total { padding-top:12px; font-weight:700; }
-  .amount-row.total span:last-child { color:var(--primary); font-size:20px; font-weight:750; }
+  .sp-amount-row.discount { color:var(--primary); }
+  .collapse-left { display:flex; align-items:center; gap:5px; }
+  .collapse-arrow {
+    font-size:16px; line-height:1; color:var(--placeholder);
+    transform:rotate(90deg); transition:transform .3s;
+  }
+  .collapse-arrow.open { transform:rotate(270deg); }
+  .sp-collapse-body { max-height:0; overflow:hidden; opacity:0; transition:max-height .3s, opacity .25s; }
+  .sp-collapse-body.open { max-height:120px; opacity:1; }
+  .sp-coupon-line {
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    margin:2px 2px 2px 12px; padding:7px 2px 7px 10px;
+    border-left:1px solid var(--border);
+    font-size:12px; color:var(--ink);
+  }
+  .sp-coupon-line span:last-child { color:var(--primary); font-weight:650; }
 
-  /* ── 订单信息（低权重，底部） ── */
-  .meta-block {
-    padding:14px 2px 4px;
-    border-top:1px solid var(--border);
+  .sp-total-line {
+    display:flex; align-items:baseline; justify-content:flex-end; gap:6px;
+    margin-top:6px; padding-top:12px;
+    font-size:13px;
   }
+  .total-muted { color:var(--muted); }
+  .total-value { color:var(--primary); font-size:17px; font-weight:750; }
+
+  /* ── 订单信息（实付下方，分隔线分隔） ── */
   .meta-row {
     display:flex; align-items:baseline; justify-content:space-between; gap:12px;
-    padding:8px 0; font-size:12px; color:var(--muted);
+    padding:9px 2px; font-size:12px; color:var(--muted);
   }
-  .meta-row span:last-child { color:var(--quiet-ink); text-align:right; }
+  .meta-row span:last-child { color:var(--ink); text-align:right; }
+  .meta-value { display:flex; align-items:center; gap:6px; min-width:0; }
+  .meta-value .addr-text { max-width:220px; }
   .copy-btn {
-    display:inline-block; margin-left:6px;
-    padding:0 7px; border-radius:6px;
-    border:1px solid var(--border); color:var(--quiet-ink);
+    flex:none; padding:0 7px; border-radius:6px;
+    border:1px solid var(--border); color:var(--muted);
     font-size:11px; font-weight:600; cursor:pointer;
   }
   .copy-btn:active { opacity:.6; }
 
-  /* ── 底部操作 ── */
-  .detail-footer {
-    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
-    width:100%; max-width:390px;
-    padding:12px 20px max(12px, env(safe-area-inset-bottom));
-    background:rgba(247,243,238,.94);
-    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-    border-top:1px solid var(--border);
-    z-index:10;
+  /* ── 本次获得（完成订单） ── */
+  .sp-reward {
+    display:flex; align-items:center; justify-content:flex-end; gap:8px;
+    padding:2px 2px 4px; font-size:12px;
   }
-  .reorder-btn {
-    height:48px; border-radius:10px;
-    background:var(--roast-brown); color:#fff;
-    display:flex; align-items:center; justify-content:center;
-    font-size:15px; font-weight:600; cursor:pointer;
-    transition:background .25s;
-  }
-  .reorder-btn:active { background:var(--roast-brown-deep); }
+  .sp-reward .reward-label { color:var(--muted); }
+  .sp-reward .reward-value { color:var(--primary); font-weight:650; }
+  .sp-reward .reward-sep { color:var(--border); }
 
   /* ── Toast ── */
   .toast {
@@ -166,125 +179,140 @@
 
 <div class="page">
 
-  <!-- 顶部导航 -->
   <div class="top-nav">
     <span class="nav-back" onclick="goBack('order.html')">‹</span>
     <span class="nav-title">订单详情</span>
     <span class="nav-right"></span>
   </div>
 
-  <!-- 状态区 -->
-  <div class="pickup-panel processing" id="pickupPanel">
-    <span class="pickup-eyebrow" id="pickupEyebrow">COZY PICKUP</span>
+  <!-- 未支付：等待支付卡 -->
+  <div class="pending-card" id="pendingCard" style="display:none">
+    <span class="pending-title" id="pendingTitle">等待支付，剩余 09:08</span>
+    <span class="pending-sub">超过15分钟未支付，订单将自动取消</span>
+    <div class="pending-actions">
+      <div class="pending-btn ghost" onclick="toast('取消订单')">取消订单</div>
+      <div class="pending-btn solid" onclick="toast('立即支付')">立即支付</div>
+    </div>
+  </div>
+
+  <!-- 状态卡（白卡：取餐号 + 三节点进度） -->
+  <div class="status-card" id="statusCard">
+    <span class="status-line" id="statusLine" style="display:none"></span>
+    <span class="pickup-label" id="pickupLabel">取餐码</span>
     <span class="pickup-code" id="pickupCode">A021</span>
-    <span class="code-caption" id="codeCaption">取餐码</span>
-    <span class="pickup-status" id="pickupStatus">正在制作 · 预计 15:32 完成</span>
-  </div>
+    <span class="pickup-eta" id="pickupEta">预计 15:32 可取</span>
 
-  <!-- 门店/配送（第一主体） -->
-  <div class="store-block">
-    <div class="store-copy">
-      <span class="store-name" id="storeName">CozyCoffee 中心店</span>
-      <span class="store-addr" id="storeAddr">杭州 · 文三路 128 号</span>
-    </div>
-    <div class="store-actions" id="storeActions">
-      <span class="store-act" onclick="toast('拨打门店电话')" title="电话">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6c0-1.1.9-2 2-2h2l1.5 4.5L7 10a13 13 0 0 0 7 7l1.5-2.5L20 16v2a2 2 0 0 1-2 2A14 14 0 0 1 4 6z"/></svg>
-      </span>
-      <span class="store-act" onclick="toast('打开导航')" title="导航">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-11a6 6 0 0 1 12 0c0 5.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>
-      </span>
+    <!-- 三节点进度 -->
+    <div class="progress" id="progress">
+      <div class="progress-track"></div>
+      <div class="progress-fill" id="progressFill"></div>
+      <div class="progress-step" id="step0"><span class="progress-icon" id="icon0"></span><span class="progress-label">已下单</span></div>
+      <div class="progress-step" id="step1"><span class="progress-icon" id="icon1"></span><span class="progress-label">制作中</span></div>
+      <div class="progress-step" id="step2"><span class="progress-icon" id="icon2"></span><span class="progress-label">待取餐</span></div>
     </div>
   </div>
 
-  <!-- 商品 -->
-  <div class="products" id="itemList"></div>
+  <!-- 门店 + 商品（白卡） -->
+  <div class="store-products">
+    <div class="sp-store">
+      <div class="sp-store-copy">
+        <span class="sp-store-name" id="storeName">CozyCoffee 中心店</span>
+        <span class="sp-store-addr" id="storeAddr">杭州 · 文三路 128 号</span>
+      </div>
+      <div class="sp-store-actions" id="storeActions">
+        <span class="store-act" onclick="toast('拨打门店电话')" title="电话">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6c0-1.1.9-2 2-2h2l1.5 4.5L7 10a13 13 0 0 0 7 7l1.5-2.5L20 16v2a2 2 0 0 1-2 2A14 14 0 0 1 4 6z"/></svg>
+        </span>
+        <span class="store-act" onclick="toast('打开导航')" title="导航">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-11a6 6 0 0 1 12 0c0 5.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>
+        </span>
+      </div>
+    </div>
 
-  <!-- 金额 -->
-  <div class="amount-block" id="priceList"></div>
+    <div class="sp-divider"></div>
 
-  <!-- 订单信息（低权重） -->
-  <div class="meta-block">
-    <div class="meta-row"><span>下单时间</span><span id="orderTime">07-31 15:28:45</span></div>
-    <div class="meta-row"><span>订单编号</span><span><span id="orderNo">COZ2026073110</span><em class="copy-btn" onclick="copyOrderNo()">复制</em></span></div>
-    <div class="meta-row"><span id="metaFulfillLabel">取餐码</span><span id="metaFulfill">A021</span></div>
+    <div id="productList"></div>
+
+    <div class="sp-divider"></div>
+
+    <!-- 金额 -->
+    <div class="sp-amount" id="amountArea">
+      <div class="sp-amount-row"><span>商品小计</span><span id="subtotal">¥60.00</span></div>
+
+      <div class="sp-collapse" id="collapse" style="display:none">
+        <div class="sp-amount-row" id="deliveryFeeRow" style="display:none"><span>配送费</span><span id="deliveryFeeVal">¥3.00</span></div>
+        <div class="sp-amount-row discount">
+          <div class="collapse-left">
+            <span>优惠合计</span>
+            <span class="collapse-arrow" id="collapseArrow" onclick="toggleCollapse()">›</span>
+          </div>
+          <span id="discountVal">-¥10.00</span>
+        </div>
+      </div>
+      <div class="sp-collapse-body" id="collapseBody">
+        <div class="sp-coupon-line"><span>满35减10</span><span id="couponAmt">-¥10.00</span></div>
+      </div>
+
+      <div class="sp-total-line">
+        <span class="total-muted" id="totalCount">共 2 件商品，实付</span>
+        <span class="total-value" id="paid">¥50.00</span>
+      </div>
+
+      <div class="sp-divider"></div>
+
+      <div class="meta-row"><span>下单时间</span><span id="orderTime">2026-07-31 15:28:45</span></div>
+      <div class="meta-row"><span>订单编号</span><span class="meta-value"><span id="orderNo">COZ2026073110</span><em class="copy-btn" onclick="copyOrderNo()">复制</em></span></div>
+      <div class="meta-row" id="deliveryMethodRow" style="display:none"><span>配送方式</span><span>外送</span></div>
+      <div class="meta-row" id="deliveryAddrRow" style="display:none"><span>配送地址</span><span class="meta-value"><span class="addr-text" id="deliveryAddr"></span></span></div>
+    </div>
   </div>
 
-</div>
+  <!-- 本次获得（完成订单） -->
+  <div class="sp-reward" id="rewardRow" style="display:none">
+    <span class="reward-label">本次获得</span>
+    <span class="reward-value">+50 积分</span>
+    <span class="reward-sep">|</span>
+    <span class="reward-value">+10 成长值</span>
+  </div>
 
-<!-- 底部操作 -->
-<div class="detail-footer">
-  <div class="reorder-btn" id="footerBtn" onclick="footerAction()">再来一单</div>
 </div>
 
 <script>
+  const ICONS = {
+    receipt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>',
+    coffee: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/></svg>',
+    bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>'
+  };
+
   const ORDERS = {
-    /* ── 咖啡订单 ── */
+    /* 待支付 */
+    coz2026080101: {
+      type:'coffee', status:'pending',
+      goodsAmount:'¥22.00', discount:'¥0.00', paid:'¥22.00',
+      time:'2026-08-01 09:00:00', orderNo:'COZ2026080101'
+    },
+    /* 制作中 · 自提 */
     coz2026073110: {
-      type:'coffee', fulfillment:'pickup', status:'processing',
-      eyebrow:'COZY PICKUP', code:'A021', codeCaption:'取餐码', statusText:'正在制作 · 预计 15:32 完成',
-      store:'CozyCoffee 中心店', storeAddr:'杭州 · 文三路 128 号',
+      type:'coffee', status:'processing',
+      goodsAmount:'¥60.00', discount:'¥10.00', paid:'¥50.00',
+      couponName:'满35减10', totalQty:2,
       items:[
-        { name:'云南保山 SOE', productName:'经典手冲', spec:'热 / 中杯 / 默认糖', price:'¥28.00', qty:'× 1' },
-        { name:'Dirty', productName:'Dirty', spec:'冰 / 中杯 / 正常', price:'¥32.00', qty:'× 1' }
+        { name:'经典手冲', spec:'热 / 中杯 / 默认糖', price:'¥28.00', qty:'× 1' },
+        { name:'Dirty', spec:'冰 / 中杯 / 正常', price:'¥32.00', qty:'× 1' }
       ],
-      coupon:{ label:'满35减10', discount:'-¥10.00' },
-      goodsAmount:'¥60.00', paid:'¥50.00',
       time:'2026-07-31 15:28:45', orderNo:'COZ2026073110'
     },
+    /* 已完成 · 外送 */
     coz2026072907: {
-      type:'coffee', fulfillment:'delivery', status:'completed',
-      eyebrow:'COZY DELIVERY', code:'SF1068192000', codeCaption:'物流单号', statusText:'订单已完成 · 已送达',
-      store:'CozyCoffee 中心店', deliveryAddr:'文三路 128 号 3 幢 1 单元',
+      type:'coffee', status:'completed', fulfillment:'delivery',
+      goodsAmount:'¥66.00', discount:'¥0.00', paid:'¥69.00', deliveryFee:'¥3.00',
+      deliveryAddr:'文三路 128 号 3 幢 1 单元 · 张三（先生）15168226973',
       items:[
-        { name:'冷萃咖啡', productName:'瓶装冷萃', spec:'冰 / 中杯 / 无糖', price:'¥28.00', qty:'× 1' },
-        { name:'冰摇荔枝咖啡', productName:'冰摇荔枝咖啡', spec:'冰 / 大杯 / 微糖', price:'¥38.00', qty:'× 1' }
+        { name:'瓶装冷萃', spec:'冰 / 中杯 / 无糖', price:'¥28.00', qty:'× 1' },
+        { name:'冰摇荔枝咖啡', spec:'冰 / 大杯 / 微糖', price:'¥38.00', qty:'× 1' }
       ],
-      coupon:null,
-      goodsAmount:'¥66.00', paid:'¥66.00',
+      points:'+66', exp:'+66',
       time:'2026-07-29 09:12:30', orderNo:'COZ2026072907'
-    },
-
-    /* ── 兑换订单 ── */
-    rd202607280002: {
-      type:'redeem', fulfillment:'pickup', status:'completed',
-      eyebrow:'COZY PICKUP', code:'P72811', codeCaption:'取货码', statusText:'已完成 · 到店自提',
-      store:'杭州中心店', storeAddr:'文三路 128 号',
-      items:[ { name:'Cozy 品牌贴纸包', productName:'Cozy 品牌贴纸包', spec:'数量 × 1', points:'100 积分' } ],
-      consumePoints:'100', remainingPoints:'3,180',
-      time:'2026-07-28 11:05:32', orderNo:'RD202607280002'
-    },
-    rd202607200003: {
-      type:'redeem', fulfillment:'delivery', status:'shipped',
-      eyebrow:'COZY DELIVERY', code:'SF1068192001', codeCaption:'物流单号', statusText:'已发货 · 顺丰速运',
-      store:'杭州中心店', deliveryAddr:'浙江省杭州市西湖区文三路 128 号',
-      items:[ { name:'Cozy 经典帆布包', productName:'Cozy 经典帆布包', spec:'数量 × 1', points:'1,600 积分' } ],
-      consumePoints:'1,600', remainingPoints:'2,080',
-      time:'2026-07-20 16:42:10', orderNo:'RD202607200003'
-    },
-    rd202607120004: {
-      type:'redeem', fulfillment:'delivery', status:'processing',
-      eyebrow:'COZY DELIVERY', code:'SF1068192002', codeCaption:'物流单号', statusText:'处理中 · 等待揽收',
-      store:'杭州中心店', deliveryAddr:'浙江省杭州市西湖区文三路 128 号',
-      items:[ { name:'挂耳咖啡精选礼盒', productName:'挂耳咖啡精选礼盒', spec:'数量 × 1', points:'3,500 积分' } ],
-      consumePoints:'3,500', remainingPoints:'1,580',
-      time:'2026-07-12 09:30:44', orderNo:'RD202607120004'
-    },
-    rd202607050005: {
-      type:'redeem', fulfillment:'delivery', status:'pending',
-      eyebrow:'COZY DELIVERY', code:'待出库', codeCaption:'物流单号', statusText:'待处理 · 即将发货',
-      store:'杭州中心店', deliveryAddr:'浙江省杭州市西湖区文三路 128 号',
-      items:[ { name:'定制拿铁金搅拌勺', productName:'定制拿铁金搅拌勺', spec:'数量 × 1', points:'600 积分' } ],
-      consumePoints:'600', remainingPoints:'2,280',
-      time:'2026-07-05 14:18:22', orderNo:'RD202607050005'
-    },
-    rd202606300006: {
-      type:'redeem', fulfillment:'pickup', status:'cancelled',
-      eyebrow:'COZY PICKUP', code:'P63019', codeCaption:'取货码', statusText:'已取消 · 积分已退还',
-      store:'杭州中心店', storeAddr:'文三路 128 号',
-      items:[ { name:'拿铁金定制马克杯', productName:'拿铁金定制马克杯', spec:'数量 × 1', points:'1,200 积分' } ],
-      consumePoints:'1,200', remainingPoints:'2,080',
-      time:'2026-06-30 19:05:11', orderNo:'RD202606300006'
     }
   };
 
@@ -295,68 +323,92 @@
     const o = ORDERS[id] || ORDERS.coz2026073110;
     currentOrder = o;
 
-    document.getElementById('pickupPanel').className = 'pickup-panel ' + o.status;
-    document.getElementById('pickupEyebrow').textContent = o.eyebrow;
-    document.getElementById('pickupCode').textContent = o.code;
-    document.getElementById('codeCaption').textContent = o.codeCaption;
-    document.getElementById('pickupStatus').textContent = o.statusText;
+    const pending = o.status === 'pending';
+    document.getElementById('pendingCard').style.display = pending ? 'block' : 'none';
+    document.getElementById('statusCard').style.display = pending ? 'none' : 'block';
 
-    document.getElementById('storeName').textContent = o.store || 'CozyCoffee 中心店';
-    document.getElementById('storeAddr').textContent = o.fulfillment === 'delivery'
-      ? '配送至 · ' + (o.deliveryAddr || '')
-      : (o.storeAddr || '');
-    document.getElementById('storeActions').style.display = o.fulfillment === 'pickup' ? 'flex' : 'none';
+    if (!pending) {
+      document.getElementById('pickupCode').textContent = o.type === 'coffee' ? 'A021' : 'P72811';
+      document.getElementById('pickupLabel').textContent = o.fulfillment === 'delivery' ? '预计送达' : '取餐码';
+      document.getElementById('pickupEta').textContent = o.fulfillment === 'delivery'
+        ? (o.status === 'completed' ? '订单已完成 · 已送达' : '预计 15:32 送达')
+        : (o.status === 'completed' ? '已完成 · 待取餐' : '预计 15:32 可取');
+      document.getElementById('statusLine').style.display = o.type === 'redeem' ? 'block' : 'none';
+      document.getElementById('statusLine').textContent = o.statusText || '';
 
-    document.getElementById('itemList').innerHTML = o.items.map(it => `
-      <div class="product-row">
-        <div class="product-img"></div>
-        <div class="product-main">
-          <span class="product-name">${it.name}</span>
-          <span class="product-spec">${it.spec}</span>
-        </div>
-        <div class="product-right">
-          ${it.price
-            ? `<span class="product-price">${it.price}</span><span class="product-qty">${it.qty}</span>`
-            : `<span class="product-points">${it.points}</span>`}
-        </div>
-      </div>`).join('');
-
-    let amountHTML;
-    if (o.type === 'coffee') {
-      amountHTML = `<div class="amount-row"><span>商品金额</span><span>${o.goodsAmount}</span></div>`;
-      if (o.coupon) {
-        amountHTML += `<div class="amount-row discount"><span>优惠券 <span class="coupon-tag">(${o.coupon.label})</span></span><span>${o.coupon.discount}</span></div>`;
+      // 三节点进度（咖啡单）
+      if (o.type === 'coffee') {
+        document.getElementById('progress').style.display = 'flex';
+        const reached = o.status === 'processing' ? 1 : 2;
+        const icons = ['receipt', 'coffee', 'bell'];
+        for (let i = 0; i < 3; i++) {
+          document.getElementById('icon' + i).innerHTML = ICONS[icons[i]];
+          document.getElementById('icon' + i).style.color = i <= reached ? '#2B1E16' : '#9E948E';
+          if (i === reached) document.getElementById('step' + i).className = 'progress-step current';
+        }
+        document.getElementById('progressFill').style.width = (reached / 2) * 66.66 + '%';
       }
-      amountHTML += `<div class="amount-divider"></div>
-        <div class="amount-row total"><span>实付金额</span><span>${o.paid}</span></div>`;
-    } else {
-      amountHTML = `
-        <div class="amount-row"><span>消耗积分</span><span>${o.consumePoints} 积分</span></div>
-        <div class="amount-row"><span>兑换后剩余</span><span>${o.remainingPoints} 积分</span></div>
-        <div class="amount-divider"></div>
-        <div class="amount-row total"><span>实付</span><span>${o.consumePoints} 积分</span></div>`;
     }
-    document.getElementById('priceList').innerHTML = amountHTML;
 
+    // 门店 + 商品
+    document.getElementById('storeName').textContent = 'CozyCoffee 中心店';
+    document.getElementById('storeAddr').textContent = o.fulfillment === 'delivery' ? '配送至 · ' + (o.deliveryAddr || '') : '杭州 · 文三路 128 号';
+    document.getElementById('storeActions').style.display = o.fulfillment === 'delivery' ? 'none' : 'flex';
+
+    if (o.items) {
+      document.getElementById('productList').innerHTML = o.items.map(it => `
+        <div class="sp-product">
+          <div class="sp-product-img"></div>
+          <div class="sp-product-main">
+            <span class="sp-name">${it.name}</span>
+            <span class="sp-spec">${it.spec}</span>
+          </div>
+          <div class="sp-right">
+            <span class="sp-price">${it.price}</span><span class="sp-qty">${it.qty}</span>
+          </div>
+        </div>`).join('');
+    }
+
+    // 金额
+    document.getElementById('subtotal').textContent = o.goodsAmount;
+    const hasDiscount = Number(o.discount) > 0;
+    const hasFee = Number(o.deliveryFee || 0) > 0;
+    document.getElementById('collapse').style.display = (hasDiscount || hasFee) ? 'block' : 'none';
+    document.getElementById('deliveryFeeRow').style.display = hasFee ? 'flex' : 'none';
+    document.getElementById('deliveryFeeVal').textContent = o.deliveryFee;
+    document.getElementById('discountVal').textContent = o.discount;
+    document.getElementById('collapseBody').style.display = hasDiscount ? 'block' : 'none';
+    document.querySelector('#collapseBody .sp-coupon-line span:first-child').textContent = o.couponName || '优惠券';
+    document.getElementById('couponAmt').textContent = o.discount;
+    if (!hasDiscount) document.getElementById('collapseBody').style.display = 'none';
+
+    document.getElementById('totalCount').textContent = `共 ${o.totalQty || (o.items ? o.items.length : 1)} 件商品，实付`;
+    document.getElementById('paid').textContent = o.paid;
+
+    // 订单信息
     document.getElementById('orderTime').textContent = o.time;
     document.getElementById('orderNo').textContent = o.orderNo;
-    document.getElementById('metaFulfillLabel').textContent = o.codeCaption;
-    document.getElementById('metaFulfill').textContent = o.code;
+    document.getElementById('deliveryMethodRow').style.display = o.fulfillment === 'delivery' ? 'flex' : 'none';
+    document.getElementById('deliveryAddrRow').style.display = o.fulfillment === 'delivery' ? 'flex' : 'none';
+    document.getElementById('deliveryAddr').textContent = o.deliveryAddr || '';
 
-    document.getElementById('footerBtn').textContent = o.type === 'coffee' ? '再来一单' : '再次兑换';
+    // 本次获得
+    const rewardRow = document.getElementById('rewardRow');
+    if (o.status === 'completed' && o.points) {
+      rewardRow.style.display = 'flex';
+      rewardRow.innerHTML = `
+        <span class="reward-label">本次获得</span>
+        <span class="reward-value">${o.points} 积分</span>
+        <span class="reward-sep">|</span>
+        <span class="reward-value">${o.exp} 成长值</span>`;
+    }
   })();
 
-  function footerAction() {
-    if (!currentOrder) return;
-    if (currentOrder.type === 'coffee') {
-      localStorage.setItem('cozy_reorder', JSON.stringify({
-        items: currentOrder.items.map(it => ({ productName: it.productName, name: it.name, spec: it.spec, price: it.price, qty: it.qty }))
-      }));
-      location.href = 'menu.html';
-    } else {
-      localStorage.setItem('cozy_rereedeem', JSON.stringify({ productName: currentOrder.items[0].productName }));
-      location.href = 'mall.html';
-    }
+  function toggleCollapse() {
+    const arrow = document.getElementById('collapseArrow');
+    const body = document.getElementById('collapseBody');
+    const open = arrow.classList.toggle('open');
+    body.classList.toggle('open', open);
   }
 
   function copyOrderNo() {

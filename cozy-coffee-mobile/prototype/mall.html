@@ -53,31 +53,7 @@
   }
   .quick-link:active { opacity:.6; }
   .quick-divider {
-    width:1px; height:13px; background:var(--border);
-  }
-
-  /* ═══════════════════════════════════════
-     分类 Tab
-     ═══════════════════════════════════════ */
-  .mall-tabs {
-    display:flex;
-    margin:12px 20px 0; padding:0 4px;
-    border-bottom:1px solid var(--border);
-  }
-  .mall-tab {
-    flex:1; padding:14px 0;
-    text-align:center;
-    font-size:15px; color:var(--muted);
-    cursor:pointer;
-    position:relative;
-    transition:color .25s;
-  }
-  .mall-tab.active { color:var(--ink); font-weight:600; }
-  .mall-tab.active::after {
-    content:''; position:absolute;
-    left:50%; bottom:-1px; transform:translateX(-50%);
-    width:24px; height:2px;
-    background:var(--ink);
+    font-size:12px; color:var(--border);
   }
 
   /* ═══════════════════════════════════════
@@ -113,105 +89,6 @@
   }
   .points-num { font-size:17px; font-weight:700; color:var(--primary); }
   .points-unit { font-size:11px; color:var(--muted); }
-
-  /* ═══════════════════════════════════════
-     详情覆盖层
-     ═══════════════════════════════════════ */
-  .detail-page {
-    position:fixed; inset:0;
-    background:#fff; z-index:50;
-    overflow-y:auto;
-    transform:translateX(100%);
-    transition:transform .35s cubic-bezier(.32,.72,.32,1);
-  }
-  .detail-page.open { transform:translateX(0); }
-  .detail-back {
-    position:fixed; top:14px; left:14px;
-    width:36px; height:36px;
-    display:flex; align-items:center; justify-content:center;
-    font-size:28px; line-height:1;
-    color:var(--ink); cursor:pointer;
-    z-index:2;
-  }
-
-  .detail-image-area {
-    padding:60px 32px 24px;
-    background:#fff;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .detail-image {
-    width:240px; height:240px;
-    border-radius:8px;
-    display:flex; align-items:center; justify-content:center;
-    overflow:hidden;
-  }
-  .detail-image svg {
-    width:65%; height:65%; color:rgba(255,255,255,.95);
-  }
-
-  .detail-head {
-    padding:0 24px 22px;
-    border-bottom:1px solid var(--border);
-  }
-  .detail-name {
-    display:block;
-    font-family:var(--serif); font-size:22px; font-weight:600;
-    color:var(--ink); line-height:1.3;
-  }
-  .detail-tags {
-    margin-top:14px;
-    display:flex; flex-wrap:wrap; gap:8px;
-  }
-  .tag {
-    display:inline-block; padding:5px 11px;
-    font-size:11px;
-    border:1px solid var(--ink);
-    color:var(--ink);
-    border-radius:2px;
-    letter-spacing:.02em;
-  }
-  .tag--limit {
-    border-color:var(--danger);
-    color:var(--danger);
-  }
-
-  /* ── 补充信息 ── */
-  .detail-sections { padding:0 24px; }
-  .detail-section {
-    padding:18px 0;
-    border-bottom:1px solid var(--border);
-  }
-  .detail-section:last-child { border-bottom:0; }
-  .section-label {
-    display:block;
-    font-size:14px; font-weight:600;
-    color:var(--ink);
-  }
-  .section-value {
-    display:block; margin-top:8px;
-    font-size:13px; line-height:1.7;
-    color:var(--muted);
-  }
-
-  /* ── 底部 CTA ── */
-  .detail-cta-wrap {
-    padding:20px 24px 32px;
-    background:#fff;
-    margin-top:8px;
-  }
-  .detail-cta {
-    height:48px;
-    display:flex; align-items:center; justify-content:center;
-    background:var(--primary); color:#fff;
-    font-size:15px; font-weight:600;
-    border-radius:24px;
-    cursor:pointer;
-    transition:opacity .2s;
-  }
-  .detail-cta:active { opacity:.85; }
-  .detail-cta.disabled {
-    background:var(--border); color:var(--muted); cursor:not-allowed;
-  }
 
   /* ── Toast ── */
   .toast {
@@ -260,74 +137,15 @@
   <!-- 文字快捷链接 -->
   <div class="quick-links">
     <a class="quick-link" href="points-history.html">积分明细</a>
-    <span class="quick-divider"></span>
+    <span class="quick-divider">|</span>
     <a class="quick-link" href="points-redemptions.html">兑换记录</a>
-    <span class="quick-divider"></span>
+    <span class="quick-divider">|</span>
     <a class="quick-link" href="points-rules.html">积分规则</a>
-  </div>
-
-  <!-- 分类 Tab -->
-  <div class="mall-tabs">
-    <div class="mall-tab active" data-type="all" onclick="switchTab(this)">全部</div>
-    <div class="mall-tab" data-type="coupon" onclick="switchTab(this)">优惠券</div>
-    <div class="mall-tab" data-type="physical" onclick="switchTab(this)">实物礼品</div>
   </div>
 
   <!-- 商品网格 -->
   <div class="products-grid" id="productGrid"></div>
 
-</div>
-
-<!-- 商品详情（覆盖层） -->
-<div class="detail-page" id="detailPage">
-  <span class="detail-back" onclick="closeDetail()">‹</span>
-
-  <div class="detail-image-area">
-    <div class="detail-image" id="detailImage"></div>
-  </div>
-
-  <div class="detail-head">
-    <span class="detail-name" id="detailName"></span>
-    <div class="detail-tags">
-      <span class="tag" id="detailMember"></span>
-      <span class="tag tag--limit" id="detailLimit"></span>
-    </div>
-  </div>
-
-  <div class="detail-sections">
-    <div class="detail-section">
-      <span class="section-label">商品类型</span>
-      <span class="section-value" id="detailType"></span>
-    </div>
-    <div class="detail-section">
-      <span class="section-label">有效期限</span>
-      <span class="section-value" id="detailValidity"></span>
-    </div>
-    <div class="detail-section">
-      <span class="section-label">抵扣对象</span>
-      <span class="section-value" id="detailDeduction"></span>
-    </div>
-    <div class="detail-section">
-      <span class="section-label">可用门店</span>
-      <span class="section-value" id="detailStores"></span>
-    </div>
-    <div class="detail-section">
-      <span class="section-label">可用场景</span>
-      <span class="section-value" id="detailScenarios"></span>
-    </div>
-    <div class="detail-section">
-      <span class="section-label">礼品说明</span>
-      <span class="section-value" id="detailNotes"></span>
-    </div>
-    <div class="detail-section">
-      <span class="section-label">礼品介绍</span>
-      <span class="section-value" id="detailIntro"></span>
-    </div>
-  </div>
-
-  <div class="detail-cta-wrap">
-    <div class="detail-cta disabled" id="detailCta" onclick="redeem()">53 积分不足</div>
-  </div>
 </div>
 
 <!-- 下架商品提示 -->
@@ -498,11 +316,10 @@
   ];
 
   // ── 渲染 ──
-  function renderProducts(type) {
-    const list = type === 'all' ? products : products.filter(p => p.type === type);
+  function renderProducts() {
     const grid = document.getElementById('productGrid');
-    grid.innerHTML = list.map(p => `
-      <div class="product-card" onclick="openDetail('${p.id}')">
+    grid.innerHTML = products.map(p => `
+      <div class="product-card" onclick="go('mall-detail.html')">
         <div class="product-image" style="background:${p.gradient};">
           ${ICONS[p.icon]}
         </div>
@@ -515,62 +332,6 @@
         </div>
       </div>
     `).join('');
-  }
-
-  // ── Tab ──
-  function switchTab(el) {
-    document.querySelectorAll('.mall-tab').forEach(t => t.classList.remove('active'));
-    el.classList.add('active');
-    renderProducts(el.dataset.type);
-  }
-
-  // ── 详情 ──
-  let currentId = null;
-  function openDetail(id) {
-    const p = products.find(x => x.id === id);
-    if (!p) return;
-    currentId = id;
-
-    document.getElementById('detailName').textContent = p.name;
-    document.getElementById('detailMember').textContent = p.member;
-    document.getElementById('detailLimit').textContent = p.limit;
-    document.getElementById('detailType').textContent = p.productType;
-    document.getElementById('detailValidity').textContent = p.validity;
-    document.getElementById('detailDeduction').textContent = p.deduction;
-    document.getElementById('detailStores').textContent = p.stores;
-    document.getElementById('detailScenarios').textContent = p.scenarios;
-    document.getElementById('detailNotes').textContent = p.notes;
-    document.getElementById('detailIntro').textContent = p.intro;
-
-    document.getElementById('detailImage').style.background = p.gradient;
-    document.getElementById('detailImage').innerHTML = ICONS[p.icon];
-
-    const cta = document.getElementById('detailCta');
-    if (CURRENT_POINTS >= p.points) {
-      cta.classList.remove('disabled');
-      cta.textContent = `立即兑换 · ${p.points} 积分`;
-    } else {
-      cta.classList.add('disabled');
-      cta.textContent = `积分不足 · 还差 ${(p.points - CURRENT_POINTS).toLocaleString()} 积分`;
-    }
-
-    document.getElementById('detailPage').classList.add('open');
-  }
-
-  function closeDetail() {
-    document.getElementById('detailPage').classList.remove('open');
-    currentId = null;
-  }
-
-  function redeem() {
-    if (!currentId) return;
-    const p = products.find(x => x.id === currentId);
-    if (!p || CURRENT_POINTS < p.points) {
-      toast('积分不足');
-      return;
-    }
-    toast(`已兑换 ${p.name} · ${p.points} 积分`);
-    setTimeout(closeDetail, 800);
   }
 
   // ── Toast ──
@@ -586,6 +347,8 @@
     clearTimeout(t._timer);
     t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
   }
+
+  function go(href) { location.href = href; }
 
   // 初始化
   renderProducts('all');

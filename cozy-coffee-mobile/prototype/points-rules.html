@@ -10,7 +10,7 @@
   html { -webkit-font-smoothing:antialiased; }
   body {
     font-family:'Inter',-apple-system,sans-serif;
-    background:#F7F3EE; color:#2C2723;
+    background:#F7F5F3; color:#2B1E16;
     max-width:390px; margin:0 auto; min-height:100vh;
   }
   :root {
@@ -34,28 +34,12 @@
     color:var(--ink);
     text-decoration:none; cursor:pointer;
     border-radius:50%;
-    background:rgba(255,255,255,.6);
-    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    background:var(--card);
+    border:1px solid var(--border);
   }
   .back-btn:active { opacity:.55; }
 
-  .page { padding:20px 20px 120px; }
-
-  /* ── 页头 ── */
-  .page-head { padding:8px 8px 10px; }
-  .page-kicker {
-    display:block;
-    font-size:11px; font-weight:700; letter-spacing:.16em; color:var(--muted);
-  }
-  .page-title {
-    display:block; margin-top:10px;
-    font-family:var(--serif); font-size:26px; font-weight:600;
-    color:var(--ink); line-height:1.2;
-  }
-  .page-sub {
-    display:block; margin-top:8px;
-    font-size:13px; color:var(--muted); line-height:1.6;
-  }
+  .page { padding:20px 20px 40px; }
 
   /* ── 规则卡片 ── */
   .rules-section {
@@ -74,6 +58,7 @@
     display:block; margin-top:8px;
     font-size:13px; line-height:1.7; color:var(--muted);
   }
+  .rules-desc em { font-style:normal; color:var(--primary); font-weight:700; }
   .rule-card {
     padding:16px 0;
     border-bottom:1px solid var(--border);
@@ -135,34 +120,13 @@
   .note-strip strong { color:var(--ink); font-weight:650; }
   .note-strip em { font-style:normal; color:var(--roast-brown); font-weight:700; }
 
-  /* ── 底部 CTA ── */
-  .rules-foot { margin-top:30px; text-align:center; }
-  .rules-cta {
-    display:block; height:48px; line-height:48px;
-    border-radius:10px;
-    background:var(--roast-brown); color:#fff;
-    font-size:15px; font-weight:600; text-decoration:none; cursor:pointer;
-    transition:background .25s;
-  }
-  .rules-cta:active { background:var(--roast-brown-deep); }
-  .rules-disclaimer {
-    display:block; margin-top:16px;
-    font-size:11px; color:var(--placeholder); line-height:1.6;
-  }
-</style>
+  /* ── 提示条 ── */</style>
 </head>
 <body>
 
 <div class="page">
 
   <a class="back-btn" onclick="goBack('mall.html')">‹</a>
-
-  <!-- 页头 -->
-  <div class="page-head">
-    <span class="page-kicker">POINTS & RULES</span>
-    <span class="page-title">积分规则</span>
-    <span class="page-sub">积分是 Cozy Coffee 对每一杯咖啡的感谢。按以下方式获得、使用与守护你的每一分。</span>
-  </div>
 
   <!-- 积分价值 -->
   <div class="rules-section">
@@ -222,23 +186,23 @@
     <table class="rate-table">
       <tr><th>等级</th><th>成长值门槛</th><th>积分倍率</th></tr>
       <tr>
-        <td class="rate-lv">基础 Classic<em>0 EXP</em></td>
+        <td class="rate-lv">基础<em>Classic · 0 EXP</em></td>
         <td>注册即达</td><td class="rate-val">1.0<span class="x">×</span></td>
       </tr>
       <tr>
-        <td class="rate-lv">白银 Silver<em>500 EXP</em></td>
+        <td class="rate-lv">白银<em>Silver · 500 EXP</em></td>
         <td>约 15–20 杯</td><td class="rate-val">1.1<span class="x">×</span></td>
       </tr>
       <tr>
-        <td class="rate-lv">黄金 Gold<em>1,500 EXP</em></td>
+        <td class="rate-lv">黄金<em>Gold · 1,500 EXP</em></td>
         <td>约 40–60 杯</td><td class="rate-val">1.2<span class="x">×</span></td>
       </tr>
       <tr>
-        <td class="rate-lv">钻石 Diamond<em>4,000 EXP</em></td>
+        <td class="rate-lv">钻石<em>Diamond · 4,000 EXP</em></td>
         <td>约 120 杯+</td><td class="rate-val">1.3<span class="x">×</span></td>
       </tr>
       <tr>
-        <td class="rate-lv">黑金 Black Gold<em>9,000 EXP</em></td>
+        <td class="rate-lv">黑金<em>Black Gold · 9,000 EXP</em></td>
         <td>深度爱好者</td><td class="rate-val">1.5<span class="x">×</span></td>
       </tr>
     </table>
@@ -341,12 +305,6 @@
     <div class="rule-card">
       <span class="rule-name">本规则由 Cozy Coffee 制定并保留最终解释权，如有调整将提前公示。</span>
     </div>
-  </div>
-
-  <!-- 底部 CTA -->
-  <div class="rules-foot">
-    <a class="rules-cta" href="mall.html">去积分商城兑换 →</a>
-    <span class="rules-disclaimer">以上规则依据《Cozy Coffee 会员积分体系白皮书 v6.0》与系统实际实现整理。</span>
   </div>
 
 </div>

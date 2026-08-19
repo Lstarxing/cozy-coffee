@@ -91,17 +91,25 @@
   .receipt-summary {
     padding:12px 14px;
     display:flex; justify-content:space-between; align-items:center; gap:12px;
-    background:var(--surface);
+    background:var(--card);
   }
   .summary-label { font-size:11px; color:var(--muted); }
   .summary-total { display:block; margin-top:4px; font-size:14px; font-weight:700; color:var(--primary); }
   .summary-total.virtual { color:var(--accent); }
   .order-action {
     flex:none; padding:8px 14px;
-    border:1px solid var(--primary); border-radius:8px;
-    color:var(--primary); font-size:11px; font-weight:650; cursor:pointer;
+    border:1px solid var(--ink); border-radius:8px;
+    background:var(--ink); color:#fff;
+    font-size:11px; font-weight:650; cursor:pointer;
   }
-  .detail-link { flex:none; padding-bottom:4px; color:var(--primary); font-size:11px; font-weight:650; }
+  .order-action:active { opacity:.85; }
+  .mini-btn {
+    flex:none; padding:7px 14px;
+    border:1px solid var(--border); border-radius:8px;
+    background:var(--card); color:var(--ink);
+    font-size:11px; font-weight:600; cursor:pointer;
+  }
+  .mini-btn:active { background:var(--surface); }
 
   /* ── 空状态 ── */
   .empty-state {
@@ -267,7 +275,9 @@
         </div>
         <div class="receipt-summary">
           <span class="summary-label">${o.count}</span>
-          <span class="order-action" onclick="event.stopPropagation(); reorder('${o.id}')">再来一单</span>
+          ${o.status === 'completed'
+            ? `<span class="order-action" onclick="event.stopPropagation(); reorder('${o.id}')">再来一单</span>`
+            : `<span class="mini-btn" onclick="event.stopPropagation(); go('order-detail.html?id=${o.id}')">查看详情</span>`}
         </div>
       </div>`).join('');
   }

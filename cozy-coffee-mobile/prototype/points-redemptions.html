@@ -294,10 +294,12 @@
     <span class="page-sub">用积分换来的每一份心意</span>
   </div>
 
-  <!-- 自取/外送筛选 -->
+  <!-- 全部/虚拟/自提/快递筛选 -->
   <div class="filter-tabs">
-    <div class="filter-tab active" data-f="pickup" onclick="switchFilter(this)">自取</div>
-    <div class="filter-tab" data-f="delivery" onclick="switchFilter(this)">外送</div>
+    <div class="filter-tab active" data-f="all" onclick="switchFilter(this)">全部</div>
+    <div class="filter-tab" data-f="virtual" onclick="switchFilter(this)">虚拟</div>
+    <div class="filter-tab" data-f="pickup" onclick="switchFilter(this)">自提</div>
+    <div class="filter-tab" data-f="delivery" onclick="switchFilter(this)">快递</div>
   </div>
 
   <!-- 订单列表 -->
@@ -350,9 +352,10 @@
   };
 
   const STATUS_TEXT = { pending:'待处理', processing:'处理中', shipped:'已发货', completed:'已完成', cancelled:'已取消' };
-  const FULFILL_TEXT = { pickup:'到店自提', delivery:'快递配送' };
+  const FULFILL_TEXT = { virtual:'已发放至券包', pickup:'自提', delivery:'快递配送' };
 
   let orders = [
+    { key:'rd202608010001', orderNo:'RD202608010001', fulfillment:'virtual', status:'completed', icon:'coupon5', productName:'5 元饮品代金券', quantity:1, pointsCost:500, createdAt:'2026-08-01 10:00:00', virtualCode:'VC-8F3A21', remark:'虚拟卡券 · 已发放至券包' },
     { key:'rd202607280002', orderNo:'RD202607280002', fulfillment:'pickup', status:'completed', icon:'sticker', productName:'Cozy 品牌贴纸包', quantity:1, pointsCost:100, createdAt:'2026-07-28 11:05:32', storeName:'杭州中心店', pickupCode:'P72811', remark:'到店自提，3 张原创贴纸' },
     { key:'rd202607200003', orderNo:'RD202607200003', fulfillment:'delivery', status:'shipped', icon:'tote', productName:'Cozy 经典帆布包', quantity:1, pointsCost:1600, createdAt:'2026-07-20 16:42:10', shippingCompany:'顺丰速运', trackingNumber:'SF1068192001', receiver:{ name:'张*宁', phone:'138****0421', address:'浙江省杭州市西湖区文三路 128 号' }, remark:'12 oz 帆布 · 米白底烫金 logo' },
     { key:'rd202607120004', orderNo:'RD202607120004', fulfillment:'delivery', status:'processing', icon:'giftbox', productName:'挂耳咖啡精选礼盒', quantity:1, pointsCost:3500, createdAt:'2026-07-12 09:30:44', shippingCompany:'顺丰速运', trackingNumber:'SF1068192002', receiver:{ name:'张*宁', phone:'138****0421', address:'浙江省杭州市西湖区文三路 128 号' }, remark:'10 包挂耳 · 4 种产地 · 礼盒装' },
@@ -360,18 +363,21 @@
     { key:'rd202606300006', orderNo:'RD202606300006', fulfillment:'pickup', status:'cancelled', icon:'mug', productName:'拿铁金定制马克杯', quantity:1, pointsCost:1200, createdAt:'2026-06-30 19:05:11', storeName:'杭州中心店', pickupCode:'P63019', remark:'已取消并退还 1,200 积分' }
   ];
 
-  let activeFilter = 'pickup';
+  let activeFilter = 'all';
   let pendingAction = null; // { type, orderId }
 
   function render() {
     const list = document.getElementById('orderList');
-    const shown = orders.filter(o => o.fulfillment === activeFilter);
+    const shown = activeFilter === 'all'
+      ? orders
+      : orders.filter(o => o.fulfillment === activeFilter);
 
     if (!shown.length) {
+      const label = { virtual:'虚拟', pickup:'自提', delivery:'快递' }[activeFilter] || '';
       list.innerHTML = `
         <div class="empty-state">
           <span class="empty-mark">RDM</span>
-          <span class="empty-text">暂无${activeFilter === 'pickup' ? '自取' : '外送'}兑换记录</span>
+          <span class="empty-text">暂无${label}兑换记录</span>
           <span class="empty-hint">去积分商城兑换你的第一份心意</span>
         </div>`;
       return;
@@ -392,8 +398,9 @@
           <span class="order-points">${o.pointsCost.toLocaleString()}</span>
         </div>
         <div class="order-foot">
-          <span class="order-fulfill">${FULFILL_TEXT[o.fulfillment]}${o.pickupCode ? '<code>取货码 ' + o.pickupCode + '</code>' : ''}${o.trackingNumber ? '<code>物流 ' + o.trackingNumber + '</code>' : ''}</span>
+          <span class="order-fulfill">${FULFILL_TEXT[o.fulfillment]}${o.pickupCode ? '<code>取货码 ' + o.pickupCode + '</code>' : ''}${o.trackingNumber ? '<code>物流 ' + o.trackingNumber + '</code>' : ''}${o.fulfillment === 'virtual' && o.virtualCode ? '<code>兑换码 ' + o.virtualCode + '</code>' : ''}</span>
           <div class="order-actions" onclick="event.stopPropagation()">
+            <button class="mini-btn" onclick="go('order-detail.html?id=${o.key}')">查看详情</button>
             ${canCancel(o) ? '<button class="mini-btn" onclick="askCancel(' + o.key + ')">取消兑换</button>' : ''}
             ${canConfirm(o) ? '<button class="mini-btn primary" onclick="askConfirm(' + o.key + ')">确认收货</button>' : ''}
           </div>
