@@ -164,10 +164,10 @@
   }
   .copy-btn:active { opacity:.6; }
 
-  /* ── 本次获得（完成咖啡订单） ── */
+  /* ── 本次获得（完成咖啡订单，紧贴实付下方） ── */
   .sp-reward {
     display:flex; align-items:center; justify-content:flex-end; gap:8px;
-    padding:0 2px 12px;
+    margin-top:6px; padding:0 2px;
   }
   .sp-reward-label { flex:none; color:var(--muted); font-size:11px; }
   .sp-reward-values { display:flex; align-items:center; gap:8px; }
@@ -271,6 +271,9 @@
     <div class="sp-amount" id="amountArea">
       <div id="amountRows"></div>
 
+      <!-- 本次获得（完成咖啡订单，紧贴实付下方） -->
+      <div class="sp-reward" id="rewardRow" style="display:none"></div>
+
       <div class="sp-divider"></div>
 
       <div class="meta-row"><span>下单时间</span><span id="orderTime">--</span></div>
@@ -279,9 +282,6 @@
       <div class="meta-row" id="deliveryMethodRow" style="display:none"><span>配送方式</span><span>外送</span></div>
       <div class="meta-row" id="deliveryAddrRow" style="display:none"><span>配送地址</span><span class="delivery-addr"><span class="addr-line" id="deliveryAddr"></span><span class="addr-line addr-contact" id="deliveryContact"></span></span></div>
     </div>
-
-    <!-- 本次获得（完成咖啡订单） -->
-    <div class="sp-reward" id="rewardRow" style="display:none"></div>
   </div>
 
   <!-- 确认收货（兑换快递单 · 已发货） -->
