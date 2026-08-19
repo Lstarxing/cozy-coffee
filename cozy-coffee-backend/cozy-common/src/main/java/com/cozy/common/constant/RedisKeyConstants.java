@@ -14,6 +14,7 @@ public final class RedisKeyConstants {
     public static final String LOCK_ORDER_MENU_REBUILD = "cozy:lock:menu:coffee:rebuild";
     public static final String LOCK_MALL_PRODUCTS_REBUILD = "cozy:lock:mall:products:rebuild";
     public static final String LOCK_ORDER_TIMEOUT_CANCEL_JOB = "cozy:lock:order:timeout:cancel:job";
+    public static final String LOCK_ORDER_DELIVERY_AUTO_COMPLETE_JOB = "cozy:lock:order:delivery:auto-complete:job";
 
     public static final String ADMIN_DASHBOARD_STATS_PREFIX = "cozy:admin:dashboard:stats:";
     public static final String ADMIN_ANALYTICS_TREND_PREFIX = "cozy:admin:analytics:trend:";

@@ -58,6 +58,24 @@ public class AdminOrderCommandService {
     public ShopOrderDTO completeOrder(Long orderId) {
         ShopOrderDTO order = orderService.completeOrder(orderId);
         AdminCacheUtil.evictOrderAndAnalytics(cacheEvictor);
+        // 外送出餐仅进入配送中（delivering），到点自动完成后才发奖励事件
+        if ("completed".equalsIgnoreCase(order.getStatus())) {
+            publishCompleted(order);
+        }
+        return order;
+    }
+
+    /**
+     * 配送中订单到点自动完成（DeliveryAutoCompleteJob 触发），发放积分/EXP 事件。
+     */
+    public ShopOrderDTO completeDeliveredOrder(Long orderId) {
+        ShopOrderDTO order = orderService.completeDeliveredOrder(orderId);
+        AdminCacheUtil.evictOrderAndAnalytics(cacheEvictor);
+        publishCompleted(order);
+        return order;
+    }
+
+    private void publishCompleted(ShopOrderDTO order) {
         orderEventProducer.publishOrderCompleted(OrderCompletedEvent.builder()
                 .orderId(order.getId())
                 .orderNo(order.getOrderNo())
@@ -70,7 +88,6 @@ public class AdminOrderCommandService {
                 .isDelivery("DELIVERY".equals(order.getDiningMethod()))
                 .occurredAt(LocalDateTime.now())
                 .build());
-        return order;
     }
 
     public ShopOrderDTO cancelOrder(Long orderId) {

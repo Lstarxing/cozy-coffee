@@ -140,6 +140,7 @@ public class OrderDtoEnricher {
         dto.setDeliveryFee(entity.getDeliveryFee());
         dto.setDeliveryFeeWaived(entity.getDeliveryFeeWaived());
         dto.setDeliveryFeeWaivedReason(entity.getDeliveryFeeWaivedReason());
+        dto.setExpectedDeliveryAt(entity.getExpectedDeliveryAt()); // v6.4: 外送预计送达
         populateExpiryInfo(entity, dto);
         enrichCouponNames(dto, entity);
 

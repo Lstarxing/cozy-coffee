@@ -11,6 +11,7 @@ public enum OrderStateMachine {
 
     PENDING("pending"),
     PREPARING("preparing"),
+    DELIVERING("delivering"),
     COMPLETED("completed"),
     CANCELLED("cancelled");
 
@@ -34,14 +35,14 @@ public enum OrderStateMachine {
     /**
      * 校验状态流转是否合法。
      * pending -> preparing (acceptOrder)
-     * preparing -> completed (completeOrder)
-     * pending -> cancelled (cancelUserOrder)
-     * pending/preparing -> cancelled (cancelOrder, admin can cancel preparing)
+     * preparing -> delivering (外送出餐) / completed (自提出餐) / cancelled
+     * delivering -> completed (到点自动完成) / cancelled
      */
     public void assertCanTransition(OrderStateMachine to) {
         boolean valid = switch (this) {
             case PENDING -> to == PREPARING || to == CANCELLED;
-            case PREPARING -> to == COMPLETED || to == CANCELLED;
+            case PREPARING -> to == DELIVERING || to == COMPLETED || to == CANCELLED;
+            case DELIVERING -> to == COMPLETED || to == CANCELLED;
             default -> false;
         };
         if (!valid) {

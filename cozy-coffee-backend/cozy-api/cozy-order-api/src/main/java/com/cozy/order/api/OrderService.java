@@ -92,6 +92,11 @@ public interface OrderService {
     ShopOrderDTO completeOrder(Long orderId);
 
     /**
+     * 配送中订单到点自动完成（由调度任务触发，发放积分/EXP）
+     */
+    ShopOrderDTO completeDeliveredOrder(Long orderId);
+
+    /**
      * 取消订单（管理端，无需验证用户）
      */
     ShopOrderDTO cancelOrder(Long orderId);

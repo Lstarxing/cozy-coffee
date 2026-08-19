@@ -43,6 +43,9 @@ public class ShopOrder {
     private Boolean deliveryFeeWaived; // 配送费是否已减免（黑金会员自动免运费）
     private String deliveryFeeWaivedReason; // 减免原因 (BLACK_GOLD_UNLIMITED / COUPON / etc.)
 
+    // v6.4: 外送预计送达时间（配送到点自动确认已完成）
+    private LocalDateTime expectedDeliveryAt;
+
     // v5.0: 附加券ID列表 (JSON格式，如 "[1,2,3]"，用于取消时回滚)
     private String appliedAddonCouponIds;
 

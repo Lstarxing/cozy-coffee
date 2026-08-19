@@ -26,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -60,6 +61,9 @@ public class OrderCreationService {
     private final OrderPreviewService orderPreviewService;
 
     private final ConcurrentMap<String, Object> idempotencyLocks = new ConcurrentHashMap<>();
+
+    @Value("${cozy.order.delivery.eta-minutes:55}")
+    private int deliveryEtaMinutes;
 
     @DubboReference(check = false)
     private MemberService memberService;
@@ -580,6 +584,10 @@ public class OrderCreationService {
         order.setDeliveryFee(deliveryFee);
         order.setDeliveryFeeWaived(deliveryFeeWaived);
         order.setDeliveryFeeWaivedReason(deliveryFeeWaivedReason);
+        // v6.4: 外送预计送达时间（配送到点自动确认已完成）
+        if ("DELIVERY".equals(request.getDiningMethod())) {
+            order.setExpectedDeliveryAt(now.plusMinutes(deliveryEtaMinutes));
+        }
         // v5.0: 保存附加券ID列表用于取消时回滚
         if (!addonCouponIds.isEmpty()) {
             try {

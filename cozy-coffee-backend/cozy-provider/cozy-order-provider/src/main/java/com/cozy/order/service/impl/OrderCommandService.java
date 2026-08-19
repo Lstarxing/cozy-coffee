@@ -151,8 +151,9 @@ public class OrderCommandService {
     }
 
     /**
-     * 完成订单 - v6.2 积分/EXP/首单奖励/月度任务已解耦到 MQ 消费者
-     * C2 修复：Dubbo 远程调用移出 @Transactional，事务仅保护状态更新。
+     * 出餐/完成订单。
+     * - 自提：preparing → completed（发放积分/EXP）
+     * - 外送：preparing → delivering（配送中），到点由调度任务自动完成
      */
     public ShopOrderDTO completeOrder(Long orderId) {
         if (orderId == null) {
@@ -163,11 +164,42 @@ public class OrderCommandService {
             throw new BusinessException("订单不存在");
         }
         OrderStateMachine current = OrderStateMachine.from(order.getStatus());
+
+        // 外送出餐 → 配送中（等预计送达时间自动完成）
+        if ("DELIVERY".equalsIgnoreCase(order.getDiningMethod())) {
+            current.assertCanTransition(OrderStateMachine.DELIVERING);
+            order.setStatus(OrderStateMachine.DELIVERING.value());
+            orderMapper.updateById(order);
+            orderInfraService.syncPendingTimeoutIndex(order);
+            log.info("外送出餐: orderId={}, orderNo={}, 进入配送中", orderId, order.getOrderNo());
+            return orderDtoEnricher.toOrderDTO(order, null);
+        }
+
+        // 自提出餐 → 完成
+        return completeWithRewards(order, current);
+    }
+
+    /**
+     * 配送中订单到点自动完成（由 DeliveryAutoCompleteJob 触发）。
+     * delivering → completed，发放积分/EXP。
+     */
+    public ShopOrderDTO completeDeliveredOrder(Long orderId) {
+        if (orderId == null) {
+            throw new BusinessException("订单ID不能为空");
+        }
+        ShopOrder order = orderMapper.selectById(orderId);
+        if (order == null) {
+            throw new BusinessException("订单不存在");
+        }
+        return completeWithRewards(order, OrderStateMachine.from(order.getStatus()));
+    }
+
+    private ShopOrderDTO completeWithRewards(ShopOrder order, OrderStateMachine current) {
         current.assertCanTransition(OrderStateMachine.COMPLETED);
 
         // 幂等检查
         if (Boolean.TRUE.equals(order.getRewardsGranted())) {
-            log.info("订单奖励已发放，跳过: orderId={}", orderId);
+            log.info("订单奖励已发放，跳过: orderId={}", order.getId());
             order.setStatus(OrderStateMachine.COMPLETED.value());
             orderMapper.updateById(order);
             orderInfraService.syncPendingTimeoutIndex(order);
@@ -190,7 +222,7 @@ public class OrderCommandService {
         boolean isDelivery = "DELIVERY".equals(order.getDiningMethod());
 
         log.info("订单完成(奖励已解耦到MQ): orderId={}, exp={}, points={}, isFirst={}, isDelivery={}, hasNew={}",
-                orderId, expEarned, pointsEarned, isFirstOrder, isDelivery, hasNewProduct);
+                order.getId(), expEarned, pointsEarned, isFirstOrder, isDelivery, hasNewProduct);
 
         // ===== 事务内：仅状态更新 =====
         return doCompleteInTx(order, expEarned, pointsEarned);
