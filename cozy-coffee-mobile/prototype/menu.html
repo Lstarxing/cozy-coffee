@@ -15,13 +15,13 @@
   }
   :root {
     --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
-    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --caramel:#A9712F; --caramel-soft:#F6EAD9; --brown-soft:#F3E9DF;
     --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
     --cask-brown:#2C1E18;
     --roastery-ink:#2B1E16; --quiet-ink:#756A63;
     --placeholder:#9E948E; --hairline:#E3DED8;
     /* aliases */
-    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22;
     --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
@@ -66,7 +66,7 @@
     margin-top:8px; display:flex; justify-content:space-between;
     font-size:11px; color:var(--muted);
   }
-  .status-icon { color:var(--accent); }
+  .status-icon { color:var(--muted); }
   .store-more { color:var(--muted); }
 
   /* ── 主体：左分类栏 + 右商品区 ── */
@@ -123,7 +123,7 @@
   }
   .product-tag {
     flex:none; padding:2px 6px; border-radius:4px;
-    background:#E8EDE5; color:#526C43;
+    background:var(--surface); color:var(--ink);
     font-size:9px; font-weight:600;
   }
   .product-desc {

@@ -15,7 +15,7 @@
   }
   :root {
     --primary:#753A22; --primary-deep:#5E2E1B;
-    --accent:#526C43; --accent-soft:#E8EDE5;
+    --caramel:#A9712F; --caramel-soft:#F6EAD9; --brown-soft:#F3E9DF;
     --ink:#2B1E16; --muted:#756A63; --placeholder:#9E948E;
     --border:#E3DED8; --surface:#F7F5F3; --card:#FFFFFF; --cask:#2C1E18;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
@@ -82,7 +82,7 @@
   }
   .hero-track-fill {
     height:100%; border-radius:2px;
-    background:var(--accent);
+    background:var(--ink);
     transition:width .5s ease;
   }
   .hero-earned {
@@ -108,7 +108,7 @@
     background:var(--surface); color:var(--primary);
     display:flex; align-items:center; justify-content:center;
   }
-  .task-icon.done { background:var(--accent-soft); color:var(--accent); }
+  .task-icon.done { background:var(--brown-soft); color:var(--primary); }
   .task-icon svg { width:22px; height:22px; }
   .task-main { flex:1; min-width:0; }
   .task-top {
@@ -119,7 +119,7 @@
     flex:none; font-size:12px; font-weight:700; color:var(--primary);
   }
   .task-reward.claimed {
-    color:var(--accent); font-weight:650;
+    color:var(--caramel); font-weight:650;
   }
   .task-desc {
     display:block; margin-top:3px;
@@ -133,7 +133,7 @@
     height:100%; border-radius:2px;
     background:var(--primary); transition:width .5s ease;
   }
-  .task-row.done .task-progress-fill { background:var(--accent); }
+  .task-row.done .task-progress-fill { background:var(--ink); }
   .task-status {
     flex:none; min-width:44px;
     padding:5px 9px; border-radius:999px;
@@ -142,7 +142,7 @@
     color:var(--muted);
     font-size:11px; font-weight:700;
   }
-  .task-status.done { background:var(--accent-soft); color:var(--accent); }
+  .task-status.done { background:var(--brown-soft); color:var(--primary); }
 
   /* ── Toast ── */
   .toast {

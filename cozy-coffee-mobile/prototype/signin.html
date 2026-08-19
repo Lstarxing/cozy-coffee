@@ -15,13 +15,13 @@
   }
   :root {
     --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
-    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --caramel:#A9712F; --caramel-soft:#F6EAD9; --brown-soft:#F3E9DF;
     --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
     --cask-brown:#2C1E18;
     --roastery-ink:#2B1E16; --quiet-ink:#756A63;
     --placeholder:#9E948E; --hairline:#E3DED8;
     /* aliases */
-    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22;
     --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
@@ -187,7 +187,7 @@
   }
   .toast-check {
     flex:none; width:24px; height:24px; border-radius:50%;
-    background:var(--accent);
+    background:var(--card);
     display:flex; align-items:center; justify-content:center;
   }
   .toast-check svg { width:12px; height:12px; }
@@ -257,7 +257,7 @@
 <div class="toast-mask" id="toastMask">
   <div class="signin-toast">
     <span class="toast-check">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="#2B1E16" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     </span>
     <div class="toast-copy">
       <span class="toast-title" id="bannerTitle">签到成功 +2 积分</span>

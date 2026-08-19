@@ -15,13 +15,13 @@
   }
   :root {
     --roast-brown:#753A22; --roast-brown-deep:#5E2E1B;
-    --glaze-green:#526C43; --glaze-green-soft:#E8EDE5;
+    --caramel:#A9712F; --caramel-soft:#F6EAD9; --brown-soft:#F3E9DF;
     --porcelain:#FFFFFF; --porcelain-muted:#F7F5F3;
     --cask-brown:#2C1E18;
     --roastery-ink:#2B1E16; --quiet-ink:#756A63;
     --placeholder:#9E948E; --hairline:#E3DED8;
     /* aliases */
-    --ink:#2B1E16; --muted:#756A63; --primary:#753A22; --accent:#526C43;
+    --ink:#2B1E16; --muted:#756A63; --primary:#753A22;
     --surface:#F7F5F3; --card:#FFFFFF; --border:#E3DED8; --cask:#2C1E18;
     --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
   }
@@ -101,7 +101,7 @@
   .status-chip.pending     { background:var(--hairline); color:var(--quiet-ink); }
   .status-chip.processing  { background:#F3E7D8; color:#8B5E2E; }
   .status-chip.shipped     { background:#F1E4DA; color:var(--roast-brown); }
-  .status-chip.completed   { background:var(--glaze-green-soft); color:var(--glaze-green); }
+  .status-chip.completed   { background:var(--brown-soft); color:var(--primary); }
   .status-chip.cancelled   { background:var(--hairline); color:var(--placeholder); }
 
   .order-product {
@@ -339,7 +339,7 @@
   };
   const GRADIENTS = {
     shot: 'linear-gradient(135deg, #6B4A2E, #3D2A1E)',
-    delivery: 'linear-gradient(135deg, #7A8580, #4A5650)',
+    delivery: 'linear-gradient(135deg, #8B8178, #575049)',
     coupon5: 'linear-gradient(135deg, #C9A876, #8B6F47)',
     bogo: 'linear-gradient(135deg, #B88859, #6E4E33)',
     star: 'linear-gradient(135deg, #C69C6D, #8B6E45)',
