@@ -27,6 +27,29 @@ const couponCode = ref(saved.selectedCouponCode)
 const addonCouponCodes = ref(saved.selectedAddonCoupons)
 const diningMethod = ref(saved.diningMethod)
 
+/**
+ * Find the index of an existing cart item that matches the given item on all
+ * distinguishing attributes (product, cup size, sugar, temperature, strength,
+ * milk type). Returns -1 when no match. Pure helper.
+ *
+ * @param {Array} items - current cart items
+ * @param {Object} item - item being added
+ * @returns {number} index of the matching item, or -1
+ */
+export function findMatchingCartItemIndex(items, item) {
+  const addonKey = (addons) => (Array.isArray(addons) ? addons.map(a => a.code).sort().join(',') : '')
+  return items.findIndex(
+    cartItem =>
+      cartItem.productId === item.productId &&
+      cartItem.cupSize === item.cupSize &&
+      cartItem.sugarLevel === item.sugarLevel &&
+      cartItem.temperature === item.temperature &&
+      cartItem.coffeeStrength === item.coffeeStrength &&
+      (cartItem.milkType || 'WHOLE') === (item.milkType || 'WHOLE') &&
+      addonKey(cartItem.addons) === addonKey(item.addons)
+  )
+}
+
 let saveTimer = null
 
 watch([cartItems, couponCode, addonCouponCodes, diningMethod], () => {
@@ -44,18 +67,7 @@ watch([cartItems, couponCode, addonCouponCodes, diningMethod], () => {
 export function useCart() {
 
   function addToCart(item) {
-    // V2: 加料选择参与去重（同杯型/糖度/温度但不同风味/奶型的订单不合并）
-    const addonKey = (addons) => (Array.isArray(addons) ? addons.map(a => a.code).sort().join(',') : '')
-    const existingIndex = cartItems.value.findIndex(
-      cartItem =>
-        cartItem.productId === item.productId &&
-        cartItem.cupSize === item.cupSize &&
-        cartItem.sugarLevel === item.sugarLevel &&
-        cartItem.temperature === item.temperature &&
-        cartItem.coffeeStrength === item.coffeeStrength &&
-        (cartItem.milkType || 'WHOLE') === (item.milkType || 'WHOLE') &&
-        addonKey(cartItem.addons) === addonKey(item.addons)
-    )
+    const existingIndex = findMatchingCartItemIndex(cartItems.value, item)
 
     if (existingIndex > -1) {
       cartItems.value[existingIndex].quantity += (item.quantity || 1)

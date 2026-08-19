@@ -132,6 +132,20 @@ import {
   findBestCoupon,
   allocateItemDiscounts
 } from '@/utils/couponRules'
+import {
+  computeBaseSubtotal,
+  computeCupExtraTotal,
+  computeStrengthExtraTotal,
+  computeMilkExtraTotal,
+  computeSubtotal,
+  detectHasExtraShot,
+  computeExtraShotCount,
+  computeMemberDiscount,
+  computeDeliveryFeeDiscount,
+  computeShotDiscount,
+  computeFinalTotal,
+  computeEstimatedPoints
+} from '@/utils/cartPrice'
 
 // ───────────────────────────────
 //  Props & emits
@@ -186,37 +200,13 @@ const isBlackGoldMember = computed(() => userStore.userLevel === MEMBER_LEVEL.BL
 //  Cart splitting helpers
 // ───────────────────────────────
 
-const baseSubtotal = computed(() => {
-  if (!props.cartItems || !Array.isArray(props.cartItems)) return 0
-  return props.cartItems.reduce((sum, item) => {
-    const basePrice = item.basePrice || item.unitPrice
-    return sum + basePrice * item.quantity
-  }, 0)
-})
+const baseSubtotal = computed(() => computeBaseSubtotal(props.cartItems))
 
-const cupExtraTotal = computed(() => {
-  if (!props.cartItems || !Array.isArray(props.cartItems)) return 0
-  return props.cartItems.reduce((sum, item) => {
-    const cupExtra = item.extraPrices?.cup || 0
-    return sum + cupExtra * item.quantity
-  }, 0)
-})
+const cupExtraTotal = computed(() => computeCupExtraTotal(props.cartItems))
 
-const strengthExtraTotal = computed(() => {
-  if (!props.cartItems || !Array.isArray(props.cartItems)) return 0
-  return props.cartItems.reduce((sum, item) => {
-    const strengthExtra = item.extraPrices?.strength || 0
-    return sum + strengthExtra * item.quantity
-  }, 0)
-})
+const strengthExtraTotal = computed(() => computeStrengthExtraTotal(props.cartItems))
 
-const milkExtraTotal = computed(() => {
-  if (!props.cartItems || !Array.isArray(props.cartItems)) return 0
-  return props.cartItems.reduce((sum, item) => {
-    const milkExtra = item.extraPrices?.milk || 0
-    return sum + milkExtra * item.quantity
-  }, 0)
-})
+const milkExtraTotal = computed(() => computeMilkExtraTotal(props.cartItems))
 
 const otherAddonTotal = computed(() => {
   if (!props.cartItems || !Array.isArray(props.cartItems)) return 0
@@ -228,32 +218,15 @@ const otherAddonTotal = computed(() => {
 
 const otherExtrasTotal = computed(() => cupExtraTotal.value + milkExtraTotal.value + otherAddonTotal.value)
 
-const subtotal = computed(() => baseSubtotal.value + strengthExtraTotal.value + otherExtrasTotal.value)
+const subtotal = computed(() => computeSubtotal(props.cartItems))
 
 // ───────────────────────────────
 //  Extra shot detection
 // ───────────────────────────────
 
-const hasExtraShot = computed(() => {
-  if (!props.cartItems || !Array.isArray(props.cartItems)) return false
-  return props.cartItems.some(item => {
-    if (item.coffeeStrength === 'STRONG') return true
-    if (item.optionsJson) {
-      const opts = item.optionsJson.toLowerCase()
-      return opts.includes('extra_shot') || opts.includes('加浓')
-    }
-    return false
-  })
-})
+const hasExtraShot = computed(() => detectHasExtraShot(props.cartItems))
 
-const extraShotCount = computed(() => {
-  if (!props.cartItems || !Array.isArray(props.cartItems)) return 0
-  let count = 0
-  props.cartItems.forEach(item => {
-    if (item.coffeeStrength === 'STRONG') count += item.quantity
-  })
-  return count
-})
+const extraShotCount = computed(() => computeExtraShotCount(props.cartItems))
 
 // ───────────────────────────────
 //  Coupon grouping (from couponRules)
@@ -330,23 +303,7 @@ const couponGetTip = (coupon) => {
 //  Discount calculations
 // ───────────────────────────────
 
-const memberDiscount = computed(() => {
-  const level = userStore.userLevel || 'basic'
-  if (level !== MEMBER_LEVEL.BLACK) return 0
-  if (!props.cartItems || !Array.isArray(props.cartItems)) return 0
-
-  let totalDiscount = 0
-  props.cartItems.forEach(item => {
-    if (item.category === 'soe') {
-      let itemBasePrice = item.basePrice || item.unitPrice
-      if (item.cupSize === 'LARGE') itemBasePrice += 3
-      const itemBaseAmount = itemBasePrice * item.quantity
-      const itemDiscount = itemBaseAmount * 0.15
-      totalDiscount += itemDiscount
-    }
-  })
-  return totalDiscount
-})
+const memberDiscount = computed(() => computeMemberDiscount(props.cartItems, userStore.userLevel || 'basic'))
 
 const discount = computed(() => {
   if (!couponCode.value) return 0
@@ -356,17 +313,16 @@ const discount = computed(() => {
 })
 
 const deliveryFeeDiscount = computed(() => {
-  if (isBlackGoldMember.value && diningMethod.value === 'DELIVERY') {
-    return deliveryFee.value
-  }
   const hasDeliveryCoupon = selectedAddonCoupons.value.some(code => {
     const coupon = addonCoupons.value.find(c => c.couponCode === code)
     return coupon?.couponType === 'DELIVERY_FEE'
   })
-  if (hasDeliveryCoupon && diningMethod.value === 'DELIVERY') {
-    return Math.min(10, deliveryFee.value)
-  }
-  return 0
+  return computeDeliveryFeeDiscount({
+    isBlackGoldMember: isBlackGoldMember.value,
+    diningMethod: diningMethod.value,
+    deliveryFee: deliveryFee.value,
+    hasDeliveryCoupon
+  })
 })
 
 const shotDiscount = computed(() => {
@@ -374,12 +330,11 @@ const shotDiscount = computed(() => {
     const coupon = addonCoupons.value.find(c => c.couponCode === code)
     return coupon?.couponType === 'SHOT'
   }).length
-
-  if (shotCouponCount > 0 && hasExtraShot.value) {
-    const maxDiscount = shotCouponCount * 5
-    return Math.min(strengthExtraTotal.value, maxDiscount)
-  }
-  return 0
+  return computeShotDiscount({
+    shotCouponCount,
+    hasExtraShot: hasExtraShot.value,
+    strengthExtraTotal: strengthExtraTotal.value
+  })
 })
 
 const addonDiscount = computed(() => deliveryFeeDiscount.value + shotDiscount.value)
@@ -414,53 +369,25 @@ const mainCouponAddonDiscountDetails = computed(() => {
 
 const mainCouponAddonDiscount = computed(() => mainCouponAddonDiscountDetails.value.total)
 
-const finalTotal = computed(() => {
-  const baseAmountForDiscount = baseSubtotal.value + cupExtraTotal.value
-  const addonsAmount = milkExtraTotal.value + strengthExtraTotal.value + otherAddonTotal.value
-  const totalAmount = baseAmountForDiscount + addonsAmount
+const finalTotal = computed(() => computeFinalTotal({
+  baseSubtotal: baseSubtotal.value,
+  cupExtraTotal: cupExtraTotal.value,
+  milkExtraTotal: milkExtraTotal.value,
+  strengthExtraTotal: strengthExtraTotal.value,
+  otherAddonTotal: otherAddonTotal.value,
+  memberDiscount: memberDiscount.value,
+  mainDiscount: discount.value,
+  shotDiscount: shotDiscount.value,
+  diningMethod: diningMethod.value,
+  deliveryFee: deliveryFee.value,
+  deliveryFeeDiscount: deliveryFeeDiscount.value
+}))
 
-  const afterMemberDiscount = Math.max(0, totalAmount - memberDiscount.value)
-  const mainDiscount = discount.value
-  const addonCouponDiscount = shotDiscount.value
-  const afterAllDiscount = Math.max(0, afterMemberDiscount - mainDiscount - addonCouponDiscount)
-
-  let deliveryAmount = 0
-  if (diningMethod.value === 'DELIVERY') {
-    deliveryAmount = Math.max(0, deliveryFee.value - deliveryFeeDiscount.value)
-  }
-
-  return Math.max(0, afterAllDiscount + deliveryAmount)
-})
-
-const estimatedPoints = computed(() => {
-  const amount = finalTotal.value
-  if (amount <= 0) return 0
-
-  const level = userStore.userLevel || 'basic'
-  const accelerateRemaining = userStore.userInfo?.monthlyAccelerateRemaining ?? 0
-
-  const baseMultiplierMap = {
-    basic: 1,
-    silver: 1.1,
-    gold: 1.2,
-    diamond: 1.3,
-    black: 1.5
-  }
-  const baseMultiplier = baseMultiplierMap[level] || 1
-
-  if (level === 'black' && accelerateRemaining > 0) {
-    const accelerateMultiplier = 1.7
-    if (amount <= accelerateRemaining) {
-      return Math.floor(amount * accelerateMultiplier)
-    } else {
-      const accelPart = accelerateRemaining * accelerateMultiplier
-      const normalPart = (amount - accelerateRemaining) * baseMultiplier
-      return Math.floor(accelPart + normalPart)
-    }
-  }
-
-  return Math.floor(amount * baseMultiplier)
-})
+const estimatedPoints = computed(() => computeEstimatedPoints({
+  amount: finalTotal.value,
+  level: userStore.userLevel || 'basic',
+  accelerateRemaining: userStore.userInfo?.monthlyAccelerateRemaining ?? 0
+}))
 
 // ───────────────────────────────
 //  Cart actions
