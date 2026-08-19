@@ -224,7 +224,7 @@ const codeEta = computed(() => {
   return `预计 ${pad(d.getHours())}:${pad(d.getMinutes())} ${isDelivery.value ? '送达' : '可取'}`
 })
 
-const isPendingPay = computed(() => ['pending', 'pending_payment'].includes(normalizedStatus.value))
+const isPendingPay = computed(() => !isRedeem.value && ['pending', 'pending_payment'].includes(normalizedStatus.value))
 const pendingRemain = computed(() => {
   if (!isPendingPay.value) return '--:--'
   const raw = order.value?.expireAt
