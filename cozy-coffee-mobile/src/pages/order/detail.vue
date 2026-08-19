@@ -459,16 +459,17 @@ async function cancelPendingOrder() {
 .pending-title {
   display: block;
   font-family: $font-display;
-  font-size: 40rpx;
+  font-size: 36rpx;
   font-weight: 600;
   color: $cozy-ink;
 }
 .pending-countdown {
   display: block;
-  margin-top: 14rpx;
+  margin-top: 12rpx;
   font-family: $font-display;
-  font-size: 34rpx;
+  font-size: 52rpx;
   font-weight: 700;
+  letter-spacing: .02em;
   color: $cozy-primary;
 }
 .pending-sub {
