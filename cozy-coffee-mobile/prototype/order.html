@@ -47,7 +47,7 @@
   /* ── 订单收据卡 ── */
   .order-receipt {
     margin-bottom:12px; overflow:hidden;
-    border-radius:12px; background:var(--card);
+    border:1px solid var(--border); border-radius:12px; background:var(--card);
   }
   .receipt-head {
     padding:14px 14px 12px;
@@ -65,6 +65,7 @@
   .order-status.processing { background:#EAF0F2; color:#285B70; }
   .order-status.completed { background:#E8EDE5; color:var(--accent); }
   .order-status.pending { background:#F4EBDD; color:#8A4D10; }
+  .order-status.cancelled { background:var(--border); color:var(--muted); }
   .expire-countdown {
     display:block; margin-top:4px; font-size:10px; color:var(--muted);
   }
@@ -123,8 +124,8 @@
   .empty-desc { margin-top:10px; font-size:13px; line-height:1.7; color:var(--muted); }
   .empty-action {
     margin-top:28px; padding:12px 32px;
-    border:1px solid var(--primary); border-radius:8px;
-    color:var(--primary); font-size:13px; font-weight:600; cursor:pointer;
+    border-radius:999px; background:var(--ink); color:#fff;
+    font-size:13px; font-weight:600; cursor:pointer;
   }
 
   /* ── 底部 TabBar ── */
@@ -208,26 +209,47 @@
 
   function go(href) { location.href = href; }
 
-  // 咖啡订单数据（自取/外送）
+  // 咖啡订单数据（自取/外送，覆盖 待支付/制作中/已完成/已取消 全状态；id 与 order-detail.html 一致）
   const COFFEE_ORDERS = [
-    {
-      id:'coz2026073110', fulfillment:'pickup', status:'processing', statusText:'制作中',
+    { id:'coz2026080101', fulfillment:'pickup', status:'pending', statusText:'待支付',
+      time:'2026-08-01 09:00:00', meta:'', expireAt: Date.now() + 8 * 60 * 1000,
+      items:[
+        { name:'经典手冲', spec:'热 / 中杯 / 默认糖', price:'¥28.00', qty:'× 1' },
+        { name:'Dirty', spec:'冰 / 中杯 / 正常', price:'¥32.00', qty:'× 1' }
+      ],
+      count:'共 2 件 · 到店自提' },
+    { id:'coz2026073110', fulfillment:'pickup', status:'processing', statusText:'制作中',
       time:'2026-07-31 15:28:45', meta:'取餐码 <em>A021</em>', note:'预计 15:32 可取',
       items:[
-        { name:'云南保山 SOE', spec:'热 · 中杯 · 微甜', price:'¥28.00', qty:'× 1' },
-        { name:'Dirty', spec:'冰 · 中杯 · 正常', price:'¥32.00', qty:'× 1' }
+        { name:'经典手冲', spec:'热 / 中杯 / 默认糖', price:'¥28.00', qty:'× 1' },
+        { name:'Dirty', spec:'冰 / 中杯 / 正常', price:'¥32.00', qty:'× 1' }
       ],
-      count:'共 2 件 · 到店自提'
-    },
-    {
-      id:'coz2026072907', fulfillment:'delivery', status:'completed', statusText:'已完成',
+      count:'共 2 件 · 到店自提' },
+    { id:'coz2026080112', fulfillment:'pickup', status:'completed', statusText:'已完成',
+      time:'2026-08-01 12:30:10', meta:'取餐码 <em>A023</em>', note:'可取',
+      items:[
+        { name:'海盐焦糖拿铁', spec:'热 / 大杯 / 半糖', price:'¥34.00', qty:'× 1' }
+      ],
+      count:'共 1 件 · 到店自提' },
+    { id:'coz2026072901', fulfillment:'pickup', status:'cancelled', statusText:'已取消',
+      time:'2026-07-29 16:20:05', meta:'',
+      items:[
+        { name:'美式咖啡', spec:'冰 / 大杯 / 无糖', price:'¥22.00', qty:'× 1' }
+      ],
+      count:'共 1 件 · 到店自提' },
+    { id:'coz2026080203', fulfillment:'delivery', status:'processing', statusText:'制作中',
+      time:'2026-08-02 14:58:20', meta:'外送 · 学院路 100 号', note:'预计 15:48 送达',
+      items:[
+        { name:'燕麦拿铁', spec:'热 / 大杯 / 无糖', price:'¥36.00', qty:'× 1' }
+      ],
+      count:'共 1 件 · 外送' },
+    { id:'coz2026072907', fulfillment:'delivery', status:'completed', statusText:'已完成',
       time:'2026-07-29 09:12:30', meta:'外送 · 文三路 128 号', note:'已送达',
       items:[
-        { name:'冷萃咖啡', spec:'冰 · 中杯 · 无糖', price:'¥28.00', qty:'× 1' },
-        { name:'冰摇荔枝咖啡', spec:'冰 · 大杯 · 微糖', price:'¥38.00', qty:'× 1' }
+        { name:'冷萃咖啡', spec:'冰 / 中杯 / 无糖', price:'¥28.00', qty:'× 1' },
+        { name:'冰摇荔枝咖啡', spec:'冰 / 大杯 / 微糖', price:'¥38.00', qty:'× 1' }
       ],
-      count:'共 2 件 · 外送'
-    }
+      count:'共 2 件 · 外送' }
   ];
 
   let activeFulfillment = 'pickup';
@@ -252,11 +274,13 @@
         <div class="receipt-head">
           <div>
             <span class="store-name">CozyCoffee 中心店</span>
-            <span class="order-meta">${o.time} · ${o.meta}</span>
+            <span class="order-meta">${o.time}${o.meta ? ' · ' + o.meta : ''}</span>
           </div>
           <div class="status-block">
             <span class="order-status ${o.status}">${o.statusText}</span>
-            ${o.note ? '<span class="expire-countdown">' + o.note + '</span>' : ''}
+            ${o.status === 'pending'
+              ? '<span class="expire-countdown" data-pending="' + o.id + '">' + fmtCountdown(o.id) + '</span>'
+              : (o.note ? '<span class="expire-countdown">' + o.note + '</span>' : '')}
           </div>
         </div>
         <div class="receipt-items">
@@ -291,6 +315,9 @@
 
   // 再来一单：订单项 → localStorage → 菜单页恢复购物车
   const REORDER = {
+    coz2026080112: [
+      { productName:'海盐焦糖拿铁', name:'海盐焦糖拿铁', spec:'热 · 大杯 · 半糖', price:34, qty:1 }
+    ],
     coz2026073110: [
       { productName:'经典手冲', name:'云南保山 SOE', spec:'热 · 中杯 · 微甜', price:28, qty:1 },
       { productName:'Dirty', name:'Dirty', spec:'冰 · 中杯 · 正常', price:32, qty:1 }
@@ -307,7 +334,35 @@
     location.href = 'menu.html';
   }
 
+  // 待支付订单实时倒计时（对齐小程序订单页 ticker）
+  function findPending(id) { return COFFEE_ORDERS.find(o => o.id === id); }
+  function remainSeconds(o) {
+    if (!o || !o.expireAt) return null;
+    return Math.max(0, Math.floor((o.expireAt - Date.now()) / 1000));
+  }
+  function fmtCountdown(id) {
+    const remain = remainSeconds(findPending(id));
+    if (remain == null) return '等待支付';
+    if (remain <= 0) return '即将自动取消';
+    const mm = String(Math.floor(remain / 60)).padStart(2, '0');
+    const ss = String(remain % 60).padStart(2, '0');
+    return `剩余 ${mm}:${ss}`;
+  }
+  let ticker = null;
+  function startTicker() {
+    stopTicker();
+    ticker = setInterval(() => {
+      document.querySelectorAll('[data-pending]').forEach(el => {
+        const o = findPending(el.dataset.pending);
+        el.textContent = fmtCountdown(el.dataset.pending);
+        el.classList.toggle('urgent', remainSeconds(o) != null && remainSeconds(o) <= 30);
+      });
+    }, 1000);
+  }
+  function stopTicker() { if (ticker) { clearInterval(ticker); ticker = null; } }
+
   render();
+  startTicker();
 
   function toast(msg) {
     let t = document.querySelector('.toast');
