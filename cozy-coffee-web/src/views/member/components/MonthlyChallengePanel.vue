@@ -45,7 +45,7 @@
           </div>
           <div class="task-desc">本月完成订单 4 次</div>
           <div class="task-progress-bar">
-            <div class="fill orange" :style="{ width: Math.min(100, ((taskData.monthlyOrderCount ?? userInfo?.monthlyOrderCount ?? 0) / 4) * 100) + '%' }"></div>
+            <div class="fill" :style="{ width: Math.min(100, ((taskData.monthlyOrderCount ?? userInfo?.monthlyOrderCount ?? 0) / 4) * 100) + '%' }"></div>
           </div>
         </div>
         <div class="task-action">
@@ -63,7 +63,7 @@
           </div>
           <div class="task-desc">10:00前完成订单 3 次</div>
           <div class="task-progress-bar">
-            <div class="fill yellow" :style="{ width: Math.min(100, ((taskData.morningOrderCount ?? userInfo?.morningOrderCount ?? 0) / 3) * 100) + '%' }"></div>
+            <div class="fill" :style="{ width: Math.min(100, ((taskData.morningOrderCount ?? userInfo?.morningOrderCount ?? 0) / 3) * 100) + '%' }"></div>
           </div>
         </div>
         <div class="task-action">
@@ -81,7 +81,7 @@
           </div>
           <div class="task-desc">完成 2 笔外卖订单</div>
           <div class="task-progress-bar">
-            <div class="fill green" :style="{ width: Math.min(100, ((taskData.currentDeliveryOrders ?? userInfo?.monthlyDeliveryOrders ?? 0) / 2) * 100) + '%' }"></div>
+            <div class="fill" :style="{ width: Math.min(100, ((taskData.currentDeliveryOrders ?? userInfo?.monthlyDeliveryOrders ?? 0) / 2) * 100) + '%' }"></div>
           </div>
         </div>
         <div class="task-action">
@@ -99,7 +99,7 @@
           </div>
           <div class="task-desc">尝试 3 款限定新品</div>
           <div class="task-progress-bar">
-            <div class="fill purple" :style="{ width: Math.min(100, ((taskData.newProductCount ?? userInfo?.newProductCount ?? 0) / 3) * 100) + '%' }"></div>
+            <div class="fill" :style="{ width: Math.min(100, ((taskData.newProductCount ?? userInfo?.newProductCount ?? 0) / 3) * 100) + '%' }"></div>
           </div>
         </div>
         <div class="task-action">
@@ -259,15 +259,11 @@ defineExpose({ refreshTaskData: loadMonthlyTaskData })
 .task-top { display: flex; justify-content: space-between; align-items: center; }
 .task-top .name { font-weight: 600; color: #3E2723; font-size: 14px; }
 .task-top .reward { font-size: 12px; color: #D97706; font-weight: 600; background: #FEF3C7; padding: 1px 8px; border-radius: 8px; }
-.task-top .reward.claimed { color: #888; background: #F5F5F5; }
+.task-top .reward.claimed { color: #A9712F; background: #F6EAD9; }
 .task-desc { font-size: 12px; color: #888; }
 .task-progress-bar { height: 3px; background: #E0E0E0; border-radius: 2px; overflow: hidden; }
-.fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
-.fill.orange { background: #F59E0B; }
-.fill.yellow { background: #EAB308; }
-.fill.green { background: #22C55E; }
-.fill.purple { background: #A855F7; }
+.fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; background: #753A22; }
 .task-action { flex-shrink: 0; }
 .status-text { font-size: 13px; color: #3E2723; font-weight: 600; }
-.status-text.completed { color: #22C55E; }
+.status-text.completed { color: #753A22; }
 </style>
