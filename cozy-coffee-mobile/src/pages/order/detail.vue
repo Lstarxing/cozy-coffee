@@ -8,9 +8,10 @@
     <RetryState v-else-if="errorMessage" :description="errorMessage" @retry="loadOrder" />
 
     <view v-else-if="order" class="detail-content">
-      <!-- 未支付：等待支付卡（无取餐码，取消/立即支付 CTA，含「已下单」首节点进度） -->
+      <!-- 未支付：等待支付卡（居中三行：等待支付/剩余倒计时/超时提示，含「已下单」首节点进度） -->
       <view v-if="isPendingPay" class="pending-card">
-        <text class="pending-title">等待支付，剩余 {{ pendingRemain }}</text>
+        <text class="pending-title">等待支付</text>
+        <text class="pending-countdown">剩余 {{ pendingRemain }}</text>
         <text class="pending-sub">超过15分钟未支付，订单将自动取消</text>
 
         <view class="progress pending-progress">
@@ -447,12 +448,13 @@ async function cancelPendingOrder() {
 .detail-page { min-height: 100vh; background: $cozy-surface; }
 .detail-content { padding: 12rpx 40rpx 0; }
 
-/* ── 未支付：等待支付卡（无取餐码，取消/立即支付 CTA） ── */
+/* ── 未支付：等待支付卡（居中三行 + 首节点进度） ── */
 .pending-card {
   margin-top: 24rpx;
   padding: 40rpx 32rpx 32rpx;
   border-radius: 28rpx;
   background: $bg-white;
+  text-align: center;
 }
 .pending-title {
   display: block;
@@ -461,9 +463,17 @@ async function cancelPendingOrder() {
   font-weight: 600;
   color: $cozy-ink;
 }
+.pending-countdown {
+  display: block;
+  margin-top: 14rpx;
+  font-family: $font-display;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: $cozy-primary;
+}
 .pending-sub {
   display: block;
-  margin-top: 12rpx;
+  margin-top: 14rpx;
   font-size: 24rpx;
   color: $cozy-muted;
 }
