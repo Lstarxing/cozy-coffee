@@ -124,5 +124,5 @@ async function handleSignIn() {
 .step-label { font-size: 11px; color: #9E9E9E; font-weight: 500; }
 .bean-step.is-active .step-label { color: #5D4037; font-weight: 700; }
 .widget-footer-info { display: flex; align-items: center; gap: 8px; margin-top: 16px; padding: 12px 16px; background: #f9f9f9; border-radius: 8px; font-size: 14px; color: #555; }
-.widget-footer-info.success { background: #f0fdf4; color: #059669; }
+.widget-footer-info.success { background: #F3E9DF; color: #753A22; }
 </style>

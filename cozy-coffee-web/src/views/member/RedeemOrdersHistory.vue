@@ -143,7 +143,7 @@ onMounted(() => {
 }
 
 .order-status.pending { background: #fff7ed; color: #d97706; }
-.order-status.completed { background: #ecfdf5; color: #059669; }
+.order-status.completed { background: #E6F1EB; color: #059669; }
 .order-status.shipped { background: #e0f2fe; color: #0284c7; }
 .order-status.cancelled { background: #fef2f2; color: #dc2626; }
 

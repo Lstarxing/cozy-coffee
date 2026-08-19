@@ -6,8 +6,8 @@
     --cozy-primary: oklch(0.42 0.09 42);
     --cozy-primary-hover: oklch(0.35 0.08 42);
     --cozy-on-primary: oklch(0.98 0 0);
-    --cozy-accent: oklch(0.50 0.07 135);
-    --cozy-accent-soft: oklch(0.92 0.03 135);
+    --cozy-accent: oklch(0.595 0.108 67);    /* 焦糖金 #A9712F — 与移动端 $cozy-caramel 一致 */
+    --cozy-accent-soft: oklch(0.94 0.03 67);
     --cozy-on-accent: oklch(0.98 0 0);
     --cozy-ink: oklch(0.17 0.008 42);
     --cozy-muted: oklch(0.46 0.008 42);
@@ -16,7 +16,7 @@
     --cozy-on-surface-alt: oklch(0.98 0 0);
     --cozy-muted-on-alt: oklch(0.78 0.01 42);
     --cozy-border-on-alt: oklch(0.98 0 0 / 0.16);
-    --cozy-accent-on-alt: oklch(0.53 0.07 135);
+    --cozy-accent-on-alt: oklch(0.62 0.11 67);   /* 深底高亮：更亮的焦糖金 */
     --cozy-cta-alt-bg: oklch(0.95 0.002 42);
     --cozy-cta-alt-text: oklch(0.30 0.05 42);
     --font-sans: "PingFang SC", "HarmonyOS Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
