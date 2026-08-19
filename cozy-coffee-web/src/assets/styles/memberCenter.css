@@ -1,6 +1,6 @@
 /* 会员卡片样式 */
 .member-card {
-    background: linear-gradient(135deg, #231e15 0%, #4a4a4a 100%);
+    background: linear-gradient(135deg, var(--color-midnight) 0%, #4a4a4a 100%);
     border-radius: 15px;
     padding: 30px;
     /* 增加内边距 */
@@ -29,9 +29,9 @@
 
 .member-card.silver {
     background: linear-gradient(145deg,
-            #c0c0c0 0%,
+            var(--color-silver) 0%,
             #e8e8e8 30%,
-            #ffffff 70%);
+            var(--color-white) 70%);
     /* 银色渐变 */
     border: 2px solid #d3d3d3;
     box-shadow:
@@ -72,15 +72,15 @@
 
 .member-card.gold {
     background: linear-gradient(145deg,
-            #ffd700 0%,
+            var(--color-gold) 0%,
             #f1c232 20%,
-            #ffd700 40%,
+            var(--color-gold) 40%,
             #fff1b2 50%,
-            #ffd700 60%,
+            var(--color-gold) 60%,
             #f1c232 80%,
-            #ffd700 100%);
+            var(--color-gold) 100%);
     /* 金色渐变 */
-    border: 2px solid #ffd700;
+    border: 2px solid var(--color-gold);
     box-shadow:
         0 4px 25px rgba(255, 215, 0, 0.3),
         inset 0 0 30px rgba(255, 248, 220, 0.5);
@@ -186,7 +186,7 @@
     box-shadow:
         0 0 30px rgba(255, 215, 0, 0.3),
         inset 0 0 15px rgba(255, 223, 32, 0.4);
-    color: #ffd700;
+    color: var(--color-gold);
     border: none;
     position: relative;
     overflow: hidden;
@@ -199,7 +199,7 @@
     right: 20px;
     font-family: 'Monaco', monospace;
     font-size: 14px;
-    color: #ffd700;
+    color: var(--color-gold);
     letter-spacing: 2px;
     opacity: 0.8;
     z-index: 3;
@@ -245,11 +245,11 @@
     position: absolute;
     top: 15px;
     right: 15px;
-    background: linear-gradient(135deg, #ffd700, #ffa500);
+    background: linear-gradient(135deg, var(--color-gold), #ffa500);
     padding: 5px 10px;
     border-radius: 15px;
     font-size: 12px;
-    color: #000;
+    color: var(--color-black);
     font-weight: bold;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     display: none;
@@ -257,19 +257,19 @@
 
 /* 会员权益卡片样式 - 根据会员等级 */
 .benefit-basic {
-    border-left: 4px solid #b87333;
+    border-left: 4px solid var(--color-copper);
 }
 
 .benefit-silver {
-    border-left: 4px solid #c0c0c0;
+    border-left: 4px solid var(--color-silver);
 }
 
 .benefit-gold {
-    border-left: 4px solid #ffd700;
+    border-left: 4px solid var(--color-gold);
 }
 
 .benefit-black {
-    border-left: 4px solid #000;
+    border-left: 4px solid var(--color-black);
     box-shadow: 0 2px 8px rgba(218, 165, 32, 0.3);
 }
 
@@ -285,7 +285,7 @@
 
 /* 黑金会员卡昵称样式 */
 .member-card.black .user-nickname {
-    color: #ffd700;
+    color: var(--color-gold);
     font-weight: 600;
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
@@ -295,7 +295,7 @@
 .member-card.silver~.member-benefits .benefit-silver,
 .member-card.gold~.member-benefits .benefit-gold,
 .member-card.black~.member-benefits .benefit-black {
-    background-color: #f0f0f0;
+    background-color: var(--color-bg-subtle);
     transform: translateY(-3px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -346,7 +346,7 @@
 
 .progress {
     height: 100%;
-    background-color: #ffffff;
+    background-color: var(--color-white);
     transition: width 0.3s ease;
 }
 
@@ -377,12 +377,12 @@
 
 .sign-in-header h3 {
     margin: 0;
-    color: #231e15;
+    color: var(--color-midnight);
 }
 
 .sign-in-streak {
     font-size: 14px;
-    color: #333;
+    color: var(--color-text);
 }
 
 .sign-in-calendar {
@@ -402,26 +402,26 @@
     width: 25px;
     height: 25px;
     border-radius: 50%;
-    background-color: #f0f0f0;
+    background-color: var(--color-bg-subtle);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    color: #333;
+    color: var(--color-text);
     position: relative;
     z-index: 2;
 }
 
 .day.signed {
-    background-color: #ffd700;
-    color: #333;
+    background-color: var(--color-gold);
+    color: var(--color-text);
 }
 
 /* 签到连线样式 */
 .sign-in-progress-line {
     position: absolute;
     height: 3px;
-    background: linear-gradient(to right, #ffd700, #ffcc00);
+    background: linear-gradient(to right, var(--color-gold), var(--color-gold-soft));
     top: 12px;
     z-index: 1;
     border-radius: 3px;
@@ -429,12 +429,12 @@
 
 /* 已签到日期之间的连线 */
 .sign-in-progress-line.completed {
-    background: linear-gradient(to right, #ffd700, #ffcc00);
+    background: linear-gradient(to right, var(--color-gold), var(--color-gold-soft));
 }
 
 /* 未签到日期之间的连线 */
 .sign-in-progress-line.pending {
-    background: #e0e0e0;
+    background: var(--color-border);
 }
 
 .sign-in-rewards {
@@ -448,14 +448,14 @@
     width: 25px;
     font-size: 10px;
     text-align: center;
-    color: #666;
+    color: var(--color-text-muted);
 }
 
 .sign-in-btn {
     width: 100%;
     padding: 6px;
-    background-color: #ffd700;
-    color: #333;
+    background-color: var(--color-gold);
+    color: var(--color-text);
     border: none;
     border-radius: 5px;
     cursor: pointer;
@@ -465,11 +465,11 @@
 }
 
 .sign-in-btn:hover {
-    background-color: #ffcc00;
+    background-color: var(--color-gold-soft);
 }
 
 .sign-in-btn:disabled {
-    background-color: #cccccc;
+    background-color: var(--color-border-soft);
     cursor: not-allowed;
 }
 
@@ -480,15 +480,15 @@
     align-items: center;
     margin-top: 10px;
     font-size: 12px;
-    color: #666;
+    color: var(--color-text-muted);
 }
 
 .makeup-btn {
     padding: 5px 10px;
-    background-color: #f0f0f0;
+    background-color: var(--color-bg-subtle);
     border: none;
     border-radius: 3px;
-    color: #333;
+    color: var(--color-text);
     cursor: pointer;
 }
 
@@ -515,7 +515,7 @@
 .benefit-item {
     text-align: center;
     padding: 20px;
-    background-color: #f8f8f8;
+    background-color: var(--color-bg-soft);
     border-radius: 8px;
     transition: transform 0.3s ease;
 }
@@ -549,7 +549,7 @@
 
 .level-btn {
     padding: 8px 15px;
-    background-color: #f0f0f0;
+    background-color: var(--color-bg-subtle);
     border: none;
     border-radius: 20px;
     cursor: pointer;
@@ -557,11 +557,11 @@
 }
 
 .level-btn:hover {
-    background-color: #e0e0e0;
+    background-color: var(--color-border);
 }
 
 .level-btn.active {
-    background-color: #231e15;
+    background-color: var(--color-midnight);
     color: white;
 }
 
@@ -574,7 +574,7 @@
 .view-rules-btn {
     display: inline-block;
     padding: 10px 20px;
-    background-color: #231e15;
+    background-color: var(--color-midnight);
     color: white;
     text-decoration: none;
     border-radius: 20px;
@@ -582,7 +582,7 @@
 }
 
 .view-rules-btn:hover {
-    background-color: #000000;
+    background-color: var(--color-black);
     transform: translateY(-2px);
 }
 

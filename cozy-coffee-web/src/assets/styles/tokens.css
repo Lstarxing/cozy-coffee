@@ -1,0 +1,36 @@
+/* =============================================================
+   tokens.css — 旧版手写样式表的共用色板 token（纯值提取）
+   这些变量提取自 style.css / about_style.css / points_mall.css /
+   personal_info.css / memberCenter.css 中高频重复的十六进制颜色，
+   仅做“同名同值”的纯值替换，计算值完全不变。
+   必须在 style.css 之前引入，以保证 :root 级联可用。
+   ============================================================= */
+:root {
+    /* ---- 品牌色板 ---- */
+    --color-midnight: #231e15;      /* 午夜褐（深咖啡色文字） */
+    --color-gold: #ffd700;          /* 积分/会员金色 */
+    --color-gold-strong: #ffb700;   /* 更亮的金色（凑单/高亮） */
+    --color-gold-soft: #ffcc00;     /* 柔和金色 */
+    --color-copper: #b87333;        /* 铜色 / 烘焙褐 */
+    --color-roast: #623d32;         /* 烘焙褐（导航 hover） */
+    --color-espresso: #2c1810;      /* 深浓缩色（强调背景） */
+    --color-green: #00754a;         /* 品牌绿（品牌故事） */
+
+    /* ---- 中性色 / 文本 ---- */
+    --color-text: #333;
+    --color-text-muted: #666;
+    --color-text-soft: #555;
+    --color-black: #000;
+    --color-white: #fff;
+
+    /* ---- 边框 / 分隔 ---- */
+    --color-border: #e0e0e0;
+    --color-border-soft: #ccc;
+    --color-silver: #c0c0c0;
+    --color-silver-dark: #a0a0a0;
+
+    /* ---- 背景 ---- */
+    --color-bg-subtle: #f0f0f0;
+    --color-bg-soft: #f8f8f8;
+    --color-bg-faint: #f5f5f5;
+}

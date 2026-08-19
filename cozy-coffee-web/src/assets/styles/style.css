@@ -106,7 +106,7 @@ body {
     line-height: 100px;
     text-align: center;
     text-decoration: none;
-    color: #333333;
+    color: var(--color-text);
     padding: 0px 15px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
@@ -116,15 +116,15 @@ body {
 /* 修改hover状态样式 */
 .nav-links a:hover {
     font-weight: 600;
-    color: #623d32;
-    border-bottom-color: #623d32;
+    color: var(--color-roast);
+    border-bottom-color: var(--color-roast);
 }
 
 /* 修改active状态样式 */
 .nav-links a.active {
     font-weight: 600;
-    color: #623d32;
-    border-bottom-color: #623d32;
+    color: var(--color-roast);
+    border-bottom-color: var(--color-roast);
 }
 
 /* 添加字重过渡补偿，防止文字宽度变化导致的抖动 */
@@ -163,14 +163,14 @@ body {
     background: transparent;
     border: none;
     /* 移除边框 */
-    color: #231e15;
+    color: var(--color-midnight);
 }
 
 .nav-btn.login:hover {
     background: transparent;
     /* 移除悬停背景 */
     transform: translateY(-2px);
-    color: #000000;
+    color: var(--color-black);
     /* 悬停时文字加深 */
 }
 
@@ -179,17 +179,17 @@ body {
     position: relative;
     background: transparent;
     /* 移除背景 */
-    border: 2px solid #231e15;
+    border: 2px solid var(--color-midnight);
     /* 添加边框 */
-    color: #231e15;
+    color: var(--color-midnight);
 }
 
 .nav-btn.register:hover {
     background: transparent;
     transform: translateY(-2px);
-    border-color: #000000;
+    border-color: var(--color-black);
     /* 悬停时边框加深 */
-    color: #000000;
+    color: var(--color-black);
     /* 悬停时文字加深 */
 }
 
@@ -295,7 +295,7 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     text-align: center;
-    color: #ffffff;
+    color: var(--color-white);
     z-index: 10;
     width: 100%;
     max-width: 800px;
@@ -307,7 +307,7 @@ body {
 .hero-content h1 {
     font-size: 70px;
     margin-bottom: 1.5rem;
-    color: #ffffff;
+    color: var(--color-white);
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
     line-height: 1.2;
     letter-spacing: 0.2em;
@@ -320,7 +320,7 @@ body {
     display: block;
     width: 400px;
     height: 3px;
-    background-color: #ffffff;
+    background-color: var(--color-white);
     margin: 1.5rem auto;
     border-radius: 2px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
@@ -338,8 +338,8 @@ body {
 .cta-button {
     display: inline-block;
     padding: 1.1rem 3rem;
-    background-color: #ffffff;
-    color: #333333;
+    background-color: var(--color-white);
+    color: var(--color-text);
     text-decoration: none;
     border-radius: 30px;
     font-weight: bold;
@@ -348,8 +348,8 @@ body {
 }
 
 .cta-button:hover {
-    background-color: #333333;
-    color: #ffffff;
+    background-color: var(--color-text);
+    color: var(--color-white);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
@@ -380,7 +380,7 @@ body {
 }
 
 .dot.active {
-    background-color: #fff;
+    background-color: var(--color-white);
     /* 当前活动点的颜色 */
 }
 
@@ -487,7 +487,7 @@ body {
 
 .section-subtitle {
     font-size: 1.2rem;
-    color: #666;
+    color: var(--color-text-muted);
     letter-spacing: 0.05em;
     /* 添加副标题字间距 */
 }
@@ -535,13 +535,13 @@ body {
 .menu-item-content h3 {
     font-size: 1.4rem;
     margin-bottom: 0.8rem;
-    color: #333;
+    color: var(--color-text);
     letter-spacing: 0.05em;
     /* 添加菜单标题字间距 */
 }
 
 .menu-item-content p {
-    color: #666;
+    color: var(--color-text-muted);
     font-size: 1rem;
     line-height: 1.5;
     margin-bottom: 1rem;
@@ -582,7 +582,7 @@ body {
 
 /* 5. 关于我们区域样式 */
 .about-section {
-    background: #fff;
+    background: var(--color-white);
 }
 
 .feature-block {
@@ -605,7 +605,7 @@ body {
     text-align: center;
     font-size: 2.5rem;
     margin-bottom: 60px;
-    color: #231e15;
+    color: var(--color-midnight);
 }
 
 /* 产地卡片样式 */
@@ -619,7 +619,7 @@ body {
     position: relative;
     cursor: pointer;
     overflow: hidden;
-    background: #fff;
+    background: var(--color-white);
     /* 添加白色背景 */
     border-radius: 15px;
     /* 添加圆角 */
@@ -688,17 +688,17 @@ body {
 
 .card-content {
     padding: 20px;
-    background: #fff;
+    background: var(--color-white);
 }
 
 .card-content h3 {
     font-size: 20px;
-    color: #333;
+    color: var(--color-text);
     margin-bottom: 10px;
 }
 
 .card-content p {
-    color: #666;
+    color: var(--color-text-muted);
     margin: 5px 0;
 }
 
@@ -731,7 +731,7 @@ body {
 
 .stat-item h4 {
     font-size: 3.5rem;
-    color: #231e15;
+    color: var(--color-midnight);
     margin-bottom: 10px;
 }
 
@@ -799,7 +799,7 @@ body {
 }
 
 .contact-item p {
-    color: #ffffff;
+    color: var(--color-white);
     /* 白色文字 */
     font-size: 15px;
 }
@@ -831,7 +831,7 @@ body {
 }
 
 .social-link {
-    color: #ffffff;
+    color: var(--color-white);
     /* 白色文字 */
     text-decoration: none;
     font-size: 20px;
@@ -839,7 +839,7 @@ body {
 }
 
 .social-link:hover {
-    color: #e0e0e0;
+    color: var(--color-border);
     /* 悬停时稍微变暗 */
 }
 
@@ -849,7 +849,7 @@ body {
 }
 
 .copyright {
-    color: #ffffff;
+    color: var(--color-white);
     /* 白色文字 */
     font-size: 16px;
     margin-bottom: 5px;
@@ -857,7 +857,7 @@ body {
 }
 
 .rights {
-    color: #cccccc;
+    color: var(--color-border-soft);
     /* 稍微淡一点的白色 */
     font-size: 15px;
 }
@@ -929,7 +929,7 @@ h1 {
 }
 
 .google-login-btn:hover {
-    background-color: #f5f5f5;
+    background-color: var(--color-bg-faint);
 }
 
 .google-icon {
@@ -962,7 +962,7 @@ h1 {
 }
 
 .divider span {
-    color: #666;
+    color: var(--color-text-muted);
     font-size: 14px;
     padding: 0 10px;
     background: white;
@@ -994,7 +994,7 @@ h1 {
     transform: translateY(-50%);
     width: 20px;
     height: 20px;
-    color: #666;
+    color: var(--color-text-muted);
 }
 
 .forgot-password {
@@ -1028,7 +1028,7 @@ h1 {
     text-align: center;
     margin-top: 24px;
     font-size: 14px;
-    color: #666;
+    color: var(--color-text-muted);
 }
 
 .register-link a {
@@ -1169,11 +1169,11 @@ h1 {
 .intro-card h3 {
     font-size: 1.4rem;
     margin-bottom: 1rem;
-    color: #333;
+    color: var(--color-text);
 }
 
 .intro-card p {
-    color: #666;
+    color: var(--color-text-muted);
     line-height: 1.5;
 }
 
@@ -1206,7 +1206,7 @@ h1 {
     text-align: center;
     font-size: 2rem;
     margin-bottom: 3rem;
-    color: #2c1810;
+    color: var(--color-espresso);
 }
 
 .points-grid {
@@ -1235,7 +1235,7 @@ h1 {
 .points-item h4 {
     font-size: 1.4rem;
     margin-bottom: 1.5rem;
-    color: #2c1810;
+    color: var(--color-espresso);
 }
 
 .points-item p {
@@ -1261,7 +1261,7 @@ h1 {
     text-align: center;
     font-size: 2rem;
     margin-bottom: 3rem;
-    color: #2c1810;
+    color: var(--color-espresso);
 }
 
 .redeem-grid {
@@ -1304,7 +1304,7 @@ h1 {
     margin: 0;
     font-size: 1.2rem;
     /* 增大标题字号 */
-    color: #333;
+    color: var(--color-text);
 }
 
 .redeem-item p {
@@ -1382,7 +1382,7 @@ h1 {
 .level-card {
     width: 250px;
     /* Narrower to fit 5 */
-    background: #fff;
+    background: var(--color-white);
     border-radius: 24px;
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
@@ -1402,7 +1402,7 @@ h1 {
 /* Headers Theme */
 .level-header {
     padding: 30px 24px;
-    color: #fff;
+    color: var(--color-white);
     text-align: center;
     position: relative;
 }
@@ -1443,7 +1443,7 @@ h1 {
 }
 
 .level-card.silver .level-header {
-    background: linear-gradient(135deg, #E0E0E0 0%, #9E9E9E 100%);
+    background: linear-gradient(135deg, var(--color-border) 0%, #9E9E9E 100%);
     /* Silver */
 }
 
@@ -1465,7 +1465,7 @@ h1 {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    background: #fff;
+    background: var(--color-white);
     /* Default white background */
 }
 
@@ -1498,7 +1498,7 @@ h1 {
 
 .level-card.black .level-header {
     background: #111;
-    background-image: radial-gradient(circle at 100% 0, #333 0%, #000 70%);
+    background-image: radial-gradient(circle at 100% 0, var(--color-text) 0%, var(--color-black) 70%);
     /* Matte Texture */
     color: #FFD54F;
     border-bottom: 1px solid rgba(255, 215, 0, 0.1);
@@ -1526,7 +1526,7 @@ h1 {
 }
 
 .level-card.black .benefit-item {
-    color: #E0E0E0;
+    color: var(--color-border);
     /* Light text for dark bg */
     font-size: 13px;
 }
@@ -1574,7 +1574,7 @@ h1 {
     text-align: center;
     font-size: 2rem;
     margin-bottom: 3rem;
-    color: #2c1810;
+    color: var(--color-espresso);
     /* 深咖啡色文字 */
 }
 
@@ -1603,7 +1603,7 @@ h1 {
     margin-top: 30px;
     display: inline-block;
     padding: 1.2rem 4rem;
-    background: #231e15;
+    background: var(--color-midnight);
     color: white;
     text-decoration: none;
     border-radius: 30px;
@@ -1613,7 +1613,7 @@ h1 {
 }
 
 .join-button:hover {
-    background: #000000;
+    background: var(--color-black);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(23, 41, 145, 0.2);
 }
@@ -1649,7 +1649,7 @@ h1 {
 }
 
 .send-code-btn:disabled {
-    background-color: #cccccc;
+    background-color: var(--color-border-soft);
     cursor: not-allowed;
 }
 
@@ -1668,7 +1668,7 @@ h1 {
 /* 品牌特色部分样式更新 */
 .features-section {
     position: relative;
-    background: #fff;
+    background: var(--color-white);
 }
 
 .feature-block {
@@ -1752,7 +1752,7 @@ h1 {
 /* 获奖海报部分样式 */
 .prize-section {
     padding: 20px 0;
-    background: #fff;
+    background: var(--color-white);
 }
 
 .prize-banner {

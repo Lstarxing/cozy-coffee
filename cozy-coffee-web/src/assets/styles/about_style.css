@@ -43,7 +43,7 @@ section {
 section h2 {
     text-align: center;
     font-size: 2.5rem;
-    color: #231e15;
+    color: var(--color-midnight);
     margin-bottom: 50px;
 }
 
@@ -98,13 +98,13 @@ section h2 {
 
 .stat-item h4 {
     font-size: 2.5rem;
-    color: #231e15;
+    color: var(--color-midnight);
     margin-bottom: 10px;
 }
 
 /* 冠军团队区域样式 */
 .master-blending {
-    background: #fff;
+    background: var(--color-white);
 }
 
 .team-wall {
@@ -165,7 +165,7 @@ section h2 {
     right: -25px;
     width: 50px;
     height: 2px;
-    background: #231e15;
+    background: var(--color-midnight);
 }
 
 /* 新鲜革命区域样式 */
@@ -204,7 +204,7 @@ section h2 {
 .certificates {
     text-align: center;
     padding: 50px 0;
-    background: #fff;
+    background: var(--color-white);
 }
 
 .cert-container {
@@ -226,7 +226,7 @@ section h2 {
 
 .certificates h3 {
     font-size: 2rem;
-    color: #231e15;
+    color: var(--color-midnight);
 }
 
 /* 响应式调整 */
@@ -315,7 +315,7 @@ section h2 {
     height: 0;
     border-style: solid;
     border-width: 20px 0 20px 32px;
-    border-color: transparent transparent transparent #000;
+    border-color: transparent transparent transparent var(--color-black);
     margin-left: 8px;
 }
 
@@ -408,7 +408,7 @@ body.no-scroll {
     background-color: rgba(255, 255, 255, 0.9);
     border: none;
     border-radius: 20px;
-    color: #333;
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -426,7 +426,7 @@ body.no-scroll {
 }
 
 .region-button:hover {
-    background-color: #00754a;
+    background-color: var(--color-green);
     color: white;
     transform: translate(-50%, -50%) scale(1.05);
 }
@@ -495,7 +495,7 @@ body.no-scroll {
 }
 
 .modal-button.primary {
-    background-color: #00754a;
+    background-color: var(--color-green);
     color: white;
 }
 
@@ -505,8 +505,8 @@ body.no-scroll {
 
 .modal-button.secondary {
     background-color: transparent;
-    border: 1px solid #00754a;
-    color: #00754a;
+    border: 1px solid var(--color-green);
+    color: var(--color-green);
 }
 
 .modal-button.secondary:hover {
@@ -535,7 +535,7 @@ body.no-scroll {
     left: 50%;
     width: 20px;
     height: 2px;
-    background-color: #333;
+    background-color: var(--color-text);
 }
 
 .modal-close::before {
@@ -677,7 +677,7 @@ body.no-scroll {
 /* 工艺展示区域样式 */
 .feature-block.craftsmanship {
     padding: 20px;
-    background-color: #f8f8f8;
+    background-color: var(--color-bg-soft);
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -716,19 +716,19 @@ body.no-scroll {
 
 .craft-details {
     font-size: 14px;
-    color: #555;
+    color: var(--color-text-soft);
 }
 
 body {
     font-family: Arial, sans-serif;
     line-height: 1.6;
-    color: #333;
+    color: var(--color-text);
     margin: 0;
     padding: 0;
 }
 
 .header {
-    background-color: #00754a;
+    background-color: var(--color-green);
     color: white;
     padding: 20px 0;
     text-align: center;
@@ -742,12 +742,12 @@ body {
 
 .intro, .values, .team {
     padding: 40px 0;
-    background-color: #f8f8f8;
+    background-color: var(--color-bg-soft);
     margin-bottom: 20px;
 }
 
 h2 {
-    color: #00754a;
+    color: var(--color-green);
     margin-bottom: 20px;
 }
 
@@ -756,7 +756,7 @@ h2 {
 }
 
 .footer {
-    background-color: #333;
+    background-color: var(--color-text);
     color: white;
     text-align: center;
     padding: 10px 0;
@@ -765,7 +765,7 @@ h2 {
 /* 品牌故事样式 */
 .brand-story {
     padding: 80px 0;
-    background: #fff;
+    background: var(--color-white);
 }
 
 .story-content {
@@ -777,7 +777,7 @@ h2 {
 
 .story-content h1 {
     font-size: 36px;
-    color: #000;
+    color: var(--color-black);
     margin-bottom: 20px;
 }
 
@@ -815,7 +815,7 @@ h2 {
 /* 品牌理念样式 */
 .brand-values {
     padding: 80px 0;
-    background: #f8f8f8;
+    background: var(--color-bg-soft);
 }
 
 .values-grid {
@@ -828,7 +828,7 @@ h2 {
 .value-item {
     text-align: center;
     padding: 40px;
-    background: #fff;
+    background: var(--color-white);
     border-radius: 12px;
     transition: transform 0.3s ease;
 }
@@ -872,14 +872,14 @@ h2 {
 .year {
     font-size: 24px;
     font-weight: bold;
-    color: #00754a;
+    color: var(--color-green);
     margin-right: 40px;
 }
 
 /* 品牌荣誉样式 */
 .brand-awards {
     padding: 80px 0;
-    background: #fff;
+    background: var(--color-white);
 }
 
 .awards-grid {

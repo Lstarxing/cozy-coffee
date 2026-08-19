@@ -9,7 +9,7 @@
     padding: 20px;
     margin-bottom: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    border-top: 4px solid #231e15;
+    border-top: 4px solid var(--color-midnight);
     position: relative;
     overflow: hidden;
 }
@@ -81,7 +81,7 @@
 .member-info {
     display: flex;
     justify-content: space-between;
-    background-color: #f0f0f0;
+    background-color: var(--color-bg-subtle);
     margin-bottom: 20px;
 }
 
@@ -95,7 +95,7 @@
 
 .info-label {
     font-size: 14px;
-    color: #666;
+    color: var(--color-text-muted);
     text-align: center;
     margin-bottom: 5px;
 }
@@ -103,7 +103,7 @@
 .info-value {
     font-size: 16px;
     font-weight: bold;
-    color: #231e15;
+    color: var(--color-midnight);
     text-align: center;
 }
 
@@ -115,7 +115,7 @@
 .form-row {
     display: flex;
     margin-bottom: 15px;
-    background-color: #f0f0f0;
+    background-color: var(--color-bg-subtle);
 }
 
 .form-label {
@@ -166,7 +166,7 @@
     position: absolute;
     right: 10px;
     padding: 5px 10px;
-    background-color: #333;
+    background-color: var(--color-text);
     color: white;
     border: none;
     cursor: pointer;
@@ -176,7 +176,7 @@
 /* 取消按钮样式 */
 .cancel-btn {
     padding: 12px 25px;
-    background-color: #666;
+    background-color: var(--color-text-muted);
     color: white;
     border: none;
     border-radius: 25px;
@@ -186,7 +186,7 @@
 }
 
 .cancel-btn:hover {
-    background-color: #555;
+    background-color: var(--color-text-soft);
     transform: translateY(-1px);
 }
 
@@ -198,7 +198,7 @@
 
 .update-contact-btn {
     padding: 8px 20px;
-    background-color: #231e15;
+    background-color: var(--color-midnight);
     color: white;
     border: none;
     border-radius: 4px;
@@ -207,7 +207,7 @@
 }
 
 .update-contact-btn:hover {
-    background-color: #000000;
+    background-color: var(--color-black);
     transform: translateY(-1px);
 }
 
@@ -219,7 +219,7 @@
 
 .save-btn {
     padding: 8px 20px;
-    background-color: #333;
+    background-color: var(--color-text);
     color: white;
     border: none;
     cursor: pointer;
@@ -228,7 +228,7 @@
 
 /* 保存按钮悬浮效果增强 */
 .save-btn:hover {
-    background-color: #000000;
+    background-color: var(--color-black);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -291,12 +291,12 @@
 .modal-header h3 {
     margin: 0;
     font-size: 18px;
-    color: #231e15;
+    color: var(--color-midnight);
 }
 
 .close-modal {
     font-size: 24px;
-    color: #666;
+    color: var(--color-text-muted);
     cursor: pointer;
     transition: color 0.3s ease;
     background: none;
@@ -305,7 +305,7 @@
 }
 
 .close-modal:hover {
-    color: #231e15;
+    color: var(--color-midnight);
 }
 
 /* 地址表单样式 */
@@ -321,7 +321,7 @@
     display: block;
     margin-bottom: 8px;
     font-weight: 500;
-    color: #333;
+    color: var(--color-text);
 }
 
 
@@ -339,7 +339,7 @@
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
-    border-color: #231e15;
+    border-color: var(--color-midnight);
     box-shadow: 0 0 0 2px rgba(35, 30, 21, 0.1);
     outline: none;
 }
@@ -380,7 +380,7 @@
 .checkbox-group .save-btn {
     margin-left: auto;
     padding: 8px 20px;
-    background-color: #231e15;
+    background-color: var(--color-midnight);
     color: white;
     border: none;
     border-radius: 5px;
@@ -406,9 +406,9 @@
 .verification-info {
     margin-bottom: 20px;
     padding: 15px;
-    background-color: #f8f8f8;
+    background-color: var(--color-bg-soft);
     border-radius: 8px;
-    color: #666;
+    color: var(--color-text-muted);
     font-size: 14px;
 }
 
@@ -427,7 +427,7 @@
 
 .send-code-btn {
     padding: 12px 20px;
-    background-color: #231e15;
+    background-color: var(--color-midnight);
     color: white;
     border: none;
     border-radius: 8px;
@@ -441,7 +441,7 @@
 }
 
 .send-code-btn:disabled {
-    background-color: #ccc;
+    background-color: var(--color-border-soft);
     cursor: not-allowed;
 }
 
@@ -470,13 +470,13 @@
 
 .next-step-btn,
 .save-btn {
-    background-color: #231e15;
+    background-color: var(--color-midnight);
     color: white;
 }
 
 .back-btn {
-    background-color: #f0f0f0;
-    color: #333;
+    background-color: var(--color-bg-subtle);
+    color: var(--color-text);
 }
 
 .next-step-btn:hover,
@@ -485,7 +485,7 @@
 }
 
 .back-btn:hover {
-    background-color: #e0e0e0;
+    background-color: var(--color-border);
 }
 
 /* 响应式布局优化 */
@@ -547,11 +547,11 @@
 
 .section-header h3 {
     margin: 0;
-    color: #231e15;
+    color: var(--color-midnight);
 }
 
 .add-btn {
-    background-color: #231e15;
+    background-color: var(--color-midnight);
     color: white;
     padding: 8px 15px;
     border: none;
@@ -573,8 +573,8 @@
 .empty-address {
     padding: 20px;
     text-align: center;
-    color: #666;
-    background-color: #f8f8f8;
+    color: var(--color-text-muted);
+    background-color: var(--color-bg-soft);
     border-radius: 10px;
     margin-top: 15px;
 }
@@ -595,7 +595,7 @@
 }
 
 .address-item.default {
-    border-color: #231e15;
+    border-color: var(--color-midnight);
     background-color: #f9f9f9;
 }
 
@@ -612,11 +612,11 @@
 .address-header h4 {
     margin: 0;
     margin-right: 10px;
-    color: #231e15;
+    color: var(--color-midnight);
 }
 
 .default-tag {
-    background-color: #231e15;
+    background-color: var(--color-midnight);
     color: white;
     padding: 2px 5px;
     border-radius: 3px;
@@ -625,7 +625,7 @@
 
 .address-info p {
     margin: 0;
-    color: #666;
+    color: var(--color-text-muted);
 }
 
 .address-actions {
@@ -643,8 +643,8 @@
 }
 
 .edit-btn {
-    background-color: #f0f0f0;
-    color: #333;
+    background-color: var(--color-bg-subtle);
+    color: var(--color-text);
 }
 
 .delete-btn {
@@ -653,7 +653,7 @@
 }
 
 .edit-btn:hover {
-    background-color: #e0e0e0;
+    background-color: var(--color-border);
 }
 
 .delete-btn:hover {
@@ -662,7 +662,7 @@
 
 .no-address {
     text-align: center;
-    color: #666;
+    color: var(--color-text-muted);
     padding: 20px;
 }
 
@@ -695,13 +695,13 @@
     top: 20px;
     font-size: 24px;
     cursor: pointer;
-    color: #666;
+    color: var(--color-text-muted);
 }
 
 .modal-title {
     margin-top: 0;
     margin-bottom: 20px;
-    color: #231e15;
+    color: var(--color-midnight);
     font-size: 18px;
 }
 
@@ -714,7 +714,7 @@
     display: block;
     margin-bottom: 5px;
     font-weight: 500;
-    color: #333;
+    color: var(--color-text);
 }
 
 .form-group input,
@@ -731,7 +731,7 @@
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
-    border-color: #231e15;
+    border-color: var(--color-midnight);
     box-shadow: 0 0 0 2px rgba(35, 30, 21, 0.1);
     outline: none;
 }
