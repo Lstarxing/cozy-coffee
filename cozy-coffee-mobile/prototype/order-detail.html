@@ -39,6 +39,7 @@
   }
   .pending-title { display:block; font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink); }
   .pending-sub { display:block; margin-top:6px; font-size:12px; color:var(--muted); }
+  .pending-card .progress { margin-top:16px; }
   .pending-actions { display:flex; gap:10px; margin-top:18px; }
   .pending-btn {
     flex:1; height:42px; border-radius:999px;
@@ -191,10 +192,19 @@
     <span class="nav-right"></span>
   </div>
 
-  <!-- 未支付（仅咖啡单）：等待支付卡 -->
+  <!-- 未支付（仅咖啡单）：等待支付卡（含「已下单」首节点进度） -->
   <div class="pending-card" id="pendingCard" style="display:none">
     <span class="pending-title" id="pendingTitle">等待支付，剩余 09:08</span>
     <span class="pending-sub">超过15分钟未支付，订单将自动取消</span>
+
+    <div class="progress" id="pendingProgress">
+      <div class="progress-seg seg-a" id="pSegA"></div>
+      <div class="progress-seg seg-b" id="pSegB"></div>
+      <div class="progress-step" id="pStep0"><span class="progress-icon" id="pIcon0"></span><span class="progress-label">已下单</span></div>
+      <div class="progress-step" id="pStep1"><span class="progress-icon" id="pIcon1"></span><span class="progress-label">制作中</span></div>
+      <div class="progress-step" id="pStep2"><span class="progress-icon" id="pIcon2"></span><span class="progress-label">待取餐</span></div>
+    </div>
+
     <div class="pending-actions">
       <div class="pending-btn ghost" onclick="toast('订单取消后，如使用优惠券会退回到卡包中')">取消订单</div>
       <div class="pending-btn solid" onclick="toast('立即支付')">立即支付</div>
@@ -400,7 +410,20 @@
     // 未支付（咖啡单）→ 等待支付卡
     document.getElementById('pendingCard').style.display = pending ? 'block' : 'none';
     document.getElementById('statusCard').style.display = pending ? 'none' : 'block';
-    if (pending) { countdownTimer = setInterval(renderCountdown, 1000); renderCountdown(); }
+    if (pending) {
+      countdownTimer = setInterval(renderCountdown, 1000);
+      renderCountdown();
+      // 待支付：进度「已下单」当前节点，短连线不亮
+      const icons = ['receipt', 'coffee', o.delivery ? 'truck' : 'bell'];
+      const labels = ['已下单', '制作中', o.delivery ? '待送达' : '待取餐'];
+      for (let i = 0; i < 3; i++) {
+        const icon = document.getElementById('pIcon' + i);
+        icon.innerHTML = ICONS[icons[i]];
+        icon.style.color = i === 0 ? '#2B1E16' : '#C0B8B1';
+        document.getElementById('pStep' + i).querySelector('.progress-label').textContent = labels[i];
+        document.getElementById('pStep' + i).classList.toggle('current', i === 0);
+      }
+    }
 
     if (!pending) {
       // 状态行：兑换单 / 已取消
