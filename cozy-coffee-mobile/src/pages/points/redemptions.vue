@@ -279,7 +279,7 @@ onShow(loadOrders)
   &.pending { background: $cozy-border; color: $cozy-muted; }
   &.processing { background: #F3E7D8; color: #8B5E2E; }
   &.shipped { background: #F1E4DA; color: $cozy-primary; }
-  &.completed { background: $cozy-primary-soft; color: $cozy-primary; }
+  &.completed { background: #E6F1EB; color: #059669; }
   &.cancelled { background: $cozy-border; color: $cozy-placeholder; }
 }
 
