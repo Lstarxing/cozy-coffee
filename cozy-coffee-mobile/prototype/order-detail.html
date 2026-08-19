@@ -204,7 +204,7 @@
   <!-- 状态卡（白卡：取餐码/兑换码 + 三节点进度） -->
   <div class="status-card" id="statusCard">
     <span class="status-line" id="statusLine" style="display:none"></span>
-    <div class="pickup-code-block">
+    <div class="pickup-code-block" id="pickupBlock">
       <span class="pickup-label" id="pickupLabel">取餐码</span>
       <span class="pickup-code" id="pickupCode">A021</span>
     </div>
@@ -415,9 +415,10 @@
       document.getElementById('pickupCode').textContent = code;
       document.getElementById('pickupCode').classList.toggle('long', code.length > 6);
       document.getElementById('pickupEta').textContent = cancelled ? '' : (o.eta || '');
+      document.getElementById('pickupBlock').style.display = cancelled ? 'none' : 'flex';
 
-      // 三节点进度（咖啡单；配送用 truck / 待送达）
-      if (!redeem) {
+      // 三节点进度（咖啡单；配送用 truck / 待送达；已取消单不展示）
+      if (!redeem && !cancelled) {
         document.getElementById('progress').style.display = 'flex';
         const reached = o.status === 'processing' ? 1 : (completed ? 2 : -1);
         const icons = ['receipt', 'coffee', delivery ? 'truck' : 'bell'];
@@ -425,7 +426,7 @@
         for (let i = 0; i < 3; i++) {
           const icon = document.getElementById('icon' + i);
           icon.innerHTML = ICONS[icons[i]];
-          icon.style.color = i === reached ? '#2B1E16' : '#756A63';
+          icon.style.color = i === reached ? '#2B1E16' : '#C0B8B1';
           document.getElementById('step' + i).querySelector('.progress-label').textContent = labels[i];
           document.getElementById('step' + i).classList.toggle('current', i === reached);
         }
