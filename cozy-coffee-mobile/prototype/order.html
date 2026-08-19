@@ -65,6 +65,7 @@
   .order-status.processing { background:#EAF0F2; color:#285B70; }
   .order-status.completed { background:#E8EDE5; color:var(--accent); }
   .order-status.pending { background:#F4EBDD; color:#8A4D10; }
+  .order-status.delivering { background:#EAF0F2; color:#285B70; }
   .order-status.cancelled { background:var(--border); color:var(--muted); }
   .expire-countdown {
     display:block; margin-top:4px; font-size:10px; color:var(--muted);
@@ -237,7 +238,7 @@
         { name:'美式咖啡', spec:'冰 / 大杯 / 无糖', price:'¥22.00', qty:'× 1' }
       ],
       count:'共 1 件 · 到店自提' },
-    { id:'coz2026080203', fulfillment:'delivery', status:'processing', statusText:'制作中',
+    { id:'coz2026080203', fulfillment:'delivery', status:'delivering', statusText:'配送中',
       time:'2026-08-02 14:58:20', meta:'外送 · 学院路 100 号', note:'预计 15:48 送达',
       items:[
         { name:'燕麦拿铁', spec:'热 / 大杯 / 无糖', price:'¥36.00', qty:'× 1' }

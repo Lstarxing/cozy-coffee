@@ -176,6 +176,15 @@
   .sp-reward-text { color:var(--primary); font-size:11px; font-weight:650; }
   .sp-reward-sep { color:var(--border); font-size:11px; }
 
+  /* ── 确认收货（兑换快递单 · 已发货） ── */
+  .confirm-receipt {
+    margin-top:12px; height:44px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:999px; background:var(--ink); color:#fff;
+    font-size:14px; font-weight:650; cursor:pointer;
+  }
+  .confirm-receipt:active { opacity:.85; }
+
   /* ── Toast ── */
   .toast {
     position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
@@ -275,6 +284,9 @@
     <div class="sp-reward" id="rewardRow" style="display:none"></div>
   </div>
 
+  <!-- 确认收货（兑换快递单 · 已发货） -->
+  <div class="confirm-receipt" id="confirmReceiptBtn" style="display:none" onclick="toast('已确认收货，感谢支持')">确认收货</div>
+
 </div>
 
 <script>
@@ -327,7 +339,7 @@
       ]
     },
     coz2026080203: {
-      type:'coffee', status:'processing', delivery:true, deliveryTime:'15:48',
+      type:'coffee', status:'delivering', statusText:'配送中', delivery:true, deliveryTime:'15:48',
       time:'2026-08-02 14:58:20', orderNo:'COZ2026080203',
       goodsAmount:'¥41.00', discount:'¥0.00', deliveryFee:'¥3.00', paid:'¥44.00',
       addr:'学院路 100 号 2 幢 502', contact:'李四（女士）139****1234',
@@ -410,6 +422,7 @@
     const virtual = !!o.virtual;
     const pending = !redeem && o.status === 'pending';
     const cancelled = o.status === 'cancelled';
+    const delivering = o.status === 'delivering';
     const completed = o.status === 'completed';
 
     // 未支付（咖啡单）→ 等待支付卡
@@ -431,8 +444,8 @@
     }
 
     if (!pending) {
-      // 状态行：兑换单 / 已取消
-      document.getElementById('statusLine').style.display = (redeem || cancelled) ? 'block' : 'none';
+      // 状态行：兑换单 / 已取消 / 配送中
+      document.getElementById('statusLine').style.display = (redeem || cancelled || delivering) ? 'block' : 'none';
       document.getElementById('statusLine').textContent = o.statusText || '';
 
       // 取餐码 / 预计送达(咖啡外送) / 物流单号(兑换快递) / 兑换码 / 取货码
@@ -448,7 +461,7 @@
       // 三节点进度（咖啡单；配送用 truck / 待送达；已取消单不展示）
       if (!redeem && !cancelled) {
         document.getElementById('progress').style.display = 'flex';
-        const reached = o.status === 'processing' ? 1 : (completed ? 2 : -1);
+        const reached = o.status === 'processing' ? 1 : ((delivering || completed) ? 2 : -1);
         const icons = ['receipt', 'coffee', delivery ? 'truck' : 'bell'];
         const labels = ['已下单', '制作中', delivery ? '待送达' : '待取餐'];
         for (let i = 0; i < 3; i++) {
@@ -526,6 +539,10 @@
     document.getElementById('deliveryAddrRow').style.display = isDelivery ? 'flex' : 'none';
     document.getElementById('deliveryAddr').textContent = o.addr || '';
     document.getElementById('deliveryContact').textContent = o.contact || '';
+
+    // 确认收货（兑换快递单 · 已发货）
+    const confirmBtn = document.getElementById('confirmReceiptBtn');
+    confirmBtn.style.display = (redeem && o.status === 'shipped' && o.delivery) ? 'flex' : 'none';
 
     // 本次获得（完成咖啡订单）
     const rewardRow = document.getElementById('rewardRow');
