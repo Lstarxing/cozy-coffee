@@ -62,10 +62,10 @@
       <view class="store-products">
         <view class="sp-store">
           <view class="sp-store-main">
-            <text class="sp-store-name">{{ isDelivery ? '配送至' : storeName }}</text>
+            <text class="sp-store-name">{{ isDelivery && isRedeem ? '配送至' : storeName }}</text>
             <text class="sp-store-addr">{{ storeAddr }}</text>
           </view>
-          <view v-if="!isDelivery && !isVirtual" class="sp-store-actions">
+          <view v-if="!isVirtual && !(isDelivery && isRedeem)" class="sp-store-actions">
             <view class="sp-store-act" @click="callStore"><CozyIcon name="phone" :size="16" color="#753A22" /></view>
             <view class="sp-store-act" @click="navigateStore"><CozyIcon name="send" :size="16" color="#753A22" /></view>
           </view>
@@ -307,8 +307,8 @@ const storeName = computed(() => {
 })
 const storeAddr = computed(() => {
   if (isVirtual.value) return '兑换码已发放至账户，可在「我的 · 卡券」查看'
-  if (isDelivery.value) return order.value?.receiverAddress || '配送至已确认收货地址'
-  if (isRedeem.value) return order.value?.storeName ? '到店自提 · 文三路 128 号' : FIXED_STORE.address
+  if (isRedeem.value && isDelivery.value) return order.value?.receiverAddress || '配送至已确认收货地址'
+  if (isRedeem.value) return '到店自提 · 文三路 128 号'
   return FIXED_STORE.address
 })
 
