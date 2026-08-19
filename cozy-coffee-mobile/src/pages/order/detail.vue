@@ -21,13 +21,13 @@
       <!-- 状态卡（白卡：取餐号在上居中 + 三节点进度 已下单/制作中/待取餐） -->
       <view v-else class="status-card">
         <text v-if="statusText && (isRedeem || isCancelled)" class="status-line">{{ statusText }}</text>
-        <view class="pickup-code-block">
+        <view v-if="!isCancelled" class="pickup-code-block">
           <text class="pickup-label">{{ codeCaption }}</text>
           <text class="pickup-code" :class="{ long: codeText.length > 6 }">{{ codeText }}</text>
         </view>
         <text v-if="codeEta" class="pickup-eta">{{ codeEta }}</text>
 
-        <view v-if="!isRedeem" class="progress">
+        <view v-if="!isRedeem && !isCancelled" class="progress">
           <view class="progress-seg seg-a" :class="{ on: reachedIndex >= 1 }"></view>
           <view class="progress-seg seg-b" :class="{ on: reachedIndex >= 2 }"></view>
           <view
@@ -276,7 +276,7 @@ const progressSteps = computed(() => {
     label,
     icon: icons[idx],
     current: reached === idx,
-    nodeColor: reached === idx ? '#2B1E16' : '#756A63'
+    nodeColor: reached === idx ? '#2B1E16' : '#C0B8B1'
   }))
 })
 
