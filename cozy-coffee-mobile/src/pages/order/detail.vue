@@ -136,7 +136,10 @@
             <view class="meta-row"><text>配送方式</text><text>外送</text></view>
             <view class="meta-row">
               <text>配送地址</text>
-              <view class="meta-value"><text class="addr-text">{{ deliveryMetaText }}</text></view>
+              <view class="delivery-addr">
+                <text class="addr-line">{{ deliveryAddress }}</text>
+                <text class="addr-line addr-contact">{{ deliveryContact }}</text>
+              </view>
             </view>
           </template>
         </view>
@@ -252,8 +255,9 @@ const pendingRemain = computed(() => {
   return `${mm}:${ss}`
 })
 const amountExpanded = ref(false)
-const deliveryMetaText = computed(() => {
-  const parts = [order.value?.receiverAddress, order.value?.receiverName, order.value?.receiverPhone].filter(Boolean)
+const deliveryAddress = computed(() => order.value?.receiverAddress || '—')
+const deliveryContact = computed(() => {
+  const parts = [order.value?.receiverName, order.value?.receiverPhone].filter(Boolean)
   return parts.join(' · ') || '—'
 })
 const statusText = computed(() => {
@@ -715,7 +719,9 @@ async function cancelPendingOrder() {
 .total-muted { color: $cozy-muted; }
 .total-value { color: $cozy-primary; font-size: 32rpx; font-weight: 750; }
 
-.addr-text { max-width: 440rpx; }
+.delivery-addr { flex: 1; min-width: 0; text-align: right; }
+.addr-line { display: block; font-size: 24rpx; line-height: 1.5; color: $cozy-ink; }
+.addr-contact { margin-top: 4rpx; color: $cozy-muted; }
 
 /* ── 本次获得（完成订单，位于实付下方，对齐确认页可得积分样式） ── */
 .sp-reward {
