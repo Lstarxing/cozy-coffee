@@ -154,6 +154,9 @@
   .meta-row span:last-child { color:var(--ink); text-align:right; }
   .meta-value { display:flex; align-items:center; gap:6px; min-width:0; }
   .meta-value .addr-text { max-width:220px; }
+  .delivery-addr { flex:1; min-width:0; text-align:right; }
+  .addr-line { display:block; font-size:12px; line-height:1.5; color:var(--ink); text-align:right; }
+  .addr-contact { margin-top:3px; color:var(--muted); }
   .copy-btn {
     flex:none; padding:0 7px; border-radius:6px;
     border:1px solid var(--border); color:var(--muted);
@@ -265,7 +268,7 @@
       <div class="meta-row"><span>订单编号</span><span class="meta-value"><span id="orderNo">--</span><em class="copy-btn" onclick="copyOrderNo()">复制</em></span></div>
       <div class="sp-divider" id="deliveryDivider" style="display:none"></div>
       <div class="meta-row" id="deliveryMethodRow" style="display:none"><span>配送方式</span><span>外送</span></div>
-      <div class="meta-row" id="deliveryAddrRow" style="display:none"><span>配送地址</span><span class="meta-value"><span class="addr-text" id="deliveryAddr"></span></span></div>
+      <div class="meta-row" id="deliveryAddrRow" style="display:none"><span>配送地址</span><span class="delivery-addr"><span class="addr-line" id="deliveryAddr"></span><span class="addr-line addr-contact" id="deliveryContact"></span></span></div>
     </div>
 
     <!-- 本次获得（完成咖啡订单） -->
@@ -327,7 +330,7 @@
       type:'coffee', status:'processing', delivery:true, deliveryTime:'15:48',
       time:'2026-08-02 14:58:20', orderNo:'COZ2026080203',
       goodsAmount:'¥41.00', discount:'¥0.00', deliveryFee:'¥3.00', paid:'¥44.00',
-      receiver:'学院路 100 号 2 幢 502 · 李四（女士）139****1234',
+      addr:'学院路 100 号 2 幢 502', contact:'李四（女士）139****1234',
       items:[
         { name:'燕麦拿铁', spec:'热 / 大杯 / 无糖', price:'¥36.00', qty:'× 1' }
       ]
@@ -337,7 +340,7 @@
       time:'2026-07-29 09:12:30', orderNo:'COZ2026072907',
       goodsAmount:'¥66.00', discount:'¥0.00', deliveryFee:'¥3.00', paid:'¥69.00',
       points:'+66', exp:'+66',
-      receiver:'文三路 128 号 3 幢 1 单元 · 张三（先生）15168226973',
+      addr:'文三路 128 号 3 幢 1 单元', contact:'张三（先生）15168226973',
       items:[
         { name:'冷萃咖啡', spec:'冰 / 中杯 / 无糖', price:'¥28.00', qty:'× 1' },
         { name:'冰摇荔枝咖啡', spec:'冰 / 大杯 / 微糖', price:'¥38.00', qty:'× 1' }
@@ -361,19 +364,19 @@
       type:'redeem', delivery:true, status:'shipped', statusText:'已发货 · 快递配送',
       productName:'Cozy 经典帆布包', pointsCost:1600, qty:1, code:'SF1068192001',
       time:'2026-07-20 16:42:10', orderNo:'RD202607200003',
-      receiver:'浙江省杭州市西湖区文三路 128 号 · 张*宁 138****0421'
+      addr:'浙江省杭州市西湖区文三路 128 号', contact:'张*宁 138****0421'
     },
     rd202607120004: {
       type:'redeem', delivery:true, status:'processing', statusText:'处理中 · 等待揽收',
       productName:'挂耳咖啡精选礼盒', pointsCost:3500, qty:1, code:'待出库',
       time:'2026-07-12 09:30:44', orderNo:'RD202607120004',
-      receiver:'浙江省杭州市西湖区文三路 128 号 · 张*宁 138****0421'
+      addr:'浙江省杭州市西湖区文三路 128 号', contact:'张*宁 138****0421'
     },
     rd202607050005: {
       type:'redeem', delivery:true, status:'pending', statusText:'待处理 · 即将发货',
       productName:'定制拿铁金搅拌勺', pointsCost:600, qty:1, code:'待出库',
       time:'2026-07-05 14:18:22', orderNo:'RD202607050005',
-      receiver:'浙江省杭州市西湖区文三路 128 号 · 张*宁 138****0421'
+      addr:'浙江省杭州市西湖区文三路 128 号', contact:'张*宁 138****0421'
     },
     rd202606300006: {
       type:'redeem', status:'cancelled', statusText:'已取消 · 积分已退还',
@@ -464,7 +467,7 @@
 
     // 门店 + 商品
     document.getElementById('storeName').textContent = o.storeName || (delivery ? '配送至' : 'CozyCoffee 中心店');
-    document.getElementById('storeAddr').textContent = o.storeAddr || (delivery ? '配送至 · ' + (o.receiver || '') : '杭州 · 文三路 128 号');
+    document.getElementById('storeAddr').textContent = o.storeAddr || (delivery ? '配送至 · ' + (o.addr || '') : '杭州 · 文三路 128 号');
     document.getElementById('storeActions').style.display = (delivery || virtual) ? 'none' : 'flex';
 
     const productName = o.productName || '';
@@ -521,7 +524,8 @@
     document.getElementById('deliveryDivider').style.display = isDelivery ? 'block' : 'none';
     document.getElementById('deliveryMethodRow').style.display = isDelivery ? 'flex' : 'none';
     document.getElementById('deliveryAddrRow').style.display = isDelivery ? 'flex' : 'none';
-    document.getElementById('deliveryAddr').textContent = o.receiver || '';
+    document.getElementById('deliveryAddr').textContent = o.addr || '';
+    document.getElementById('deliveryContact').textContent = o.contact || '';
 
     // 本次获得（完成咖啡订单）
     const rewardRow = document.getElementById('rewardRow');
