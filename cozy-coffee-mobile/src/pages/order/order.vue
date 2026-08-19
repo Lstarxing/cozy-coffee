@@ -55,7 +55,7 @@
         <view class="receipt-summary">
           <text class="summary-label">共 {{ order.totalQty }} 件 · {{ fulfillmentLabel(order) }}</text>
           <view class="summary-actions">
-            <view v-if="isCompleted(order.status)" class="order-action" @click.stop="reOrder(order)">再来一单</view>
+            <view v-if="isCompleted(order.status) || isCancelled(order.status)" class="order-action" @click.stop="reOrder(order)">再来一单</view>
             <view v-else class="mini-btn" @click.stop="goToDetail(order.id)">查看详情</view>
           </view>
         </view>
@@ -173,6 +173,7 @@ function stopTicker() {
 function normalizeStatus(status) { return String(status || '').toLowerCase() }
 function isPending(status) { return ['pending', 'pending_payment'].includes(normalizeStatus(status)) }
 function isCompleted(status) { return normalizeStatus(status) === 'completed' }
+function isCancelled(status) { return ['cancelled', 'canceled'].includes(normalizeStatus(status)) }
 function isDeliveryOrder(order) { return String(order.diningMethod || '').toUpperCase() === 'DELIVERY' }
 
 function getExpireMs(order) {
