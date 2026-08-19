@@ -8,10 +8,25 @@
     <RetryState v-else-if="errorMessage" :description="errorMessage" @retry="loadOrder" />
 
     <view v-else-if="order" class="detail-content">
-      <!-- 未支付：等待支付卡（无取餐码，取消/立即支付 CTA） -->
+      <!-- 未支付：等待支付卡（无取餐码，取消/立即支付 CTA，含「已下单」首节点进度） -->
       <view v-if="isPendingPay" class="pending-card">
         <text class="pending-title">等待支付，剩余 {{ pendingRemain }}</text>
         <text class="pending-sub">超过15分钟未支付，订单将自动取消</text>
+
+        <view class="progress pending-progress">
+          <view class="progress-seg seg-a"></view>
+          <view class="progress-seg seg-b"></view>
+          <view
+            v-for="(step, idx) in progressSteps"
+            :key="idx"
+            class="progress-step"
+            :class="{ current: step.current }"
+          >
+            <CozyIcon :name="step.icon" :size="28" stroke-width="2" :color="step.nodeColor" />
+            <text class="progress-label">{{ step.label }}</text>
+          </view>
+        </view>
+
         <view class="pending-actions">
           <view class="pending-btn ghost" @click="cancelPendingOrder">取消订单</view>
           <view class="pending-btn solid" @click="payPendingOrder">{{ paying ? '支付中…' : '立即支付' }}</view>
@@ -452,6 +467,7 @@ async function cancelPendingOrder() {
   font-size: 24rpx;
   color: $cozy-muted;
 }
+.pending-progress { margin-top: 36rpx; }
 .pending-actions {
   display: flex;
   gap: 20rpx;
