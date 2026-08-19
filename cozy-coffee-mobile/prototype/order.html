@@ -299,7 +299,7 @@
         </div>
         <div class="receipt-summary">
           <span class="summary-label">${o.count}</span>
-          ${o.status === 'completed'
+          ${(o.status === 'completed' || o.status === 'cancelled')
             ? `<span class="order-action" onclick="event.stopPropagation(); reorder('${o.id}')">再来一单</span>`
             : `<span class="mini-btn" onclick="event.stopPropagation(); go('order-detail.html?id=${o.id}')">查看详情</span>`}
         </div>
@@ -317,6 +317,9 @@
   const REORDER = {
     coz2026080112: [
       { productName:'海盐焦糖拿铁', name:'海盐焦糖拿铁', spec:'热 · 大杯 · 半糖', price:34, qty:1 }
+    ],
+    coz2026072901: [
+      { productName:'美式咖啡', name:'美式咖啡', spec:'冰 · 大杯 · 无糖', price:22, qty:1 }
     ],
     coz2026073110: [
       { productName:'经典手冲', name:'云南保山 SOE', spec:'热 · 中杯 · 微甜', price:28, qty:1 },
