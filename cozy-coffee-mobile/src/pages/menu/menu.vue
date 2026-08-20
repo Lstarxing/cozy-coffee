@@ -40,7 +40,7 @@
       </view>
       <view class="store-meta" :class="{ 'store-meta--delivery': fulfillment === 'delivery' }">
         <template v-if="fulfillment === 'delivery'">
-          <CozyIcon name="swap" :size="18" color="#753A22" />
+          <CozyIcon name="swap" :size="18" color="#756A63" />
           <text class="store-meta-text">CozyCoffee 中心店 | 配送距离 1.2km</text>
         </template>
         <template v-else>距离您 1.2km</template>
@@ -490,9 +490,6 @@ function closeOffShelf() {
   display: flex;
   align-items: center;
   gap: 8rpx;
-  font-size: 28rpx;
-  font-weight: 600;
-  color: $cozy-ink;
 }
 .tap-target { cursor: pointer; }
 .delivery-addr {
