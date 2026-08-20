@@ -1,5 +1,6 @@
 <!--
   积分商品详情页 - 独立页面（原生导航栏"商品详情"）
+  底部「去兑换」跳转兑换确认订单页（领取方式/门店/地址在确认页配置）
 -->
 <template>
   <view class="detail-page">
@@ -37,7 +38,7 @@
         <view
           class="detail-cta"
           :class="{ disabled: !canRedeemSelected }"
-          @click="confirmRedeem"
+          @click="goToConfirm"
         >{{ ctaText }}</view>
       </view>
     </view>
@@ -48,7 +49,7 @@
 import { computed, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
-import { getMemberInfo, redeemPoints } from '@/api/member'
+import { getMemberInfo } from '@/api/member'
 import { getMemberLevelName } from '@/constants/member'
 import {
   POINTS_REDEEM_DISCOUNTS,
@@ -59,7 +60,6 @@ import {
 const userStore = useUserStore()
 const product = ref(null)
 const redeemQuantity = ref(1)
-const redeeming = ref(false)
 
 onLoad(() => {
   const data = uni.getStorageSync('cozy_mall_product')
@@ -103,12 +103,10 @@ const canRedeemSelected = computed(() => (
   Boolean(product.value) &&
   redeemQuantity.value >= 1 &&
   redeemQuantity.value <= Math.max(1, selectedQuantityLimit.value) &&
-  hasEnoughPoints.value &&
-  !redeeming.value
+  hasEnoughPoints.value
 ))
 const ctaText = computed(() => {
-  if (redeeming.value) return '兑换中…'
-  if (canRedeemSelected.value) return `立即兑换 · ${selectedTotalCost.value} 积分`
+  if (canRedeemSelected.value) return '去兑换'
   const diff = selectedTotalCost.value - (userStore.memberInfo?.currentPoints || 0)
   return `积分不足 · 还差 ${Math.max(0, diff).toLocaleString()} 积分`
 })
@@ -145,30 +143,13 @@ function increaseQuantity() {
   if (canIncreaseQuantity.value) redeemQuantity.value += 1
 }
 
-async function confirmRedeem() {
+function goToConfirm() {
   if (!canRedeemSelected.value) {
     uni.showToast({ title: '积分不足', icon: 'none' })
     return
   }
-  redeeming.value = true
-  uni.showLoading({ title: '兑换中…', mask: true })
-  try {
-    const response = await redeemPoints({
-      productId: product.value.id,
-      quantity: redeemQuantity.value,
-      fulfillmentType: product.value.productType === 'VIRTUAL' ? 'VIRTUAL' : 'PICKUP',
-      storeId: product.value.productType === 'VIRTUAL' ? undefined : 1
-    })
-    if (response.code === 200) {
-      uni.showToast({ title: '兑换成功', icon: 'success' })
-      setTimeout(() => uni.navigateBack(), 600)
-    }
-  } catch (error) {
-    uni.showToast({ title: error?.message || '兑换失败', icon: 'none' })
-  } finally {
-    uni.hideLoading()
-    redeeming.value = false
-  }
+  uni.setStorageSync('cozy_mall_confirm', { product: product.value, quantity: redeemQuantity.value })
+  uni.navigateTo({ url: '/pages/mall/confirm' })
 }
 </script>
 

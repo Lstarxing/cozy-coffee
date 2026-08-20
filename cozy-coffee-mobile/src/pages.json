@@ -69,6 +69,12 @@
             }
         },
         {
+            "path": "pages/mall/confirm",
+            "style": {
+                "navigationBarTitleText": "确认兑换"
+            }
+        },
+        {
             "path": "pages/login/index",
             "style": {
                 "navigationBarTitleText": "登录"

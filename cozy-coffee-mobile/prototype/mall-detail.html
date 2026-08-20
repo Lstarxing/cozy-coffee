@@ -137,6 +137,7 @@
     opacity:0; transition:opacity .3s ease; max-width:82%;
     text-align:center;
   }
+
 </style>
 </head>
 <body>
@@ -198,7 +199,7 @@
           <span class="stepper-btn" id="stepperPlus" onclick="increaseQuantity()">＋</span>
         </div>
       </div>
-      <div class="detail-cta" id="detailCta" onclick="redeem()"></div>
+      <div class="detail-cta" id="detailCta" onclick="goConfirm()"></div>
     </div>
   </div>
 
@@ -307,7 +308,7 @@
     const cta = document.getElementById('detailCta');
     if (cost <= USER.points) {
       cta.classList.remove('disabled');
-      cta.textContent = `立即兑换 · ${cost.toLocaleString()} 积分`;
+      cta.textContent = '去兑换';
     } else {
       cta.classList.add('disabled');
       cta.textContent = `积分不足 · 还差 ${(cost - USER.points).toLocaleString()} 积分`;
@@ -327,11 +328,10 @@
     if (canIncrease()) { qty++; render(); }
   }
 
-  function redeem() {
+  function goConfirm() {
     const cost = costFor(qty);
-    const p = EXAMPLES[type];
     if (cost > USER.points) { toast('积分不足'); return; }
-    toast(`已兑换「${p.name}」· ${cost.toLocaleString()} 积分`);
+    location.href = 'mall-confirm.html';
   }
 
   function toast(msg) {

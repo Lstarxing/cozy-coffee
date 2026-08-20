@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>确认兑换 · Cozy Coffee</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
+  body {
+    font-family:'Inter',-apple-system,sans-serif;
+    background:#F7F5F3; color:#2B1E16;
+    max-width:390px; margin:0 auto; min-height:100vh;
+  }
+  :root {
+    --primary:#753A22; --primary-deep:#5E2E1B;
+    --ink:#2B1E16; --muted:#756A63; --placeholder:#9E948E;
+    --border:#E3DED8; --surface:#F7F5F3; --card:#FFFFFF; --cask:#2C1E18;
+    --serif:'Noto Serif SC','Source Han Serif SC','Songti SC',serif;
+  }
+
+  /* ── 顶部导航 ── */
+  .top-nav {
+    position:relative; display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; background:#fff;
+    border-bottom:1px solid var(--border);
+  }
+  .nav-back { font-size:26px; line-height:1; color:var(--ink); cursor:pointer; padding:6px 4px; width:32px; text-decoration:none; }
+  .nav-title { position:absolute; left:50%; transform:translateX(-50%); font-size:16px; font-weight:600; color:var(--ink); white-space:nowrap; }
+  .nav-right { width:32px; }
+
+  .page { padding:12px 16px 132px; }
+
+  /* ── 原型工具：实物/虚拟示例切换 ── */
+  .demo-switch { display:flex; align-items:center; gap:8px; margin:2px 2px 12px; }
+  .demo-label { font-size:10px; letter-spacing:.06em; color:var(--placeholder); }
+  .demo-pills { display:flex; gap:6px; }
+  .demo-pill {
+    padding:3px 10px; border-radius:999px;
+    border:1px solid var(--border); background:var(--card);
+    font-size:11px; font-weight:600; color:var(--muted); cursor:pointer;
+  }
+  .demo-pill.on { background:#F1E4DA; border-color:var(--primary); color:var(--primary); }
+
+  /* ── 白卡 ── */
+  .card { margin-top:12px; padding:16px; border-radius:14px; background:var(--card); }
+  .section-heading { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .section-title { font-family:var(--serif); font-size:15px; font-weight:600; color:var(--ink); }
+  .section-note { font-size:11px; color:var(--muted); }
+
+  /* ── 顶部自提/外送筛选（对齐订单页） ── */
+  .category-switch {
+    display:flex; height:48px;
+    background:var(--card);
+    border-bottom:1px solid var(--border);
+  }
+  .category-item {
+    flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+    font-size:14px; font-weight:600; color:var(--muted);
+    cursor:pointer; position:relative;
+  }
+  .category-item.active { color:var(--primary); font-weight:700; }
+  .category-item.active::after {
+    content:''; position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+    width:32px; height:2px; background:var(--primary);
+  }
+
+  /* ── 门店 / 配送地址卡（对齐咖啡确认页） ── */
+  .store-card { padding:16px; border-radius:14px; background:var(--card); cursor:pointer; }
+  .store-card:active { opacity:.85; }
+  .store-main { display:flex; align-items:flex-start; gap:10px; }
+  .store-copy { flex:1; min-width:0; }
+  .store-title-row { display:flex; align-items:center; gap:8px; }
+  .store-name {
+    font-family:var(--serif); font-size:17px; font-weight:600; color:var(--ink);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .pickup-tag {
+    flex:none; padding:2px 8px; border-radius:999px;
+    border:1px solid var(--ink); color:var(--ink);
+    font-size:10px; font-weight:650; letter-spacing:.03em;
+  }
+  .store-address {
+    flex:1; min-width:0; font-size:13px; line-height:1.5; color:var(--ink);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .store-address.placeholder { color:var(--placeholder); }
+  .store-arrow { flex:none; color:var(--muted); font-size:22px; font-weight:300; line-height:1; margin-top:2px; }
+  .contact-row { display:flex; align-items:center; gap:10px; margin-top:8px; }
+  .contact-name { color:var(--ink); font-size:13px; font-weight:650; }
+  .delivery-eta { display:block; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); color:var(--ink); font-size:12px; }
+  .pickup-row {
+    margin-top:12px; padding-top:12px; border-top:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .pickup-label { color:var(--ink); font-size:12px; }
+  .pickup-value { color:var(--ink); font-size:12px; font-weight:650; }
+
+  /* ── 商品明细 ── */
+  .redeem-line { display:flex; align-items:center; gap:12px; padding:10px 0; }
+  .line-thumb {
+    flex:none; width:60px; height:60px; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#E8DDD2,#D8C8B4);
+  }
+  .line-thumb svg { width:32px; height:32px; color:rgba(43,30,22,.5); }
+  .line-content { flex:1; min-width:0; }
+  .line-name { display:block; font-size:14px; font-weight:650; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .line-spec { display:block; margin-top:4px; font-size:11px; color:var(--muted); }
+  .line-points { flex:none; font-size:14px; font-weight:700; color:var(--primary); }
+
+  .quantity-row { display:flex; align-items:center; justify-content:space-between; padding-top:12px; border-top:1px solid var(--border); }
+  .quantity-label { font-size:12px; color:var(--muted); }
+  .stepper { display:flex; align-items:center; overflow:hidden; border:1px solid var(--border); border-radius:999px; }
+  .stepper-btn { width:40px; padding:6px 0; font-size:18px; color:var(--ink); text-align:center; cursor:pointer; }
+  .stepper-btn.disabled { color:var(--placeholder); cursor:not-allowed; }
+  .stepper-value { min-width:32px; font-size:14px; font-weight:600; color:var(--ink); text-align:center; }
+
+  .redeem-tip { margin-top:12px; padding:12px 14px; border-radius:8px; background:var(--surface); font-size:11px; line-height:1.6; color:var(--muted); }
+
+  /* ── 积分汇总 ── */
+  .summary-row { min-height:28px; display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:12px; color:var(--muted); }
+  .summary-row .amount { color:var(--ink); }
+  .summary-strong { color:var(--primary); font-size:15px; font-weight:750; }
+
+  /* ── 底部确认条 ── */
+  .submit-shell {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:390px; min-height:56px;
+    padding:7px 14px; display:flex; align-items:center; gap:12px;
+    border-top:1px solid var(--border); background:#fff; z-index:80;
+  }
+  .submit-price { flex:1; min-width:0; }
+  .submit-cost { font-size:19px; font-weight:750; color:var(--primary); }
+  .submit-hint { display:block; margin-top:1px; font-size:10px; color:var(--muted); }
+  .submit-button {
+    min-width:135px; height:44px; display:flex; align-items:center; justify-content:center;
+    border-radius:999px; background:var(--ink); color:#fff;
+    font-size:14px; font-weight:600; cursor:pointer;
+  }
+  .submit-button:active { opacity:.85; }
+  .submit-button.disabled { background:var(--border); color:var(--muted); cursor:not-allowed; }
+
+  /* ── 地址选择弹层 ── */
+  .sheet-mask {
+    position:fixed; inset:0; z-index:90;
+    background:rgba(43,30,22,.4);
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .sheet-mask.show { display:flex; }
+  .choice-sheet {
+    width:100%; max-height:70vh; background:var(--card);
+    border-radius:16px 16px 0 0; padding:20px 20px 16px;
+    display:flex; flex-direction:column;
+  }
+  .sheet-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .sheet-title { font-size:16px; font-weight:650; color:var(--ink); }
+  .sheet-close { font-size:22px; color:var(--muted); cursor:pointer; padding:4px 6px; }
+  .choice-list { flex:1; overflow-y:auto; max-height:46vh; }
+  .choice-row { display:flex; align-items:center; gap:10px; padding:13px 10px; border-bottom:1px solid var(--border); cursor:pointer; }
+  .choice-row.on { background:var(--surface); }
+  .choice-main { flex:1; min-width:0; }
+  .choice-addr-line { display:flex; align-items:center; gap:5px; }
+  .choice-label { flex:none; padding:0 5px; border:1px solid var(--primary); border-radius:2px; color:var(--primary); font-size:9px; line-height:1.6; }
+  .choice-addr { font-size:13px; font-weight:600; color:var(--ink); }
+  .choice-sub { display:block; margin-top:3px; font-size:10px; line-height:1.5; color:var(--muted); }
+  .choice-check { flex:none; color:var(--primary); font-weight:700; font-size:14px; }
+  .choice-add {
+    flex:none; height:44px; margin-top:12px; border-radius:6px;
+    border:1px solid var(--border); background:var(--card);
+    display:flex; align-items:center; justify-content:center; gap:5px;
+    font-size:13px; font-weight:600; color:var(--primary); cursor:pointer;
+  }
+  .choice-add:active { background:var(--surface); }
+
+  .toast {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    padding:10px 22px; border-radius:20px;
+    background:rgba(43,30,22,.88); color:#F7F5F3;
+    font-size:12px; pointer-events:none; z-index:99;
+    opacity:0; transition:opacity .3s ease; max-width:82%;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+  <div class="top-nav">
+    <a class="nav-back" href="mall-detail.html">‹</a>
+    <span class="nav-title">确认兑换</span>
+    <span class="nav-right"></span>
+  </div>
+
+  <!-- 原型工具：实物/虚拟示例切换 -->
+  <div class="demo-switch">
+    <span class="demo-label">原型示例</span>
+    <div class="demo-pills">
+      <span class="demo-pill on" data-type="physical" onclick="switchType('physical')">实物周边</span>
+      <span class="demo-pill" data-type="virtual" onclick="switchType('virtual')">虚拟权益</span>
+    </div>
+  </div>
+
+  <!-- 顶部筛选（到店自提/快递配送，对齐订单页） -->
+  <div class="category-switch" id="fulfillSwitch" style="display:none">
+    <div class="category-item active" id="catPickup" onclick="switchFulfill('pickup')">到店自提</div>
+    <div class="category-item" id="catDelivery" onclick="switchFulfill('delivery')">快递配送</div>
+  </div>
+
+  <div class="page">
+    <!-- 门店 / 配送地址卡（对齐咖啡确认页） -->
+    <div class="store-card" id="cardStore">
+      <div class="store-main">
+        <div class="store-copy">
+          <div class="store-title-row">
+            <span class="store-name">CozyCoffee 中心店</span>
+            <span class="pickup-tag">自提</span>
+          </div>
+          <span class="store-address">固定自提门店 · 具体地址以门店公告为准</span>
+        </div>
+      </div>
+      <div class="pickup-row">
+        <span class="pickup-label">取餐时间</span>
+        <span class="pickup-value">尽快取餐（约 15 分钟）</span>
+      </div>
+    </div>
+    <div class="store-card" id="cardAddr" style="display:none" onclick="openAddrSheet()">
+      <div class="store-main">
+        <div class="store-copy">
+          <div class="store-title-row">
+            <span class="pickup-tag">外送</span>
+            <span class="store-address" id="rowAddr"></span>
+          </div>
+          <div class="contact-row">
+            <span class="contact-name" id="rowAddrContact"></span>
+          </div>
+        </div>
+        <span class="store-arrow">›</span>
+      </div>
+      <span class="delivery-eta">兑换后 14 天内发货</span>
+    </div>
+
+    <!-- 商品明细 -->
+    <div class="card">
+      <div class="section-heading">
+        <span class="section-title">商品明细</span>
+      </div>
+      <div class="redeem-line">
+        <div class="line-thumb" id="lineThumb"></div>
+        <div class="line-content">
+          <span class="line-name" id="lineName"></span>
+          <span class="line-spec" id="lineSpec"></span>
+        </div>
+        <span class="line-points" id="linePoints"></span>
+      </div>
+      <div class="quantity-row">
+        <span class="quantity-label">兑换数量</span>
+        <div class="stepper">
+          <span class="stepper-btn" id="stepperMinus" onclick="decrease()">−</span>
+          <span class="stepper-value" id="stepperValue">1</span>
+          <span class="stepper-btn" id="stepperPlus" onclick="increase()">＋</span>
+        </div>
+      </div>
+      <div class="redeem-tip" id="redeemTip" style="display:none">兑换后自动发放至券包，可在「我的 · 卡券」查看</div>
+    </div>
+
+    <!-- 积分汇总 -->
+    <div class="card">
+      <div class="summary-row"><span>消耗积分</span><span class="amount" id="sumCost"></span></div>
+      <div class="summary-row"><span>会员折扣</span><span class="amount" id="sumDiscount"></span></div>
+      <div class="summary-row"><span>兑换后剩余</span><span class="amount" id="sumRemain"></span></div>
+    </div>
+  </div>
+
+  <!-- 底部确认条 -->
+  <div class="submit-shell">
+    <div class="submit-price">
+      <span class="submit-cost" id="submitCost"></span>
+      <span class="submit-hint" id="submitHint"></span>
+    </div>
+    <div class="submit-button" id="submitBtn" onclick="confirmRedeem()">确认兑换</div>
+  </div>
+
+  <!-- 地址选择弹层 -->
+  <div class="sheet-mask" id="addrMask">
+    <div class="choice-sheet">
+      <div class="sheet-head">
+        <span class="sheet-title">选择收货地址</span>
+        <span class="sheet-close" onclick="closeSheet('addrMask')">×</span>
+      </div>
+      <div class="choice-list" id="addrList"></div>
+      <div class="choice-add" onclick="toast('去新增收货地址')">＋ 新增收货地址</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  // 当前用户：白银会员 · 1200 积分 · 兑换享 98 折
+  const USER = { levelName: '白银会员', points: 1200, discount: 0.98 };
+
+  const ICONS = {
+    mug: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 22h32v22a8 8 0 0 1-8 8H22a8 8 0 0 1-8-8z"/><path d="M46 28h6a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4h-6"/><path d="M20 14c0 2 2 2 2 4s-2 2-2 4M28 14c0 2 2 2 2 4s-2 2-2 4M36 14c0 2 2 2 2 4s-2 2-2 4"/></svg>',
+    coupon: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 20h44v9a6 6 0 0 0 0 8v9H10a3 3 0 0 1-3-3V23a3 3 0 0 1 3-3z"/><path d="M54 29v8"/></svg>'
+  };
+
+  const EXAMPLES = {
+    physical: {
+      name: '拿铁金定制马克杯', icon: ICONS.mug,
+      gradient: 'linear-gradient(135deg,#F0E8DA,#B8A988)',
+      typeValue: '实物周边 · 礼品', pointsPrice: 1200,
+      stepper: false
+    },
+    virtual: {
+      name: '任选饮品通兑券', icon: ICONS.coupon,
+      gradient: 'linear-gradient(135deg,#C69C6D,#8B6E45)',
+      typeValue: '优惠券 · 虚拟权益', pointsPrice: 800,
+      stepper: true
+    }
+  };
+
+  const ADDRESSES = [
+    { id: 1, label: '家', addr: '浙江省 杭州市 西湖区 文三路 128 号 创新大厦 3F', contact: '张宁（先生）', phone: '13811110421', default: true },
+    { id: 2, label: '公司', addr: '浙江省 杭州市 滨江区 江陵路 88 号', contact: '张宁（先生）', phone: '13811110421' }
+  ];
+
+  let type = 'physical';
+  let qty = 1;
+  let fulfill = 'pickup';
+  let selectedAddrId = null;
+  const limit = 2;
+
+  function costFor(q) {
+    const p = EXAMPLES[type];
+    return Math.ceil(p.pointsPrice * q * USER.discount);
+  }
+
+  function render() {
+    const p = EXAMPLES[type];
+    const cost = costFor(qty);
+
+    document.getElementById('lineThumb').style.background = p.gradient;
+    document.getElementById('lineThumb').innerHTML = p.icon;
+    document.getElementById('lineName').textContent = p.name;
+    document.getElementById('lineSpec').textContent = p.typeValue;
+    document.getElementById('linePoints').textContent = cost.toLocaleString() + ' 积分';
+
+    // 实物/虚拟：顶部筛选 + 数量 stepper + 虚拟提示
+    document.getElementById('fulfillSwitch').style.display = type === 'physical' ? 'flex' : 'none';
+    document.getElementById('stepperMinus').classList.toggle('disabled', qty <= 1);
+    document.getElementById('stepperPlus').classList.toggle('disabled', !canIncrease());
+    document.getElementById('stepperValue').textContent = qty;
+    document.getElementById('redeemTip').style.display = type === 'physical' ? 'none' : 'block';
+
+    document.getElementById('sumCost').textContent = cost.toLocaleString() + ' 积分';
+    document.getElementById('sumDiscount').textContent = `已享 ${Math.round(USER.discount * 100)} 折`;
+    document.getElementById('sumRemain').textContent = (USER.points - cost).toLocaleString() + ' 积分';
+
+    document.getElementById('submitCost').textContent = cost.toLocaleString() + ' 积分';
+    document.getElementById('submitHint').textContent = '兑换后剩余 ' + (USER.points - cost).toLocaleString() + ' 积分';
+
+    renderFulfill();
+  }
+
+  function renderFulfill() {
+    const pickup = fulfill === 'pickup';
+    document.getElementById('catPickup').classList.toggle('active', pickup);
+    document.getElementById('catDelivery').classList.toggle('active', !pickup);
+    document.getElementById('cardStore').style.display = pickup ? 'block' : 'none';
+    document.getElementById('cardAddr').style.display = pickup ? 'none' : 'block';
+    const addr = ADDRESSES.find(a => a.id === selectedAddrId);
+    const addrEl = document.getElementById('rowAddr');
+    if (addr) {
+      addrEl.textContent = addr.addr.replace(/\s+/g, '');
+      addrEl.classList.remove('placeholder');
+      document.getElementById('rowAddrContact').textContent = addr.contact + ' · ' + addr.phone;
+    } else {
+      addrEl.textContent = '请选择收货地址';
+      addrEl.classList.add('placeholder');
+      document.getElementById('rowAddrContact').textContent = '';
+    }
+    document.getElementById('submitBtn').classList.toggle('disabled', !pickup && !addr);
+  }
+
+  function switchType(t) {
+    type = t; qty = 1; fulfill = 'pickup';
+    document.querySelectorAll('.demo-pill').forEach(p => p.classList.toggle('on', p.dataset.type === t));
+    render();
+  }
+
+  function switchFulfill(v) {
+    fulfill = v;
+    if (v === 'delivery' && !selectedAddrId) {
+      selectedAddrId = (ADDRESSES.find(a => a.default) || ADDRESSES[0]).id;
+      renderAddrList();
+    }
+    renderFulfill();
+  }
+
+  function canIncrease() { return qty < limit && costFor(qty + 1) <= USER.points; }
+  function decrease() { if (qty > 1) { qty--; render(); } }
+  function increase() { if (canIncrease()) { qty++; render(); } }
+
+  function openAddrSheet() { renderAddrList(); showSheet('addrMask'); }
+  function renderAddrList() {
+    document.getElementById('addrList').innerHTML = ADDRESSES.map(a => `
+      <div class="choice-row ${a.id === selectedAddrId ? 'on' : ''}" onclick="pickAddr(${a.id})">
+        <div class="choice-main">
+          <div class="choice-addr-line">
+            ${a.label ? '<span class="choice-label">' + a.label + '</span>' : ''}
+            <span class="choice-addr">${a.addr.replace(/\s+/g, '')}</span>
+          </div>
+          <span class="choice-sub">${a.contact} · ${a.phone}</span>
+        </div>
+        ${a.id === selectedAddrId ? '<span class="choice-check">✓</span>' : ''}
+      </div>`).join('');
+  }
+  function pickAddr(id) { selectedAddrId = id; renderFulfill(); closeSheet('addrMask'); }
+
+  function showSheet(id) { document.getElementById(id).classList.add('show'); }
+  function closeSheet(id) { document.getElementById(id).classList.remove('show'); }
+
+  function confirmRedeem() {
+    const p = EXAMPLES[type];
+    const cost = costFor(qty);
+    const addr = ADDRESSES.find(a => a.id === selectedAddrId);
+    if (type === 'physical' && fulfill === 'delivery' && !addr) { toast('请选择收货地址'); return; }
+    const delivery = type === 'physical' ? (fulfill === 'delivery' ? ' · 快递配送' : ' · 到店自提') : '';
+    toast(`已兑换「${p.name}」· ${cost.toLocaleString()} 积分${delivery}`);
+  }
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1400);
+  }
+
+  render();
+</script>
+</body>
+</html>
