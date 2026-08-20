@@ -467,6 +467,7 @@
         setTimeout(() => { location.href = 'address.html'; }, 1000);
         return;
       }
+      localStorage.setItem('cozy_dining_method', 'delivery');
       setTimeout(() => { location.href = 'menu.html'; }, 400);
       return;
     }

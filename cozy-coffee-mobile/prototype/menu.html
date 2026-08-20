@@ -1000,6 +1000,14 @@
     clearTimeout(t._timer);
     t._timer = setTimeout(() => { t.style.opacity = '0'; }, 1200);
   }
+
+  // 首页外送 CTA 传入的选择优先（与 menu.vue onShow 一致）
+  (function initFulfillment() {
+    const mode = localStorage.getItem('cozy_dining_method');
+    if (!mode) return;
+    localStorage.removeItem('cozy_dining_method');
+    if (mode === 'delivery') setFulfillment('delivery');
+  })();
 </script>
 </body>
 </html>
