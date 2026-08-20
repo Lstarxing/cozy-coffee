@@ -38,6 +38,12 @@
   }
   .back-btn:active { opacity:.55; }
 
+  .select-hint {
+    margin-bottom:12px; padding:9px 12px;
+    border-radius:8px; background:var(--brown-soft, #F3E9DF);
+    font-size:12px; font-weight:600; color:var(--primary, #753A22);
+  }
+
   .page { padding:20px 20px 110px; }
 
   /* ── 地址列表 ── */
@@ -54,6 +60,8 @@
   .addr-main {
     display:flex; align-items:flex-start; gap:12px;
   }
+  .addr-main.selectable { cursor:pointer; }
+  .addr-main.selectable:active { opacity:.7; }
   .addr-pin {
     flex:none; width:26px; height:26px;
     display:flex; align-items:center; justify-content:center;
@@ -162,6 +170,8 @@
 
   <a class="back-btn" onclick="goBack('profile.html')">‹</a>
 
+  <div class="select-hint" id="selectHint" style="display:none">选择配送地址</div>
+
   <div class="address-list" id="addressList"></div>
 
   <div class="add-entry" onclick="go('address-edit.html')">
@@ -189,6 +199,10 @@
   function getAddresses() { try { return JSON.parse(localStorage.getItem('cozy_addresses')) || []; } catch (e) { return []; } }
   function persist(list) { localStorage.setItem('cozy_addresses', JSON.stringify(list)); }
 
+  // 从菜单页外送进入时为选择模式：点击地址卡片选中返回
+  const SELECTABLE = document.referrer && document.referrer.indexOf('menu.html') > -1;
+  if (SELECTABLE) document.getElementById('selectHint').style.display = 'block';
+
   function maskName(n) { return n.length > 1 ? n[0] + '*' + n.slice(-1) : n; }
   function maskPhone(p) { return String(p).replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'); }
 
@@ -211,7 +225,7 @@
       const honorific = String(a.gender || '').toUpperCase() === 'FEMALE' ? '女士' : '先生';
       return `
       <div class="address-card ${a.isDefault ? 'default' : ''}">
-        <div class="addr-main">
+        <div class="addr-main ${SELECTABLE ? 'selectable' : ''}" ${SELECTABLE ? `onclick="selectAddress(${a.id})" title="选择此地址"` : ''}>
           <span class="addr-pin">${ICONS.pin}</span>
           <div class="addr-copy">
             <span class="addr-region">${a.region}</span>
@@ -239,6 +253,13 @@
     persist(list);
     render();
     toast('已设为默认');
+  }
+
+  function selectAddress(id) {
+    const addr = getAddresses().find(a => a.id === id);
+    if (!addr) return;
+    localStorage.setItem('cozy_selected_address', JSON.stringify(addr));
+    location.href = 'menu.html';
   }
 
   function removeAddress(id) {

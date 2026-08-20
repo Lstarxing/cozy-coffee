@@ -473,7 +473,7 @@
   <!-- 门店信息 -->
   <div class="store-info">
     <div class="store-row">
-      <div class="store-left" id="storeLeft" onclick="document.getElementById('optDelivery').classList.contains('active') && go('address.html')">
+      <div class="store-left" id="storeLeft" onclick="chooseAddress()">
         <span class="store-fav">☆</span>
         <span class="store-name">CozyCoffee 中心店</span>
       </div>
@@ -812,6 +812,11 @@
   // ── 自提 / 外送切换 ──
   const PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-11a6 6 0 0 1 12 0c0 5.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>';
   const SWAP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M14 4l4 4-4 4"/><path d="M20 16H7M10 12l-4 4 4 4"/></svg>';
+  function chooseAddress() {
+    if (!document.getElementById('optDelivery').classList.contains('active')) return;
+    localStorage.setItem('cozy_dining_method', 'delivery');
+    location.href = 'address.html';
+  }
   function setFulfillment(mode) {
     const pickup = document.getElementById('optPickup');
     const delivery = document.getElementById('optDelivery');
@@ -820,9 +825,13 @@
     if (mode === 'delivery') {
       pickup.classList.remove('active');
       delivery.classList.add('active');
-      // 外送：解析默认地址，无地址跳添加页（与 menu.vue setFulfillment 一致）
-      const addrList = (() => { try { return JSON.parse(localStorage.getItem('cozy_addresses')) || []; } catch (e) { return []; } })();
-      const addr = addrList.find(a => a.isDefault) || addrList[0] || null;
+      // 外送：优先用地址页选中的地址，其次默认/首个，无地址跳添加页（与 menu.vue setFulfillment 一致）
+      let addr = (() => { try { return JSON.parse(localStorage.getItem('cozy_selected_address')); } catch (e) { return null; } })();
+      localStorage.removeItem('cozy_selected_address');
+      if (!addr) {
+        const addrList = (() => { try { return JSON.parse(localStorage.getItem('cozy_addresses')) || []; } catch (e) { return []; } })();
+        addr = addrList.find(a => a.isDefault) || addrList[0] || null;
+      }
       if (!addr) {
         toast('未设置配送地址，请先添加');
         setTimeout(() => { location.href = 'address.html'; }, 600);
