@@ -51,7 +51,7 @@
     background:var(--card); border-bottom:1px solid var(--border);
   }
   .store-row { display:flex; justify-content:space-between; align-items:center; }
-  .store-left { display:flex; align-items:center; gap:8px; }
+  .store-left { display:flex; align-items:center; gap:8px; min-width:0; cursor:pointer; }
   .store-fav { color:var(--ink); }
   .store-name { font-size:15px; font-weight:650; color:var(--ink); }
   .pickup-switch {
@@ -62,26 +62,13 @@
   }
   .pickup-opt.active { background:var(--ink); color:#fff; }
   .store-meta { margin-top:6px; font-size:11px; color:var(--muted); }
-  .delivery-info {
-    margin-top:8px; padding:9px 11px; border-radius:8px;
-    background:var(--surface);
-    display:flex; flex-direction:column; gap:6px;
-    cursor:pointer;
-  }
-  .delivery-info:active { opacity:.7; }
-  .delivery-row {
-    display:flex; align-items:center; gap:7px; min-width:0;
-  }
-  .delivery-row svg { flex:none; width:14px; height:14px; color:var(--muted); }
-  .delivery-row:nth-child(2) svg { color:var(--primary); }
+  .store-left svg { flex:none; width:14px; height:14px; color:var(--muted); }
   .delivery-addr {
     flex:1; min-width:0;
     font-size:12px; color:var(--ink);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .delivery-arrow { flex:none; font-size:13px; line-height:1; color:var(--placeholder); }
-  .delivery-store { flex:none; font-size:11px; font-weight:600; color:var(--muted); }
-  .delivery-dist { font-size:11px; color:var(--placeholder); }
   .store-foot {
     margin-top:8px; display:flex; justify-content:space-between;
     font-size:11px; color:var(--muted);
@@ -482,7 +469,7 @@
   <!-- 门店信息 -->
   <div class="store-info">
     <div class="store-row">
-      <div class="store-left">
+      <div class="store-left" id="storeLeft" onclick="document.getElementById('optDelivery').classList.contains('active') && go('address.html')">
         <span class="store-fav">☆</span>
         <span class="store-name">CozyCoffee 中心店</span>
       </div>
@@ -491,19 +478,7 @@
         <div class="pickup-opt" id="optDelivery" onclick="setFulfillment('delivery')">外送</div>
       </div>
     </div>
-    <div class="store-meta">距离您 1.2km</div>
-    <div class="delivery-info" id="deliveryInfo" style="display:none" onclick="go('address.html')">
-      <div class="delivery-row">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-11a6 6 0 0 1 12 0c0 5.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>
-        <span class="delivery-addr" id="deliveryAddr">--</span>
-        <span class="delivery-arrow">›</span>
-      </div>
-      <div class="delivery-row">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
-        <span class="delivery-store">CozyCoffee 中心店</span>
-        <span class="delivery-dist"> | 1.2km</span>
-      </div>
-    </div>
+    <div class="store-meta" id="storeMeta">距离您 1.2km</div>
     <div class="store-foot">
       <span class="store-status" id="topMsg"><span class="status-icon">☼</span> 精品咖啡每日新鲜烘焙</span>
       <span class="store-more" onclick="openStoreDetail()">详情 ›</span>
@@ -831,10 +806,12 @@
   }
 
   // ── 自提 / 外送切换 ──
+  const PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-11a6 6 0 0 1 12 0c0 5.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>';
   function setFulfillment(mode) {
     const pickup = document.getElementById('optPickup');
     const delivery = document.getElementById('optDelivery');
-    const info = document.getElementById('deliveryInfo');
+    const storeLeft = document.getElementById('storeLeft');
+    const storeMeta = document.getElementById('storeMeta');
     if (mode === 'delivery') {
       pickup.classList.remove('active');
       delivery.classList.add('active');
@@ -846,14 +823,15 @@
         setTimeout(() => { location.href = 'address.html'; }, 600);
         return;
       }
-      document.getElementById('deliveryAddr').textContent = [addr.region, addr.detail].filter(Boolean).join(' ');
-      info.style.display = 'flex';
+      storeLeft.innerHTML = PIN_SVG + '<span class="store-name delivery-addr">' + [addr.region, addr.detail].filter(Boolean).join(' ') + '</span><span class="delivery-arrow">›</span>';
+      storeMeta.textContent = 'CozyCoffee 中心店 | 配送距离 1.2km';
       toast('已切换外送');
       return;
     }
     delivery.classList.remove('active');
     pickup.classList.add('active');
-    info.style.display = 'none';
+    storeLeft.innerHTML = '<span class="store-fav">☆</span><span class="store-name">CozyCoffee 中心店</span>';
+    storeMeta.textContent = '距离您 1.2km';
     toast('已切换自提');
   }
 
