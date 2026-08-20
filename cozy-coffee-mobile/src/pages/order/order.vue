@@ -38,6 +38,19 @@
           </view>
         </view>
 
+        <view v-if="isDeliveryOrder(order)" class="delivery-info">
+          <view class="delivery-row">
+            <CozyIcon name="pin" :size="16" color="#756A63" />
+            <text class="delivery-addr">{{ order.receiverAddress || '—' }}</text>
+            <text class="delivery-arrow">›</text>
+          </view>
+          <view class="delivery-row">
+            <CozyIcon name="send" :size="16" color="#753A22" />
+            <text class="delivery-store">CozyCoffee 中心店</text>
+            <text class="delivery-dist"> | 1.2km</text>
+          </view>
+        </view>
+
         <view class="receipt-items">
           <view v-for="item in order.items" :key="item.id || `${item.productName}-${item.spec}`" class="order-item">
             <view class="item-image"><image v-if="item.productImage" :src="item.productImage" class="item-img" mode="aspectFill" /></view>
@@ -84,6 +97,7 @@ import { useCartStore } from '@/stores/cart'
 import { restoreOrderToCart } from '@/services/order/ReorderService'
 import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
+import CozyIcon from '@/components/CozyIcon.vue'
 
 const categories = [
   { value: 'pickup', label: '自取' },
@@ -380,6 +394,47 @@ function openRestoredCart() {
   color: $cozy-muted;
 }
 .expire-countdown.urgent { color: #9B3932; font-weight: 600; }
+
+.delivery-info {
+  margin: 20rpx 28rpx 4rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 12rpx;
+  background: $cozy-surface;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+.delivery-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  min-width: 0;
+}
+.delivery-addr {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  color: $cozy-ink;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.delivery-arrow {
+  flex: none;
+  font-size: 24rpx;
+  line-height: 1;
+  color: $cozy-placeholder;
+}
+.delivery-store {
+  flex: none;
+  font-size: 22rpx;
+  color: $cozy-muted;
+  font-weight: 600;
+}
+.delivery-dist {
+  font-size: 22rpx;
+  color: $cozy-placeholder;
+}
 
 .receipt-items { padding: 4rpx 28rpx; }
 .order-item {

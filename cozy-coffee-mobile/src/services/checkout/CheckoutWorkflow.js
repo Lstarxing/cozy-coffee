@@ -47,6 +47,7 @@ export class CheckoutWorkflow {
       pickupTime: this.checkoutStore.pickupTime,
       diningMethod: this.checkoutStore.diningMethod,
       deliveryAddressId: this.checkoutStore.deliveryAddressId,
+      deliveryAddress: this.checkoutStore.deliveryAddress || null,
       selectedCouponId: this.checkoutStore.selectedCouponId,
       remark: this.checkoutStore.remark,
       phone: this.checkoutStore.phone,

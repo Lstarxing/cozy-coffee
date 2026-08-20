@@ -39,6 +39,7 @@ export class OrderService {
   }
 
   async create(context, idempotencyKey) {
+    const addr = context.deliveryAddress || {}
     const response = await this.api.createOrder({
       items: toOrderItems(context.items),
       couponCode: resolveCouponCode(context),
@@ -48,7 +49,9 @@ export class OrderService {
       storeId: context.storeId,
       pickupTime: context.pickupTime,
       remark: context.remark || '',
-      receiverPhone: context.phone || '',
+      receiverName: addr.name || '',
+      receiverPhone: context.phone || addr.phone || '',
+      receiverAddress: [addr.region, addr.detail].filter(Boolean).join(' '),
       previewToken: context.preview?.previewToken || context.preview?.previewVersion
     }, {
       header: { 'Idempotency-Key': idempotencyKey }
