@@ -18,22 +18,8 @@
     </view>
 
     <!-- 筛选 -->
-    <view class="filter-tabs">
-      <view
-        class="filter-tab"
-        :class="{ active: filterType === 'all' }"
-        @click="filterType = 'all'"
-      >全部</view>
-      <view
-        class="filter-tab"
-        :class="{ active: filterType === 'earn' }"
-        @click="filterType = 'earn'"
-      >收入</view>
-      <view
-        class="filter-tab"
-        :class="{ active: filterType === 'spend' }"
-        @click="filterType = 'spend'"
-      >支出</view>
+    <view class="filter-wrap">
+      <FilterTabs :options="typeOptions" v-model="filterType" />
     </view>
 
     <!-- 流水 -->
@@ -77,24 +63,21 @@ import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
 import { getPointsTransactions, getMemberInfo } from '@/api/member'
+import FilterTabs from '@/components/common/FilterTabs.vue'
+import { formatPoints, formatTime } from '@/utils/format'
 
 const userStore = useUserStore()
 const memberInfo = computed(() => userStore.memberInfo)
 
 const filterType = ref('all')
+const typeOptions = [
+  { value: 'all', label: '全部' },
+  { value: 'earn', label: '收入' },
+  { value: 'spend', label: '支出' }
+]
 const historyList = ref([])
 const loading = ref(false)
 const errorMessage = ref('')
-
-const formatPoints = (value) => Number(value || 0).toLocaleString()
-
-function formatTime(value) {
-  if (!value) return ''
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return String(value).replace('T', ' ').slice(0, 16)
-  const pad = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
 
 const loadHistory = async () => {
   loading.value = true
@@ -193,34 +176,10 @@ function goToRules() { uni.navigateTo({ url: '/pages/points/rules' }) }
   height: 92rpx;
 }
 
-/* ── 筛选（下划线式） ── */
-.filter-tabs {
-  display: flex;
+/* ── 筛选（下划线式，间距由容器提供） ── */
+.filter-wrap {
   margin-top: 28rpx;
   padding: 0 8rpx;
-  border-bottom: 1rpx solid $cozy-border;
-}
-.filter-tab {
-  flex: 1;
-  padding: 26rpx 0;
-  text-align: center;
-  font-size: 28rpx;
-  color: $cozy-muted;
-  position: relative;
-  transition: color $cozy-duration $cozy-ease-out;
-
-  &.active { color: $cozy-ink; font-weight: 600; }
-  &.active::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: -1rpx;
-    transform: translateX(-50%);
-    width: 44rpx;
-    height: 4rpx;
-    border-radius: 2rpx;
-    background: $cozy-ink;
-  }
 }
 
 /* ── 流水 ── */

@@ -4,18 +4,8 @@
 -->
 <template>
   <view class="redemptions-page">
-    <!-- 顶部白色筛选条（全部/虚拟/自提/快递） -->
-    <view class="order-top">
-      <view class="filter-tabs">
-        <view
-          v-for="f in filters"
-          :key="f.value"
-          class="filter-tab"
-          :class="{ active: activeFilter === f.value }"
-          @click="switchFilter(f.value)"
-        >{{ f.label }}</view>
-      </view>
-    </view>
+    <!-- 顶部筛选条（全部/虚拟/自提/快递） -->
+    <FilterTabs :options="filters" v-model="activeFilter" />
 
     <!-- 列表 -->
     <LoadingState v-if="loading && orders.length === 0" text="正在加载兑换订单…" />
@@ -90,7 +80,9 @@ import { cancelRedemption, confirmRedemptionReceipt, getMyRedemptions } from '@/
 import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
 import CozyIcon from '@/components/CozyIcon.vue'
+import FilterTabs from '@/components/common/FilterTabs.vue'
 import { FIXED_STORE } from '@/config/store'
+import { formatPoints, formatTime } from '@/utils/format'
 
 const filters = [
   { value: 'all', label: '全部' },
@@ -146,21 +138,8 @@ async function loadOrders() {
   }
 }
 
-function switchFilter(value) {
-  if (activeFilter.value === value) return
-  activeFilter.value = value
-}
-
 function getStatusText(status) { return STATUS_TEXT[status] || status || '未知状态' }
 function getFulfillmentText(order) { return FULFILL_TEXT[order.fulfillmentType] || '兑换订单' }
-function formatPoints(value) { return Number(value || 0).toLocaleString() }
-function formatTime(value) {
-  if (!value) return ''
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return String(value).replace('T', ' ').slice(0, 16)
-  const pad = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
 
 function canCancel(order) { return ['pending', 'processing'].includes(order.status) }
 function canConfirm(order) { return order.status === 'shipped' && order.fulfillmentType === 'DELIVERY' }
@@ -212,43 +191,6 @@ onShow(loadOrders)
   min-height: 100vh;
   background: $cozy-surface;
   padding: 0 0 240rpx;
-}
-
-/* ── 顶部白色区（胶囊下方留白 + 筛选，对齐订单页） ── */
-.order-top { background: #fff; }
-
-/* ── 自提/外送筛选 ── */
-.filter-tabs {
-  display: flex;
-  height: 96rpx;
-  background: $bg-white;
-  border-bottom: 1rpx solid $cozy-border;
-}
-.filter-tab {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28rpx;
-  color: $cozy-muted;
-  position: relative;
-  transition: color $cozy-duration $cozy-ease-out;
-
-  &.active {
-    color: $cozy-ink;
-    font-weight: 600;
-  }
-  &.active::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-    width: 64rpx;
-    height: 4rpx;
-    border-radius: 2rpx;
-    background: $cozy-primary;
-  }
 }
 
 /* ── 订单列表 ── */

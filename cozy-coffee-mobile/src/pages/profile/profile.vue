@@ -166,6 +166,7 @@ import { MEMBER_LEVELS, MEMBER_LEVEL_THRESHOLDS, getMemberLevelName } from '@/co
 import { useMemberTheme } from '@/composables/useMemberTheme'
 import LevelBadge from '@/components/member/LevelBadge.vue'
 import CozyIcon from '@/components/CozyIcon.vue'
+import { formatPoints } from '@/utils/format'
 import DevLevelSwitcher from '@/components/dev/DevLevelSwitcher.vue'
 
 const userStore = useUserStore()
@@ -203,8 +204,6 @@ const growthLabel = computed(() => nextLevel.value
 const growthExp = computed(() => nextLevel.value
   ? `${Math.max(0, MEMBER_LEVEL_THRESHOLDS[nextLevel.value] - currentExp.value).toLocaleString()} EXP`
   : '尊享全部权益')
-
-function formatPoints(value) { return Number(value || 0).toLocaleString() }
 
 onShow(async () => {
   if (!isLoggedIn.value) {

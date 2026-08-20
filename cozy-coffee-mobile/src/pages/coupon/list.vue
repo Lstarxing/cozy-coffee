@@ -5,18 +5,7 @@
 <template>
   <view class="coupon-page">
     <!-- 筛选 tabs（选择模式隐藏，仅展示可使用） -->
-    <view v-if="!selectMode" class="filter-tabs">
-      <view
-        class="filter-tab"
-        :class="{ active: currentTab === 'available' }"
-        @click="switchTab('available')"
-      >可使用</view>
-      <view
-        class="filter-tab"
-        :class="{ active: currentTab === 'unavailable' }"
-        @click="switchTab('unavailable')"
-      >不可使用</view>
-    </view>
+    <FilterTabs v-if="!selectMode" :options="couponTabs" v-model="currentTab" sticky />
 
     <!-- 选择模式：不使用优惠券（灰色提示） -->
     <view v-if="selectMode" class="none-hint" @click="pickCoupon(null)">
@@ -51,8 +40,13 @@ import { getCouponList } from '@/api/coupon'
 import { validateCouponForCart } from '@/utils/couponRules'
 import CozyIcon from '@/components/CozyIcon.vue'
 import CouponCard from '@/components/coupon/CouponCard.vue'
+import FilterTabs from '@/components/common/FilterTabs.vue'
 
 const currentTab = ref('available')
+const couponTabs = [
+  { value: 'available', label: '可使用' },
+  { value: 'unavailable', label: '不可使用' }
+]
 const coupons = ref([])
 const selectMode = ref(false)
 const cartContext = ref(null)
@@ -168,11 +162,6 @@ const displayCoupons = computed(() => filteredCoupons.value.map(c => {
 }))
 const tabText = computed(() => TAB_TEXT[currentTab.value])
 
-function switchTab(value) {
-  if (currentTab.value === value) return
-  currentTab.value = value
-}
-
 function onCardTap(item) {
   if (selectMode.value && item.status === 'available') pickCoupon(item)
 }
@@ -198,40 +187,6 @@ function useCoupon(coupon) {
   min-height: 100vh;
   padding-bottom: 220rpx;
   background: $cozy-surface;
-}
-
-/* ── 筛选 tabs（顶部固定条 · 下划线式，对齐订单页） ── */
-.filter-tabs {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  height: 96rpx;
-  background: $bg-white;
-  border-bottom: 1rpx solid $cozy-border;
-}
-.filter-tab {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28rpx;
-  color: $cozy-muted;
-  position: relative;
-  transition: color $cozy-duration $cozy-ease-out;
-
-  &.active { color: $cozy-ink; font-weight: 600; }
-  &.active::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-    width: 44rpx;
-    height: 4rpx;
-    border-radius: 2rpx;
-    background: $cozy-ink;
-  }
 }
 
 /* ── 券列表 ── */

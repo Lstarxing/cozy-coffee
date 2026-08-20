@@ -175,6 +175,7 @@ import { useSessionStore } from '@/stores/session'
 import { refreshMemberProfile } from '@/services/session/MemberProfileService'
 import { FIXED_STORE } from '@/config/store'
 import { formatCoffeeSpec } from '@/utils/spec'
+import { formatFullTime, formatPoints, money } from '@/utils/format'
 import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
 import CozyIcon from '@/components/CozyIcon.vue'
@@ -381,15 +382,6 @@ function itemKey(item) {
 function itemSpec(item) {
   if (isRedeem.value) return item.spec || (item.quantity ? `数量 ×${item.quantity}` : '')
   return formatCoffeeSpec(item) || '默认规格'
-}
-function money(value) { return Number(value || 0).toFixed(2) }
-function formatPoints(value) { return Number(value || 0).toLocaleString() }
-function formatFullTime(value) {
-  if (!value) return '--'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return String(value).replace('T', ' ').slice(0, 19)
-  const pad = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
 function copyOrderNo() {

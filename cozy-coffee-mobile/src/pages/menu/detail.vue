@@ -51,6 +51,7 @@ import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getProductDetail } from '@/api/product'
 import { useCartStore } from '@/stores/cart'
+import { money } from '@/utils/format'
 import ProductSpecSheet from '@/components/order/ProductSpecSheet.vue'
 import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
@@ -114,8 +115,6 @@ function goToMenu() {
   uni.setStorageSync('cozy_open_cart_on_menu', '1')
   uni.switchTab({ url: '/pages/menu/menu' })
 }
-
-function money(value) { return Number(value || 0).toFixed(2) }
 </script>
 
 <style lang="scss" scoped>

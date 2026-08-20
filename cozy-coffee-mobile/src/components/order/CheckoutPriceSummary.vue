@@ -27,12 +27,12 @@
 <script setup>
 import { computed } from 'vue'
 import CozyIcon from '@/components/CozyIcon.vue'
+import { money } from '@/utils/format'
 
 const props = defineProps({
   preview: { type: Object, default: null }
 })
 
-const money = value => Number(value || 0).toFixed(2)
 // 积分/成长值按商品实付金额计算（实付 - 配送费），配送费不计入
 const earnedPoints = computed(() => Math.floor(Math.max(0, Number(props.preview?.payable || 0) - Number(props.preview?.deliveryFee || 0))))
 const earnedExp = computed(() => earnedPoints.value)

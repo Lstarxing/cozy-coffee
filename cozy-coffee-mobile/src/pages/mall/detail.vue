@@ -29,11 +29,7 @@
       <view class="detail-cta-wrap">
         <view v-if="!isPhysical || !needStorePickup" class="quantity-row">
           <text class="quantity-label">兑换数量</text>
-          <view class="stepper">
-            <view class="stepper-btn" :class="{ disabled: redeemQuantity <= 1 }" @click="decreaseQuantity">−</view>
-            <text class="stepper-value">{{ redeemQuantity }}</text>
-            <view class="stepper-btn" :class="{ disabled: !canIncreaseQuantity }" @click="increaseQuantity">＋</view>
-          </view>
+          <Stepper v-model="redeemQuantity" :max="selectedQuantityLimit" :can-increase="canIncreaseQuantity" />
         </view>
         <view
           class="detail-cta"
@@ -51,6 +47,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
 import { getMemberInfo } from '@/api/member'
 import { getMemberLevelName } from '@/constants/member'
+import Stepper from '@/components/common/Stepper.vue'
 import {
   POINTS_REDEEM_DISCOUNTS,
   getDiscountedPointsCost,
@@ -135,13 +132,6 @@ const detailSections = computed(() => {
   })
   return sections
 })
-
-function decreaseQuantity() {
-  if (redeemQuantity.value > 1) redeemQuantity.value -= 1
-}
-function increaseQuantity() {
-  if (canIncreaseQuantity.value) redeemQuantity.value += 1
-}
 
 function goToConfirm() {
   if (!canRedeemSelected.value) {
@@ -236,29 +226,6 @@ function goToConfirm() {
   margin-bottom: 28rpx;
 }
 .quantity-label { color: $cozy-muted; font-size: 28rpx; }
-.stepper {
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  border: 1rpx solid $cozy-border;
-  border-radius: 999rpx;
-}
-.stepper-btn {
-  width: 80rpx;
-  padding: 12rpx 0;
-  color: $cozy-ink;
-  font-size: 40rpx;
-  text-align: center;
-
-  &.disabled { color: $cozy-placeholder; }
-}
-.stepper-value {
-  min-width: 64rpx;
-  color: $cozy-ink;
-  font-size: 30rpx;
-  font-weight: 600;
-  text-align: center;
-}
 .detail-cta {
   height: 96rpx;
   display: flex;

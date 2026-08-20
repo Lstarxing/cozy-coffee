@@ -27,7 +27,7 @@
         <view class="receipt-head">
           <view>
             <text class="store-name">CozyCoffee 中心店</text>
-            <text class="order-meta">{{ formatTime(order.createdAt) }} · <text v-if="order.pickupCode && !isDeliveryOrder(order)" class="meta-em">取餐码 {{ order.pickupCode }}</text></text>
+            <text class="order-meta">{{ formatFullTime(order.createdAt) }} · <text v-if="order.pickupCode && !isDeliveryOrder(order)" class="meta-em">取餐码 {{ order.pickupCode }}</text></text>
           </view>
           <view class="status-block">
             <text class="order-status" :class="statusClass(order.status)">{{ getStatusText(order.status) }}</text>
@@ -89,6 +89,7 @@ import { computed, ref } from 'vue'
 import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { getOrderList, acceptOrder as acceptOrderApi, cancelOrder as cancelOrderApi } from '@/api/order'
 import { formatCoffeeSpec } from '@/utils/spec'
+import { formatFullTime, money } from '@/utils/format'
 import { useCartStore } from '@/stores/cart'
 import { restoreOrderToCart } from '@/services/order/ReorderService'
 import LoadingState from '@/components/states/LoadingState.vue'
@@ -240,15 +241,6 @@ function completedNote(order) {
   return isDeliveryOrder(order) ? '已送达' : '可取'
 }
 
-function formatTime(value) {
-  if (!value) return '--'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return String(value).replace('T', ' ').slice(0, 19)
-  const pad = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-}
-
-function money(value) { return Number(value || 0).toFixed(2) }
 function goToMenu() {
   uni.switchTab({
     url: '/pages/menu/menu',
