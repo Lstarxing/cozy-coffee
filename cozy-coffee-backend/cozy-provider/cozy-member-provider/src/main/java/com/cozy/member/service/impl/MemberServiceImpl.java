@@ -580,6 +580,63 @@ public class MemberServiceImpl implements MemberService {
         return true;
     }
 
+    @Override
+    @Transactional
+    public void refundPointsByConsumption(Long userId, int points, String consumeType, Long consumeId, String description) {
+        if (userId == null || points <= 0) {
+            return;
+        }
+        if (consumeId == null) {
+            throw new BusinessException("缺少扣减关联ID，无法按批次退款");
+        }
+
+        // 幂等预查：refund 流水已存在则跳过（points_transactions uk_reward 唯一索引并发兜底）
+        LambdaQueryWrapper<PointsTransaction> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PointsTransaction::getUserId, userId)
+                .eq(PointsTransaction::getSourceType, "refund")
+                .eq(PointsTransaction::getSourceId, consumeId)
+                .last("LIMIT 1");
+        if (transactionMapper.selectOne(wrapper) != null) {
+            log.info("积分退款已处理过，跳过: userId={}, consumeId={}", userId, consumeId);
+            return;
+        }
+
+        MemberInfo member = memberInfoMapper.selectByUserIdForUpdate(userId);
+        if (member == null) {
+            throw new BusinessException("会员信息不存在");
+        }
+
+        // 1. 单条 SQL 批量回补原批次（保持原到期时间，跳过已过期作废的批次）
+        int restoredRows = pointsLotMapper.batchRestoreByConsumption(userId, consumeType, consumeId);
+        log.info("回补原批次: userId={}, consumeId={}, restoredRows={}", userId, consumeId, restoredRows);
+
+        // 2. 兜底：已过期作废的批次无法回补，差额新建 365 天批次（低概率防御）
+        int expiredAmount = consumptionMapper.selectExpiredRefundAmount(userId, consumeType, consumeId);
+        if (expiredAmount > 0) {
+            PointsLot lot = new PointsLot();
+            lot.setUserId(userId);
+            lot.setInitialAmount(expiredAmount);
+            lot.setRemaining(expiredAmount);
+            lot.setSourceType("refund");
+            lot.setSourceId(consumeId);
+            lot.setExpiresAt(LocalDateTime.now().plusDays(365));
+            lot.setCreatedAt(LocalDateTime.now());
+            pointsLotMapper.insert(lot);
+            log.warn("退款含已过期作废批次，兜底新建批次: userId={}, consumeId={}, amount={}",
+                    userId, consumeId, expiredAmount);
+        }
+
+        // 3. 更新主表余额
+        member.setCurrentPoints(member.getCurrentPoints() + points);
+        memberInfoMapper.updateById(member);
+
+        // 4. 记录积分流水（sourceId=consumeId，uk_reward 唯一约束防重）
+        recordTransaction(userId, points, member.getCurrentPoints(), "refund", consumeId, description);
+        evictMemberProfileCache(userId);
+
+        log.info("积分退款成功: userId={}, points={}, consumeId={}", userId, points, consumeId);
+    }
+
     private void consumePointsFIFOInternal(MemberInfo member, int points, String consumeType, Long consumeId,
             String description) {
         Long userId = member.getUserId();

@@ -71,6 +71,20 @@ public interface MemberService {
     boolean consumePointsFIFO(Long userId, int points, String consumeType, Long consumeId);
 
     /**
+     * 按消费明细退款：回补原积分批次（保持原到期时间，维持 FIFO 语义）
+     * <p>
+     * 先按 points_lot_consumptions 明细批量回补原批次；个别批次若已过期作废
+     * 则差额新建 365 天批次兜底。幂等：refund 流水 (userId, sourceType, sourceId) 唯一。
+     *
+     * @param userId      用户ID
+     * @param points      应退积分总额
+     * @param consumeType 扣减类型（redeem）
+     * @param consumeId   扣减关联ID（如兑换订单ID）
+     * @param description 描述
+     */
+    void refundPointsByConsumption(Long userId, int points, String consumeType, Long consumeId, String description);
+
+    /**
      * 管理员人工调整积分（支持正负，强一致性：同步更新批次 lot）
      * 
      * @param userId 用户ID

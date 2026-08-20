@@ -594,8 +594,8 @@ public class PointsMallServiceImpl implements PointsMallService {
         // 恢复库存（加分布式锁，防止并发取消导致库存错乱）
         restoreProductStock(order.getProductId(), order.getQuantity());
 
-        // 跨服务调用：返还积分
-        memberService.addPoints(userId, order.getPointsCost(), "refund",
+        // 跨服务调用：按消费明细回补原批次退还积分（保持原到期时间，FIFO 语义；幂等：refund 流水唯一）
+        memberService.refundPointsByConsumption(userId, order.getPointsCost(), "redeem", order.getId(),
                 "订单取消退还: " + order.getProductName() + " x" + order.getQuantity());
 
         log.info("订单取消成功: orderNo={}, refund={}", order.getOrderNo(), order.getPointsCost());
