@@ -186,10 +186,12 @@
             </view>
             <view class="address-copy">
               <view class="address-name-line">
-                <text v-if="addr.label" class="address-label">{{ labelText(addr.label) }}</text>
                 <text class="address-name">{{ addressNameText(addr) }}</text>
               </view>
-              <text class="address-detail">{{ addressText(addr) }}</text>
+              <view class="address-detail-line">
+                <text v-if="addr.label" class="address-label">{{ labelText(addr.label) }}</text>
+                <text class="address-detail">{{ addressText(addr) }}</text>
+              </view>
             </view>
             <view class="address-edit" @click.stop="editAddress(addr)"><CozyIcon name="pencil" :size="16" color="#756A63" /></view>
           </view>
@@ -656,17 +658,20 @@ function closeOffShelf() {
 .address-check { flex: none; width: 40rpx; display: flex; align-items: center; justify-content: center; }
 .address-copy { flex: 1; min-width: 0; }
 .address-name-line { display: flex; align-items: center; gap: 10rpx; }
+.address-name { display: block; font-size: 28rpx; font-weight: 600; color: $cozy-ink; }
+.address-detail-line { display: flex; align-items: center; gap: 10rpx; margin-top: 8rpx; }
 .address-label {
   flex: none;
-  padding: 2rpx 12rpx;
-  border-radius: 6rpx;
-  background: $cozy-primary-soft;
+  padding: 0 10rpx;
+  border: 1rpx solid $cozy-primary;
+  border-radius: 4rpx;
   color: $cozy-primary;
-  font-size: 20rpx; font-weight: 600;
+  font-size: 18rpx;
+  line-height: 1.6;
 }
-.address-name { display: block; font-size: 28rpx; font-weight: 600; color: $cozy-ink; }
 .address-detail {
-  display: block; margin-top: 8rpx;
+  flex: 1;
+  min-width: 0;
   font-size: 22rpx; color: $cozy-muted;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }

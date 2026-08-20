@@ -185,11 +185,12 @@ const selectAddress = (item) => {
 .addr-region-line { display: flex; align-items: center; gap: 10rpx; }
 .addr-label {
   flex: none;
-  padding: 2rpx 12rpx;
-  border-radius: 6rpx;
-  background: $cozy-primary-soft;
+  padding: 0 10rpx;
+  border: 1rpx solid $cozy-primary;
+  border-radius: 4rpx;
   color: $cozy-primary;
-  font-size: 20rpx; font-weight: 600;
+  font-size: 18rpx;
+  line-height: 1.6;
 }
 .addr-region {
   display: block;
