@@ -100,6 +100,13 @@
         <view class="phone-save" :class="{ disabled: !phoneDraft.trim() }" @click="savePhone">保存</view>
       </view>
     </view>
+
+    <AddressPickerSheet
+      :visible="addressPickerVisible"
+      :selected-id="checkoutStore.deliveryAddressId"
+      @close="addressPickerVisible = false"
+      @select="onAddressPicked"
+    />
   </view>
 </template>
 
@@ -113,6 +120,7 @@ import { createDefaultCheckoutWorkflow } from '@/services/checkout/CheckoutWorkf
 import { resolveDeliveryAddress } from '@/services/address/DeliveryAddressResolver'
 import { AuthError, NetworkError } from '@/services/errors/AppError'
 import StoreSummary from '@/components/order/StoreSummary.vue'
+import AddressPickerSheet from '@/components/address/AddressPickerSheet.vue'
 import CheckoutPriceSummary from '@/components/order/CheckoutPriceSummary.vue'
 import CheckoutSubmitBar from '@/components/order/CheckoutSubmitBar.vue'
 import LoadingState from '@/components/states/LoadingState.vue'
@@ -130,6 +138,7 @@ const phoneVisible = ref(false)
 const phoneDraft = ref('')
 const diningMethod = computed(() => checkoutStore.diningMethod || 'TAKEOUT')
 const previewError = ref('')
+const addressPickerVisible = ref(false)
 
 // 预计送达：当前本地时间 + 50~60 分钟区间
 const deliveryEtaText = computed(() => {
@@ -162,11 +171,7 @@ onUnload(() => {
 
 function onStoreTap() {
   if (diningMethod.value === 'DELIVERY') {
-    if (!checkoutStore.deliveryAddress) {
-      uni.navigateTo({ url: '/pages/address/edit' })
-      return
-    }
-    uni.navigateTo({ url: '/pages/address/list' })
+    addressPickerVisible.value = true
     return
   }
   uni.navigateTo({ url: '/pages/store/list' })
@@ -179,6 +184,11 @@ function handleAddressSelected(address) {
   if (address.phone && !checkoutStore.phone) checkoutStore.phone = address.phone
   checkoutStore.invalidatePreview()
   loadPreview()
+}
+
+function onAddressPicked(address) {
+  addressPickerVisible.value = false
+  handleAddressSelected(address)
 }
 
 onShow(async () => {
