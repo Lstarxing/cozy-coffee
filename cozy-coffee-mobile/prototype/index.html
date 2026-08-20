@@ -461,8 +461,8 @@
     if (mode === 'delivery') {
       // 外送 CTA：解析默认地址，无地址跳添加页（与 index.vue goMenu('delivery') 一致）
       toast('正在解析默认地址…');
-      const addr = localStorage.getItem('cozy_default_address');
-      if (!addr) {
+      const addrList = (() => { try { return JSON.parse(localStorage.getItem('cozy_addresses')) || []; } catch (e) { return []; } })();
+      if (!addrList.length) {
         setTimeout(() => { toast('未设置配送地址，请先添加'); }, 300);
         setTimeout(() => { location.href = 'address.html'; }, 1000);
         return;

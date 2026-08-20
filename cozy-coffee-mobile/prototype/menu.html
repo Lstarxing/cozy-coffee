@@ -806,7 +806,8 @@
       pickup.classList.remove('active');
       delivery.classList.add('active');
       // 外送：解析默认地址，无地址跳添加页（与 menu.vue setFulfillment 一致）
-      if (!localStorage.getItem('cozy_default_address')) {
+      const addrList = (() => { try { return JSON.parse(localStorage.getItem('cozy_addresses')) || []; } catch (e) { return []; } })();
+      if (!addrList.length) {
         toast('未设置配送地址，请先添加');
         setTimeout(() => { location.href = 'address.html'; }, 600);
         return;
