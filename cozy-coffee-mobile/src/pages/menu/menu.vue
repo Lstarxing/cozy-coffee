@@ -24,7 +24,7 @@
       <view class="store-row">
         <view class="store-left" :class="{ 'tap-target': fulfillment === 'delivery' }" @click="fulfillment === 'delivery' && goToAddress()">
           <template v-if="fulfillment === 'delivery'">
-            <CozyIcon name="pin" :size="16" color="#756A63" />
+            <CozyIcon name="pin" :size="22" color="#756A63" />
             <text class="store-name delivery-addr">{{ deliveryAddressText }}</text>
             <text class="delivery-arrow">›</text>
           </template>
@@ -38,8 +38,11 @@
           <view class="pickup-opt" :class="{ active: fulfillment === 'delivery' }" @click="setFulfillment('delivery')">外送</view>
         </view>
       </view>
-      <view class="store-meta">
-        <template v-if="fulfillment === 'delivery'">CozyCoffee 中心店 | 配送距离 1.2km</template>
+      <view class="store-meta" :class="{ 'store-meta--delivery': fulfillment === 'delivery' }">
+        <template v-if="fulfillment === 'delivery'">
+          <CozyIcon name="swap" :size="18" color="#753A22" />
+          <text class="store-meta-text">CozyCoffee 中心店 | 配送距离 1.2km</text>
+        </template>
         <template v-else>距离您 1.2km</template>
       </view>
       <view class="store-foot">
@@ -222,7 +225,7 @@ async function setFulfillment(value) {
 const deliveryAddressText = computed(() => {
   const a = checkoutStore.deliveryAddress
   if (!a) return '未设置配送地址，点击添加'
-  return [a.region, a.detail].filter(Boolean).join(' ')
+  return [a.region, a.detail].filter(Boolean).join(' ').replace(/\s+/g, '')
 })
 function goToAddress() {
   uni.navigateTo({ url: '/pages/address/list' })
@@ -474,19 +477,27 @@ function closeOffShelf() {
   padding: 24rpx 28rpx 26rpx;
   background: #fff;
 }
-.store-row { display: flex; align-items: center; justify-content: space-between; }
-.store-left { display: flex; align-items: center; gap: 8rpx; min-width: 0; }
+.store-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
+.store-left { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8rpx; }
 .store-fav { color: $cozy-ink; font-size: 26rpx; }
 .store-name { color: $cozy-ink; font-size: 30rpx; font-weight: 650; }
-.pickup-switch { display: flex; border: 1rpx solid $cozy-border; border-radius: 12rpx; overflow: hidden; }
+.pickup-switch { flex: none; display: flex; border: 1rpx solid $cozy-border; border-radius: 12rpx; overflow: hidden; }
 .pickup-opt { padding: 10rpx 28rpx; font-size: 22rpx; color: $cozy-muted; background: $cozy-surface; }
 .pickup-opt.active { background: $cozy-ink; color: #fff; }
-.store-meta { margin-top: 10rpx; font-size: 22rpx; color: $cozy-muted; }
+.store-meta { margin-top: 4rpx; font-size: 22rpx; color: $cozy-muted; }
+.store-meta--delivery {
+  margin-top: 6rpx;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $cozy-ink;
+}
 .tap-target { cursor: pointer; }
 .delivery-addr {
   flex: 1;
   min-width: 0;
-  font-size: 24rpx;
   color: $cozy-ink;
   white-space: nowrap;
   overflow: hidden;
