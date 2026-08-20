@@ -228,12 +228,12 @@
 
   /* ── 选择收货地址抽屉 ── */
   .addr-sheet-mask {
-    position:fixed; inset:0; z-index:35;
+    position:fixed; top:0; left:0; right:0; bottom:54px; z-index:35;
     background:rgba(28,20,14,.45);
     display:none; align-items:flex-end; justify-content:center;
   }
   .addr-sheet {
-    width:100%; max-width:390px; max-height:74vh;
+    width:100%; max-width:390px; max-height:72vh;
     display:flex; flex-direction:column;
     background:var(--card); border-radius:16px 16px 0 0;
     padding:0 20px 20px;
@@ -250,19 +250,27 @@
   }
   .addr-sheet-title { font-family:var(--serif); font-size:18px; font-weight:600; color:var(--ink); }
   .addr-sheet-close { font-size:22px; color:var(--muted); padding:2px 6px; cursor:pointer; }
-  .addr-sheet-list { flex:1; min-height:0; overflow-y:auto; }
+  .addr-sheet-list { flex:1; min-height:30vh; overflow-y:auto; }
   .addr-row {
     display:flex; align-items:center; gap:10px;
-    padding:13px 0; border-bottom:1px solid var(--border);
+    margin-top:10px; padding:12px 12px;
+    border:1px solid var(--border); border-radius:8px;
     cursor:pointer;
   }
   .addr-row:active { opacity:.7; }
   .addr-check { flex:none; width:20px; display:flex; align-items:center; justify-content:center; }
   .addr-check svg { width:14px; height:14px; color:var(--primary); }
   .addr-copy { flex:1; min-width:0; }
+  .addr-name-line { display:flex; align-items:center; gap:6px; }
+  .addr-label {
+    flex:none; padding:1px 7px; border-radius:4px;
+    background:var(--brown-soft, #F3E9DF);
+    color:var(--primary, #753A22);
+    font-size:10px; font-weight:600;
+  }
   .addr-name { display:block; font-size:13px; font-weight:600; color:var(--ink); }
   .addr-detail {
-    display:block; margin-top:3px;
+    display:block; margin-top:4px;
     font-size:11px; color:var(--muted);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
@@ -881,6 +889,7 @@
   const SWAP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M14 4l4 4-4 4"/><path d="M20 16H7M10 12l-4 4 4 4"/></svg>';
   const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   const PENCIL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/><path d="M14 6l4 4"/></svg>';
+  const LABEL_TEXT = { HOME: '家', COMPANY: '公司', SCHOOL: '学校' };
   let currentAddressId = null;
   function getAddressList() { try { return JSON.parse(localStorage.getItem('cozy_addresses')) || []; } catch (e) { return []; } }
   function getDefaultAddress() {
@@ -902,11 +911,12 @@
     document.getElementById('addrSheetList').innerHTML = list.map(a => {
       const checked = currentAddressId && String(a.id) === String(currentAddressId) ? CHECK_SVG : '';
       const honorific = String(a.gender || '').toUpperCase() === 'FEMALE' ? '（女士）' : '（先生）';
+      const label = a.label ? '<span class="addr-label">' + (LABEL_TEXT[a.label] || a.label) + '</span>' : '';
       return `
         <div class="addr-row" onclick="pickAddress(${a.id})">
           <span class="addr-check">${checked}</span>
           <span class="addr-copy">
-            <span class="addr-name">${a.name}${honorific} · ${maskPhone(a.phone)}</span>
+            <span class="addr-name-line">${label}<span class="addr-name">${a.name}${honorific} · ${maskPhone(a.phone)}</span></span>
             <span class="addr-detail">${[a.region, a.detail].filter(Boolean).join(' ').replace(/\s+/g, '')}</span>
           </span>
           <span class="addr-edit" onclick="event.stopPropagation(); go('address-edit.html?id=${a.id}')">${PENCIL_SVG}</span>

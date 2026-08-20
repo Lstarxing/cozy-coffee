@@ -151,6 +151,14 @@
       </div>
     </div>
     <div class="form-row">
+      <span class="form-label">标签</span>
+      <div class="gender-group">
+        <div class="gender-opt active" data-l="HOME" onclick="pickLabel(this)">家</div>
+        <div class="gender-opt" data-l="COMPANY" onclick="pickLabel(this)">公司</div>
+        <div class="gender-opt" data-l="SCHOOL" onclick="pickLabel(this)">学校</div>
+      </div>
+    </div>
+    <div class="form-row">
       <span class="form-label">手机号</span>
       <input class="form-input" id="fPhone" type="number" maxlength="11" placeholder="请填写收货手机号">
     </div>
@@ -193,6 +201,7 @@
         document.getElementById('fName').value = a.name;
         document.getElementById('fPhone').value = a.phone;
         pickGender(document.querySelector('.gender-opt[data-g="' + (a.gender || 'MALE') + '"]'));
+        pickLabel(document.querySelector('.gender-opt[data-l="' + (a.label || 'HOME') + '"]'));
         regionIdx = REGIONS.indexOf(a.region);
         const r = document.getElementById('fRegion');
         r.textContent = a.region;
@@ -205,6 +214,10 @@
 
   function pickGender(el) {
     document.querySelectorAll('.gender-opt').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+  }
+  function pickLabel(el) {
+    document.querySelectorAll('.gender-opt[data-l]').forEach(o => o.classList.remove('active'));
     el.classList.add('active');
   }
   function cycleRegion() {
@@ -230,15 +243,16 @@
     if (!/^1\d{10}$/.test(phone)) { toast('请输入正确的手机号'); return; }
 
     const gender = document.querySelector('.gender-opt.active').dataset.g;
+    const label = (document.querySelector('.gender-opt.active[data-l]') || {}).dataset?.l || 'HOME';
     const list = getAddresses();
     if (isDefault) list.forEach(a => a.isDefault = false);
 
     if (editingId) {
       const a = list.find(x => x.id === editingId);
-      if (a) { a.name = name; a.phone = phone; a.gender = gender; a.region = region; a.detail = detail; a.isDefault = isDefault; }
+      if (a) { a.name = name; a.phone = phone; a.gender = gender; a.label = label; a.region = region; a.detail = detail; a.isDefault = isDefault; }
     } else {
       const id = list.length ? Math.max(...list.map(a => a.id)) + 1 : 1;
-      list.push({ id, name, phone, gender, region, detail, isDefault });
+      list.push({ id, name, phone, gender, label, region, detail, isDefault });
     }
     persist(list);
     toast('已保存');

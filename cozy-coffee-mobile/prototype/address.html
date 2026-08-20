@@ -69,6 +69,13 @@
   }
   .addr-pin svg { width:22px; height:22px; }
   .addr-copy { flex:1; min-width:0; }
+  .addr-region-line { display:flex; align-items:center; gap:6px; }
+  .addr-label {
+    flex:none; padding:1px 7px; border-radius:4px;
+    background:var(--brown-soft, #F3E9DF);
+    color:var(--primary, #753A22);
+    font-size:11px; font-weight:600;
+  }
   .addr-region {
     display:block;
     font-size:15px; font-weight:600; color:var(--ink);
@@ -192,8 +199,8 @@
   };
 
   const DEFAULT_ADDRESSES = [
-    { id:1, name:'张苏宁', phone:'13811110421', gender:'MALE', region:'浙江省 杭州市 西湖区', detail:'文三路 128 号 CozyCoffee 大厦', isDefault:true },
-    { id:2, name:'李雨', phone:'13655559872', gender:'FEMALE', region:'浙江省 杭州市 滨江区', detail:'江南大道 588 号 3 幢 1 单元', isDefault:false }
+    { id:1, name:'张苏宁', phone:'13811110421', gender:'MALE', label:'HOME', region:'浙江省 杭州市 西湖区', detail:'文三路 128 号 CozyCoffee 大厦', isDefault:true },
+    { id:2, name:'李雨', phone:'13655559872', gender:'FEMALE', label:'COMPANY', region:'浙江省 杭州市 滨江区', detail:'江南大道 588 号 3 幢 1 单元', isDefault:false }
   ];
 
   function getAddresses() { try { return JSON.parse(localStorage.getItem('cozy_addresses')) || []; } catch (e) { return []; } }
@@ -202,6 +209,8 @@
   // 从菜单页外送进入时为选择模式：点击地址卡片选中返回
   const SELECTABLE = document.referrer && document.referrer.indexOf('menu.html') > -1;
   if (SELECTABLE) document.getElementById('selectHint').style.display = 'block';
+
+  const LABEL_TEXT = { HOME: '家', COMPANY: '公司', SCHOOL: '学校' };
 
   function maskName(n) { return n.length > 1 ? n[0] + '*' + n.slice(-1) : n; }
   function maskPhone(p) { return String(p).replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'); }
@@ -228,7 +237,10 @@
         <div class="addr-main ${SELECTABLE ? 'selectable' : ''}" ${SELECTABLE ? `onclick="selectAddress(${a.id})" title="选择此地址"` : ''}>
           <span class="addr-pin">${ICONS.pin}</span>
           <div class="addr-copy">
-            <span class="addr-region">${a.region}</span>
+            <div class="addr-region-line">
+              ${a.label ? '<span class="addr-label">' + (LABEL_TEXT[a.label] || a.label) + '</span>' : ''}
+              <span class="addr-region">${a.region}</span>
+            </div>
             <span class="addr-detail">${a.detail}</span>
           </div>
           ${a.isDefault ? '<span class="default-badge">默认</span>' : ''}
