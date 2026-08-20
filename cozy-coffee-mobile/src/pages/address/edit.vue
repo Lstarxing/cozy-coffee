@@ -8,9 +8,15 @@
       <view class="form-row">
         <text class="form-label">联系人</text>
         <input v-model="form.name" placeholder="请填写收货人姓名" placeholder-class="form-placeholder" class="form-input" />
-        <view class="gender-rounds">
-          <view class="gender-round" :class="{ on: form.gender === 'MALE' }" @click="form.gender = 'MALE'">先生</view>
-          <view class="gender-round" :class="{ on: form.gender === 'FEMALE' }" @click="form.gender = 'FEMALE'">女士</view>
+        <view class="gender-radios">
+          <view class="gender-radio" :class="{ on: form.gender === 'MALE' }" @click="form.gender = 'MALE'">
+            <view class="radio-dot" />
+            <text>先生</text>
+          </view>
+          <view class="gender-radio" :class="{ on: form.gender === 'FEMALE' }" @click="form.gender = 'FEMALE'">
+            <view class="radio-dot" />
+            <text>女士</text>
+          </view>
         </view>
       </view>
       <view class="form-row">
@@ -239,26 +245,37 @@ const save = async () => {
 }
 .form-check.on { background: $cozy-primary; border-color: $cozy-primary; }
 
-/* 联系人右侧：圆形先生/女士选择 */
-.gender-rounds { flex: none; display: flex; align-items: center; gap: 14rpx; }
-.gender-round {
-  width: 60rpx;
-  height: 60rpx;
+/* 联系人右侧：单选 radio（先生/女士） */
+.gender-radios { flex: none; display: flex; align-items: center; gap: 24rpx; }
+.gender-radio {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 22rpx;
+  color: $cozy-muted;
+
+  &.on { color: $cozy-ink; }
+}
+.radio-dot {
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 50%;
+  border: 2rpx solid $cozy-border;
+  background: $bg-white;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.gender-radio.on .radio-dot {
+  border-color: $cozy-primary;
+}
+.gender-radio.on .radio-dot::after {
+  content: '';
+  width: 14rpx;
+  height: 14rpx;
   border-radius: 50%;
-  border: 1rpx solid $cozy-border;
-  background: $bg-white;
-  color: $cozy-muted;
-  font-size: 20rpx;
-
-  &.on {
-    background: $cozy-primary;
-    border-color: $cozy-primary;
-    color: #fff;
-    font-weight: 600;
-  }
+  background: $cozy-primary;
 }
 
 /* 标签：小巧胶囊，置于设为默认上一行 */
