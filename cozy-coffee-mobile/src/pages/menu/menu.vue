@@ -40,7 +40,7 @@
       </view>
       <view class="store-meta" :class="{ 'store-meta--delivery': fulfillment === 'delivery' }">
         <template v-if="fulfillment === 'delivery'">
-          <CozyIcon name="swap" :size="18" color="#756A63" />
+          <CozyIcon name="swap" :size="14" color="#756A63" />
           <text class="store-meta-text">CozyCoffee 中心店 | 配送距离 1.2km</text>
         </template>
         <template v-else>距离您 1.2km</template>
@@ -170,6 +170,34 @@
       </view>
     </view>
 
+    <!-- 选择收货地址抽屉 -->
+    <view v-if="addressSheetVisible" class="store-sheet" @click="addressSheetVisible = false">
+      <view class="sheet-mask" />
+      <view class="address-sheet-content" @click.stop>
+        <view class="sheet-header">
+          <text class="sheet-title">请选择收货地址</text>
+          <text class="sheet-close" @click="addressSheetVisible = false">×</text>
+        </view>
+        <scroll-view scroll-y class="address-sheet-list">
+          <view v-if="addressLoading" class="address-sheet-loading">加载中…</view>
+          <view v-for="addr in addressList" :key="addr.id" class="address-row" @click="pickAddress(addr)">
+            <view class="address-check">
+              <CozyIcon v-if="isCurrentAddress(addr)" name="check" :size="16" color="#753A22" />
+            </view>
+            <view class="address-copy">
+              <text class="address-name">{{ addressNameText(addr) }}</text>
+              <text class="address-detail">{{ addressText(addr) }}</text>
+            </view>
+            <view class="address-edit" @click.stop="editAddress(addr)"><CozyIcon name="pencil" :size="16" color="#756A63" /></view>
+          </view>
+        </scroll-view>
+        <view class="address-add" @click="addAddress">
+          <CozyIcon name="plus" :size="18" color="#753A22" />
+          <text>新增收货地址</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 下架商品提示 -->
     <view v-if="offShelfVisible" class="off-shelf-mask" @click="closeOffShelf">
       <view class="off-shelf-card" @click.stop>
@@ -185,9 +213,10 @@
 
 <script setup>
 import { computed, nextTick, ref } from 'vue'
-import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { FIXED_STORE } from '@/config/store'
 import { getMenuData } from '@/api/product'
+import { get } from '@/api/request'
 import { useCartStore } from '@/stores/cart'
 import { useCheckoutStore } from '@/stores/checkout'
 import { NetworkError } from '@/services/errors/AppError'
@@ -228,13 +257,60 @@ const deliveryAddressText = computed(() => {
   return [a.region, a.detail].filter(Boolean).join(' ').replace(/\s+/g, '')
 })
 function goToAddress() {
-  uni.navigateTo({ url: '/pages/address/list' })
+  openAddressSheet()
 }
-function handleAddressSelected(address) {
-  if (!address) return
-  checkoutStore.deliveryAddress = address
-  checkoutStore.deliveryAddressId = address.id || null
-  if (address.phone && !checkoutStore.phone) checkoutStore.phone = address.phone
+
+// ── 选择收货地址抽屉 ──
+const addressSheetVisible = ref(false)
+const addressList = ref([])
+const addressLoading = ref(false)
+async function openAddressSheet() {
+  addressSheetVisible.value = true
+  addressLoading.value = true
+  try {
+    const res = await get('/member/addresses')
+    if (res.code === 200 && Array.isArray(res.data)) {
+      addressList.value = res.data.map(a => ({
+        ...a,
+        name: a.receiverName,
+        gender: a.gender || 'MALE',
+        phone: a.receiverPhone,
+        region: [a.province, a.city, a.district].filter(Boolean).join(' '),
+        detail: a.detailAddress,
+        isDefault: a.isDefault
+      }))
+    }
+  } catch (e) {
+    // 加载失败时抽屉内不展示地址，用户可点新增配置
+  } finally {
+    addressLoading.value = false
+  }
+}
+const maskPhone = (phone) => String(phone || '').replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
+const genderSuffix = (gender) => String(gender || '').toUpperCase() === 'FEMALE' ? '女士' : '先生'
+function addressNameText(addr) {
+  return `${addr.name || ''}${genderSuffix(addr.gender)} · ${maskPhone(addr.phone)}`
+}
+function addressText(addr) {
+  return [addr.region, addr.detail].filter(Boolean).join(' ').replace(/\s+/g, '')
+}
+function isCurrentAddress(addr) {
+  return checkoutStore.deliveryAddressId && String(addr.id) === String(checkoutStore.deliveryAddressId)
+}
+function pickAddress(addr) {
+  checkoutStore.deliveryAddress = addr
+  checkoutStore.deliveryAddressId = addr.id || null
+  if (addr.phone && !checkoutStore.phone) checkoutStore.phone = addr.phone
+  addressSheetVisible.value = false
+}
+function editAddress(addr) {
+  addressSheetVisible.value = false
+  uni.setStorageSync('cozy_edit_address', addr)
+  uni.navigateTo({ url: `/pages/address/edit?id=${addr.id}` })
+}
+function addAddress() {
+  addressSheetVisible.value = false
+  uni.navigateTo({ url: '/pages/address/edit' })
 }
 const sysInfo = uni.getSystemInfoSync()
 const statusBarHeight = ref(sysInfo.statusBarHeight || 20)
@@ -252,12 +328,7 @@ const currentCategory = computed(() => categories.value[currentCategoryIndex.val
 
 onLoad((options) => {
   pendingCategory = (options && options.category) ? String(options.category).toLowerCase() : ''
-  uni.$on('addressSelected', handleAddressSelected)
   loadMenu()
-})
-
-onUnload(() => {
-  uni.$off('addressSelected', handleAddressSelected)
 })
 
 onShow(async () => {
@@ -561,6 +632,36 @@ function closeOffShelf() {
 .sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 36rpx 0 32rpx; border-bottom: 1rpx solid $cozy-border; }
 .sheet-title { font-family: $font-display; font-size: 36rpx; font-weight: 600; color: $cozy-ink; }
 .sheet-close { font-size: 40rpx; color: $cozy-muted; padding: 4rpx 8rpx; }
+
+/* ── 选择收货地址抽屉 ── */
+.address-sheet-content {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 74vh;
+  display: flex; flex-direction: column;
+  background: #fff; border-radius: 32rpx 32rpx 0 0;
+}
+.address-sheet-list { flex: 1; min-height: 0; padding: 0 40rpx; box-sizing: border-box; }
+.address-sheet-loading { padding: 48rpx 0; text-align: center; font-size: 24rpx; color: $cozy-muted; }
+.address-row {
+  display: flex; align-items: center; gap: 20rpx;
+  padding: 30rpx 0; border-bottom: 1rpx solid $cozy-border;
+}
+.address-check { flex: none; width: 40rpx; display: flex; align-items: center; justify-content: center; }
+.address-copy { flex: 1; min-width: 0; }
+.address-name { display: block; font-size: 28rpx; font-weight: 600; color: $cozy-ink; }
+.address-detail {
+  display: block; margin-top: 6rpx;
+  font-size: 22rpx; color: $cozy-muted;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.address-edit { flex: none; padding: 8rpx; }
+.address-add {
+  display: flex; align-items: center; justify-content: center; gap: 12rpx;
+  margin: 20rpx 40rpx 40rpx; height: 88rpx;
+  border: 1rpx solid $cozy-border; border-radius: 12rpx;
+  font-size: 28rpx; font-weight: 600; color: $cozy-primary;
+}
+.address-add:active { background: $cozy-surface; }
 .sheet-subheader { margin-top: 20rpx; padding-bottom: 20rpx; border-bottom: 1rpx solid $cozy-border; }
 .sheet-row { display: flex; align-items: center; gap: 28rpx; padding: 28rpx 0; border-bottom: 1rpx solid $cozy-border; }
 .sheet-row.plain { border-bottom: 0; }
