@@ -133,7 +133,7 @@ const selectAddress = (item) => {
   const pages = getCurrentPages()
   if (pages.length > 1) {
     const prevPage = pages[pages.length - 2]
-    if (prevPage.route === 'pages/order/confirm') {
+    if (prevPage.route === 'pages/order/confirm' || prevPage.route === 'pages/menu/menu') {
       uni.$emit('addressSelected', item)
       uni.navigateBack()
     }

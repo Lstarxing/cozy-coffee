@@ -185,7 +185,7 @@
 
 <script setup>
 import { computed, nextTick, ref } from 'vue'
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { FIXED_STORE } from '@/config/store'
 import { getMenuData } from '@/api/product'
 import { useCartStore } from '@/stores/cart'
@@ -230,6 +230,12 @@ const deliveryAddressText = computed(() => {
 function goToAddress() {
   uni.navigateTo({ url: '/pages/address/list' })
 }
+function handleAddressSelected(address) {
+  if (!address) return
+  checkoutStore.deliveryAddress = address
+  checkoutStore.deliveryAddressId = address.id || null
+  if (address.phone && !checkoutStore.phone) checkoutStore.phone = address.phone
+}
 const sysInfo = uni.getSystemInfoSync()
 const statusBarHeight = ref(sysInfo.statusBarHeight || 20)
 const navRight = ref(100)
@@ -246,7 +252,12 @@ const currentCategory = computed(() => categories.value[currentCategoryIndex.val
 
 onLoad((options) => {
   pendingCategory = (options && options.category) ? String(options.category).toLowerCase() : ''
+  uni.$on('addressSelected', handleAddressSelected)
   loadMenu()
+})
+
+onUnload(() => {
+  uni.$off('addressSelected', handleAddressSelected)
 })
 
 onShow(async () => {
