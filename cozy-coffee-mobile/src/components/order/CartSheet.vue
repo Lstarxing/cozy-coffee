@@ -8,7 +8,7 @@
             <CozyIcon name="check" size="12" color="#ffffff" />
           </view>
           <text class="cart-title">已选购 {{ totalCount }} 件</text>
-          <text class="cart-chip">自取</text>
+          <text class="cart-chip">{{ fulfillment === 'delivery' ? '外送' : '自提' }}</text>
         </view>
         <view class="cart-clear" @click="emit('clear')">
           <CozyIcon name="trash" size="16" color="#756A63" />
@@ -39,7 +39,8 @@ import CozyIcon from '@/components/CozyIcon.vue'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
-  items: { type: Array, default: () => [] }
+  items: { type: Array, default: () => [] },
+  fulfillment: { type: String, default: 'pickup' }
 })
 const emit = defineEmits(['close', 'clear', 'edit', 'decrease', 'increase'])
 

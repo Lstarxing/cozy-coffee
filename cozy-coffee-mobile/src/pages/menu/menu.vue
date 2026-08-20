@@ -106,7 +106,7 @@
                     <text class="price">{{ formatPrice(product.price) }}</text>
                   </view>
                   <view class="add-btn" @click.stop="openDetail(product)">
-                    <text class="add-plus">+</text>
+                    <CozyIcon name="add-circle" :size="24" color="#2B1E16" />
                     <text v-if="productCount(product.productId || product.id)" class="add-count">{{ productCount(product.productId || product.id) }}</text>
                   </view>
                 </view>
@@ -123,6 +123,7 @@
     <CartSheet
       :visible="cartVisible"
       :items="cartStore.items"
+      :fulfillment="fulfillment"
       @close="cartVisible = false"
       @clear="clearCart"
       @edit="editCartLine"
@@ -165,16 +166,16 @@
         </view>
         <view class="sheet-row">
           <text class="sheet-label">取餐方式</text>
-          <text class="sheet-value">到店自提 · 约 15 分钟</text>
+          <text class="sheet-value">{{ fulfillment === 'delivery' ? '外卖配送 · 预计 50-60 分钟送达' : '到店自提 · 约 15 分钟' }}</text>
         </view>
       </view>
     </view>
 
     <!-- 选择收货地址抽屉 -->
-    <view v-if="addressSheetVisible" class="store-sheet" @click="addressSheetVisible = false">
+    <view v-if="addressSheetVisible" class="address-sheet-mask" @click="addressSheetVisible = false">
       <view class="sheet-mask" />
       <view class="address-sheet-content" @click.stop>
-        <view class="sheet-header">
+        <view class="sheet-header address-sheet-header">
           <text class="sheet-title">请选择收货地址</text>
           <text class="sheet-close" @click="addressSheetVisible = false">×</text>
         </view>
@@ -627,9 +628,8 @@ function closeOffShelf() {
 .product-price { display: flex; align-items: baseline; color: $cozy-ink; }
 .currency { font-size: 20rpx; font-weight: 700; }
 .price { font-size: 32rpx; font-weight: 750; line-height: 1; }
-.add-btn { position: relative; width: 44rpx; height: 44rpx; border-radius: 50%; background: $cozy-ink; color: #fff; text-align: center; line-height: 44rpx; }
-.add-plus { font-size: 34rpx; font-weight: 600; line-height: 44rpx; }
-.add-count { position: absolute; top: -8rpx; right: -6rpx; min-width: 32rpx; height: 32rpx; padding: 0 6rpx; display: flex; align-items: center; justify-content: center; border: 2rpx solid #fff; border-radius: 999rpx; background: $cozy-ink; color: #fff; font-size: 18rpx; box-sizing: border-box; }
+.add-btn { position: relative; width: 48rpx; height: 48rpx; border-radius: 50%; background: transparent; display: flex; align-items: center; justify-content: center; }
+.add-count { position: absolute; top: -12rpx; right: -10rpx; min-width: 32rpx; height: 32rpx; padding: 0 6rpx; display: flex; align-items: center; justify-content: center; border: 2rpx solid #fff; border-radius: 999rpx; background: $cozy-ink; color: #fff; font-size: 18rpx; box-sizing: border-box; }
 .product-spacer { height: 160rpx; }
 
 /* ── 门店详情抽屉 ── */
@@ -641,15 +641,17 @@ function closeOffShelf() {
 .sheet-close { font-size: 40rpx; color: $cozy-muted; padding: 4rpx 8rpx; }
 
 /* ── 选择收货地址抽屉 ── */
+.address-sheet-mask { position: fixed; inset: 0; z-index: 60; }
 .address-sheet-content {
   position: absolute; bottom: 0; left: 0; right: 0;
-  max-height: 68vh;
+  max-height: 66vh;
   display: flex; flex-direction: column;
   background: #fff; border-radius: 32rpx 32rpx 0 0;
 }
+.address-sheet-header { padding: 32rpx 40rpx 24rpx; border-bottom: 0; }
 .address-sheet-list {
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 38vh;
   max-height: 48vh;
   padding: 0 40rpx 8rpx;
   box-sizing: border-box;
@@ -657,8 +659,8 @@ function closeOffShelf() {
 .address-sheet-loading { padding: 48rpx 0; text-align: center; font-size: 24rpx; color: $cozy-muted; }
 .address-row {
   display: flex; align-items: center; gap: 20rpx;
-  margin-top: 20rpx;
-  padding: 20rpx 24rpx;
+  margin-top: 24rpx;
+  padding: 30rpx 28rpx;
   border: 1rpx solid $cozy-border; border-radius: 16rpx;
   background: $bg-white;
 }
@@ -680,7 +682,7 @@ function closeOffShelf() {
   font-size: 24rpx; color: $cozy-ink;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.address-contact-line { display: flex; align-items: center; gap: 12rpx; margin-top: 8rpx; }
+.address-contact-line { display: flex; align-items: center; gap: 12rpx; margin-top: 12rpx; }
 .address-name { font-size: 22rpx; font-weight: 600; color: $cozy-ink; }
 .address-phone { font-size: 22rpx; color: $cozy-muted; }
 .address-edit { flex: none; padding: 8rpx; }

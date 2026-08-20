@@ -152,14 +152,14 @@
   .price { font-size:16px; font-weight:750; line-height:1; }
   .add-btn {
     position:relative;
-    width:24px; height:24px; border-radius:50%;
-    background:var(--ink); color:#fff;
+    width:28px; height:28px; border-radius:50%;
+    background:transparent;
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
   }
-  .add-plus { font-size:17px; font-weight:600; line-height:24px; }
+  .add-btn svg { width:26px; height:26px; }
   .add-count {
-    position:absolute; top:-4px; right:-3px;
+    position:absolute; top:-6px; right:-5px;
     min-width:16px; height:16px; padding:0 4px;
     display:flex; align-items:center; justify-content:center;
     border:2px solid #fff; border-radius:9px;
@@ -253,7 +253,7 @@
   .addr-sheet-list { flex:1; min-height:30vh; overflow-y:auto; }
   .addr-row {
     display:flex; align-items:center; gap:10px;
-    margin-top:10px; padding:12px 12px;
+    margin-top:12px; padding:16px 14px;
     border:1px solid var(--border); border-radius:8px;
     cursor:pointer;
   }
@@ -587,7 +587,7 @@
       </div>
       <div class="sheet-row">
         <span class="sheet-label">取餐方式</span>
-        <span class="sheet-value">到店自提 · 约 15 分钟</span>
+        <span class="sheet-value" id="pickupModeVal">到店自提 · 约 15 分钟</span>
       </div>
     </div>
   </div>
@@ -651,7 +651,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </span>
           <span class="cart-drawer-title">已选购 <span id="cartDrawerCount">0</span> 件</span>
-          <span class="cart-drawer-chip">自取</span>
+          <span class="cart-drawer-chip" id="cartDrawerChip">自提</span>
         </div>
         <span class="cart-drawer-clear" onclick="clearCart()" title="清空购物车">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
@@ -790,7 +790,7 @@
                 <div class="product-foot">
                   <span class="product-price"><span class="currency">¥</span><span class="price">${p.price}</span></span>
                   <div class="add-btn" onclick="go('spec.html')">
-                    <span class="add-plus">+</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#2B1E16" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v9M7.5 12h9"/></svg>
                     <span class="add-count hidden">0</span>
                   </div>
                 </div>
@@ -954,6 +954,8 @@
       }
       currentAddressId = addr.id;
       renderDeliveryAddress(addr);
+      document.getElementById('pickupModeVal').textContent = '外卖配送 · 预计 50-60 分钟送达';
+      document.getElementById('cartDrawerChip').textContent = '外送';
       toast('已切换外送');
       return;
     }
@@ -962,6 +964,8 @@
     document.getElementById('storeLeft').innerHTML = '<span class="store-fav">☆</span><span class="store-name">CozyCoffee 中心店</span>';
     document.getElementById('storeMeta').classList.remove('store-meta--delivery');
     document.getElementById('storeMeta').textContent = '距离您 1.2km';
+    document.getElementById('pickupModeVal').textContent = '到店自提 · 约 15 分钟';
+    document.getElementById('cartDrawerChip').textContent = '自提';
     toast('已切换自提');
   }
 
