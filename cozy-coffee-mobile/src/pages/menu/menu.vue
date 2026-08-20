@@ -185,12 +185,13 @@
               <CozyIcon v-if="isCurrentAddress(addr)" name="check" :size="16" color="#753A22" />
             </view>
             <view class="address-copy">
-              <view class="address-name-line">
-                <text class="address-name">{{ addressNameText(addr) }}</text>
-              </view>
-              <view class="address-detail-line">
+              <view class="address-addr-line">
                 <text v-if="addr.label" class="address-label">{{ labelText(addr.label) }}</text>
-                <text class="address-detail">{{ addressText(addr) }}</text>
+                <text class="address-addr">{{ addressText(addr) }}</text>
+              </view>
+              <view class="address-contact-line">
+                <text class="address-name">{{ contactNameText(addr) }}</text>
+                <text class="address-phone">{{ maskPhone(addr.phone) }}</text>
               </view>
             </view>
             <view class="address-edit" @click.stop="editAddress(addr)"><CozyIcon name="pencil" :size="16" color="#756A63" /></view>
@@ -294,8 +295,8 @@ async function openAddressSheet() {
 const maskPhone = (phone) => String(phone || '').replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
 const genderSuffix = (gender) => String(gender || '').toUpperCase() === 'FEMALE' ? '女士' : '先生'
 const labelText = (label) => ({ HOME: '家', COMPANY: '公司', SCHOOL: '学校' }[label] || label || '')
-function addressNameText(addr) {
-  return `${addr.name || ''}${genderSuffix(addr.gender)} · ${maskPhone(addr.phone)}`
+function contactNameText(addr) {
+  return `${addr.name || ''}（${genderSuffix(addr.gender)}）`
 }
 function addressText(addr) {
   return [addr.region, addr.detail].filter(Boolean).join(' ').replace(/\s+/g, '')
@@ -657,9 +658,7 @@ function closeOffShelf() {
 }
 .address-check { flex: none; width: 40rpx; display: flex; align-items: center; justify-content: center; }
 .address-copy { flex: 1; min-width: 0; }
-.address-name-line { display: flex; align-items: center; gap: 10rpx; }
-.address-name { display: block; font-size: 28rpx; font-weight: 600; color: $cozy-ink; }
-.address-detail-line { display: flex; align-items: center; gap: 10rpx; margin-top: 8rpx; }
+.address-addr-line { display: flex; align-items: center; gap: 10rpx; }
 .address-label {
   flex: none;
   padding: 0 10rpx;
@@ -669,12 +668,15 @@ function closeOffShelf() {
   font-size: 18rpx;
   line-height: 1.6;
 }
-.address-detail {
+.address-addr {
   flex: 1;
   min-width: 0;
-  font-size: 22rpx; color: $cozy-muted;
+  font-size: 24rpx; color: $cozy-ink;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.address-contact-line { display: flex; align-items: center; gap: 12rpx; margin-top: 8rpx; }
+.address-name { font-size: 22rpx; font-weight: 600; color: $cozy-ink; }
+.address-phone { font-size: 22rpx; color: $cozy-muted; }
 .address-edit { flex: none; padding: 8rpx; }
 .address-add {
   display: flex; align-items: center; justify-content: center; gap: 12rpx;
