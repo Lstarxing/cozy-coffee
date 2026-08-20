@@ -57,6 +57,7 @@ import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { get, post, del, put } from '@/api/request'
 import CozyIcon from '@/components/CozyIcon.vue'
+import { genderSuffix, labelText, maskPhone } from '@/utils/address'
 
 const getAddressList = () => get('/member/addresses')
 const deleteAddressApi = (id) => del(`/member/addresses/${id}`)
@@ -124,10 +125,6 @@ const deleteAddress = (item) => {
     }
   })
 }
-
-const genderSuffix = (gender) => String(gender || '').toUpperCase() === 'FEMALE' ? '女士' : '先生'
-const labelText = (label) => ({ HOME: '家', COMPANY: '公司', SCHOOL: '学校' }[label] || label || '')
-const maskPhone = (phone) => String(phone || '').replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
 
 const selectAddress = (item) => {
   const pages = getCurrentPages()

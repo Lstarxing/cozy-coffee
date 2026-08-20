@@ -47,6 +47,7 @@
 import { ref, watch } from 'vue'
 import { get } from '@/api/request'
 import CozyIcon from '@/components/CozyIcon.vue'
+import { addressText, contactNameText, labelText, maskPhone, normalizeAddress } from '@/utils/address'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -66,30 +67,13 @@ async function loadAddresses() {
   try {
     const res = await get('/member/addresses')
     if (res.code === 200 && Array.isArray(res.data)) {
-      addressList.value = res.data.map(a => ({
-        ...a,
-        name: a.receiverName,
-        gender: a.gender || 'MALE',
-        phone: a.receiverPhone,
-        region: [a.province, a.city, a.district].filter(Boolean).join(' '),
-        detail: a.detailAddress,
-        isDefault: a.isDefault
-      }))
+      addressList.value = res.data.map(normalizeAddress)
     }
   } catch (_) { /* 加载失败保持空列表，可点新增 */ } finally {
     loading.value = false
   }
 }
 
-const maskPhone = (phone) => String(phone || '').replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
-const genderSuffix = (gender) => String(gender || '').toUpperCase() === 'FEMALE' ? '女士' : '先生'
-const labelText = (label) => ({ HOME: '家', COMPANY: '公司', SCHOOL: '学校' }[label] || label || '')
-function contactNameText(addr) {
-  return `${addr.name || ''}（${genderSuffix(addr.gender)}）`
-}
-function addressText(addr) {
-  return [addr.region, addr.detail].filter(Boolean).join(' ').replace(/\s+/g, '')
-}
 function isSelected(addr) {
   return props.selectedId != null && String(addr.id) === String(props.selectedId)
 }
