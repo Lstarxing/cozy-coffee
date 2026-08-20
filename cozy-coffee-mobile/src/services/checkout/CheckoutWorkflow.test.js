@@ -40,12 +40,12 @@ describe('CheckoutWorkflow', () => {
     expect(results.every(result => result.status === 'success')).toBe(true)
   })
 
-  it('keeps the cart when mock payment is cancelled', async () => {
+  it('clears the cart when mock payment is cancelled (order already created)', async () => {
     const paymentService = { pay: vi.fn().mockResolvedValue({ status: 'cancelled', transactionId: null }) }
     const { workflow, checkoutStore, cartStore } = fixture({ paymentService })
     expect((await workflow.submit()).status).toBe('cancelled')
     expect(checkoutStore.status).toBe('cancelled')
-    expect(cartStore.clearCart).not.toHaveBeenCalled()
+    expect(cartStore.clearCart).toHaveBeenCalledOnce()
   })
 
   it('moves to offline when the network is unavailable', async () => {

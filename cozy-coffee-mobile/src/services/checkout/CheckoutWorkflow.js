@@ -160,6 +160,8 @@ export class CheckoutWorkflow {
       this.log('info', 'Create Order', startedAt, { traceId })
       const order = await this.orderService.create(context, this.checkoutStore.idempotencyKey)
       this.checkoutStore.transition('ORDER_CREATED')
+      // 下单即视为购物车已提交：无论支付成功或取消，购物车都应清空（商品已进入订单）
+      this.cartStore.clearCart()
       const payment = await this.paymentService.pay({ order, orderId: order?.id, amount: order?.payAmount ?? this.checkoutStore.latestPreview.payable })
 
       if (payment.status === 'cancelled') {
@@ -175,7 +177,6 @@ export class CheckoutWorkflow {
           this.log('warn', 'Auto Accept Failed', startedAt, { traceId, orderId: order?.id, error: error?.message })
         })
       }
-      this.cartStore.clearCart()
       this.lastResult = { status: 'success', order, payment }
       this.log('info', 'Payment Success', startedAt, { traceId, orderId: order?.id })
       return this.lastResult
