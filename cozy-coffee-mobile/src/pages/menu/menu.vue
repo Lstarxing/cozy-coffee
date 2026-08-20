@@ -32,6 +32,18 @@
         </view>
       </view>
       <view class="store-meta">距离您 1.2km</view>
+      <view v-if="fulfillment === 'delivery'" class="delivery-info" @click="goToAddress">
+        <view class="delivery-row">
+          <CozyIcon name="pin" :size="16" color="#756A63" />
+          <text class="delivery-addr">{{ deliveryAddressText }}</text>
+          <text class="delivery-arrow">›</text>
+        </view>
+        <view class="delivery-row">
+          <CozyIcon name="send" :size="16" color="#753A22" />
+          <text class="delivery-store">CozyCoffee 中心店</text>
+          <text class="delivery-dist"> | 1.2km</text>
+        </view>
+      </view>
       <view class="store-foot">
         <text class="store-status"><text class="status-icon">☼</text> 精品咖啡每日新鲜烘焙</text>
         <text class="store-more" @click="openStoreDetail">详情 ›</text>
@@ -208,6 +220,14 @@ async function setFulfillment(value) {
     const addr = await resolveDeliveryAddress(checkoutStore)
     if (!addr) uni.navigateTo({ url: '/pages/address/edit' })
   }
+}
+const deliveryAddressText = computed(() => {
+  const a = checkoutStore.deliveryAddress
+  if (!a) return '未设置配送地址，点击添加'
+  return [a.region, a.detail].filter(Boolean).join(' ')
+})
+function goToAddress() {
+  uni.navigateTo({ url: '/pages/address/list' })
 }
 const sysInfo = uni.getSystemInfoSync()
 const statusBarHeight = ref(sysInfo.statusBarHeight || 20)
@@ -464,6 +484,46 @@ function closeOffShelf() {
 .pickup-opt { padding: 10rpx 28rpx; font-size: 22rpx; color: $cozy-muted; background: $cozy-surface; }
 .pickup-opt.active { background: $cozy-ink; color: #fff; }
 .store-meta { margin-top: 10rpx; font-size: 22rpx; color: $cozy-muted; }
+.delivery-info {
+  margin-top: 16rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 12rpx;
+  background: $cozy-surface;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+.delivery-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  min-width: 0;
+}
+.delivery-addr {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  color: $cozy-ink;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.delivery-arrow {
+  flex: none;
+  font-size: 24rpx;
+  line-height: 1;
+  color: $cozy-placeholder;
+}
+.delivery-store {
+  flex: none;
+  font-size: 22rpx;
+  color: $cozy-muted;
+  font-weight: 600;
+}
+.delivery-dist {
+  font-size: 22rpx;
+  color: $cozy-placeholder;
+}
 .store-foot { margin-top: 12rpx; display: flex; align-items: center; justify-content: space-between; font-size: 22rpx; color: $cozy-muted; }
 .status-icon { color: $cozy-muted; }
 .store-more { color: $cozy-muted; }
