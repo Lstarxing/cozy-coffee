@@ -8,20 +8,9 @@
       <view class="form-row">
         <text class="form-label">联系人</text>
         <input v-model="form.name" placeholder="请填写收货人姓名" placeholder-class="form-placeholder" class="form-input" />
-      </view>
-      <view class="form-row">
-        <text class="form-label">性别</text>
-        <view class="gender-options">
-          <view class="gender-option" :class="{ selected: form.gender === 'MALE' }" @click="form.gender = 'MALE'">男</view>
-          <view class="gender-option" :class="{ selected: form.gender === 'FEMALE' }" @click="form.gender = 'FEMALE'">女</view>
-        </view>
-      </view>
-      <view class="form-row">
-        <text class="form-label">标签</text>
-        <view class="gender-options">
-          <view class="gender-option" :class="{ selected: form.label === 'HOME' }" @click="form.label = 'HOME'">家</view>
-          <view class="gender-option" :class="{ selected: form.label === 'COMPANY' }" @click="form.label = 'COMPANY'">公司</view>
-          <view class="gender-option" :class="{ selected: form.label === 'SCHOOL' }" @click="form.label = 'SCHOOL'">学校</view>
+        <view class="gender-rounds">
+          <view class="gender-round" :class="{ on: form.gender === 'MALE' }" @click="form.gender = 'MALE'">先生</view>
+          <view class="gender-round" :class="{ on: form.gender === 'FEMALE' }" @click="form.gender = 'FEMALE'">女士</view>
         </view>
       </view>
       <view class="form-row">
@@ -38,6 +27,14 @@
       <view class="form-row">
         <text class="form-label">门牌号</text>
         <input v-model="form.detail" placeholder="例：A座8102室" placeholder-class="form-placeholder" class="form-input" />
+      </view>
+      <view class="form-row">
+        <text class="form-label">标签</text>
+        <view class="label-options">
+          <view class="label-option" :class="{ selected: form.label === 'HOME' }" @click="form.label = 'HOME'">家</view>
+          <view class="label-option" :class="{ selected: form.label === 'COMPANY' }" @click="form.label = 'COMPANY'">公司</view>
+          <view class="label-option" :class="{ selected: form.label === 'SCHOOL' }" @click="form.label = 'SCHOOL'">学校</view>
+        </view>
       </view>
       <view class="form-row tap" @click="form.isDefault = !form.isDefault">
         <text class="form-label">设为默认</text>
@@ -192,9 +189,9 @@ const save = async () => {
 .form-row {
   display: flex;
   align-items: center;
-  gap: 28rpx;
-  min-height: 108rpx;
-  padding: 0 36rpx;
+  gap: 20rpx;
+  min-height: 96rpx;
+  padding: 0 32rpx;
   border-bottom: 1rpx solid $cozy-border;
 }
 .form-row:last-child { border-bottom: 0; }
@@ -202,8 +199,8 @@ const save = async () => {
 .form-row.tap:active { opacity: .7; }
 .form-label {
   flex: none;
-  width: 124rpx;
-  font-size: 28rpx;
+  width: 116rpx;
+  font-size: 24rpx;
   color: $cozy-ink;
 }
 .form-input {
@@ -211,57 +208,79 @@ const save = async () => {
   min-width: 0;
   border: none;
   background: transparent;
-  font-size: 28rpx;
+  font-size: 24rpx;
   color: $cozy-ink;
   padding: 12rpx 0;
 }
 .form-placeholder { color: $cozy-placeholder; }
 .form-value {
   margin-left: auto;
-  font-size: 28rpx;
+  font-size: 24rpx;
   color: $cozy-placeholder;
 }
 .form-value.filled { color: $cozy-ink; }
 .form-arrow {
-  font-size: 32rpx;
+  font-size: 28rpx;
   color: $cozy-placeholder;
   line-height: 1;
 }
 .form-check {
   margin-left: auto;
-  width: 44rpx;
-  height: 44rpx;
-  border-radius: 10rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 8rpx;
   border: 1rpx solid $cozy-border;
   background: $bg-white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #fff;
 }
 .form-check.on { background: $cozy-primary; border-color: $cozy-primary; }
 
-/* 性别选择：轻选中态（暖底 + 棕描边） */
-.gender-options { margin-left: auto; display: flex; gap: 16rpx; }
-.gender-option {
-  min-width: 120rpx;
-  height: 72rpx;
-  padding: 0 36rpx;
+/* 联系人右侧：圆形先生/女士选择 */
+.gender-rounds { flex: none; display: flex; align-items: center; gap: 14rpx; }
+.gender-round {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1rpx solid $cozy-border;
+  background: $bg-white;
+  color: $cozy-muted;
+  font-size: 20rpx;
+
+  &.on {
+    background: $cozy-primary;
+    border-color: $cozy-primary;
+    color: #fff;
+    font-weight: 600;
+  }
+}
+
+/* 标签：小巧胶囊，置于设为默认上一行 */
+.label-options { margin-left: auto; display: flex; gap: 12rpx; }
+.label-option {
+  min-width: 84rpx;
+  height: 48rpx;
+  padding: 0 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1rpx solid $cozy-border;
-  border-radius: $cozy-radius-md;
+  border-radius: 999rpx;
   background: $bg-white;
   color: $cozy-muted;
-  font-size: 26rpx;
+  font-size: 22rpx;
 
   &.selected {
-    background: #F1E4DA;
+    background: $cozy-primary-soft;
     border-color: $cozy-primary;
     color: $cozy-primary;
-    font-weight: 650;
+    font-weight: 600;
   }
 }
 
