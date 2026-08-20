@@ -57,6 +57,7 @@
     border-radius:14px; background:var(--card); text-align:center;
   }
   .status-line { display:block; font-size:13px; color:var(--ink); }
+  .status-thanks { display:block; margin-top:6px; font-size:11px; color:var(--muted); }
   .pickup-code-block { margin-top:15px; display:flex; flex-direction:column; align-items:center; gap:7px; }
   .pickup-label { font-size:13px; color:var(--muted); }
   .pickup-code {
@@ -176,15 +177,6 @@
   .sp-reward-text { color:var(--primary); font-size:11px; font-weight:650; }
   .sp-reward-sep { color:var(--border); font-size:11px; }
 
-  /* ── 确认收货（兑换快递单 · 已发货） ── */
-  .confirm-receipt {
-    margin-top:12px; height:44px;
-    display:flex; align-items:center; justify-content:center;
-    border-radius:999px; background:var(--ink); color:#fff;
-    font-size:14px; font-weight:650; cursor:pointer;
-  }
-  .confirm-receipt:active { opacity:.85; }
-
   /* ── Toast ── */
   .toast {
     position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
@@ -228,6 +220,7 @@
   <!-- 状态卡（白卡：取餐码/兑换码 + 三节点进度） -->
   <div class="status-card" id="statusCard">
     <span class="status-line" id="statusLine" style="display:none"></span>
+    <span class="status-thanks" id="statusThanks" style="display:none">感谢您对CozyCoffee的支持，欢迎再次光临</span>
     <div class="pickup-code-block" id="pickupBlock">
       <span class="pickup-label" id="pickupLabel">取餐码</span>
       <span class="pickup-code" id="pickupCode">A021</span>
@@ -284,9 +277,6 @@
     </div>
   </div>
 
-  <!-- 确认收货（兑换快递单 · 已发货） -->
-  <div class="confirm-receipt" id="confirmReceiptBtn" style="display:none" onclick="toast('已确认收货，感谢支持')">确认收货</div>
-
 </div>
 
 <script>
@@ -342,7 +332,7 @@
       type:'coffee', status:'delivering', statusText:'配送中', delivery:true, deliveryTime:'15:48',
       time:'2026-08-02 14:58:20', orderNo:'COZ2026080203',
       goodsAmount:'¥41.00', discount:'¥0.00', deliveryFee:'¥3.00', paid:'¥44.00',
-      addr:'浙江省杭州市西湖区学院路 100 号 2 幢 502', contact:'李四（女士）139****1234',
+      addr:'浙江省杭州市西湖区学院路 100 号 2 幢 502', contact:'李四（女士）13911111234',
       items:[
         { name:'燕麦拿铁', spec:'热 / 大杯 / 无糖', price:'¥36.00', qty:'× 1' }
       ]
@@ -376,19 +366,19 @@
       type:'redeem', delivery:true, status:'shipped', statusText:'已发货 · 快递配送',
       productName:'Cozy 经典帆布包', pointsCost:1600, qty:1, code:'SF1068192001',
       time:'2026-07-20 16:42:10', orderNo:'RD202607200003',
-      addr:'浙江省杭州市西湖区文三路 128 号', contact:'张*宁 138****0421'
+      addr:'浙江省杭州市西湖区文三路 128 号', contact:'张宁（先生）13811110421'
     },
     rd202607120004: {
       type:'redeem', delivery:true, status:'processing', statusText:'处理中 · 等待揽收',
       productName:'挂耳咖啡精选礼盒', pointsCost:3500, qty:1, code:'待出库',
       time:'2026-07-12 09:30:44', orderNo:'RD202607120004',
-      addr:'浙江省杭州市西湖区文三路 128 号', contact:'张*宁 138****0421'
+      addr:'浙江省杭州市西湖区文三路 128 号', contact:'张宁（先生）13811110421'
     },
     rd202607050005: {
       type:'redeem', delivery:true, status:'pending', statusText:'待处理 · 即将发货',
       productName:'定制拿铁金搅拌勺', pointsCost:600, qty:1, code:'待出库',
       time:'2026-07-05 14:18:22', orderNo:'RD202607050005',
-      addr:'浙江省杭州市西湖区文三路 128 号', contact:'张*宁 138****0421'
+      addr:'浙江省杭州市西湖区文三路 128 号', contact:'张宁（先生）13811110421'
     },
     rd202606300006: {
       type:'redeem', status:'cancelled', statusText:'已取消 · 积分已退还',
@@ -447,6 +437,7 @@
       // 状态行：兑换单 / 已取消 / 配送中
       document.getElementById('statusLine').style.display = (redeem || cancelled || delivering) ? 'block' : 'none';
       document.getElementById('statusLine').textContent = o.statusText || '';
+      document.getElementById('statusThanks').style.display = cancelled ? 'block' : 'none';
 
       // 取餐码 / 预计送达(咖啡外送) / 物流单号(兑换快递) / 兑换码 / 取货码
       const caption = !redeem && delivery ? '预计送达'
@@ -479,9 +470,9 @@
     }
 
     // 门店 + 商品
-    document.getElementById('storeName').textContent = o.storeName || (redeem && delivery ? '配送至' : 'CozyCoffee 中心店');
-    document.getElementById('storeAddr').textContent = o.storeAddr || (redeem && delivery ? '配送至 · ' + (o.addr || '') : '杭州 · 文三路 128 号');
-    document.getElementById('storeActions').style.display = ((delivery && redeem) || virtual) ? 'none' : 'flex';
+    document.getElementById('storeName').textContent = o.storeName || (redeem && delivery ? '杭州中心店' : 'CozyCoffee 中心店');
+    document.getElementById('storeAddr').textContent = o.storeAddr || (redeem && delivery ? (o.addr || '') : '杭州 · 文三路 128 号');
+    document.getElementById('storeActions').style.display = virtual ? 'none' : 'flex';
 
     const productName = o.productName || '';
     document.getElementById('productList').innerHTML = (o.items || [{
@@ -539,10 +530,6 @@
     document.getElementById('deliveryAddrRow').style.display = isDelivery ? 'flex' : 'none';
     document.getElementById('deliveryAddr').textContent = o.addr || '';
     document.getElementById('deliveryContact').textContent = o.contact || '';
-
-    // 确认收货（兑换快递单 · 已发货）
-    const confirmBtn = document.getElementById('confirmReceiptBtn');
-    confirmBtn.style.display = (redeem && o.status === 'shipped' && o.delivery) ? 'flex' : 'none';
 
     // 本次获得（完成咖啡订单）
     const rewardRow = document.getElementById('rewardRow');

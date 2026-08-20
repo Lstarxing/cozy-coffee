@@ -1,6 +1,6 @@
 <!--
   订单详情页 - 精确复现 prototype/order-detail.html：统一小票
-  状态区 → 门店/配送 → 商品 → 金额 → 订单信息；支持咖啡+兑换、自取+外送
+  状态区 → 门店/配送 → 商品 → 金额 → 订单信息；支持咖啡+兑换、自提+外送
 -->
 <template>
   <view class="detail-page">
@@ -37,6 +37,7 @@
       <!-- 状态卡（白卡：取餐号在上居中 + 三节点进度 已下单/制作中/待取餐） -->
       <view v-else class="status-card">
         <text v-if="statusText && (isRedeem || isCancelled || isDelivering)" class="status-line">{{ statusText }}</text>
+        <text v-if="isCancelled" class="status-thanks">感谢您对CozyCoffee的支持，欢迎再次光临</text>
         <view v-if="!isCancelled" class="pickup-code-block">
           <text class="pickup-label">{{ codeCaption }}</text>
           <text class="pickup-code" :class="{ long: codeText.length > 6 }">{{ codeText }}</text>
@@ -62,10 +63,10 @@
       <view class="store-products">
         <view class="sp-store">
           <view class="sp-store-main">
-            <text class="sp-store-name">{{ isDelivery && isRedeem ? '配送至' : storeName }}</text>
+            <text class="sp-store-name">{{ storeName }}</text>
             <text class="sp-store-addr">{{ storeAddr }}</text>
           </view>
-          <view v-if="!isVirtual && !(isDelivery && isRedeem)" class="sp-store-actions">
+          <view v-if="!isVirtual" class="sp-store-actions">
             <view class="sp-store-act" @click="callStore"><CozyIcon name="phone" :size="16" color="#753A22" /></view>
             <view class="sp-store-act" @click="navigateStore"><CozyIcon name="send" :size="16" color="#753A22" /></view>
           </view>
@@ -161,8 +162,6 @@
         </view>
       </view>
 
-      <!-- 确认收货（兑换快递单 · 已发货） -->
-      <view v-if="canConfirmReceipt" class="confirm-receipt" @click="confirmReceipt">确认收货</view>
     </view>
   </view>
 </template>
@@ -171,7 +170,7 @@
 import { computed, ref } from 'vue'
 import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { getOrderDetail, acceptOrder, cancelOrder } from '@/api/order'
-import { getRedemptionDetail, confirmRedemptionReceipt } from '@/api/member'
+import { getRedemptionDetail } from '@/api/member'
 import { useSessionStore } from '@/stores/session'
 import { refreshMemberProfile } from '@/services/session/MemberProfileService'
 import { FIXED_STORE } from '@/config/store'
@@ -198,7 +197,6 @@ const isDelivery = computed(() => {
   return String(order.value?.diningMethod || '').toUpperCase() === 'DELIVERY'
 })
 const isVirtual = computed(() => isRedeem.value && order.value?.fulfillmentType === 'VIRTUAL')
-const canConfirmReceipt = computed(() => isRedeem.value && normalizedStatus.value === 'shipped' && order.value?.fulfillmentType === 'DELIVERY')
 
 const orderItems = computed(() => {
   if (isRedeem.value) {
@@ -407,26 +405,6 @@ function navigateStore() {
   uni.showToast({ title: '打开导航', icon: 'none' })
 }
 
-async function confirmReceipt() {
-  const confirmed = await new Promise(resolve => {
-    uni.showModal({
-      title: '确认收货',
-      content: '请确认已收到商品。确认后订单将标记为已完成。',
-      confirmText: '确认',
-      cancelText: '再等等',
-      success: res => resolve(res.confirm)
-    })
-  })
-  if (!confirmed) return
-  try {
-    await confirmRedemptionReceipt(orderId.value)
-    uni.showToast({ title: '已确认收货，感谢支持', icon: 'none' })
-    loadOrder()
-  } catch (error) {
-    uni.showToast({ title: error?.message || '确认收货失败，请稍后重试', icon: 'none' })
-  }
-}
-
 async function payPendingOrder() {
   paying.value = true
   try {
@@ -476,7 +454,7 @@ async function cancelPendingOrder() {
 
 <style lang="scss" scoped>
 .detail-page { min-height: 100vh; background: $cozy-surface; }
-.detail-content { padding: 12rpx 40rpx 0; }
+.detail-content { padding: 12rpx 40rpx 120rpx; }
 
 /* ── 未支付：等待支付卡（居中三行 + 首节点进度） ── */
 .pending-card {
@@ -541,6 +519,12 @@ async function cancelPendingOrder() {
   display: block;
   font-size: 26rpx;
   color: $cozy-ink;
+}
+.status-thanks {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  color: $cozy-muted;
 }
 .pickup-code-block {
   margin-top: 30rpx;
@@ -787,21 +771,5 @@ async function cancelPendingOrder() {
   font-weight: 600;
 
   &:active { opacity: .6; }
-}
-
-/* ── 确认收货（兑换快递单 · 已发货） ── */
-.confirm-receipt {
-  margin-top: 24rpx;
-  height: 88rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999rpx;
-  background: $cozy-ink;
-  color: #fff;
-  font-size: 28rpx;
-  font-weight: 650;
-
-  &:active { opacity: .85; }
 }
 </style>
