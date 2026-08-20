@@ -60,6 +60,12 @@
   }
   .store-address { flex:1; min-width:0; font-size:13px; line-height:1.5; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .store-address.placeholder { color:var(--placeholder); }
+  .addr-label {
+    flex:none; padding:0 5px;
+    border:1px solid var(--primary, #753A22); border-radius:3px;
+    color:var(--primary, #753A22);
+    font-size:10px; line-height:1.6;
+  }
   .store-arrow { flex:none; color:var(--muted); font-size:22px; font-weight:300; line-height:1; margin-top:2px; }
   .contact-row { display:flex; align-items:center; gap:10px; margin-top:8px; }
   .contact-name { color:var(--ink); font-size:13px; font-weight:650; }
@@ -203,10 +209,11 @@
         <div class="store-copy">
           <div class="store-title-row">
             <span class="pickup-tag" id="sumTag">外送</span>
+            <span class="addr-label" id="sumLabel" style="display:none"></span>
             <span class="store-address" id="sumAddress">浙江省 杭州市 西湖区 文三路 128 号 创新大厦 3F</span>
           </div>
           <div class="contact-row" id="sumContact">
-            <span class="contact-name">林女士（女士）</span>
+            <span class="contact-name">林晓（女士）</span>
             <span class="contact-phone">138 **** 8888</span>
           </div>
         </div>
@@ -357,6 +364,7 @@
   const MODES = {
     delivery: {
       tag:'外送',
+      label:'HOME',
       address:'浙江省 杭州市 西湖区 文三路 128 号 创新大厦 3F',
       contact:true,
       fee:6.00,
@@ -375,6 +383,7 @@
       eta:'尽快取餐（约 15 分钟）'
     }
   };
+  const LABEL_TEXT = { HOME: '家', COMPANY: '公司', SCHOOL: '学校' };
   let mode = 'delivery';
 
   function setMode(m) {
@@ -382,6 +391,9 @@
     document.querySelectorAll('.demo-pill').forEach(p => p.classList.toggle('on', p.dataset.mode === m));
     const d = MODES[m];
     document.getElementById('sumTag').textContent = d.tag;
+    const labelEl = document.getElementById('sumLabel');
+    if (d.label) { labelEl.textContent = LABEL_TEXT[d.label] || d.label; labelEl.style.display = 'inline-block'; }
+    else { labelEl.style.display = 'none'; }
     document.getElementById('sumAddress').textContent = d.address;
     document.getElementById('sumContact').style.display = d.contact ? 'flex' : 'none';
     document.getElementById('sumEta').textContent = d.eta();
