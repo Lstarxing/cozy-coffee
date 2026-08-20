@@ -65,7 +65,7 @@
   .store-meta--delivery {
     margin-top:5px; display:flex; align-items:center; gap:6px;
   }
-  .store-meta--delivery svg { flex:none; width:16px; height:16px; color:var(--muted); }
+  .store-meta--delivery svg { flex:none; width:14px; height:14px; color:var(--muted); }
   .store-left svg { flex:none; width:18px; height:18px; color:var(--muted); }
   .delivery-addr {
     flex:1; min-width:0;
@@ -225,6 +225,58 @@
   .sheet-row .sheet-value.cozy-today {
     color:var(--roast-brown); font-weight:600;
   }
+
+  /* ── 选择收货地址抽屉 ── */
+  .addr-sheet-mask {
+    position:fixed; inset:0; z-index:35;
+    background:rgba(28,20,14,.45);
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .addr-sheet {
+    width:100%; max-width:390px; max-height:74vh;
+    display:flex; flex-direction:column;
+    background:var(--card); border-radius:16px 16px 0 0;
+    padding:0 20px 20px;
+    animation:addr-sheet-up .35s ease both;
+  }
+  @keyframes addr-sheet-up {
+    from { transform:translateY(100%); }
+    to { transform:translateY(0); }
+  }
+  .addr-sheet-head {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 0 16px;
+    border-bottom:1px solid var(--border);
+  }
+  .addr-sheet-title { font-family:var(--serif); font-size:18px; font-weight:600; color:var(--ink); }
+  .addr-sheet-close { font-size:22px; color:var(--muted); padding:2px 6px; cursor:pointer; }
+  .addr-sheet-list { flex:1; min-height:0; overflow-y:auto; }
+  .addr-row {
+    display:flex; align-items:center; gap:10px;
+    padding:13px 0; border-bottom:1px solid var(--border);
+    cursor:pointer;
+  }
+  .addr-row:active { opacity:.7; }
+  .addr-check { flex:none; width:20px; display:flex; align-items:center; justify-content:center; }
+  .addr-check svg { width:14px; height:14px; color:var(--primary); }
+  .addr-copy { flex:1; min-width:0; }
+  .addr-name { display:block; font-size:13px; font-weight:600; color:var(--ink); }
+  .addr-detail {
+    display:block; margin-top:3px;
+    font-size:11px; color:var(--muted);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .addr-edit { flex:none; padding:4px; cursor:pointer; }
+  .addr-edit svg { width:16px; height:16px; color:var(--muted); }
+  .addr-sheet-add {
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    margin-top:14px; height:44px;
+    border:1px solid var(--border); border-radius:8px;
+    font-size:13px; font-weight:600; color:var(--primary);
+    cursor:pointer;
+  }
+  .addr-sheet-add:active { background:var(--surface); }
+  .addr-sheet-add svg { width:16px; height:16px; color:var(--primary); }
 
   /* ── 底部购物车条 ── */
   /* ── Cart bar ── */
@@ -530,6 +582,21 @@
     </div>
   </div>
 
+  <!-- 选择收货地址抽屉 -->
+  <div class="addr-sheet-mask" id="addrSheetMask" style="display:none" onclick="closeAddrSheet()">
+    <div class="addr-sheet" onclick="event.stopPropagation()">
+      <div class="addr-sheet-head">
+        <span class="addr-sheet-title">请选择收货地址</span>
+        <span class="addr-sheet-close" onclick="closeAddrSheet()">×</span>
+      </div>
+      <div class="addr-sheet-list" id="addrSheetList"></div>
+      <div class="addr-sheet-add" onclick="go('address-edit.html')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span>新增收货地址</span>
+      </div>
+    </div>
+  </div>
+
   <!-- 主体：左分类 + 右商品 -->
   <div class="menu-body">
     <div class="category-sidebar" id="categorySidebar"></div>
@@ -812,42 +879,76 @@
   // ── 自提 / 外送切换 ──
   const PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-11a6 6 0 0 1 12 0c0 5.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>';
   const SWAP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M14 4l4 4-4 4"/><path d="M20 16H7M10 12l-4 4 4 4"/></svg>';
+  const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  const PENCIL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/><path d="M14 6l4 4"/></svg>';
+  let currentAddressId = null;
+  function getAddressList() { try { return JSON.parse(localStorage.getItem('cozy_addresses')) || []; } catch (e) { return []; } }
+  function getDefaultAddress() {
+    const list = getAddressList();
+    return list.find(a => a.isDefault) || list[0] || null;
+  }
+  function maskPhone(p) { return String(p || '').replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'); }
+  function renderDeliveryAddress(addr) {
+    document.getElementById('storeLeft').innerHTML = PIN_SVG + '<span class="store-name delivery-addr">' + [addr.region, addr.detail].filter(Boolean).join(' ').replace(/\s+/g, '') + '</span><span class="delivery-arrow">›</span>';
+    document.getElementById('storeMeta').classList.add('store-meta--delivery');
+    document.getElementById('storeMeta').innerHTML = SWAP_SVG + '<span>CozyCoffee 中心店 | 配送距离 1.2km</span>';
+  }
   function chooseAddress() {
     if (!document.getElementById('optDelivery').classList.contains('active')) return;
-    localStorage.setItem('cozy_dining_method', 'delivery');
-    location.href = 'address.html';
+    openAddrSheet();
+  }
+  function openAddrSheet() {
+    const list = getAddressList();
+    document.getElementById('addrSheetList').innerHTML = list.map(a => {
+      const checked = currentAddressId && String(a.id) === String(currentAddressId) ? CHECK_SVG : '';
+      const honorific = String(a.gender || '').toUpperCase() === 'FEMALE' ? '（女士）' : '（先生）';
+      return `
+        <div class="addr-row" onclick="pickAddress(${a.id})">
+          <span class="addr-check">${checked}</span>
+          <span class="addr-copy">
+            <span class="addr-name">${a.name}${honorific} · ${maskPhone(a.phone)}</span>
+            <span class="addr-detail">${[a.region, a.detail].filter(Boolean).join(' ').replace(/\s+/g, '')}</span>
+          </span>
+          <span class="addr-edit" onclick="event.stopPropagation(); go('address-edit.html?id=${a.id}')">${PENCIL_SVG}</span>
+        </div>`;
+    }).join('');
+    document.getElementById('addrSheetMask').style.display = 'flex';
+  }
+  function closeAddrSheet() {
+    document.getElementById('addrSheetMask').style.display = 'none';
+  }
+  function pickAddress(id) {
+    const addr = getAddressList().find(a => a.id === id);
+    if (!addr) return;
+    currentAddressId = id;
+    renderDeliveryAddress(addr);
+    closeAddrSheet();
   }
   function setFulfillment(mode) {
     const pickup = document.getElementById('optPickup');
     const delivery = document.getElementById('optDelivery');
-    const storeLeft = document.getElementById('storeLeft');
-    const storeMeta = document.getElementById('storeMeta');
     if (mode === 'delivery') {
       pickup.classList.remove('active');
       delivery.classList.add('active');
       // 外送：优先用地址页选中的地址，其次默认/首个，无地址跳添加页（与 menu.vue setFulfillment 一致）
       let addr = (() => { try { return JSON.parse(localStorage.getItem('cozy_selected_address')); } catch (e) { return null; } })();
       localStorage.removeItem('cozy_selected_address');
-      if (!addr) {
-        const addrList = (() => { try { return JSON.parse(localStorage.getItem('cozy_addresses')) || []; } catch (e) { return []; } })();
-        addr = addrList.find(a => a.isDefault) || addrList[0] || null;
-      }
+      if (!addr) addr = getDefaultAddress();
       if (!addr) {
         toast('未设置配送地址，请先添加');
         setTimeout(() => { location.href = 'address.html'; }, 600);
         return;
       }
-      storeLeft.innerHTML = PIN_SVG + '<span class="store-name delivery-addr">' + [addr.region, addr.detail].filter(Boolean).join(' ').replace(/\s+/g, '') + '</span><span class="delivery-arrow">›</span>';
-      storeMeta.classList.add('store-meta--delivery');
-      storeMeta.innerHTML = SWAP_SVG + '<span>CozyCoffee 中心店 | 配送距离 1.2km</span>';
+      currentAddressId = addr.id;
+      renderDeliveryAddress(addr);
       toast('已切换外送');
       return;
     }
     delivery.classList.remove('active');
     pickup.classList.add('active');
-    storeLeft.innerHTML = '<span class="store-fav">☆</span><span class="store-name">CozyCoffee 中心店</span>';
-    storeMeta.classList.remove('store-meta--delivery');
-    storeMeta.textContent = '距离您 1.2km';
+    document.getElementById('storeLeft').innerHTML = '<span class="store-fav">☆</span><span class="store-name">CozyCoffee 中心店</span>';
+    document.getElementById('storeMeta').classList.remove('store-meta--delivery');
+    document.getElementById('storeMeta').textContent = '距离您 1.2km';
     toast('已切换自提');
   }
 
