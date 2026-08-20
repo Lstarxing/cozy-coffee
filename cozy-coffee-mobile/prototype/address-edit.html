@@ -53,37 +53,52 @@
     overflow:hidden;
   }
   .form-row {
-    display:flex; align-items:center; gap:14px;
-    min-height:54px;
+    display:flex; align-items:center; gap:10px;
+    min-height:48px;
     padding:0 18px;
     border-bottom:1px solid var(--border);
   }
   .form-row:last-child { border-bottom:0; }
   .form-label {
-    flex:none; width:62px;
-    font-size:14px; color:var(--ink);
+    flex:none; width:58px;
+    font-size:12px; color:var(--ink);
   }
   .form-input {
     flex:1; min-width:0;
     border:none; background:transparent;
-    font-size:14px; color:var(--roastery-ink); font-family:inherit;
+    font-size:12px; color:var(--roastery-ink); font-family:inherit;
     padding:6px 0;
   }
   .form-input::placeholder { color:var(--placeholder); }
   .form-input:focus { outline:none; }
 
-  /* 性别（右对齐） */
-  .gender-group { display:flex; gap:10px; margin-left:auto; }
-  .gender-opt {
-    min-width:64px; height:34px;
+  /* 联系人右侧：圆形先生/女士 */
+  .gender-rounds { flex:none; display:flex; gap:8px; }
+  .gender-round {
+    width:30px; height:30px;
     display:flex; align-items:center; justify-content:center;
-    border-radius:6px;
+    border-radius:50%;
     border:1px solid var(--hairline); background:var(--porcelain-muted);
-    font-size:13px; color:var(--roastery-ink); cursor:pointer;
+    font-size:10px; color:var(--roastery-ink); cursor:pointer;
     transition:all .2s;
   }
-  .gender-opt.active {
-    background:#F1E4DA; border-color:var(--roast-brown);
+  .gender-round.active {
+    background:var(--roast-brown); border-color:var(--roast-brown);
+    color:#fff; font-weight:600;
+  }
+
+  /* 标签：小巧胶囊，置于设为默认上一行 */
+  .label-options { margin-left:auto; display:flex; gap:8px; }
+  .label-opt {
+    min-width:42px; height:24px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:999px;
+    border:1px solid var(--hairline); background:var(--porcelain-muted);
+    font-size:11px; color:var(--roastery-ink); cursor:pointer;
+    transition:all .2s;
+  }
+  .label-opt.active {
+    background:#F3E9DF; border-color:var(--roast-brown);
     color:var(--roast-brown); font-weight:600;
   }
 
@@ -92,7 +107,7 @@
   .form-row.tap:active { opacity:.7; }
   .form-value {
     margin-left:auto;
-    font-size:14px; color:var(--placeholder);
+    font-size:12px; color:var(--placeholder);
   }
   .form-value.filled { color:var(--roastery-ink); }
   .form-arrow { font-size:16px; color:var(--placeholder); }
@@ -142,20 +157,9 @@
     <div class="form-row">
       <span class="form-label">联系人</span>
       <input class="form-input" id="fName" placeholder="请填写收货人姓名">
-    </div>
-    <div class="form-row">
-      <span class="form-label">性别</span>
-      <div class="gender-group">
-        <div class="gender-opt active" data-g="MALE" onclick="pickGender(this)">男</div>
-        <div class="gender-opt" data-g="FEMALE" onclick="pickGender(this)">女</div>
-      </div>
-    </div>
-    <div class="form-row">
-      <span class="form-label">标签</span>
-      <div class="gender-group">
-        <div class="gender-opt active" data-l="HOME" onclick="pickLabel(this)">家</div>
-        <div class="gender-opt" data-l="COMPANY" onclick="pickLabel(this)">公司</div>
-        <div class="gender-opt" data-l="SCHOOL" onclick="pickLabel(this)">学校</div>
+      <div class="gender-rounds">
+        <div class="gender-round active" data-g="MALE" onclick="pickGender(this)">先生</div>
+        <div class="gender-round" data-g="FEMALE" onclick="pickGender(this)">女士</div>
       </div>
     </div>
     <div class="form-row">
@@ -170,6 +174,14 @@
     <div class="form-row">
       <span class="form-label">门牌号</span>
       <input class="form-input" id="fDetail" placeholder="例：A座8102室">
+    </div>
+    <div class="form-row">
+      <span class="form-label">标签</span>
+      <div class="label-options">
+        <div class="label-opt active" data-l="HOME" onclick="pickLabel(this)">家</div>
+        <div class="label-opt" data-l="COMPANY" onclick="pickLabel(this)">公司</div>
+        <div class="label-opt" data-l="SCHOOL" onclick="pickLabel(this)">学校</div>
+      </div>
     </div>
     <div class="form-row tap" onclick="toggleDefault()">
       <span class="form-label">设为默认</span>
@@ -200,8 +212,8 @@
         document.getElementById('pageTitle').textContent = '编辑地址';
         document.getElementById('fName').value = a.name;
         document.getElementById('fPhone').value = a.phone;
-        pickGender(document.querySelector('.gender-opt[data-g="' + (a.gender || 'MALE') + '"]'));
-        pickLabel(document.querySelector('.gender-opt[data-l="' + (a.label || 'HOME') + '"]'));
+        pickGender(document.querySelector('.gender-round[data-g="' + (a.gender || 'MALE') + '"]'));
+        pickLabel(document.querySelector('.label-opt[data-l="' + (a.label || 'HOME') + '"]'));
         regionIdx = REGIONS.indexOf(a.region);
         const r = document.getElementById('fRegion');
         r.textContent = a.region;
@@ -213,11 +225,11 @@
   })();
 
   function pickGender(el) {
-    document.querySelectorAll('.gender-opt').forEach(o => o.classList.remove('active'));
+    document.querySelectorAll('.gender-round').forEach(o => o.classList.remove('active'));
     el.classList.add('active');
   }
   function pickLabel(el) {
-    document.querySelectorAll('.gender-opt[data-l]').forEach(o => o.classList.remove('active'));
+    document.querySelectorAll('.label-opt').forEach(o => o.classList.remove('active'));
     el.classList.add('active');
   }
   function cycleRegion() {
@@ -242,8 +254,8 @@
     if (!name || !phone || !region || !detail) { toast('请填写完整信息'); return; }
     if (!/^1\d{10}$/.test(phone)) { toast('请输入正确的手机号'); return; }
 
-    const gender = document.querySelector('.gender-opt.active').dataset.g;
-    const label = (document.querySelector('.gender-opt.active[data-l]') || {}).dataset?.l || 'HOME';
+    const gender = document.querySelector('.gender-round.active').dataset.g;
+    const label = (document.querySelector('.label-opt.active') || {}).dataset?.l || 'HOME';
     const list = getAddresses();
     if (isDefault) list.forEach(a => a.isDefault = false);
 
