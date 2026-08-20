@@ -69,7 +69,10 @@ class AuthControllerValidationTest {
 
     @Test
     void wechatDevSession_validInput_returnsToken() throws Exception {
-        when(authService.loginWechatDev("device_12345678"))
+        // 端点守卫：devLoginEnabled 或 wechatConfigured() 任一为真才放行；mock 里固定为真
+        when(authService.wechatConfigured()).thenReturn(true);
+        // 控制器调用的是 loginWechat(code, deviceId)，不是 loginWechatDev
+        when(authService.loginWechat("wx-code", "device_12345678"))
                 .thenReturn(java.util.Map.of("token", "wechat-dev-token"));
 
         mockMvc.perform(post("/api/auth/wechat/session")
