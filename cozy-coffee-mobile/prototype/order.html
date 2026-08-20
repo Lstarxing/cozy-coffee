@@ -101,7 +101,7 @@
   .order-action {
     flex:none; padding:8px 14px;
     border:1px solid var(--ink); border-radius:8px;
-    background:var(--ink); color:#fff;
+    background:transparent; color:var(--ink);
     font-size:11px; font-weight:650; cursor:pointer;
   }
   .order-action:active { opacity:.85; }
@@ -112,6 +112,9 @@
     font-size:11px; font-weight:600; cursor:pointer;
   }
   .mini-btn:active { background:var(--surface); }
+  .mini-btn.md { padding:5px 10px; font-size:10px; border-radius:6px; }
+  .mini-btn.strong { border-color:var(--ink); background:transparent; color:var(--ink); font-weight:650; }
+  .mini-btn.strong:active { opacity:.85; }
 
   /* ── 空状态 ── */
   .empty-state {
@@ -165,7 +168,7 @@
   <!-- 分类切换 -->
   <div class="category-switch">
     <div class="category-item active" data-f="pickup" onclick="switchCat(this)">
-      自取<span class="category-count" id="pickupCount">1</span>
+      自提<span class="category-count" id="pickupCount">1</span>
     </div>
     <div class="category-item" data-f="delivery" onclick="switchCat(this)">
       外送<span class="category-count" id="deliveryCount">1</span>
@@ -174,13 +177,13 @@
 
   <div class="page">
 
-    <!-- 咖啡订单（JS 渲染，按自取/外送过滤） -->
+    <!-- 咖啡订单（JS 渲染，按自提/外送过滤） -->
     <div id="orderList"></div>
 
     <!-- 空状态 -->
     <div class="empty-state" id="emptyState" style="display:none;">
       <span class="empty-icon">☕</span>
-      <span class="empty-title" id="emptyTitle">暂无自取订单</span>
+      <span class="empty-title" id="emptyTitle">暂无自提订单</span>
       <span class="empty-desc">选择一杯喜欢的咖啡，<br>我们会为你现制。</span>
       <span class="empty-action" onclick="go('menu.html')">去点单 →</span>
     </div>
@@ -210,7 +213,7 @@
 
   function go(href) { location.href = href; }
 
-  // 咖啡订单数据（自取/外送，覆盖 待支付/制作中/已完成/已取消 全状态；id 与 order-detail.html 一致）
+  // 咖啡订单数据（自提/外送，覆盖 待支付/制作中/已完成/已取消 全状态；id 与 order-detail.html 一致）
   const COFFEE_ORDERS = [
     { id:'coz2026080101', fulfillment:'pickup', status:'pending', statusText:'待支付',
       time:'2026-08-01 09:00:00', meta:'', expireAt: Date.now() + 8 * 60 * 1000,
@@ -264,7 +267,7 @@
     if (!shown.length) {
       document.getElementById('orderList').style.display = 'none';
       document.getElementById('emptyState').style.display = 'block';
-      document.getElementById('emptyTitle').textContent = '暂无' + (activeFulfillment === 'pickup' ? '自取' : '外送') + '订单';
+      document.getElementById('emptyTitle').textContent = '暂无' + (activeFulfillment === 'pickup' ? '自提' : '外送') + '订单';
       return;
     }
     document.getElementById('orderList').style.display = 'block';
@@ -300,9 +303,13 @@
         </div>
         <div class="receipt-summary">
           <span class="summary-label">${o.count}</span>
-          ${(o.status === 'completed' || o.status === 'cancelled')
-            ? `<span class="order-action" onclick="event.stopPropagation(); reorder('${o.id}')">再来一单</span>`
-            : `<span class="mini-btn" onclick="event.stopPropagation(); go('order-detail.html?id=${o.id}')">查看详情</span>`}
+          ${o.status === 'pending'
+            ? `<span class="mini-btn md" onclick="event.stopPropagation(); toast('订单已取消（模拟）')">取消订单</span>
+               <span class="mini-btn md strong" onclick="event.stopPropagation(); go('order-detail.html?id=${o.id}')">立即支付</span>
+               <span class="mini-btn md" onclick="event.stopPropagation(); go('order-detail.html?id=${o.id}')">查看详情</span>`
+            : (o.status === 'completed' || o.status === 'cancelled')
+              ? `<span class="order-action" onclick="event.stopPropagation(); reorder('${o.id}')">再来一单</span>`
+              : `<span class="mini-btn" onclick="event.stopPropagation(); go('order-detail.html?id=${o.id}')">查看详情</span>`}
         </div>
       </div>`).join('');
   }

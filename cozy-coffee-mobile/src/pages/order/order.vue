@@ -1,5 +1,5 @@
 <!--
-  订单页 - 精确复现 prototype/order.html：自取/外送分类，仅咖啡订单
+  订单页 - 精确复现 prototype/order.html：自提/外送分类，仅咖啡订单
   每单: 时间+取餐码/外送地址 + 状态 + 商品 + 再来一单
 -->
 <template>
@@ -55,8 +55,17 @@
         <view class="receipt-summary">
           <text class="summary-label">共 {{ order.totalQty }} 件 · {{ fulfillmentLabel(order) }}</text>
           <view class="summary-actions">
-            <view v-if="isCompleted(order.status) || isCancelled(order.status)" class="order-action" @click.stop="reOrder(order)">再来一单</view>
-            <view v-else class="mini-btn" @click.stop="goToDetail(order.id)">查看详情</view>
+            <template v-if="isPending(order.status)">
+              <view class="mini-btn md" @click.stop="cancelOrderItem(order)">取消订单</view>
+              <view class="mini-btn md strong" @click.stop="payOrderItem(order)">立即支付</view>
+              <view class="mini-btn md" @click.stop="goToDetail(order.id)">查看详情</view>
+            </template>
+            <template v-else-if="isCompleted(order.status) || isCancelled(order.status)">
+              <view class="order-action" @click.stop="reOrder(order)">再来一单</view>
+            </template>
+            <template v-else>
+              <view class="mini-btn" @click.stop="goToDetail(order.id)">查看详情</view>
+            </template>
           </view>
         </view>
       </view>
@@ -68,7 +77,7 @@
         <view class="empty-cup__body" />
         <view class="empty-cup__handle" />
       </view>
-      <text class="empty-title">暂无{{ currentCategory === 'pickup' ? '自取' : '外送' }}订单</text>
+      <text class="empty-title">暂无{{ currentCategory === 'pickup' ? '自提' : '外送' }}订单</text>
       <text class="empty-desc">选择一杯喜欢的咖啡，<br>我们会为你现制</text>
       <view class="empty-action" @click="goToMenu">去点单</view>
     </view>
@@ -78,7 +87,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
-import { getOrderList } from '@/api/order'
+import { getOrderList, acceptOrder as acceptOrderApi, cancelOrder as cancelOrderApi } from '@/api/order'
 import { formatCoffeeSpec } from '@/utils/spec'
 import { useCartStore } from '@/stores/cart'
 import { restoreOrderToCart } from '@/services/order/ReorderService'
@@ -86,7 +95,7 @@ import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
 
 const categories = [
-  { value: 'pickup', label: '自取' },
+  { value: 'pickup', label: '自提' },
   { value: 'delivery', label: '外送' }
 ]
 
@@ -127,7 +136,7 @@ const counts = computed(() => {
 })
 
 const loadingText = computed(() =>
-  currentCategory.value === 'pickup' ? '正在读取自取订单…' : '正在读取外送订单…'
+  currentCategory.value === 'pickup' ? '正在读取自提订单…' : '正在读取外送订单…'
 )
 
 function switchCategory(value) {
@@ -247,6 +256,51 @@ function goToMenu() {
   })
 }
 function goToDetail(orderId) { uni.navigateTo({ url: `/pages/order/detail?id=${encodeURIComponent(orderId)}` }) }
+
+// 待支付订单：列表直接支付/取消，无需进详情
+async function payOrderItem(order) {
+  const amount = money(order.payAmount ?? order.totalAmount)
+  const confirmed = await new Promise(resolve => {
+    uni.showModal({
+      title: '模拟支付',
+      content: `订单金额 ¥${amount}，确认模拟支付？`,
+      confirmText: '确认支付',
+      cancelText: '取消',
+      success: r => resolve(r.confirm)
+    })
+  })
+  if (!confirmed) return
+  uni.showLoading({ title: '正在支付', mask: true })
+  try {
+    await acceptOrderApi(order.id)
+    uni.hideLoading()
+    uni.showToast({ title: '支付成功，商家已接单', icon: 'none', duration: 2200 })
+    loadCurrent()
+  } catch (e) {
+    uni.hideLoading()
+    uni.showToast({ title: e?.message || '支付失败，请稍后重试', icon: 'none' })
+  }
+}
+
+async function cancelOrderItem(order) {
+  const confirmed = await new Promise(resolve => {
+    uni.showModal({
+      title: '取消订单',
+      content: '确定取消该订单吗？如使用优惠券会退回卡包',
+      confirmText: '确认取消',
+      cancelText: '再想想',
+      success: r => resolve(r.confirm)
+    })
+  })
+  if (!confirmed) return
+  try {
+    await cancelOrderApi(order.id)
+    uni.showToast({ title: '订单已取消', icon: 'none' })
+    loadCurrent()
+  } catch (e) {
+    uni.showToast({ title: e?.message || '取消失败，请稍后重试', icon: 'none' })
+  }
+}
 
 async function reOrder(order) {
   if (reorderingOrderId.value) return
@@ -415,15 +469,15 @@ function openRestoredCart() {
   gap: 24rpx;
   background: $bg-white;
 }
-.summary-label { font-size: 22rpx; color: $cozy-muted; }
-.summary-actions { flex: none; display: flex; align-items: center; }
+.summary-label { flex: 1; min-width: 0; font-size: 22rpx; color: $cozy-muted; }
+.summary-actions { flex: none; display: flex; align-items: center; gap: 12rpx; }
 .order-action {
   flex: none;
   padding: 16rpx 28rpx;
   border: 1rpx solid $cozy-ink;
   border-radius: 16rpx;
-  background: $cozy-ink;
-  color: #fff;
+  background: transparent;
+  color: $cozy-ink;
   font-size: 24rpx;
   font-weight: 650;
 
@@ -441,6 +495,9 @@ function openRestoredCart() {
 
   &:active { background: $cozy-surface; }
 }
+.mini-btn.md { padding: 10rpx 20rpx; font-size: 22rpx; }
+.mini-btn.strong { border-color: $cozy-ink; background: transparent; color: $cozy-ink; font-weight: 650; }
+.mini-btn.strong:active { opacity: .85; }
 
 /* ── 空状态 ── */
 .empty-state {
