@@ -643,16 +643,22 @@ function closeOffShelf() {
 /* ── 选择收货地址抽屉 ── */
 .address-sheet-content {
   position: absolute; bottom: 0; left: 0; right: 0;
-  height: 80vh;
+  max-height: 68vh;
   display: flex; flex-direction: column;
   background: #fff; border-radius: 32rpx 32rpx 0 0;
 }
-.address-sheet-list { flex: 1; min-height: 40vh; padding: 0 40rpx 32rpx; box-sizing: border-box; }
+.address-sheet-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 48vh;
+  padding: 0 40rpx 8rpx;
+  box-sizing: border-box;
+}
 .address-sheet-loading { padding: 48rpx 0; text-align: center; font-size: 24rpx; color: $cozy-muted; }
 .address-row {
   display: flex; align-items: center; gap: 20rpx;
-  margin-top: 24rpx;
-  padding: 24rpx 24rpx;
+  margin-top: 20rpx;
+  padding: 20rpx 24rpx;
   border: 1rpx solid $cozy-border; border-radius: 16rpx;
   background: $bg-white;
 }
@@ -680,7 +686,7 @@ function closeOffShelf() {
 .address-edit { flex: none; padding: 8rpx; }
 .address-add {
   display: flex; align-items: center; justify-content: center; gap: 12rpx;
-  margin: 24rpx 40rpx 40rpx; height: 88rpx;
+  margin: 16rpx 40rpx 32rpx; height: 84rpx;
   border: 1rpx solid $cozy-border; border-radius: 12rpx;
   font-size: 28rpx; font-weight: 600; color: $cozy-primary;
 }
