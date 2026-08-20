@@ -18,7 +18,7 @@
           <text v-if="item.isDefault" class="default-badge">默认</text>
         </view>
         <view class="addr-receiver">
-          <text class="receiver-name">{{ maskName(item.name) }}</text>
+          <text class="receiver-name">{{ item.name }}</text>
           <text class="receiver-honorific">{{ genderSuffix(item.gender) }}</text>
           <text class="receiver-phone">{{ maskPhone(item.phone) }}</text>
         </view>
@@ -125,10 +125,6 @@ const deleteAddress = (item) => {
   })
 }
 
-const maskName = (name) => {
-  const n = String(name || '')
-  return n.length > 1 ? n[0] + '*' + n.slice(-1) : n
-}
 const genderSuffix = (gender) => String(gender || '').toUpperCase() === 'FEMALE' ? '女士' : '先生'
 const labelText = (label) => ({ HOME: '家', COMPANY: '公司', SCHOOL: '学校' }[label] || label || '')
 const maskPhone = (phone) => String(phone || '').replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')

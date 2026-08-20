@@ -212,7 +212,6 @@
 
   const LABEL_TEXT = { HOME: '家', COMPANY: '公司', SCHOOL: '学校' };
 
-  function maskName(n) { return n.length > 1 ? n[0] + '*' + n.slice(-1) : n; }
   function maskPhone(p) { return String(p).replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'); }
 
   function render() {
@@ -246,7 +245,7 @@
           ${a.isDefault ? '<span class="default-badge">默认</span>' : ''}
         </div>
         <div class="addr-receiver">
-          <span class="receiver-name">${maskName(a.name)}</span>
+          <span class="receiver-name">${a.name}</span>
           <span class="receiver-honorific">${honorific}</span>
           <span class="receiver-phone">${maskPhone(a.phone)}</span>
         </div>

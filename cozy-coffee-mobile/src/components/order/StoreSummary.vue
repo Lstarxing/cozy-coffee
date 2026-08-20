@@ -6,7 +6,6 @@
         <view class="store-copy">
           <view class="store-title-row">
             <text class="pickup-tag">外送</text>
-            <text v-if="deliveryAddress && deliveryAddress.label" class="addr-label">{{ labelText(deliveryAddress.label) }}</text>
             <text class="store-address" :class="{ placeholder: !deliveryAddress }">{{ addressText }}</text>
           </view>
           <view v-if="deliveryAddress" class="contact-row">
@@ -65,8 +64,6 @@ const contactName = computed(() => {
   const honorific = String(a.gender || '').toUpperCase() === 'FEMALE' ? '女士' : '先生'
   return `${a.name || ''}（${honorific}）`
 })
-
-const labelText = (label) => ({ HOME: '家', COMPANY: '公司', SCHOOL: '学校' }[label] || label || '')
 </script>
 
 <style lang="scss" scoped>
@@ -107,15 +104,6 @@ const labelText = (label) => ({ HOME: '家', COMPANY: '公司', SCHOOL: '学校'
   white-space: nowrap;
 }
 .store-address.placeholder { color: $cozy-placeholder; }
-.addr-label {
-  flex: none;
-  padding: 0 10rpx;
-  border: 1rpx solid $cozy-primary;
-  border-radius: 4rpx;
-  color: $cozy-primary;
-  font-size: 18rpx;
-  line-height: 1.6;
-}
 .store-arrow {
   flex: none;
   color: $cozy-muted;

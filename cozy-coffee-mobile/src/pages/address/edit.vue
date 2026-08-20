@@ -44,7 +44,9 @@
       </view>
       <view class="form-row tap" @click="form.isDefault = !form.isDefault">
         <text class="form-label">设为默认</text>
-        <view class="form-check" :class="{ on: form.isDefault }">{{ form.isDefault ? '✓' : '' }}</view>
+        <view class="form-check" :class="{ on: form.isDefault }">
+          <CozyIcon v-if="form.isDefault" name="check" :size="20" color="#fff" />
+        </view>
       </view>
     </view>
 
@@ -57,6 +59,7 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { post, put } from '@/api/request'
 import chinaRegions from '@/data/china-regions.json'
+import CozyIcon from '@/components/CozyIcon.vue'
 
 const createAddress = (data) => post('/member/addresses', data)
 const updateAddress = (id, data) => put(`/member/addresses/${id}`, data)
@@ -216,7 +219,9 @@ const save = async () => {
   background: transparent;
   font-size: 24rpx;
   color: $cozy-ink;
-  padding: 12rpx 0;
+  height: 40rpx;
+  line-height: 40rpx;
+  padding: 0;
 }
 .form-placeholder { color: $cozy-placeholder; }
 .form-value {
@@ -240,10 +245,9 @@ const save = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22rpx;
   color: #fff;
 }
-.form-check.on { background: $cozy-primary; border-color: $cozy-primary; }
+.form-check.on { background: $cozy-ink; border-color: $cozy-ink; }
 
 /* 联系人右侧：单选 radio（先生/女士） */
 .gender-radios { flex: none; display: flex; align-items: center; gap: 24rpx; }
@@ -263,19 +267,10 @@ const save = async () => {
   border: 2rpx solid $cozy-border;
   background: $bg-white;
   box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 .gender-radio.on .radio-dot {
-  border-color: $cozy-primary;
-}
-.gender-radio.on .radio-dot::after {
-  content: '';
-  width: 14rpx;
-  height: 14rpx;
-  border-radius: 50%;
-  background: $cozy-primary;
+  border-color: $cozy-ink;
+  background: radial-gradient(circle, $cozy-ink 0, $cozy-ink 7rpx, $bg-white 7rpx);
 }
 
 /* 标签：小巧胶囊，置于设为默认上一行 */
@@ -294,9 +289,9 @@ const save = async () => {
   font-size: 22rpx;
 
   &.selected {
-    background: $cozy-primary-soft;
-    border-color: $cozy-primary;
-    color: $cozy-primary;
+    background: $cozy-surface;
+    border-color: $cozy-ink;
+    color: $cozy-ink;
     font-weight: 600;
   }
 }
