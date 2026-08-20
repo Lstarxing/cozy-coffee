@@ -22,27 +22,25 @@
     <!-- 门店信息 -->
     <view class="store-info">
       <view class="store-row">
-        <view class="store-left">
-          <text class="store-fav">☆</text>
-          <text class="store-name">{{ fixedStore.name }}</text>
+        <view class="store-left" :class="{ 'tap-target': fulfillment === 'delivery' }" @click="fulfillment === 'delivery' && goToAddress()">
+          <template v-if="fulfillment === 'delivery'">
+            <CozyIcon name="pin" :size="16" color="#756A63" />
+            <text class="store-name delivery-addr">{{ deliveryAddressText }}</text>
+            <text class="delivery-arrow">›</text>
+          </template>
+          <template v-else>
+            <text class="store-fav">☆</text>
+            <text class="store-name">{{ fixedStore.name }}</text>
+          </template>
         </view>
         <view class="pickup-switch">
           <view class="pickup-opt" :class="{ active: fulfillment === 'pickup' }" @click="setFulfillment('pickup')">自提</view>
           <view class="pickup-opt" :class="{ active: fulfillment === 'delivery' }" @click="setFulfillment('delivery')">外送</view>
         </view>
       </view>
-      <view class="store-meta">距离您 1.2km</view>
-      <view v-if="fulfillment === 'delivery'" class="delivery-info" @click="goToAddress">
-        <view class="delivery-row">
-          <CozyIcon name="pin" :size="16" color="#756A63" />
-          <text class="delivery-addr">{{ deliveryAddressText }}</text>
-          <text class="delivery-arrow">›</text>
-        </view>
-        <view class="delivery-row">
-          <CozyIcon name="send" :size="16" color="#753A22" />
-          <text class="delivery-store">CozyCoffee 中心店</text>
-          <text class="delivery-dist"> | 1.2km</text>
-        </view>
+      <view class="store-meta">
+        <template v-if="fulfillment === 'delivery'">CozyCoffee 中心店 | 配送距离 1.2km</template>
+        <template v-else>距离您 1.2km</template>
       </view>
       <view class="store-foot">
         <text class="store-status"><text class="status-icon">☼</text> 精品咖啡每日新鲜烘焙</text>
@@ -477,28 +475,14 @@ function closeOffShelf() {
   background: #fff;
 }
 .store-row { display: flex; align-items: center; justify-content: space-between; }
-.store-left { display: flex; align-items: center; gap: 8rpx; }
+.store-left { display: flex; align-items: center; gap: 8rpx; min-width: 0; }
 .store-fav { color: $cozy-ink; font-size: 26rpx; }
 .store-name { color: $cozy-ink; font-size: 30rpx; font-weight: 650; }
 .pickup-switch { display: flex; border: 1rpx solid $cozy-border; border-radius: 12rpx; overflow: hidden; }
 .pickup-opt { padding: 10rpx 28rpx; font-size: 22rpx; color: $cozy-muted; background: $cozy-surface; }
 .pickup-opt.active { background: $cozy-ink; color: #fff; }
 .store-meta { margin-top: 10rpx; font-size: 22rpx; color: $cozy-muted; }
-.delivery-info {
-  margin-top: 16rpx;
-  padding: 18rpx 20rpx;
-  border-radius: 12rpx;
-  background: $cozy-surface;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-}
-.delivery-row {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  min-width: 0;
-}
+.tap-target { cursor: pointer; }
 .delivery-addr {
   flex: 1;
   min-width: 0;
@@ -512,16 +496,6 @@ function closeOffShelf() {
   flex: none;
   font-size: 24rpx;
   line-height: 1;
-  color: $cozy-placeholder;
-}
-.delivery-store {
-  flex: none;
-  font-size: 22rpx;
-  color: $cozy-muted;
-  font-weight: 600;
-}
-.delivery-dist {
-  font-size: 22rpx;
   color: $cozy-placeholder;
 }
 .store-foot { margin-top: 12rpx; display: flex; align-items: center; justify-content: space-between; font-size: 22rpx; color: $cozy-muted; }
