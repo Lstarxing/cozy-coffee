@@ -185,7 +185,10 @@
               <CozyIcon v-if="isCurrentAddress(addr)" name="check" :size="16" color="#753A22" />
             </view>
             <view class="address-copy">
-              <text class="address-name">{{ addressNameText(addr) }}</text>
+              <view class="address-name-line">
+                <text v-if="addr.label" class="address-label">{{ labelText(addr.label) }}</text>
+                <text class="address-name">{{ addressNameText(addr) }}</text>
+              </view>
               <text class="address-detail">{{ addressText(addr) }}</text>
             </view>
             <view class="address-edit" @click.stop="editAddress(addr)"><CozyIcon name="pencil" :size="16" color="#756A63" /></view>
@@ -288,6 +291,7 @@ async function openAddressSheet() {
 }
 const maskPhone = (phone) => String(phone || '').replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
 const genderSuffix = (gender) => String(gender || '').toUpperCase() === 'FEMALE' ? '女士' : '先生'
+const labelText = (label) => ({ HOME: '家', COMPANY: '公司', SCHOOL: '学校' }[label] || label || '')
 function addressNameText(addr) {
   return `${addr.name || ''}${genderSuffix(addr.gender)} · ${maskPhone(addr.phone)}`
 }
@@ -636,28 +640,40 @@ function closeOffShelf() {
 /* ── 选择收货地址抽屉 ── */
 .address-sheet-content {
   position: absolute; bottom: 0; left: 0; right: 0;
-  height: 74vh;
+  height: 80vh;
   display: flex; flex-direction: column;
   background: #fff; border-radius: 32rpx 32rpx 0 0;
 }
-.address-sheet-list { flex: 1; min-height: 0; padding: 0 40rpx; box-sizing: border-box; }
+.address-sheet-list { flex: 1; min-height: 40vh; padding: 0 40rpx 32rpx; box-sizing: border-box; }
 .address-sheet-loading { padding: 48rpx 0; text-align: center; font-size: 24rpx; color: $cozy-muted; }
 .address-row {
   display: flex; align-items: center; gap: 20rpx;
-  padding: 30rpx 0; border-bottom: 1rpx solid $cozy-border;
+  margin-top: 24rpx;
+  padding: 24rpx 24rpx;
+  border: 1rpx solid $cozy-border; border-radius: 16rpx;
+  background: $bg-white;
 }
 .address-check { flex: none; width: 40rpx; display: flex; align-items: center; justify-content: center; }
 .address-copy { flex: 1; min-width: 0; }
+.address-name-line { display: flex; align-items: center; gap: 10rpx; }
+.address-label {
+  flex: none;
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+  background: $cozy-primary-soft;
+  color: $cozy-primary;
+  font-size: 20rpx; font-weight: 600;
+}
 .address-name { display: block; font-size: 28rpx; font-weight: 600; color: $cozy-ink; }
 .address-detail {
-  display: block; margin-top: 6rpx;
+  display: block; margin-top: 8rpx;
   font-size: 22rpx; color: $cozy-muted;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .address-edit { flex: none; padding: 8rpx; }
 .address-add {
   display: flex; align-items: center; justify-content: center; gap: 12rpx;
-  margin: 20rpx 40rpx 40rpx; height: 88rpx;
+  margin: 24rpx 40rpx 40rpx; height: 88rpx;
   border: 1rpx solid $cozy-border; border-radius: 12rpx;
   font-size: 28rpx; font-weight: 600; color: $cozy-primary;
 }

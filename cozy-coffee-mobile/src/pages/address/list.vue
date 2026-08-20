@@ -9,7 +9,10 @@
         <view class="addr-main" @click="selectAddress(item)">
           <view class="addr-pin"><CozyIcon name="pin" :size="24" color="#753A22" /></view>
           <view class="addr-copy">
-            <text class="addr-region">{{ item.region }}</text>
+            <view class="addr-region-line">
+              <text v-if="item.label" class="addr-label">{{ labelText(item.label) }}</text>
+              <text class="addr-region">{{ item.region }}</text>
+            </view>
             <text class="addr-detail">{{ item.detail }}</text>
           </view>
           <text v-if="item.isDefault" class="default-badge">默认</text>
@@ -127,6 +130,7 @@ const maskName = (name) => {
   return n.length > 1 ? n[0] + '*' + n.slice(-1) : n
 }
 const genderSuffix = (gender) => String(gender || '').toUpperCase() === 'FEMALE' ? '女士' : '先生'
+const labelText = (label) => ({ HOME: '家', COMPANY: '公司', SCHOOL: '学校' }[label] || label || '')
 const maskPhone = (phone) => String(phone || '').replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
 
 const selectAddress = (item) => {
@@ -178,6 +182,15 @@ const selectAddress = (item) => {
   margin-top: 2rpx;
 }
 .addr-copy { flex: 1; min-width: 0; }
+.addr-region-line { display: flex; align-items: center; gap: 10rpx; }
+.addr-label {
+  flex: none;
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+  background: $cozy-primary-soft;
+  color: $cozy-primary;
+  font-size: 20rpx; font-weight: 600;
+}
 .addr-region {
   display: block;
   font-size: 30rpx;

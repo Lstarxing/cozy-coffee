@@ -17,6 +17,14 @@
         </view>
       </view>
       <view class="form-row">
+        <text class="form-label">标签</text>
+        <view class="gender-options">
+          <view class="gender-option" :class="{ selected: form.label === 'HOME' }" @click="form.label = 'HOME'">家</view>
+          <view class="gender-option" :class="{ selected: form.label === 'COMPANY' }" @click="form.label = 'COMPANY'">公司</view>
+          <view class="gender-option" :class="{ selected: form.label === 'SCHOOL' }" @click="form.label = 'SCHOOL'">学校</view>
+        </view>
+      </view>
+      <view class="form-row">
         <text class="form-label">手机号</text>
         <input v-model="form.phone" type="number" maxlength="11" placeholder="请填写收货手机号" placeholder-class="form-placeholder" class="form-input" />
       </view>
@@ -55,7 +63,7 @@ const editingId = ref(null)
 const provinceCode = ref('')
 const cityCode = ref('')
 const regionIndexes = ref([0, 0, 0])
-const form = ref({ name: '', gender: 'MALE', phone: '', region: '', detail: '', isDefault: false })
+const form = ref({ name: '', gender: 'MALE', label: 'HOME', phone: '', region: '', detail: '', isDefault: false })
 
 // 三级联动：省 → 市 → 区/县
 const provinces = computed(() => Object.entries(chinaRegions['86'] || {}).map(([code, name]) => ({ code, name })))
@@ -77,6 +85,7 @@ onLoad((options) => {
     if (item) {
       form.value.name = item.name || item.receiverName || ''
       form.value.gender = item.gender || 'MALE'
+      form.value.label = item.label || 'HOME'
       form.value.phone = item.phone || item.receiverPhone || ''
       form.value.detail = item.detail || item.detailAddress || ''
       form.value.isDefault = Boolean(item.isDefault)
@@ -142,6 +151,7 @@ const save = async () => {
   const data = {
     receiverName: name.trim(),
     gender: form.value.gender,
+    label: form.value.label,
     receiverPhone: phone.trim(),
     province: parts[0] || '',
     city: parts[1] || '',
