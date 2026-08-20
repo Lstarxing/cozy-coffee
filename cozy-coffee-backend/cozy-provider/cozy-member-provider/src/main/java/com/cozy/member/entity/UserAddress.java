@@ -12,6 +12,7 @@ public class UserAddress {
     private Long userId;
     private String receiverName;
     private String gender; // MALE男 / FEMALE女
+    private String label; // HOME家 / COMPANY公司 / SCHOOL学校
     private String receiverPhone;
     private String province;
     private String city;
