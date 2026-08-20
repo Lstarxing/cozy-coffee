@@ -50,25 +50,30 @@
     padding:14px 24px 16px;
     background:var(--card); border-bottom:1px solid var(--border);
   }
-  .store-row { display:flex; justify-content:space-between; align-items:center; }
-  .store-left { display:flex; align-items:center; gap:8px; min-width:0; cursor:pointer; }
+  .store-row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .store-left { flex:1; min-width:0; display:flex; align-items:center; gap:7px; cursor:pointer; }
   .store-fav { color:var(--ink); }
   .store-name { font-size:15px; font-weight:650; color:var(--ink); }
   .pickup-switch {
-    display:flex; border:1px solid var(--border); border-radius:6px; overflow:hidden;
+    flex:none; display:flex; border:1px solid var(--border); border-radius:6px; overflow:hidden;
   }
   .pickup-opt {
     padding:5px 14px; font-size:11px; color:var(--muted); background:var(--surface);
   }
   .pickup-opt.active { background:var(--ink); color:#fff; }
-  .store-meta { margin-top:6px; font-size:11px; color:var(--muted); }
-  .store-left svg { flex:none; width:14px; height:14px; color:var(--muted); }
+  .store-meta { margin-top:3px; font-size:11px; color:var(--muted); }
+  .store-meta--delivery {
+    margin-top:5px; display:flex; align-items:center; gap:6px;
+    font-size:13px; font-weight:600; color:var(--ink);
+  }
+  .store-meta--delivery svg { flex:none; width:16px; height:16px; color:var(--primary); }
+  .store-left svg { flex:none; width:18px; height:18px; color:var(--muted); }
   .delivery-addr {
     flex:1; min-width:0;
-    font-size:12px; color:var(--ink);
+    font-size:15px; font-weight:650; color:var(--ink);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
-  .delivery-arrow { flex:none; font-size:13px; line-height:1; color:var(--placeholder); }
+  .delivery-arrow { flex:none; font-size:14px; line-height:1; color:var(--placeholder); }
   .store-foot {
     margin-top:8px; display:flex; justify-content:space-between;
     font-size:11px; color:var(--muted);
@@ -807,6 +812,7 @@
 
   // ── 自提 / 外送切换 ──
   const PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-11a6 6 0 0 1 12 0c0 5.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>';
+  const SWAP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M14 4l4 4-4 4"/><path d="M20 16H7M10 12l-4 4 4 4"/></svg>';
   function setFulfillment(mode) {
     const pickup = document.getElementById('optPickup');
     const delivery = document.getElementById('optDelivery');
@@ -823,14 +829,16 @@
         setTimeout(() => { location.href = 'address.html'; }, 600);
         return;
       }
-      storeLeft.innerHTML = PIN_SVG + '<span class="store-name delivery-addr">' + [addr.region, addr.detail].filter(Boolean).join(' ') + '</span><span class="delivery-arrow">›</span>';
-      storeMeta.textContent = 'CozyCoffee 中心店 | 配送距离 1.2km';
+      storeLeft.innerHTML = PIN_SVG + '<span class="store-name delivery-addr">' + [addr.region, addr.detail].filter(Boolean).join(' ').replace(/\s+/g, '') + '</span><span class="delivery-arrow">›</span>';
+      storeMeta.classList.add('store-meta--delivery');
+      storeMeta.innerHTML = SWAP_SVG + '<span>CozyCoffee 中心店 | 配送距离 1.2km</span>';
       toast('已切换外送');
       return;
     }
     delivery.classList.remove('active');
     pickup.classList.add('active');
     storeLeft.innerHTML = '<span class="store-fav">☆</span><span class="store-name">CozyCoffee 中心店</span>';
+    storeMeta.classList.remove('store-meta--delivery');
     storeMeta.textContent = '距离您 1.2km';
     toast('已切换自提');
   }
