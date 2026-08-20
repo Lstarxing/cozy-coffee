@@ -261,19 +261,21 @@
   .addr-check { flex:none; width:20px; display:flex; align-items:center; justify-content:center; }
   .addr-check svg { width:14px; height:14px; color:var(--primary); }
   .addr-copy { flex:1; min-width:0; }
-  .addr-name { display:block; font-size:13px; font-weight:600; color:var(--ink); }
-  .addr-detail-line { display:flex; align-items:center; gap:6px; margin-top:4px; }
+  .addr-addr-line { display:flex; align-items:center; gap:6px; }
   .addr-label {
     flex:none; padding:0 5px;
     border:1px solid var(--primary, #753A22); border-radius:3px;
     color:var(--primary, #753A22);
     font-size:9px; line-height:1.6;
   }
-  .addr-detail {
+  .addr-addr {
     flex:1; min-width:0;
-    font-size:11px; color:var(--muted);
+    font-size:12px; color:var(--ink);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
+  .addr-contact-line { display:flex; align-items:center; gap:8px; margin-top:4px; }
+  .addr-name { font-size:11px; font-weight:600; color:var(--ink); }
+  .addr-phone { font-size:11px; color:var(--muted); }
   .addr-edit { flex:none; padding:4px; cursor:pointer; }
   .addr-edit svg { width:16px; height:16px; color:var(--muted); }
   .addr-sheet-add {
@@ -912,12 +914,13 @@
       const checked = currentAddressId && String(a.id) === String(currentAddressId) ? CHECK_SVG : '';
       const honorific = String(a.gender || '').toUpperCase() === 'FEMALE' ? '（女士）' : '（先生）';
       const label = a.label ? '<span class="addr-label">' + (LABEL_TEXT[a.label] || a.label) + '</span>' : '';
+      const addrText = [a.region, a.detail].filter(Boolean).join(' ').replace(/\s+/g, '');
       return `
         <div class="addr-row" onclick="pickAddress(${a.id})">
           <span class="addr-check">${checked}</span>
           <span class="addr-copy">
-            <span class="addr-name">${a.name}${honorific} · ${maskPhone(a.phone)}</span>
-            <span class="addr-detail-line">${label}<span class="addr-detail">${[a.region, a.detail].filter(Boolean).join(' ').replace(/\s+/g, '')}</span></span>
+            <span class="addr-addr-line">${label}<span class="addr-addr">${addrText}</span></span>
+            <span class="addr-contact-line"><span class="addr-name">${a.name}${honorific}</span><span class="addr-phone">${maskPhone(a.phone)}</span></span>
           </span>
           <span class="addr-edit" onclick="event.stopPropagation(); go('address-edit.html?id=${a.id}')">${PENCIL_SVG}</span>
         </div>`;
