@@ -11,7 +11,7 @@
       <view class="quick-links">
         <text class="quick-link" @click="goToHistory">积分明细</text>
         <text class="link-sep">|</text>
-        <text class="quick-link" @click="goToRedemptions">兑换记录</text>
+        <text class="quick-link" @click="goToRedemptions">兑换订单</text>
         <text class="link-sep">|</text>
         <text class="quick-link" @click="goToRules">积分规则</text>
       </view>

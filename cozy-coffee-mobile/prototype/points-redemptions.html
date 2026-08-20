@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>兑换记录 · Cozy Coffee</title>
+<title>兑换订单 · Cozy Coffee</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -80,12 +80,21 @@
     margin-top:18px;
   }
   .order-card {
-    border-radius:14px; background:var(--card);
-    padding:18px;
+    overflow:hidden;
+    border:1px solid var(--border); border-radius:12px; background:var(--card);
     cursor:pointer;
     transition:opacity .2s;
   }
   .order-card:active { opacity:.8; }
+  .receipt-head {
+    padding:14px 14px 12px;
+    display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
+    border-bottom:1px solid var(--border);
+  }
+  .store-name { display:block; font-size:14px; font-weight:650; color:var(--ink); }
+  .store-addr { display:block; margin-top:2px; font-size:10px; color:var(--muted); }
+  .order-meta em { font-style:normal; color:var(--primary); font-weight:650; }
+  .status-block { flex:none; text-align:right; }
   .order-head {
     display:flex; align-items:center; justify-content:space-between; gap:10px;
   }
@@ -106,7 +115,7 @@
 
   .order-product {
     display:flex; align-items:center; gap:14px;
-    margin-top:14px;
+    padding:14px;
   }
   .order-thumb {
     flex:none; width:52px; height:52px; border-radius:8px;
@@ -154,6 +163,14 @@
     border-color:var(--roast-brown); background:var(--roast-brown); color:#fff;
   }
   .mini-btn.primary:active { background:var(--roast-brown-deep); }
+  .mini-btn.strong { border-color:var(--ink); background:transparent; color:var(--ink); font-weight:650; }
+  .mini-btn.strong:active { opacity:.85; }
+  .receipt-summary {
+    padding:12px 14px;
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    border-top:1px solid var(--border);
+  }
+  .summary-label { font-size:11px; color:var(--muted); }
 
   /* ── 空状态 ── */
   .empty-state {
@@ -290,7 +307,7 @@
 
   <!-- 页头 -->
   <div class="page-head">
-    <span class="page-title">兑换记录</span>
+    <span class="page-title">兑换订单</span>
     <span class="page-sub">用积分换来的每一份心意</span>
   </div>
 
@@ -357,9 +374,9 @@
   let orders = [
     { key:'rd202608010001', orderNo:'RD202608010001', fulfillment:'virtual', status:'completed', icon:'coupon5', productName:'5 元饮品代金券', quantity:1, pointsCost:500, createdAt:'2026-08-01 10:00:00', virtualCode:'VC-8F3A21', remark:'虚拟卡券 · 已发放至券包' },
     { key:'rd202607280002', orderNo:'RD202607280002', fulfillment:'pickup', status:'completed', icon:'sticker', productName:'Cozy 品牌贴纸包', quantity:1, pointsCost:100, createdAt:'2026-07-28 11:05:32', storeName:'杭州中心店', pickupCode:'P72811', remark:'到店自提，3 张原创贴纸' },
-    { key:'rd202607200003', orderNo:'RD202607200003', fulfillment:'delivery', status:'shipped', icon:'tote', productName:'Cozy 经典帆布包', quantity:1, pointsCost:1600, createdAt:'2026-07-20 16:42:10', shippingCompany:'顺丰速运', trackingNumber:'SF1068192001', receiver:{ name:'张*宁', phone:'138****0421', address:'浙江省杭州市西湖区文三路 128 号' }, remark:'12 oz 帆布 · 米白底烫金 logo' },
-    { key:'rd202607120004', orderNo:'RD202607120004', fulfillment:'delivery', status:'processing', icon:'giftbox', productName:'挂耳咖啡精选礼盒', quantity:1, pointsCost:3500, createdAt:'2026-07-12 09:30:44', shippingCompany:'顺丰速运', trackingNumber:'SF1068192002', receiver:{ name:'张*宁', phone:'138****0421', address:'浙江省杭州市西湖区文三路 128 号' }, remark:'10 包挂耳 · 4 种产地 · 礼盒装' },
-    { key:'rd202607050005', orderNo:'RD202607050005', fulfillment:'delivery', status:'pending', icon:'spoon', productName:'定制拿铁金搅拌勺', quantity:1, pointsCost:600, createdAt:'2026-07-05 14:18:22', receiver:{ name:'张*宁', phone:'138****0421', address:'浙江省杭州市西湖区文三路 128 号' }, remark:'金属搅拌勺 · 拿铁金（PVD）涂层' },
+    { key:'rd202607200003', orderNo:'RD202607200003', fulfillment:'delivery', status:'shipped', icon:'tote', productName:'Cozy 经典帆布包', quantity:1, pointsCost:1600, createdAt:'2026-07-20 16:42:10', shippingCompany:'顺丰速运', trackingNumber:'SF1068192001', receiver:{ name:'张宁', phone:'13811110421', address:'浙江省杭州市西湖区文三路 128 号' }, remark:'12 oz 帆布 · 米白底烫金 logo' },
+    { key:'rd202607120004', orderNo:'RD202607120004', fulfillment:'delivery', status:'processing', icon:'giftbox', productName:'挂耳咖啡精选礼盒', quantity:1, pointsCost:3500, createdAt:'2026-07-12 09:30:44', shippingCompany:'顺丰速运', trackingNumber:'SF1068192002', receiver:{ name:'张宁', phone:'13811110421', address:'浙江省杭州市西湖区文三路 128 号' }, remark:'10 包挂耳 · 4 种产地 · 礼盒装' },
+    { key:'rd202607050005', orderNo:'RD202607050005', fulfillment:'delivery', status:'pending', icon:'spoon', productName:'定制拿铁金搅拌勺', quantity:1, pointsCost:600, createdAt:'2026-07-05 14:18:22', receiver:{ name:'张宁', phone:'13811110421', address:'浙江省杭州市西湖区文三路 128 号' }, remark:'金属搅拌勺 · 拿铁金（PVD）涂层' },
     { key:'rd202606300006', orderNo:'RD202606300006', fulfillment:'pickup', status:'cancelled', icon:'mug', productName:'拿铁金定制马克杯', quantity:1, pointsCost:1200, createdAt:'2026-06-30 19:05:11', storeName:'杭州中心店', pickupCode:'P63019', remark:'已取消并退还 1,200 积分' }
   ];
 
@@ -385,28 +402,40 @@
 
     list.innerHTML = shown.map(o => `
       <div class="order-card" onclick="go('order-detail.html?id=${o.key}')">
-        <div class="order-head">
-          <span class="order-no">${o.orderNo}</span>
-          <span class="status-chip ${o.status}">${STATUS_TEXT[o.status]}</span>
+        <div class="receipt-head">
+          <div>
+            <span class="store-name">${o.fulfillment === 'virtual' ? '虚拟商品' : 'CozyCoffee 中心店'}</span>
+            <span class="order-meta">${formatTime(o.createdAt)}${codeText(o) ? '<em> · ' + codeText(o) + '</em>' : ''}</span>
+          </div>
+          <div class="status-block">
+            <span class="status-chip ${o.status}">${STATUS_TEXT[o.status]}</span>
+          </div>
         </div>
         <div class="order-product">
           <div class="order-thumb" style="background:${GRADIENTS[o.icon]};">${ICONS[o.icon]}</div>
           <div class="order-copy">
             <span class="order-name">${o.productName}</span>
-            <span class="order-meta">数量 ×${o.quantity} · ${formatTime(o.createdAt)}</span>
+            <span class="order-meta">数量 ×${o.quantity}</span>
           </div>
-          <span class="order-points">${o.pointsCost.toLocaleString()}</span>
+          <span class="order-points">${o.pointsCost.toLocaleString()} 积分</span>
         </div>
-        <div class="order-foot">
-          <span class="order-fulfill">${FULFILL_TEXT[o.fulfillment]}${o.pickupCode ? '<code>取货码 ' + o.pickupCode + '</code>' : ''}${o.trackingNumber ? '<code>物流 ' + o.trackingNumber + '</code>' : ''}${o.fulfillment === 'virtual' && o.virtualCode ? '<code>兑换码 ' + o.virtualCode + '</code>' : ''}</span>
+        <div class="receipt-summary">
+          <span class="summary-label">共 ${o.quantity} 件 · ${FULFILL_TEXT[o.fulfillment]}</span>
           <div class="order-actions" onclick="event.stopPropagation()">
             <button class="mini-btn" onclick="go('order-detail.html?id=${o.key}')">查看详情</button>
             ${canCancel(o) ? '<button class="mini-btn" onclick="askCancel(' + o.key + ')">取消兑换</button>' : ''}
-            ${canConfirm(o) ? '<button class="mini-btn primary" onclick="askConfirm(' + o.key + ')">确认收货</button>' : ''}
+            ${canConfirm(o) ? '<button class="mini-btn strong" onclick="askConfirm(' + o.key + ')">确认收货</button>' : ''}
           </div>
         </div>
       </div>
     `).join('');
+  }
+
+  function codeText(o) {
+    if (o.pickupCode) return '取货码 ' + o.pickupCode;
+    if (o.trackingNumber) return '物流 ' + o.trackingNumber;
+    if (o.fulfillment === 'virtual' && o.virtualCode) return '兑换码 ' + o.virtualCode;
+    return '';
   }
 
   function canCancel(o) { return ['pending','processing'].includes(o.status); }
