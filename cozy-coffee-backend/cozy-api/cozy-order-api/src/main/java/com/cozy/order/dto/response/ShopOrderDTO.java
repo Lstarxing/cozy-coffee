@@ -74,6 +74,11 @@ public class ShopOrderDTO implements Serializable {
     // v6.4: 外送预计送达时间（配送到点自动确认已完成）
     private LocalDateTime expectedDeliveryAt;
 
+    // v6.5: 外送收货人信息快照（列表/详情展示配送地址）
+    private String receiverName;
+    private String receiverPhone;
+    private String receiverAddress;
+
     // 待处理订单超时信息
     private LocalDateTime expireAt; // 预计自动取消时间
     private Long secondsToExpire; // 当前剩余秒数（最小为0）

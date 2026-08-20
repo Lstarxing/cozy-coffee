@@ -46,6 +46,11 @@ public class ShopOrder {
     // v6.4: 外送预计送达时间（配送到点自动确认已完成）
     private LocalDateTime expectedDeliveryAt;
 
+    // v6.5: 外送收货人信息快照（列表/详情展示配送地址）
+    private String receiverName;
+    private String receiverPhone;
+    private String receiverAddress;
+
     // v5.0: 附加券ID列表 (JSON格式，如 "[1,2,3]"，用于取消时回滚)
     private String appliedAddonCouponIds;
 

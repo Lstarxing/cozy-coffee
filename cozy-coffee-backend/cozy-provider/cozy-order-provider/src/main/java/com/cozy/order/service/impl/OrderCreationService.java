@@ -587,6 +587,10 @@ public class OrderCreationService {
         // v6.4: 外送预计送达时间（配送到点自动确认已完成）
         if ("DELIVERY".equals(request.getDiningMethod())) {
             order.setExpectedDeliveryAt(now.plusMinutes(deliveryEtaMinutes));
+            // v6.5: 外送快照收货人信息（列表/详情展示配送地址）
+            order.setReceiverName(request.getReceiverName());
+            order.setReceiverPhone(request.getReceiverPhone());
+            order.setReceiverAddress(request.getReceiverAddress());
         }
         // v5.0: 保存附加券ID列表用于取消时回滚
         if (!addonCouponIds.isEmpty()) {

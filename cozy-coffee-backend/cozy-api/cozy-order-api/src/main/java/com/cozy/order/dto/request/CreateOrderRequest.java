@@ -27,6 +27,11 @@ public class CreateOrderRequest implements Serializable {
 
     private Long deliveryAddressId;
 
+    // v6.5: 外送收货人信息快照（移动端确认页携带，后端落库供列表/详情展示）
+    private String receiverName;
+    private String receiverPhone;
+    private String receiverAddress;
+
     private String remark;
 
     /** Authoritative token returned by POST /api/order/cart/check. */

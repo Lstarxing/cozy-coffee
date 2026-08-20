@@ -73,6 +73,11 @@ public class OrderDtoEnricher {
         dto.setDiningMethod(entity.getDiningMethod());
         dto.setRemark(entity.getRemark());
 
+        // v6.5: 外送收货人信息快照（列表/详情展示配送地址）
+        dto.setReceiverName(entity.getReceiverName());
+        dto.setReceiverPhone(entity.getReceiverPhone());
+        dto.setReceiverAddress(entity.getReceiverAddress());
+
         // 金额信息
         dto.setTotalAmount(entity.getTotalAmount());
         dto.setDiscountAmount(entity.getDiscountAmount());
