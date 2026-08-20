@@ -27,7 +27,10 @@ jobs:
           cache: maven
 
       - name: Run Maven tests
-        run: mvn -q -B test
+        # 排除 3 个需要本地基础设施（MySQL/Redis/Dubbo 微服务）的 @SpringBootTest
+        # 集成测试：PointsConsistencyTest / PointsFIFOConsistencyTest / OrderFlowBaselineTest，
+        # 它们依赖 IDE 里运行中的服务，CI 环境无此设施；其余 47 个纯单测在此跑
+        run: mvn -q -B test -Dtest='!PointsConsistencyTest,!PointsFIFOConsistencyTest,!OrderFlowBaselineTest' -Dsurefire.failIfNoSpecifiedTests=false
 
   frontend:
     name: Frontend (${{ matrix.app }})
