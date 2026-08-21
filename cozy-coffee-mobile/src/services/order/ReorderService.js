@@ -23,9 +23,10 @@ function isFood(product) {
 function allowedSizes(product) {
   if (isFood(product)) return ['STANDARD']
   const type = String(product?.sizeType || 'MEDIUM_LARGE').toUpperCase()
+  // 与选规格页 spec.vue 的 sizeOptions 对齐
   if (type === 'DEFAULT') return ['STANDARD']
-  if (type === 'ALL_SIZES') return ['SMALL', 'MEDIUM', 'LARGE']
-  return ['MEDIUM', 'LARGE']
+  if (type === 'ALL_SIZES') return ['MEDIUM', 'LARGE', 'EXTRA_LARGE']
+  return ['STANDARD', 'LARGE']
 }
 
 function allowedTemperatures(product) {

@@ -303,6 +303,7 @@ async function reOrder(order) {
     uni.hideLoading()
     if (!result.restoredQuantity) {
       uni.showToast({ title: '原订单商品均已下架，请重新选择', icon: 'none', duration: 2200 })
+      setTimeout(() => openRestoredCart(), 500)
       return
     }
 
@@ -310,16 +311,10 @@ async function reOrder(order) {
     if (result.invalidItems.length) notices.push(`${result.invalidItems.length} 款商品已下架，未加入购物车`)
     if (result.adjustedItems.length) notices.push(`${result.adjustedItems.length} 款商品规格已按当前菜单调整`)
 
+    openRestoredCart()
     if (notices.length) {
-      uni.showModal({
-        title: `已恢复 ${result.restoredQuantity} 件商品`,
-        content: notices.join('\n'),
-        showCancel: false,
-        confirmText: '查看购物车',
-        success: openRestoredCart
-      })
+      uni.showToast({ title: `已恢复 ${result.restoredQuantity} 件商品 · ${notices[0]}`, icon: 'none', duration: 2200 })
     } else {
-      openRestoredCart()
       uni.showToast({ title: `已恢复 ${result.restoredQuantity} 件商品`, icon: 'none' })
     }
   } catch (error) {
