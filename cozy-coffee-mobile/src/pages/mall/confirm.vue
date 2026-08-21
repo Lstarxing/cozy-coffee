@@ -94,6 +94,7 @@ import AddressPickerSheet from '@/components/address/AddressPickerSheet.vue'
 import StoreSummary from '@/components/order/StoreSummary.vue'
 import FilterTabs from '@/components/common/FilterTabs.vue'
 import Stepper from '@/components/common/Stepper.vue'
+import { isPhysicalProduct, isVirtualProduct } from '@/utils/product'
 
 const userStore = useUserStore()
 const product = ref(null)
@@ -125,7 +126,7 @@ async function loadMember() {
   } catch (_) { /* 静默 */ }
 }
 
-const isPhysical = computed(() => product.value?.productType === 'PHYSICAL')
+const isPhysical = computed(() => isPhysicalProduct(product.value))
 const redeemDiscount = computed(() => POINTS_REDEEM_DISCOUNTS[userStore.userLevel] || 1)
 const selectedQuantityLimit = computed(() => getRedeemQuantityLimit(product.value || {}))
 const totalCost = computed(() => getDiscountedPointsCost(product.value?.pointsPrice, quantity.value, userStore.userLevel))
@@ -141,7 +142,7 @@ const canSubmit = computed(() => {
   if (isPhysical.value && fulfillType.value === 'delivery') return Boolean(selectedAddress.value)
   return true
 })
-const productTypeText = computed(() => product.value?.productType === 'PHYSICAL' ? '实物周边 · 礼品' : '优惠券 · 虚拟权益')
+const productTypeText = computed(() => isPhysicalProduct(product.value) ? '实物周边 · 礼品' : '优惠券 · 虚拟权益')
 
 function onAddressPicked(address) {
   if (!address) return
@@ -154,7 +155,7 @@ async function submitRedeem() {
   const payload = {
     productId: product.value.id,
     quantity: quantity.value,
-    fulfillmentType: product.value.productType === 'VIRTUAL' ? 'VIRTUAL' : fulfillType.value === 'delivery' ? 'DELIVERY' : 'PICKUP'
+    fulfillmentType: isVirtualProduct(product.value) ? 'VIRTUAL' : fulfillType.value === 'delivery' ? 'DELIVERY' : 'PICKUP'
   }
   if (payload.fulfillmentType === 'PICKUP') {
     payload.storeId = FIXED_STORE.id

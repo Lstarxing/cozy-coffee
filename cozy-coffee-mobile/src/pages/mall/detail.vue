@@ -48,6 +48,7 @@ import { useUserStore } from '@/stores/user'
 import { getMemberInfo } from '@/api/member'
 import { getMemberLevelName } from '@/constants/member'
 import Stepper from '@/components/common/Stepper.vue'
+import { isPhysicalProduct } from '@/utils/product'
 import {
   POINTS_REDEEM_DISCOUNTS,
   getDiscountedPointsCost,
@@ -82,7 +83,7 @@ async function loadMember() {
 }
 
 const redeemDiscount = computed(() => POINTS_REDEEM_DISCOUNTS[userStore.userLevel] || 1)
-const isPhysical = computed(() => product.value?.productType === 'PHYSICAL')
+const isPhysical = computed(() => isPhysicalProduct(product.value))
 const needStorePickup = computed(() => product.value?.fulfillmentType === 'PICKUP' || isPhysical.value)
 const selectedQuantityLimit = computed(() => getRedeemQuantityLimit(product.value || {}))
 const selectedTotalCost = computed(() => getDiscountedPointsCost(
@@ -121,14 +122,14 @@ const limitTag = computed(() => {
 const detailSections = computed(() => {
   const p = product.value || {}
   const sections = []
-  sections.push({ label: '商品类型', value: p.productType === 'PHYSICAL' ? '实物周边 · 礼品' : '优惠券 · 虚拟权益' })
+  sections.push({ label: '商品类型', value: isPhysicalProduct(p) ? '实物周边 · 礼品' : '优惠券 · 虚拟权益' })
   if (p.validDays) sections.push({ label: '有效期限', value: `自获取之日起 ${p.validDays} 天内有效` })
-  else if (p.productType === 'PHYSICAL') sections.push({ label: '有效期限', value: '兑换后 14 天内发货' })
+  else if (isPhysicalProduct(p)) sections.push({ label: '有效期限', value: '兑换后 14 天内发货' })
   if (p.description) sections.push({ label: '商品说明', value: p.description })
   if (p.originalPrice) sections.push({ label: '参考价值', value: `¥${p.originalPrice}` })
   sections.push({
     label: '领取方式',
-    value: p.productType === 'PHYSICAL' ? '到店自提 · 邮寄到家' : '兑换后自动发放至券包'
+    value: isPhysicalProduct(p) ? '到店自提 · 邮寄到家' : '兑换后自动发放至券包'
   })
   return sections
 })

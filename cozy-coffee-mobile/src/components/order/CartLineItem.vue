@@ -24,26 +24,14 @@
 <script setup>
 import { computed, ref } from 'vue'
 import CozyIcon from '@/components/CozyIcon.vue'
+import { formatCoffeeSpec } from '@/utils/spec'
 
 const props = defineProps({ line: { type: Object, required: true } })
 defineEmits(['edit', 'decrease', 'increase'])
 
 const imgError = ref(false)
 
-const labels = {
-  STANDARD: '标准杯', MEDIUM: '中杯', LARGE: '大杯', SMALL: '小杯',
-  HOT: '热', COLD: '冰', WARM: '温',
-  LESS: '少糖', HALF: '半糖', NONE: '无糖',
-  WHOLE: '标准牛乳', OAT: '换燕麦奶', COCONUT: '换椰奶', SOY: '豆奶',
-  NORMAL: '标准浓度', STRONG: '加浓'
-}
-
-const specText = computed(() => {
-  const values = [props.line.cupSize, props.line.temperature, props.line.sugarLevel, props.line.milkType, props.line.coffeeStrength]
-    .filter(value => value && !['WHOLE', 'NORMAL'].includes(value))
-    .map(value => labels[value] || value)
-  return values.join(' · ') || '默认规格'
-})
+const specText = computed(() => formatCoffeeSpec(props.line) || '默认规格')
 const lineTotal = computed(() => (Number(props.line.price || 0) * Number(props.line.quantity || 1)).toFixed(2))
 </script>
 
