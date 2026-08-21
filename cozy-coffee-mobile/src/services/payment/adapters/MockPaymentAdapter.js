@@ -3,7 +3,7 @@ function defaultConfirmation(context) {
     uni.showModal({
       title: '模拟支付',
       content: `开发模式：确认模拟支付 ¥${Number(context.amount || 0).toFixed(2)}？`,
-      confirmText: '支付成功',
+      confirmText: '确认支付',
       cancelText: '取消',
       success: result => resolve(Boolean(result.confirm)),
       fail: reject

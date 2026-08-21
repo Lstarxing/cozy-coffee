@@ -30,11 +30,11 @@
             <text class="order-meta">{{ formatFullTime(order.createdAt) }} · <text v-if="order.pickupCode && !isDeliveryOrder(order)" class="meta-em">取餐码 {{ order.pickupCode }}</text></text>
           </view>
           <view class="status-block">
-            <text class="order-status" :class="statusClass(order.status)">{{ getStatusText(order.status) }}</text>
+            <text class="order-status" :class="statusBadgeClass(order)">{{ statusBadgeText(order) }}</text>
             <text v-if="isPending(order.status)" class="expire-countdown" :class="{ urgent: isExpiringSoon(order) }">
               {{ formatCountdown(order) }}
             </text>
-            <text v-else-if="isCompleted(order.status)" class="expire-countdown">{{ completedNote(order) }}</text>
+            <text v-else-if="isCompleted(order.status) && isDeliveryOrder(order)" class="expire-countdown">{{ completedNote(order) }}</text>
           </view>
         </view>
 
@@ -61,8 +61,7 @@
               <view class="mini-btn md" @click.stop="goToDetail(order.id)">查看详情</view>
             </template>
             <template v-else-if="canConfirmOrder(order)">
-              <view class="mini-btn md strong" @click.stop="confirmOrderItem(order)">{{ confirmActionText(order) }}</view>
-              <view v-if="isCompleted(order.status)" class="order-action" @click.stop="reOrder(order)">再来一单</view>
+              <view class="order-action" @click.stop="confirmOrderItem(order)">{{ confirmActionText(order) }}</view>
             </template>
             <template v-else-if="isCompleted(order.status) || isCancelled(order.status)">
               <view class="order-action" @click.stop="reOrder(order)">再来一单</view>
@@ -208,7 +207,7 @@ async function confirmOrderItem(order) {
   const isDeliver = isDeliveryOrder(order)
   try {
     await confirmOrderApi(order.id)
-    uni.showToast({ title: isDeliver ? '确认收货成功，奖励已到账' : '确认取餐成功，奖励已到账', icon: 'none', duration: 2200 })
+    uni.showToast({ title: isDeliver ? '确认收货成功，积分已到账' : '确认取餐成功，积分已到账', icon: 'none', duration: 2000 })
     loadCurrent(true)
   } catch (e) {
     uni.showToast({ title: e?.message || '确认失败，请稍后重试', icon: 'none' })
@@ -260,6 +259,16 @@ function statusClass(status) {
   if (['cancelled', 'canceled'].includes(normalized)) return 'cancelled'
   if (normalized === 'completed') return 'completed'
   return 'pending'
+}
+
+// 出餐后未确认的自提单 → 高亮「待取餐」引导点击确认取餐
+function statusBadgeText(order) {
+  if (canConfirmOrder(order) && !isDeliveryOrder(order)) return '待取餐'
+  return getStatusText(order.status)
+}
+function statusBadgeClass(order) {
+  if (canConfirmOrder(order) && !isDeliveryOrder(order)) return 'await-confirm'
+  return statusClass(order.status)
 }
 
 function fulfillmentLabel(order) {
@@ -443,6 +452,7 @@ function openRestoredCart() {
 .order-status.completed { background: #E6F1EB; color: #059669; }
 .order-status.pending { background: #F4EBDD; color: #8A4D10; }
 .order-status.cancelled { background: $cozy-border; color: $cozy-muted; }
+.order-status.await-confirm { background: $cozy-primary; color: #fff; }
 .expire-countdown {
   display: block;
   margin-top: 8rpx;

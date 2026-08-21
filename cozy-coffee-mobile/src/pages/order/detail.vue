@@ -58,19 +58,6 @@
           </view>
         </view>
 
-        <!-- 已出餐/已送达未确认：确认后发放积分与成长值 -->
-        <view v-if="canConfirmPickup" class="confirm-block">
-          <text class="confirm-hint">咖啡已出餐，取到后请确认</text>
-          <view class="confirm-btn" :class="{ disabled: confirming }" @click="confirmOrder">
-            {{ confirming ? '确认中…' : '确认取餐' }}
-          </view>
-        </view>
-        <view v-else-if="canConfirmDelivery" class="confirm-block">
-          <text class="confirm-hint">外送已送达，请确认收货</text>
-          <view class="confirm-btn" :class="{ disabled: confirming }" @click="confirmOrder">
-            {{ confirming ? '确认中…' : '确认收货' }}
-          </view>
-        </view>
       </view>
 
       <!-- 门店 + 商品（白卡，参考原型合并为一个板块） -->
@@ -183,7 +170,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onLoad, onShow, onHide, onUnload, onPullDownRefresh } from '@dcloudio/uni-app'
-import { getOrderDetail, acceptOrder, cancelOrder, confirmOrder as confirmOrderApi } from '@/api/order'
+import { getOrderDetail, acceptOrder, cancelOrder } from '@/api/order'
 import { getRedemptionDetail } from '@/api/member'
 import { useSessionStore } from '@/stores/session'
 import { refreshMemberProfile } from '@/services/session/MemberProfileService'
@@ -200,7 +187,6 @@ const order = ref(null)
 const loading = ref(true)
 const errorMessage = ref('')
 const paying = ref(false)
-const confirming = ref(false)
 const usedCache = ref(false)
 const nowTs = ref(Date.now())
 let countdownTicker = null
@@ -341,9 +327,6 @@ const rewards = computed(() => {
   const exp = Number(order.value?.expEarned || 0)
   return (points || exp) ? { points, exp } : null
 })
-// 已出餐/已送达但未确认 → 显示确认按钮（确认后发奖）
-const canConfirmPickup = computed(() => !isRedeem.value && !isCancelled.value && normalizedStatus.value === 'completed' && !rewardsGranted.value && !isDelivery.value)
-const canConfirmDelivery = computed(() => !isRedeem.value && !isCancelled.value && normalizedStatus.value === 'delivering' && !rewardsGranted.value)
 // 已确认/自动确认发奖后的终态 → 显示「订单已完成」+ 感谢支持（与取消订单一致）
 const isFullyCompleted = computed(() => !isRedeem.value && normalizedStatus.value === 'completed' && rewardsGranted.value)
 const totalCount = computed(() => orderItems.value.reduce((sum, item) => sum + Number(item.quantity || 1), 0))
@@ -431,9 +414,9 @@ function notifyStatusChange(before) {
   const after = { status: normalizedStatus.value, granted: rewardsGranted.value }
   if (before.status === after.status && before.granted === after.granted) return
   if (before.status !== 'completed' && after.status === 'completed' && !isDelivery.value) {
-    uni.showToast({ title: '咖啡已出餐，请确认取餐', icon: 'none', duration: 2200 })
+    uni.showToast({ title: '咖啡已出餐，可到订单列表确认取餐', icon: 'none', duration: 2200 })
   } else if (before.status === 'delivering' && after.status === 'completed') {
-    uni.showToast({ title: '外送已送达，请确认收货', icon: 'none', duration: 2200 })
+    uni.showToast({ title: '外送已送达，可到订单列表确认收货', icon: 'none', duration: 2200 })
   } else if (before.status !== 'delivering' && after.status === 'delivering') {
     uni.showToast({ title: '商家已出餐，配送中', icon: 'none', duration: 2200 })
   } else if (!before.granted && after.granted) {
@@ -527,23 +510,6 @@ async function cancelPendingOrder() {
     loadOrder()
   } catch (error) {
     uni.showToast({ title: error?.message || '取消失败，请稍后重试', icon: 'none' })
-  }
-}
-
-async function confirmOrder() {
-  if (confirming.value) return
-  confirming.value = true
-  const isDeliveryConfirm = canConfirmDelivery.value
-  try {
-    await confirmOrderApi(orderId.value)
-    uni.showToast({ title: isDeliveryConfirm ? '确认收货成功，奖励已到账' : '确认取餐成功，奖励已到账', icon: 'none', duration: 2200 })
-    completedMemberRefreshed = false
-    loadOrder()
-    try { await refreshMemberProfile(sessionStore) } catch (_) { /* 静默 */ }
-  } catch (error) {
-    uni.showToast({ title: error?.message || '确认失败，请稍后重试', icon: 'none', duration: 2200 })
-  } finally {
-    confirming.value = false
   }
 }
 </script>
@@ -681,33 +647,6 @@ async function confirmOrder() {
 .progress-step.current .progress-label {
   color: $cozy-ink;
   font-weight: 650;
-}
-
-/* ── 确认取餐/确认收货（状态卡内，已出餐/已送达未确认时显示） ── */
-.confirm-block {
-  margin-top: 36rpx;
-  padding-top: 30rpx;
-  border-top: 1rpx solid $cozy-border;
-}
-.confirm-hint {
-  display: block;
-  font-size: 24rpx;
-  color: $cozy-muted;
-}
-.confirm-btn {
-  margin-top: 24rpx;
-  height: 88rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999rpx;
-  background: $cozy-ink;
-  color: #fff;
-  font-size: 28rpx;
-  font-weight: 650;
-
-  &.disabled { opacity: .6; }
-  &:active { opacity: .85; }
 }
 
 /* ── 门店 + 商品（白卡，合并为一个板块） ── */
