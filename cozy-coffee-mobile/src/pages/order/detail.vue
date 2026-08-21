@@ -182,7 +182,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+import { onLoad, onShow, onHide, onUnload, onPullDownRefresh } from '@dcloudio/uni-app'
 import { getOrderDetail, acceptOrder, cancelOrder, confirmOrder as confirmOrderApi } from '@/api/order'
 import { getRedemptionDetail } from '@/api/member'
 import { useSessionStore } from '@/stores/session'
@@ -372,8 +372,20 @@ onLoad(options => {
 onShow(() => {
   if (orderId.value) loadOrder(usedCache.value)
   startCountdownTicker()
+  startPolling()
 })
-onUnload(stopCountdownTicker)
+onHide(stopPolling)
+onUnload(() => {
+  stopPolling()
+  stopCountdownTicker()
+})
+onPullDownRefresh(async () => {
+  if (orderId.value) {
+    usedCache.value = false
+    await loadOrder(true)
+  }
+  uni.stopPullDownRefresh()
+})
 
 function startCountdownTicker() {
   stopCountdownTicker()
@@ -381,6 +393,50 @@ function startCountdownTicker() {
 }
 function stopCountdownTicker() {
   if (countdownTicker) { clearInterval(countdownTicker); countdownTicker = null }
+}
+
+// 订单状态轮询：页面停留期间自动刷新，检测到跳变时 toast（到达终态后停止）
+const POLL_INTERVAL_MS = 5000
+let pollTicker = null
+let pollInFlight = false
+
+function startPolling() {
+  stopPolling()
+  if (isRedeem.value) return
+  pollTicker = setInterval(pollOrder, POLL_INTERVAL_MS)
+}
+
+function stopPolling() {
+  if (pollTicker) { clearInterval(pollTicker); pollTicker = null }
+  pollInFlight = false
+}
+
+async function pollOrder() {
+  if (pollInFlight || !order.value) return
+  // 已完成且已发奖：状态不再变化，停止轮询
+  if (normalizedStatus.value === 'completed' && rewardsGranted.value) { stopPolling(); return }
+  pollInFlight = true
+  try {
+    const before = { status: normalizedStatus.value, granted: rewardsGranted.value }
+    await loadOrder(true)
+    notifyStatusChange(before)
+  } catch (_) { /* loadOrder 内部已处理错误 */ } finally {
+    pollInFlight = false
+  }
+}
+
+function notifyStatusChange(before) {
+  const after = { status: normalizedStatus.value, granted: rewardsGranted.value }
+  if (before.status === after.status && before.granted === after.granted) return
+  if (before.status !== 'completed' && after.status === 'completed' && !isDelivery.value) {
+    uni.showToast({ title: '咖啡已出餐，请确认取餐', icon: 'none', duration: 2200 })
+  } else if (before.status === 'delivering' && after.status === 'completed') {
+    uni.showToast({ title: '外送已送达，请确认收货', icon: 'none', duration: 2200 })
+  } else if (before.status !== 'delivering' && after.status === 'delivering') {
+    uni.showToast({ title: '商家已出餐，配送中', icon: 'none', duration: 2200 })
+  } else if (!before.granted && after.granted) {
+    uni.showToast({ title: '积分与成长值已到账', icon: 'none', duration: 2200 })
+  }
 }
 
 async function loadOrder(silent = false) {

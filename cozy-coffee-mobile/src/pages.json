@@ -17,7 +17,9 @@
             "path": "pages/order/order",
             "style": {
                 "navigationBarTitleText": "订单",
-                "navigationStyle": "custom"
+                "navigationStyle": "custom",
+                "enablePullDownRefresh": true,
+                "backgroundTextStyle": "dark"
             }
         },
         {
@@ -167,7 +169,9 @@
         {
             "path": "pages/order/detail",
             "style": {
-                "navigationBarTitleText": "订单详情"
+                "navigationBarTitleText": "订单详情",
+                "enablePullDownRefresh": true,
+                "backgroundTextStyle": "dark"
             }
         },
         {

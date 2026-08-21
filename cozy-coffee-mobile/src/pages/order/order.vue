@@ -86,7 +86,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+import { onLoad, onShow, onUnload, onPullDownRefresh } from '@dcloudio/uni-app'
 import { getOrderList, acceptOrder as acceptOrderApi, cancelOrder as cancelOrderApi } from '@/api/order'
 import { formatCoffeeSpec } from '@/utils/spec'
 import { formatFullTime, money } from '@/utils/format'
@@ -126,6 +126,11 @@ onShow(() => {
 
 onUnload(stopTicker)
 
+onPullDownRefresh(async () => {
+  await loadCurrent(true)
+  uni.stopPullDownRefresh()
+})
+
 const shownOrders = computed(() => coffeeOrders.value.filter(order => {
   const isDelivery = String(order.diningMethod || '').toUpperCase() === 'DELIVERY'
   return currentCategory.value === 'delivery' ? isDelivery : !isDelivery
@@ -145,8 +150,8 @@ function switchCategory(value) {
   currentCategory.value = value
 }
 
-async function loadCurrent() {
-  loading.value = true
+async function loadCurrent(silent = false) {
+  if (!silent) loading.value = true
   errorMessage.value = ''
   try {
     const response = await getOrderList()
@@ -165,7 +170,7 @@ async function loadCurrent() {
   } catch (error) {
     errorMessage.value = error?.message || '订单加载失败，请稍后重试'
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
 
