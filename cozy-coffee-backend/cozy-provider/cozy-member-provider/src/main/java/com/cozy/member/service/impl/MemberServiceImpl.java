@@ -33,7 +33,10 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -199,7 +202,7 @@ public class MemberServiceImpl implements MemberService {
         // v5.3: Populate Monthly Challenge Status (只查询，不发放奖励)
         try {
             if (monthlyTaskMapper != null) {
-                String month = java.time.YearMonth.now().toString();
+                String month = YearMonth.now().toString();
                 LambdaQueryWrapper<MonthlyTask> taskWrapper = new LambdaQueryWrapper<>();
                 taskWrapper.eq(MonthlyTask::getUserId, userId)
                         .eq(MonthlyTask::getTaskMonth, month);
@@ -514,8 +517,8 @@ public class MemberServiceImpl implements MemberService {
         // 逻辑修正：加速包不再直接由 (300 - 当月总消费) 计算
         // 改为：仅在用户是“黑卡”时，或者本次消费导致升级为“黑卡”时，扣减额度
         // ============================================
-        String currentMonth = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")
-                .format(java.time.LocalDate.now());
+        // monthly_spent_month 列是 DATE(月初)，必须写完整日期 "yyyy-MM-dd"
+        String currentMonth = LocalDate.now().withDayOfMonth(1).toString();
 
         // 跨月处理：如果是新月份，先把加速包重置为 300
         if (!currentMonth.equals(member.getMonthlySpentMonth())) {
@@ -941,7 +944,7 @@ public class MemberServiceImpl implements MemberService {
     @org.springframework.scheduling.annotation.Scheduled(cron = "0 30 0 * * ?")
     public void processBirthdayRewards() {
         log.info("开始处理生日福利发放任务...");
-        java.time.LocalDate today = java.time.LocalDate.now();
+        LocalDate today = LocalDate.now();
 
         // 需求：生日月 1 号自动发放
         if (today.getDayOfMonth() != 1) {
@@ -998,7 +1001,7 @@ public class MemberServiceImpl implements MemberService {
             return false;
         }
 
-        int currentYear = java.time.LocalDate.now().getYear();
+        int currentYear = LocalDate.now().getYear();
         try {
             grantBirthdayRewardInternal(userId, currentYear);
             log.info("生日权益包发放成功: userId={}, year={}", userId, currentYear);
@@ -1093,7 +1096,7 @@ public class MemberServiceImpl implements MemberService {
     @org.springframework.scheduling.annotation.Scheduled(cron = "0 0 0 1 1 ?")
     @Transactional
     public void processYearlySettlement() {
-        int currentYear = java.time.LocalDate.now().getYear();
+        int currentYear = LocalDate.now().getYear();
         int lastYear = currentYear - 1;
 
         log.info("开始执行 {} 年度保级判定...", lastYear);
@@ -1225,8 +1228,8 @@ public class MemberServiceImpl implements MemberService {
             return Map.of("claimed", false, "canClaim", false, "benefitName", "");
 
         // 1. 获取当月 Key
-        String currentMonthKey = java.time.format.DateTimeFormatter.ofPattern("yyyyMM")
-                .format(java.time.LocalDate.now());
+        String currentMonthKey = DateTimeFormatter.ofPattern("yyyyMM")
+                .format(LocalDate.now());
         String sourceType = "monthly_benefit_" + currentMonthKey;
 
         // 2. 检查是否已领取 (查流水)
@@ -1283,8 +1286,8 @@ public class MemberServiceImpl implements MemberService {
             throw new BusinessException("当前等级暂无可领取的月度权益");
         }
 
-        String currentMonthKey = java.time.format.DateTimeFormatter.ofPattern("yyyyMM")
-                .format(java.time.LocalDate.now());
+        String currentMonthKey = DateTimeFormatter.ofPattern("yyyyMM")
+                .format(LocalDate.now());
         String sourceType = "monthly_benefit_" + currentMonthKey;
         String uniqueKeyBase = userId + "_" + currentMonthKey;
 

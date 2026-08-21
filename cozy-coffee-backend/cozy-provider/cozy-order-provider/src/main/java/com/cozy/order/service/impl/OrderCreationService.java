@@ -503,8 +503,8 @@ public class OrderCreationService {
                 if (currentExp >= BLACK_THRESHOLD) {
                     // 1. 已经是黑卡：直接按加速包逻辑计算
                     BigDecimal monthlySpent = BigDecimal.ZERO;
-                    String currentMonth = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")
-                            .format(java.time.LocalDate.now());
+                    // 与 MemberServiceImpl 一致：monthly_spent_month 是 DATE(月初)，写/比完整日期 "yyyy-MM-dd"
+                    String currentMonth = LocalDate.now().withDayOfMonth(1).toString();
 
                     // 获取月度加速包剩余额度
                     BigDecimal accelerateRemaining = member.getMonthlyAccelerateRemaining() != null
