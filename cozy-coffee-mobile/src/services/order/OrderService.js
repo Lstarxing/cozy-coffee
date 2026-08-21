@@ -1,4 +1,4 @@
-import { checkCart as checkCartApi, createOrder as createOrderApi, getOrderDetail, acceptOrder as acceptOrderApi } from '@/api/order'
+import { checkCart as checkCartApi, createOrder as createOrderApi, getOrderDetail, acceptOrder as acceptOrderApi, confirmOrder as confirmOrderApi } from '@/api/order'
 
 export function toOrderItems(lines = []) {
   return lines.map(line => ({
@@ -21,7 +21,7 @@ function resolveCouponCode(context) {
 }
 
 export class OrderService {
-  constructor(api = { checkCart: checkCartApi, createOrder: createOrderApi, getOrderDetail, acceptOrder: acceptOrderApi }) {
+  constructor(api = { checkCart: checkCartApi, createOrder: createOrderApi, getOrderDetail, acceptOrder: acceptOrderApi, confirmOrder: confirmOrderApi }) {
     this.api = api
   }
 
@@ -66,6 +66,11 @@ export class OrderService {
 
   async accept(orderId) {
     const response = await this.api.acceptOrder(orderId)
+    return response?.data ?? response
+  }
+
+  async confirm(orderId) {
+    const response = await this.api.confirmOrder(orderId)
     return response?.data ?? response
   }
 }

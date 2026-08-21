@@ -34,3 +34,8 @@ export const cancelOrder = (orderId) => {
 export const acceptOrder = (orderId) => {
     return post(`/order/${orderId}/accept`)
 }
+
+// 确认取餐（自提）/ 确认收货（外送）→ 发放积分与成长值
+export const confirmOrder = (orderId) => {
+    return post(`/order/${orderId}/confirm`)
+}
