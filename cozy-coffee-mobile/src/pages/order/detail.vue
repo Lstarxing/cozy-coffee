@@ -36,15 +36,15 @@
 
       <!-- 状态卡（白卡：取餐号在上居中 + 三节点进度 已下单/制作中/待取餐） -->
       <view v-else class="status-card">
-        <text v-if="statusText && (isRedeem || isCancelled || isDelivering)" class="status-line">{{ statusText }}</text>
-        <text v-if="isCancelled" class="status-thanks">感谢您对CozyCoffee的支持，欢迎再次光临</text>
-        <view v-if="!isCancelled" class="pickup-code-block">
+        <text v-if="statusText && (isRedeem || isCancelled || isDelivering || isFullyCompleted)" class="status-line">{{ statusText }}</text>
+        <text v-if="isCancelled || isFullyCompleted" class="status-thanks">感谢您对CozyCoffee的支持，欢迎再次光临</text>
+        <view v-if="!isCancelled && !isFullyCompleted" class="pickup-code-block">
           <text class="pickup-label">{{ codeCaption }}</text>
           <text class="pickup-code" :class="{ long: codeText.length > 6 }">{{ codeText }}</text>
         </view>
-        <text v-if="codeEta" class="pickup-eta">{{ codeEta }}</text>
+        <text v-if="codeEta && !isFullyCompleted" class="pickup-eta">{{ codeEta }}</text>
 
-        <view v-if="!isRedeem && !isCancelled" class="progress">
+        <view v-if="!isRedeem && !isCancelled && !isFullyCompleted" class="progress">
           <view class="progress-seg seg-a" :class="{ on: reachedIndex >= 1 }"></view>
           <view class="progress-seg seg-b" :class="{ on: reachedIndex >= 2 }"></view>
           <view
@@ -295,7 +295,7 @@ const statusText = computed(() => {
     preparing: '咖啡制作中',
     processing: '咖啡制作中',
     delivering: '配送中',
-    completed: '订单已完成',
+    completed: '订单已完成' + (isDelivery.value ? ' · 已送达' : ''),
     cancelled: '订单已取消'
   }
   return (isRedeem.value ? redeem : coffee)[status] || '订单已提交'
@@ -344,6 +344,8 @@ const rewards = computed(() => {
 // 已出餐/已送达但未确认 → 显示确认按钮（确认后发奖）
 const canConfirmPickup = computed(() => !isRedeem.value && !isCancelled.value && normalizedStatus.value === 'completed' && !rewardsGranted.value && !isDelivery.value)
 const canConfirmDelivery = computed(() => !isRedeem.value && !isCancelled.value && normalizedStatus.value === 'delivering' && !rewardsGranted.value)
+// 已确认/自动确认发奖后的终态 → 显示「订单已完成」+ 感谢支持（与取消订单一致）
+const isFullyCompleted = computed(() => !isRedeem.value && normalizedStatus.value === 'completed' && rewardsGranted.value)
 const totalCount = computed(() => orderItems.value.reduce((sum, item) => sum + Number(item.quantity || 1), 0))
 const payAmount = computed(() => Number(order.value?.payAmount ?? order.value?.totalAmount ?? 0))
 const remainingPoints = computed(() => Number(sessionStore.memberInfo?.currentPoints) || 0)

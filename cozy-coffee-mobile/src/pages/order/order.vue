@@ -60,6 +60,10 @@
               <view class="mini-btn md strong" @click.stop="payOrderItem(order)">立即支付</view>
               <view class="mini-btn md" @click.stop="goToDetail(order.id)">查看详情</view>
             </template>
+            <template v-else-if="canConfirmOrder(order)">
+              <view class="mini-btn md strong" @click.stop="confirmOrderItem(order)">{{ confirmActionText(order) }}</view>
+              <view v-if="isCompleted(order.status)" class="order-action" @click.stop="reOrder(order)">再来一单</view>
+            </template>
             <template v-else-if="isCompleted(order.status) || isCancelled(order.status)">
               <view class="order-action" @click.stop="reOrder(order)">再来一单</view>
             </template>
@@ -87,7 +91,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onLoad, onShow, onUnload, onPullDownRefresh } from '@dcloudio/uni-app'
-import { getOrderList, acceptOrder as acceptOrderApi, cancelOrder as cancelOrderApi } from '@/api/order'
+import { getOrderList, acceptOrder as acceptOrderApi, cancelOrder as cancelOrderApi, confirmOrder as confirmOrderApi } from '@/api/order'
 import { formatCoffeeSpec } from '@/utils/spec'
 import { formatFullTime, money } from '@/utils/format'
 import { useCartStore } from '@/stores/cart'
@@ -190,6 +194,26 @@ function isPending(status) { return ['pending', 'pending_payment'].includes(norm
 function isCompleted(status) { return normalizeStatus(status) === 'completed' }
 function isCancelled(status) { return ['cancelled', 'canceled'].includes(normalizeStatus(status)) }
 function isDeliveryOrder(order) { return String(order.diningMethod || '').toUpperCase() === 'DELIVERY' }
+
+// 待确认取餐/收货：自提 completed 未发奖、外送 delivering 未发奖
+function rewardsGrantedOf(order) { return order.rewardsGranted === true || order.rewardsGranted === 1 }
+function canConfirmOrder(order) {
+  if (rewardsGrantedOf(order)) return false
+  return isDeliveryOrder(order) ? isCompleted(order.status) || normalizeStatus(order.status) === 'delivering'
+                                : isCompleted(order.status)
+}
+function confirmActionText(order) { return isDeliveryOrder(order) ? '确认收货' : '确认取餐' }
+
+async function confirmOrderItem(order) {
+  const isDeliver = isDeliveryOrder(order)
+  try {
+    await confirmOrderApi(order.id)
+    uni.showToast({ title: isDeliver ? '确认收货成功，奖励已到账' : '确认取餐成功，奖励已到账', icon: 'none', duration: 2200 })
+    loadCurrent(true)
+  } catch (e) {
+    uni.showToast({ title: e?.message || '确认失败，请稍后重试', icon: 'none' })
+  }
+}
 
 function getExpireMs(order) {
   if (order?.expireAt) {
