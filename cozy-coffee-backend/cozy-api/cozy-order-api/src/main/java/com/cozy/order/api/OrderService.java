@@ -87,14 +87,26 @@ public interface OrderService {
     ShopOrderDTO acceptUserOrder(Long orderId, Long userId);
 
     /**
-     * 完成订单
+     * 完成订单（出餐）：自提 → completed、外送 → delivering，仅履约不发奖
      */
     ShopOrderDTO completeOrder(Long orderId);
 
     /**
-     * 配送中订单到点自动完成（由调度任务触发，发放积分/EXP）
+     * 用户确认取餐（自提）/ 确认收货（外送）：校验订单归属后发放积分/EXP
+     *
+     * @param orderId 订单ID
+     * @param userId  用户ID
+     * @return 发放后的订单
+     * @throws RuntimeException 如果订单不属于该用户
      */
-    ShopOrderDTO completeDeliveredOrder(Long orderId);
+    ShopOrderDTO confirmUserOrder(Long orderId, Long userId);
+
+    /**
+     * 发放积分/EXP（用户确认或兜底 Job 触发）。
+     * CAS 条件更新（rewards_granted=0 且 status 在 completed/delivering），
+     * 赢家才发布 ORDER_COMPLETED，多入口并发不会重复发放。
+     */
+    ShopOrderDTO grantRewards(Long orderId);
 
     /**
      * 取消订单（管理端，无需验证用户）

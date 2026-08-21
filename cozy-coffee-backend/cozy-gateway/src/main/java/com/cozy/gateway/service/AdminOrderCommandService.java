@@ -1,9 +1,7 @@
 package com.cozy.gateway.service;
 
-import com.cozy.common.mq.OrderCompletedEvent;
 import com.cozy.gateway.cache.AdminOrderCacheEvictor;
 import com.cozy.common.exception.NotFoundException;
-import com.cozy.gateway.mq.OrderEventProducer;
 import com.cozy.gateway.util.AdminCacheUtil;
 import com.cozy.mall.api.PointsMallService;
 import com.cozy.mall.dto.response.PointsOrderDTO;
@@ -14,11 +12,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-
 /**
  * 管理端订单/兑换单命令服务。
- * 封装 Dubbo 调用 + 缓存驱逐 + 事件发布 + 用户信息填充的编排逻辑。
+ * 封装 Dubbo 调用 + 缓存驱逐 + 用户信息填充的编排逻辑。
+ * 订单完成事件（ORDER_COMPLETED）已下沉到 order-provider 发奖时统一发布，此处不再发布。
  */
 @Slf4j
 @Service
@@ -31,7 +28,6 @@ public class AdminOrderCommandService {
     @DubboReference(check = false)
     private PointsMallService pointsMallService;
 
-    private final OrderEventProducer orderEventProducer;
     private final AdminOrderCacheEvictor cacheEvictor;
     private final AdminUserEnrichService userEnrichService;
 
@@ -56,38 +52,10 @@ public class AdminOrderCommandService {
     }
 
     public ShopOrderDTO completeOrder(Long orderId) {
+        // 出餐仅履约：自提 → completed、外送 → delivering；奖励待用户确认/兜底 Job 发放（order-provider 统一发布事件）
         ShopOrderDTO order = orderService.completeOrder(orderId);
         AdminCacheUtil.evictOrderAndAnalytics(cacheEvictor);
-        // 外送出餐仅进入配送中（delivering），到点自动完成后才发奖励事件
-        if ("completed".equalsIgnoreCase(order.getStatus())) {
-            publishCompleted(order);
-        }
         return order;
-    }
-
-    /**
-     * 配送中订单到点自动完成（DeliveryAutoCompleteJob 触发），发放积分/EXP 事件。
-     */
-    public ShopOrderDTO completeDeliveredOrder(Long orderId) {
-        ShopOrderDTO order = orderService.completeDeliveredOrder(orderId);
-        AdminCacheUtil.evictOrderAndAnalytics(cacheEvictor);
-        publishCompleted(order);
-        return order;
-    }
-
-    private void publishCompleted(ShopOrderDTO order) {
-        orderEventProducer.publishOrderCompleted(OrderCompletedEvent.builder()
-                .orderId(order.getId())
-                .orderNo(order.getOrderNo())
-                .userId(order.getUserId())
-                .payAmount(order.getPayAmount())
-                .expEarned(order.getExpEarned())
-                .pointsEarned(order.getPointsEarned())
-                .isFirstOrder(order.getIsFirstOrder())
-                .hasNewProduct(order.getHasNewProduct())
-                .isDelivery("DELIVERY".equals(order.getDiningMethod()))
-                .occurredAt(LocalDateTime.now())
-                .build());
     }
 
     public ShopOrderDTO cancelOrder(Long orderId) {

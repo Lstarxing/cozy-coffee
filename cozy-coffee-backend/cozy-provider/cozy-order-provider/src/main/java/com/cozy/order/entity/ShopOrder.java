@@ -46,6 +46,9 @@ public class ShopOrder {
     // v6.4: 外送预计送达时间（配送到点自动确认已完成）
     private LocalDateTime expectedDeliveryAt;
 
+    // v6.6: 完成时间（自提出餐/确认收货时写入，自提兜底自动确认计时）
+    private LocalDateTime completedAt;
+
     // v6.5: 外送收货人信息快照（列表/详情展示配送地址）
     private String receiverName;
     private String receiverPhone;

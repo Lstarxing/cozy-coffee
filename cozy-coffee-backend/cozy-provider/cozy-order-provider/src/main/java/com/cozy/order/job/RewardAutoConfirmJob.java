@@ -2,21 +2,15 @@ package com.cozy.order.job;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
-import com.cozy.common.mq.MqTags;
-import com.cozy.common.mq.MqTopics;
-import com.cozy.common.mq.OrderCompletedEvent;
-import com.cozy.order.dto.response.ShopOrderDTO;
 import com.cozy.order.entity.ShopOrder;
 import com.cozy.order.mapper.ShopOrderMapper;
 import com.cozy.order.service.impl.OrderServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -28,14 +22,17 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 外送订单到点自动完成。
- * 外送功能未上线，出餐后订单进入 delivering（配送中），
- * 本任务扫描预计送达时间已过且仍在配送中的订单，自动置为 completed 并发放积分/EXP。
+ * 订单奖励自动确认（兜底，替代原 DeliveryAutoCompleteJob）：
+ * - 自提：completed && !rewards_granted && completed_at + pickupGrace <= now → 自动「确认取餐」→ 发放积分/EXP
+ * - 外送：delivering && !rewards_granted && expectedDeliveryAt + deliveryGrace <= now → 自动「确认收货」→ 发放积分/EXP
+ * <p>
+ * 发奖由 OrderCommandService.grantRewards 的 CAS 完成并统一发布 ORDER_COMPLETED，
+ * 本任务只触发 grantRewards，不重复发布；与用户手动确认天然互斥（CAS 只允许一个赢家）。
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class DeliveryAutoCompleteJob {
+public class RewardAutoConfirmJob {
 
     private static final String ADMIN_CACHE_ORDERS_LIST_PREFIX = "cozy:admin:orders:list:";
     private static final String ADMIN_CACHE_ORDERS_RECENT_PREFIX = "cozy:admin:orders:recent:";
@@ -45,22 +42,24 @@ public class DeliveryAutoCompleteJob {
     private static final String LEGACY_ADMIN_CACHE_DASHBOARD_PREFIX = "admin:cache:dashboard:";
     private static final String LEGACY_ADMIN_CACHE_ANALYTICS_PREFIX = "admin:cache:analytics:";
 
-    private static final int SEND_RETRY_MAX = 3;
-    private static final long SEND_RETRY_BASE_DELAY_MS = 1000;
-
     private final ShopOrderMapper orderMapper;
     private final OrderServiceImpl orderService;
     private final StringRedisTemplate stringRedisTemplate;
-    private final RocketMQTemplate rocketMQTemplate;
 
-    @Value("${cozy.order.delivery-auto-complete.enabled:true}")
+    @Value("${cozy.order.reward-auto-confirm.enabled:true}")
     private boolean enabled;
 
-    @Value("${cozy.order.delivery-auto-complete.batch-size:100}")
+    @Value("${cozy.order.reward-auto-confirm.batch-size:100}")
     private int batchSize;
 
-    @Scheduled(fixedDelayString = "${cozy.order.delivery-auto-complete.scan-interval-ms:60000}")
-    public void autoCompleteDeliveredOrders() {
+    @Value("${cozy.order.reward-auto-confirm.delivery-grace-minutes:60}")
+    private int deliveryGraceMinutes;
+
+    @Value("${cozy.order.reward-auto-confirm.pickup-grace-minutes:60}")
+    private int pickupGraceMinutes;
+
+    @Scheduled(fixedDelayString = "${cozy.order.reward-auto-confirm.scan-interval-ms:60000}")
+    public void autoConfirmRewards() {
         if (!enabled) {
             return;
         }
@@ -70,24 +69,31 @@ public class DeliveryAutoCompleteJob {
             return;
         }
 
-        int totalCompleted = 0;
+        int totalConfirmed = 0;
         int totalFailed = 0;
         try {
-            List<Long> orderIds = fetchDueDeliveringOrderIds();
-            for (Long orderId : orderIds) {
+            for (Long orderId : fetchDuePickupOrderIds()) {
                 try {
-                    var order = orderService.completeDeliveredOrder(orderId);
-                    publishCompleted(order);
-                    totalCompleted++;
+                    orderService.grantRewards(orderId);
+                    totalConfirmed++;
                 } catch (Exception e) {
                     totalFailed++;
-                    log.warn("配送中订单自动完成失败: orderId={}, error={}", orderId, e.getMessage());
+                    log.warn("自提奖励自动确认失败: orderId={}, error={}", orderId, e.getMessage());
                 }
             }
-            if (totalCompleted > 0 || totalFailed > 0) {
-                log.info("配送订单自动完成任务: completed={}, failed={}", totalCompleted, totalFailed);
+            for (Long orderId : fetchDueDeliveringOrderIds()) {
+                try {
+                    orderService.grantRewards(orderId);
+                    totalConfirmed++;
+                } catch (Exception e) {
+                    totalFailed++;
+                    log.warn("外送奖励自动确认失败: orderId={}, error={}", orderId, e.getMessage());
+                }
             }
-            if (totalCompleted > 0) {
+            if (totalConfirmed > 0 || totalFailed > 0) {
+                log.info("奖励自动确认任务: confirmed={}, failed={}", totalConfirmed, totalFailed);
+            }
+            if (totalConfirmed > 0) {
                 evictAdminOrderCaches();
             }
         } finally {
@@ -95,71 +101,40 @@ public class DeliveryAutoCompleteJob {
         }
     }
 
-    /** status=delivering 且预计送达时间已过 */
+    /** 自提：已出餐(completed) 且未发奖 且 出餐后超过 pickupGraceMinutes */
+    private List<Long> fetchDuePickupOrderIds() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(pickupGraceMinutes);
+        LambdaQueryWrapper<ShopOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ShopOrder::getStatus, "completed")
+                .eq(ShopOrder::getRewardsGranted, false)
+                .ne(ShopOrder::getDiningMethod, "DELIVERY")
+                .isNotNull(ShopOrder::getCompletedAt)
+                .le(ShopOrder::getCompletedAt, cutoff)
+                .orderByAsc(ShopOrder::getCompletedAt)
+                .last("LIMIT " + batchSize);
+
+        return toIds(orderMapper.selectList(wrapper));
+    }
+
+    /** 外送：配送中(delivering) 未发奖 且 预计送达后超过 deliveryGraceMinutes */
     private List<Long> fetchDueDeliveringOrderIds() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(deliveryGraceMinutes);
         LambdaQueryWrapper<ShopOrder> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ShopOrder::getStatus, "delivering")
-                .eq(ShopOrder::getDiningMethod, "DELIVERY")
+                .eq(ShopOrder::getRewardsGranted, false)
                 .isNotNull(ShopOrder::getExpectedDeliveryAt)
-                .le(ShopOrder::getExpectedDeliveryAt, now)
+                .le(ShopOrder::getExpectedDeliveryAt, cutoff)
                 .orderByAsc(ShopOrder::getExpectedDeliveryAt)
                 .last("LIMIT " + batchSize);
 
-        List<ShopOrder> orders = orderMapper.selectList(wrapper);
+        return toIds(orderMapper.selectList(wrapper));
+    }
+
+    private List<Long> toIds(List<ShopOrder> orders) {
         if (orders == null || orders.isEmpty()) {
             return Collections.emptyList();
         }
-        List<Long> ids = new ArrayList<>(orders.size());
-        for (ShopOrder o : orders) {
-            ids.add(o.getId());
-        }
-        return ids;
-    }
-
-    /** 发放积分/EXP 事件：与 gateway OrderEventProducer 对等，失败重试。 */
-    private void publishCompleted(ShopOrderDTO order) {
-        if (order == null || order.getId() == null) {
-            return;
-        }
-        OrderCompletedEvent event = OrderCompletedEvent.builder()
-                .orderId(order.getId())
-                .orderNo(order.getOrderNo())
-                .userId(order.getUserId())
-                .payAmount(order.getPayAmount())
-                .expEarned(order.getExpEarned())
-                .pointsEarned(order.getPointsEarned())
-                .isFirstOrder(order.getIsFirstOrder())
-                .hasNewProduct(order.getHasNewProduct())
-                .isDelivery("DELIVERY".equals(order.getDiningMethod()))
-                .occurredAt(LocalDateTime.now())
-                .build();
-
-        String destination = MqTopics.ORDER_EVENTS + ":" + MqTags.ORDER_COMPLETED;
-        for (int attempt = 1; attempt <= SEND_RETRY_MAX; attempt++) {
-            try {
-                rocketMQTemplate.syncSend(
-                        destination,
-                        MessageBuilder.withPayload(event)
-                                .setHeader("KEYS", String.valueOf(order.getId()))
-                                .build());
-                return;
-            } catch (Exception e) {
-                if (attempt == SEND_RETRY_MAX) {
-                    log.error("配送自动完成派发 ORDER_COMPLETED 最终失败: orderId={}", order.getId(), e);
-                } else {
-                    long delay = SEND_RETRY_BASE_DELAY_MS * (1L << (attempt - 1));
-                    log.warn("配送自动完成派发失败, attempt={}/{}, {}ms 后重试: orderId={}",
-                            attempt, SEND_RETRY_MAX, delay, order.getId());
-                    try {
-                        Thread.sleep(delay);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                }
-            }
-        }
+        return orders.stream().map(ShopOrder::getId).toList();
     }
 
     private boolean tryAcquireLock(String lockToken) {
@@ -171,7 +146,7 @@ public class DeliveryAutoCompleteJob {
                     TimeUnit.SECONDS);
             return Boolean.TRUE.equals(ok);
         } catch (Exception e) {
-            log.warn("获取配送自动完成任务锁失败", e);
+            log.warn("获取奖励自动确认任务锁失败", e);
             return false;
         }
     }
@@ -189,7 +164,7 @@ public class DeliveryAutoCompleteJob {
                     Collections.singletonList(RedisKeyConstants.LOCK_ORDER_DELIVERY_AUTO_COMPLETE_JOB),
                     lockToken);
         } catch (Exception e) {
-            log.warn("释放配送自动完成任务锁失败", e);
+            log.warn("释放奖励自动确认任务锁失败", e);
         }
     }
 

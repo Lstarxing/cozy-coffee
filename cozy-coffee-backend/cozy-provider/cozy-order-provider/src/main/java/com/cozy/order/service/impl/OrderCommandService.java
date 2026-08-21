@@ -1,8 +1,7 @@
 package com.cozy.order.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.cozy.common.mq.MqTags;
-import com.cozy.common.mq.MqTopics;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.mall.api.PointsMallService;
@@ -15,6 +14,7 @@ import com.cozy.order.entity.ShopOrderItem;
 import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.mapper.ShopOrderMapper;
 import com.cozy.order.mapper.ShopOrderItemMapper;
+import com.cozy.order.mq.OrderCompletedEventPublisher;
 import com.cozy.order.service.PickupCodeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +48,7 @@ public class OrderCommandService {
     private final OrderDtoEnricher orderDtoEnricher;
     private final OrderInfraService orderInfraService;
     private final TransactionTemplate transactionTemplate;
+    private final OrderCompletedEventPublisher orderCompletedEventPublisher;
 
     @DubboReference(check = false)
     private MemberService memberService;
@@ -151,9 +152,9 @@ public class OrderCommandService {
     }
 
     /**
-     * 出餐/完成订单。
-     * - 自提：preparing → completed（发放积分/EXP）
-     * - 外送：preparing → delivering（配送中），到点由调度任务自动完成
+     * 出餐/完成订单（仅履约，不再发放奖励）。
+     * - 自提：preparing → completed（写入 completedAt，奖励待用户「确认取餐」后发放）
+     * - 外送：preparing → delivering（配送中），奖励由用户「确认收货」或兜底 Job 发放
      */
     public ShopOrderDTO completeOrder(Long orderId) {
         if (orderId == null) {
@@ -165,7 +166,7 @@ public class OrderCommandService {
         }
         OrderStateMachine current = OrderStateMachine.from(order.getStatus());
 
-        // 外送出餐 → 配送中（等预计送达时间自动完成）
+        // 外送出餐 → 配送中（等用户确认收货/兜底自动确认发放奖励）
         if ("DELIVERY".equalsIgnoreCase(order.getDiningMethod())) {
             current.assertCanTransition(OrderStateMachine.DELIVERING);
             order.setStatus(OrderStateMachine.DELIVERING.value());
@@ -175,15 +176,43 @@ public class OrderCommandService {
             return orderDtoEnricher.toOrderDTO(order, null);
         }
 
-        // 自提出餐 → 完成
-        return completeWithRewards(order, current);
+        // 自提出餐 → 完成（奖励待用户确认取餐）
+        current.assertCanTransition(OrderStateMachine.COMPLETED);
+        order.setStatus(OrderStateMachine.COMPLETED.value());
+        order.setCompletedAt(LocalDateTime.now());
+        orderMapper.updateById(order);
+        orderInfraService.syncPendingTimeoutIndex(order);
+        log.info("自提出餐: orderId={}, orderNo={}, 已完成待确认取餐", orderId, order.getOrderNo());
+        return orderDtoEnricher.toOrderDTO(order, null);
     }
 
     /**
-     * 配送中订单到点自动完成（由 DeliveryAutoCompleteJob 触发）。
-     * delivering → completed，发放积分/EXP。
+     * 用户确认取餐（自提）/ 确认收货（外送）：校验订单归属后发放积分/EXP。
+     * 发奖走 CAS，只有赢家发布 ORDER_COMPLETED。
      */
-    public ShopOrderDTO completeDeliveredOrder(Long orderId) {
+    public ShopOrderDTO confirmUserOrder(Long orderId, Long userId) {
+        if (orderId == null) {
+            throw new BusinessException("订单ID不能为空");
+        }
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
+        }
+        ShopOrder order = orderMapper.selectById(orderId);
+        if (order == null) {
+            throw new BusinessException("订单不存在");
+        }
+        if (!order.getUserId().equals(userId)) {
+            throw new BusinessException("无权确认该订单");
+        }
+        return grantRewards(orderId);
+    }
+
+    /**
+     * 发放积分/EXP（自提/外送共用；由用户确认或兜底 Job 触发）。
+     * CAS 条件更新（rewards_granted=0 且 status 在 completed/delivering），
+     * 影响 1 行的赢家才发布 ORDER_COMPLETED，多入口并发不会重复发放。
+     */
+    public ShopOrderDTO grantRewards(Long orderId) {
         if (orderId == null) {
             throw new BusinessException("订单ID不能为空");
         }
@@ -191,18 +220,13 @@ public class OrderCommandService {
         if (order == null) {
             throw new BusinessException("订单不存在");
         }
-        return completeWithRewards(order, OrderStateMachine.from(order.getStatus()));
-    }
-
-    private ShopOrderDTO completeWithRewards(ShopOrder order, OrderStateMachine current) {
-        current.assertCanTransition(OrderStateMachine.COMPLETED);
-
-        // 幂等检查
         if (Boolean.TRUE.equals(order.getRewardsGranted())) {
-            log.info("订单奖励已发放，跳过: orderId={}", order.getId());
-            order.setStatus(OrderStateMachine.COMPLETED.value());
-            orderMapper.updateById(order);
-            orderInfraService.syncPendingTimeoutIndex(order);
+            log.info("订单奖励已发放，跳过: orderId={}", orderId);
+            return orderDtoEnricher.toOrderDTO(order, null);
+        }
+        OrderStateMachine current = OrderStateMachine.from(order.getStatus());
+        if (current != OrderStateMachine.COMPLETED && current != OrderStateMachine.DELIVERING) {
+            log.info("订单状态不可确认发奖: orderId={}, status={}", orderId, order.getStatus());
             return orderDtoEnricher.toOrderDTO(order, null);
         }
 
@@ -221,11 +245,32 @@ public class OrderCommandService {
         boolean hasNewProduct = checkNewProduct(order);
         boolean isDelivery = "DELIVERY".equals(order.getDiningMethod());
 
-        log.info("订单完成(奖励已解耦到MQ): orderId={}, exp={}, points={}, isFirst={}, isDelivery={}, hasNew={}",
+        log.info("确认发奖(奖励已解耦到MQ): orderId={}, exp={}, points={}, isFirst={}, isDelivery={}, hasNew={}",
                 order.getId(), expEarned, pointsEarned, isFirstOrder, isDelivery, hasNewProduct);
 
-        // ===== 事务内：仅状态更新 =====
-        return doCompleteInTx(order, expEarned, pointsEarned);
+        // ===== CAS：赢家才发事件 =====
+        if (tryGrantRewards(order.getId(), expEarned, pointsEarned)) {
+            orderCompletedEventPublisher.publish(order, expEarned, pointsEarned, isFirstOrder, hasNewProduct, isDelivery);
+        }
+        return orderDtoEnricher.toOrderDTO(orderMapper.selectById(orderId), null);
+    }
+
+    private boolean tryGrantRewards(Long orderId, int expEarned, int pointsEarned) {
+        return Boolean.TRUE.equals(transactionTemplate.execute(status -> {
+            ShopOrder update = new ShopOrder();
+            update.setStatus(OrderStateMachine.COMPLETED.value());
+            update.setExpEarned(expEarned);
+            update.setPointsEarned(pointsEarned);
+            update.setRewardsGranted(true);
+            update.setCompletedAt(LocalDateTime.now());
+            update.setUpdatedAt(LocalDateTime.now());
+            return orderMapper.update(update, new LambdaUpdateWrapper<ShopOrder>()
+                    .eq(ShopOrder::getId, orderId)
+                    .eq(ShopOrder::getRewardsGranted, false)
+                    .in(ShopOrder::getStatus,
+                            OrderStateMachine.COMPLETED.value(),
+                            OrderStateMachine.DELIVERING.value())) == 1;
+        }));
     }
 
     private String resolveMemberLevel(Long userId) {
@@ -280,20 +325,6 @@ public class OrderCommandService {
             log.warn("新品检测失败: orderId={}", order.getId(), e);
         }
         return false;
-    }
-
-    private ShopOrderDTO doCompleteInTx(ShopOrder order, int expEarned, int pointsEarned) {
-        transactionTemplate.executeWithoutResult(status -> {
-            // 更新订单状态（积分/EXP/首单奖励/月度任务由 MQ 消费者异步处理）
-            order.setStatus(OrderStateMachine.COMPLETED.value());
-            order.setExpEarned(expEarned);
-            order.setPointsEarned(pointsEarned);
-            order.setRewardsGranted(true);
-            orderMapper.updateById(order);
-            orderInfraService.syncPendingTimeoutIndex(order);
-        });
-
-        return orderDtoEnricher.toOrderDTO(order, null);
     }
 
     @Transactional

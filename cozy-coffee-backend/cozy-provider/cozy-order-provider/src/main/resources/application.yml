@@ -65,3 +65,10 @@ cozy:
       batch-size: 200
       max-rounds: 5
       scan-interval-ms: 15000
+    # 订单奖励自动确认兜底：出餐后/预计送达后超时未确认，自动确认并发奖
+    reward-auto-confirm:
+      enabled: true
+      scan-interval-ms: 60000
+      batch-size: 100
+      pickup-grace-minutes: 60
+      delivery-grace-minutes: 60

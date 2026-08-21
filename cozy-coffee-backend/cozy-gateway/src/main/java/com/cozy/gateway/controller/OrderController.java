@@ -98,4 +98,9 @@ public class OrderController {
     public Result<ShopOrderDTO> acceptOrder(@PathVariable Long id) {
         return Result.success(orderService.acceptUserOrder(id, AuthUtil.requireUserId()), "已接单");
     }
+
+    @PostMapping("/{id}/confirm")
+    public Result<ShopOrderDTO> confirmOrder(@PathVariable Long id) {
+        return Result.success(orderService.confirmUserOrder(id, AuthUtil.requireUserId()), "确认成功，奖励已发放");
+    }
 }
