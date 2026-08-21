@@ -160,17 +160,19 @@ export class CheckoutWorkflow {
       this.log('info', 'Create Order', startedAt, { traceId })
       const order = await this.orderService.create(context, this.checkoutStore.idempotencyKey)
       this.checkoutStore.transition('ORDER_CREATED')
-      // 下单即视为购物车已提交：无论支付成功或取消，购物车都应清空（商品已进入订单）
-      this.cartStore.clearCart()
       const payment = await this.paymentService.pay({ order, orderId: order?.id, amount: order?.payAmount ?? this.checkoutStore.latestPreview.payable })
 
       if (payment.status === 'cancelled') {
         this.checkoutStore.transition('PAYMENT_CANCELLED')
         this.log('warn', 'Payment Cancel', startedAt, { traceId, orderId: order?.id })
+        // 支付取消同样清空购物车（商品已进入订单，支付弹窗时购物车保留以维持确认页展示）
+        this.cartStore.clearCart()
         return { status: 'cancelled', order, payment }
       }
 
       this.checkoutStore.transition('PAYMENT_SUCCEEDED')
+      // 支付成功：购物车清空（商品已进入订单）
+      this.cartStore.clearCart()
       // 支付成功后自动接单：待支付 pending → 制作中 preparing
       if (order?.id) {
         this.orderService.accept(order.id).catch(error => {

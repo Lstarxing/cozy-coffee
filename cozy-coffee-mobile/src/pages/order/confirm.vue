@@ -1,6 +1,6 @@
 <template>
   <view class="confirm-page">
-    <view v-if="cartStore.items.length" class="confirm-content">
+    <view v-if="cartStore.items.length || checkoutSubmitting" class="confirm-content">
       <StoreSummary
         :mode="diningMethod === 'DELIVERY' ? 'delivery' : 'pickup'"
         :delivery-address="checkoutStore.deliveryAddress"
@@ -17,7 +17,7 @@
           <image class="line-image" :src="line.image" mode="aspectFill" />
           <view class="line-content">
             <text class="line-name">{{ line.name }}</text>
-            <text class="line-spec">{{ formatSpec(line) }}</text>
+            <text class="line-spec">{{ formatCoffeeSpec(line) }}</text>
             <text class="line-quantity">× {{ line.quantity }}</text>
           </view>
           <text class="line-price">¥{{ lineAmount(line) }}</text>
@@ -73,7 +73,7 @@
     <EmptyState v-else title="购物车还是空的" description="先选择一杯喜欢的咖啡，再来结算" action-text="去点单" @action="goToMenu" />
 
     <CheckoutSubmitBar
-      v-if="cartStore.items.length"
+      v-if="cartStore.items.length || checkoutSubmitting"
       :amount="checkoutStore.latestPreview?.payable || cartStore.subtotal"
       :status="checkoutStore.status"
       :disabled="submitDisabled"
@@ -118,6 +118,7 @@ import { useCheckoutStore } from '@/stores/checkout'
 import { useUserStore } from '@/stores/user'
 import { createDefaultCheckoutWorkflow } from '@/services/checkout/CheckoutWorkflow'
 import { resolveDeliveryAddress } from '@/services/address/DeliveryAddressResolver'
+import { formatCoffeeSpec } from '@/utils/spec'
 import { AuthError, NetworkError } from '@/services/errors/AppError'
 import StoreSummary from '@/components/order/StoreSummary.vue'
 import AddressPickerSheet from '@/components/address/AddressPickerSheet.vue'
@@ -138,6 +139,7 @@ const phoneVisible = ref(false)
 const phoneDraft = ref('')
 const diningMethod = computed(() => checkoutStore.diningMethod || 'TAKEOUT')
 const previewError = ref('')
+const checkoutSubmitting = ref(false)
 const addressPickerVisible = ref(false)
 
 // 预计送达：当前本地时间 + 50~60 分钟区间
@@ -262,6 +264,8 @@ async function submitOrder() {
     uni.showToast({ title: '请先选择配送地址', icon: 'none' })
     return
   }
+  // 结算中锁定内容区：购物车清空后、跳转详情前不闪现空状态
+  checkoutSubmitting.value = true
   previewError.value = ''
   try {
     const result = ['awaiting_auth', 'offline', 'failed', 'cancelled'].includes(checkoutStore.status)
@@ -270,16 +274,20 @@ async function submitOrder() {
 
     if (result.status === 'cancelled') {
       const orderId = result.order?.id || result.order?.orderId
-      uni.redirectTo({ url: `/pages/order/detail?id=${encodeURIComponent(orderId || '')}` })
+      if (result.order) uni.setStorageSync('cozy_order_detail', result.order)
+      uni.redirectTo({ url: `/pages/order/detail?id=${encodeURIComponent(orderId || '')}`, animationType: 'none' })
       return
     }
 
     const orderId = result.order?.id || result.order?.orderId
+    if (result.order) uni.setStorageSync('cozy_order_detail', result.order)
     uni.redirectTo({
       url: `/pages/order/detail?id=${encodeURIComponent(orderId || '')}`,
+      animationType: 'none',
       success: () => uni.showToast({ title: '下单成功', icon: 'success' })
     })
   } catch (error) {
+    checkoutSubmitting.value = false
     if (error instanceof AuthError) {
       promptLogin()
       return
@@ -307,17 +315,6 @@ function promptLogin() {
 function couponKey(coupon) { return coupon?.couponCode || coupon?.code || coupon?.id || '' }
 function couponTitle(coupon) { return coupon?.name || coupon?.couponName || coupon?.title || coupon?.typeName || '优惠券' }
 
-const optionLabels = {
-  STANDARD: '标准杯', MEDIUM: '中杯', LARGE: '大杯', SMALL: '小杯',
-  HOT: '热', COLD: '冰', WARM: '温', LESS: '少糖', HALF: '半糖', NONE: '无糖',
-  WHOLE: '全脂奶', OAT: '燕麦奶', COCONUT: '椰奶', SOY: '豆奶', NORMAL: '标准浓度', STRONG: '加浓'
-}
-function formatSpec(line) {
-  return [line.cupSize, line.temperature, line.sugarLevel, line.milkType, line.coffeeStrength]
-    .filter(value => value && !['WHOLE', 'NORMAL'].includes(value))
-    .map(value => optionLabels[value] || value)
-    .join(' · ') || '默认规格'
-}
 function lineAmount(line) { return (Number(line.price || 0) * Number(line.quantity || 1)).toFixed(2) }
 function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 </script>

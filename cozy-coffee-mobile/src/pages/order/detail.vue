@@ -186,6 +186,7 @@ const order = ref(null)
 const loading = ref(true)
 const errorMessage = ref('')
 const paying = ref(false)
+const usedCache = ref(false)
 const nowTs = ref(Date.now())
 let countdownTicker = null
 const sessionStore = useSessionStore()
@@ -340,9 +341,17 @@ const discount = computed(() => Number(order.value?.discountAmount || 0))
 onLoad(options => {
   orderId.value = options.id || options.orderId || ''
   if (options.type === 'redeem') type.value = 'redeem'
+  // 确认页/支付后跳转：先用缓存订单立即渲染，避免加载闪帧
+  const cached = uni.getStorageSync('cozy_order_detail')
+  uni.removeStorageSync('cozy_order_detail')
+  if (cached && !isRedeem.value && String(cached.id) === String(orderId.value)) {
+    order.value = cached
+    loading.value = false
+    usedCache.value = true
+  }
 })
 onShow(() => {
-  if (orderId.value) loadOrder()
+  if (orderId.value) loadOrder(usedCache.value)
   startCountdownTicker()
 })
 onUnload(stopCountdownTicker)
@@ -363,7 +372,8 @@ async function loadOrder(silent = false) {
     order.value = response?.data ?? response
     if (!isRedeem.value) refreshMemberWhenCompleted(order.value)
   } catch (error) {
-    errorMessage.value = error?.message || '订单加载失败，请重试'
+    // 后台刷新失败时保留已有内容，静默
+    if (!(silent && order.value)) errorMessage.value = error?.message || '订单加载失败，请重试'
   } finally {
     if (!silent) loading.value = false
   }

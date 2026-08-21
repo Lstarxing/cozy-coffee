@@ -33,8 +33,12 @@ export const useCheckoutStore = defineStore('checkout', () => {
   }
 
   function start() {
+    // 新一轮结算：成功/取消后清空幂等 key，避免复用旧 key 幂等返回旧订单（可能已取消）
+    if ([CHECKOUT_STATUS.SUCCESS, CHECKOUT_STATUS.CANCELLED].includes(status.value)) {
+      status.value = CHECKOUT_STATUS.IDLE
+      idempotencyKey.value = ''
+    }
     ensureIdempotencyKey()
-    if ([CHECKOUT_STATUS.SUCCESS, CHECKOUT_STATUS.CANCELLED].includes(status.value)) status.value = CHECKOUT_STATUS.IDLE
     return idempotencyKey.value
   }
 
