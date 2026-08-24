@@ -52,3 +52,141 @@ dubbo:
 # RocketMQ：消费 order_cancelled 触发券回滚
 rocketmq:
   name-server: ${ROCKETMQ_NAME_SERVER:localhost:9876}
+
+# 优惠券发券模板（CouponTemplateConfig 单一事实源；顺序=旧 if-else 分支顺序，displayTitle 缺省=动态生成）
+cozy:
+  mall:
+    coupon-template:
+      templates:
+        - template-code: BOGO
+          type: BOGO
+          use-discount-amount-as-max-discount: true
+          display-sub-title: "买一送一 | 封顶¥{discountAmount}"
+        - template-code: SHOT
+          type: SHOT
+          value: 5
+          display-title: 免费加浓缩券
+          display-sub-title: 抵扣¥5
+        - template-code: DELIVERY_FEE
+          type: DELIVERY_FEE
+          value: 3
+          display-title: 配送费抵扣券
+          display-sub-title: 免运费
+        - template-code: NEW_PRODUCT_HALF
+          type: NEW_PRODUCT_HALF
+          max-discount: 20
+          display-title: 新品5折券
+          display-sub-title: 封顶¥20
+        - template-code: NEW_PRODUCT_FREE
+          type: NEW_PRODUCT_FREE
+          max-discount: 40
+          display-title: 新品免单券
+          display-sub-title: 封顶¥40
+        - template-code: FREE_DRINK
+          type: EXCHANGE
+          use-discount-amount-as-max-discount: true
+        - template-code: EXCHANGE_
+          type: EXCHANGE
+          linked-product-from-code: true
+          display-sub-title: 限标准杯，升杯加料需补差价
+        - template-code: FREE_CAKE
+          type: EXCHANGE
+          use-discount-amount-as-max-discount: true
+          scope: CAKE_ONLY
+          display-title: 烘培甜品免单券
+          display-sub-title: "封顶¥{discountAmount}"
+        - template-code: CAKE_HALF
+          type: DISCOUNT
+          value: 50
+          scope: CAKE_ONLY
+          display-title: 烘培甜品5折券
+          display-sub-title: 限烘焙甜品
+        - template-code: UPGRADE_SILVER_DISCOUNT
+          type: DISCOUNT
+          value: 50
+          limit: SINGLE_ITEM
+          scope: DRINK_ONLY
+          max-discount-amount: 20
+          display-title: 晋升白银5折券
+          display-sub-title: 限饮品 | 封顶¥20
+        - template-code: UPGRADE_GOLD_BOGO
+          type: BOGO
+          use-discount-amount-as-max-discount: true
+          scope: DRINK_ONLY
+          display-title: 晋升黄金买一赠一券
+          display-sub-title: "封顶¥{discountAmount}"
+        - template-code: UPGRADE_DIAMOND_STANDARD_FREE
+          type: EXCHANGE
+          use-discount-amount-as-max-discount: true
+          sku-limit: STANDARD_ONLY
+          category-blocklist: [soe, pour-over]
+          display-title: 晋升钻石优选饮品免单券
+          display-sub-title: "限标准杯 | 封顶¥{discountAmount}"
+        - template-code: UPGRADE_BLACK_PREMIUM
+          type: EXCHANGE
+          sku-limit: ALL
+          free-addon: true
+          display-title: 黑金尊享通兑券
+          display-sub-title: 不限杯型 | 含SOE | 无封顶
+        - template-code: MONTHLY_BLACK_FREE
+          type: EXCHANGE
+          max-discount: 40
+          sku-limit: ALL
+          category-blocklist: [soe, pour-over]
+          display-title: 黑金月度全通兑免单券
+          display-sub-title: 不限杯型 | 封顶¥40
+        - template-code: MONTHLY_DIAMOND_FREE
+          type: EXCHANGE
+          max-discount: 40
+          sku-limit: STANDARD_ONLY
+          category-blocklist: [soe, pour-over]
+          display-title: 钻石月度优选饮品免单券
+          display-sub-title: 限标准杯 | 封顶¥40
+        - template-code: BIRTHDAY_BLACK_FREE
+          type: EXCHANGE
+          max-discount: 40
+          sku-limit: ALL
+          category-blocklist: [soe, pour-over]
+          display-title: 🎂黑金生日全通兑免单券
+          display-sub-title: 不限杯型 | 封顶¥40
+        - template-code: BIRTHDAY_DIAMOND_FREE
+          type: EXCHANGE
+          use-discount-amount-as-max-discount: true
+          sku-limit: STANDARD_ONLY
+          category-blocklist: [soe, pour-over]
+          display-title: 🎂钻石生日优选饮品免单券
+          display-sub-title: "限标准杯 | 封顶¥{discountAmount}"
+        - template-code: BIRTHDAY_GOLD_FREE
+          type: EXCHANGE
+          use-discount-amount-as-max-discount: true
+          sku-limit: STANDARD_ONLY
+          category-blocklist: [signature, soe, pour-over]
+          display-title: 🎂黄金生日标准饮品免单券
+          display-sub-title: 限标准杯/不含特调、SOE
+        - template-code: BIRTHDAY_SILVER_BOGO
+          type: BOGO
+          max-discount: 40
+          scope: DRINK_ONLY
+          display-title: 🎂白银生日买一赠一券
+          display-sub-title: 封顶¥40
+        - template-code: BIRTHDAY_BASIC_DISCOUNT
+          type: DISCOUNT
+          discount-rate: 0.5
+          limit: SINGLE_ITEM
+          sku-limit: STANDARD_ONLY
+          scope: DRINK_ONLY
+          max-discount-amount: 20
+          display-title: 🎂基础会员生日5折券
+          display-sub-title: 限标准杯 | 封顶¥20
+        - template-code: STANDARD_FREE
+          type: EXCHANGE
+          use-discount-amount-as-max-discount: true
+          sku-limit: STANDARD_ONLY
+          category-blocklist: [soe, pour-over]
+          display-title: 标准饮品免单券
+          display-sub-title: "封顶¥{discountAmount}"
+        # 通用折扣券（catch-all，rate 计算与折数标题由代码动态生成）
+        - template-code: HALF_PRICE
+          type: DISCOUNT
+        - template-code: DISCOUNT
+          type: DISCOUNT

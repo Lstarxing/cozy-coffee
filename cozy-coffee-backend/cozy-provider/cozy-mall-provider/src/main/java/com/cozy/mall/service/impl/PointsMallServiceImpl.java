@@ -1,11 +1,14 @@
 package com.cozy.mall.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.common.constant.CouponTemplateConfig;
 import com.cozy.common.constant.RedemptionDiscountConfig;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.cozy.mall.coupon.CouponCalculator;
+import com.cozy.mall.util.CouponRuleUtil;
 import com.cozy.mall.entity.PointsOrder;
 import com.cozy.mall.entity.PointsOrderFulfillment;
 import com.cozy.mall.entity.PointsProduct;
@@ -46,6 +49,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -86,6 +90,12 @@ public class PointsMallServiceImpl implements PointsMallService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
+
+    // 优惠券发券模板配置（单一事实源 @ConfigurationProperties，见 cozy.mall.coupon-template）
+    private final CouponTemplateConfig couponTemplateConfig;
+
+    // 优惠券抵扣策略（按 coupon_type 分发，Spring 注入 @Component(type) 实现）
+    private final Map<String, CouponCalculator> couponCalculators;
 
     // 跨服务调用：会员服务（获取积分、扣减积分）
     @DubboReference(check = false)
@@ -835,583 +845,38 @@ public class PointsMallServiceImpl implements PointsMallService {
 
     private BigDecimal calculateCouponDiscount(UserCoupon coupon, BigDecimal orderAmount,
             List<ItemCheckDTO> items) {
-        if (orderAmount == null)
+        if (orderAmount == null) {
             orderAmount = BigDecimal.ZERO;
-
-        String type = coupon.getCouponType();
-        String ruleJson = coupon.getRuleJson();
-        int value = parseValue(ruleJson, "value");
-        int minOrderAmount = parseValue(ruleJson, "minOrderAmount");
-        long linkedProductId = parseLongValue(ruleJson, "linkedProductId");
-
-        if ("EXCHANGE".equals(type)) {
-            // v5.7: 兑换券/免单券 - 支持 SKU 限制
-            // rule_json 支持的字段:
-            //   - maxDiscount: 最高抵扣金额（不设置=无上限）
-            //   - value: 兼容旧字段，同 maxDiscount
-            //   - skuLimit: "STANDARD_ONLY" | "ALL" (杯型限制)
-            //   - categoryBlocklist: ["signature", "soe"] (品类黑名单)
-            //   - linkedProductId: 指定商品ID (通兑券为0)
-            
-            // v5.7: 优先读取 maxDiscount，其次 value，都没有则无上限（9999）
-            int maxDiscountFromRule = parseValue(ruleJson, "maxDiscount");
-            if (maxDiscountFromRule <= 0) {
-                maxDiscountFromRule = parseValue(ruleJson, "value");
-            }
-            // 无上限时使用极大值，而非硬编码40
-            BigDecimal maxDiscount = maxDiscountFromRule > 0 ? new BigDecimal(maxDiscountFromRule) : new BigDecimal("9999");
-        
-            // v5.3: 解析 SKU 限制
-            String cleanJson = ruleJson != null ? ruleJson.replace(" ", "").replace("\n", "").replace("\t", "") : "";
-            boolean standardOnly = cleanJson.contains("\"skuLimit\":\"STANDARD_ONLY\"");
-            
-            // v5.3.6: 精确判断品类黑名单 - 只检查 categoryBlocklist 数组内容
-            // 注意：不能用 contains("特调") 全文匹配，因为 description 字段可能包含"含特调"等描述文字
-            boolean blockSoe = false;
-            boolean blockSignature = false;
-            if (cleanJson.contains("\"categoryBlocklist\"")) {
-                // 提取 categoryBlocklist 数组部分进行精确匹配
-                int startIdx = cleanJson.indexOf("\"categoryBlocklist\"");
-                int arrayStart = cleanJson.indexOf("[", startIdx);
-                int arrayEnd = cleanJson.indexOf("]", arrayStart);
-                if (arrayStart > 0 && arrayEnd > arrayStart) {
-                    String blocklistPart = cleanJson.substring(arrayStart, arrayEnd + 1).toLowerCase();
-                    blockSoe = blocklistPart.contains("\"soe\"") || blocklistPart.contains("\"pour-over\"");
-                    blockSignature = blocklistPart.contains("\"signature\"");
-                    log.info("券品类限制解析: blockSoe={}, blockSignature={}, blocklist={}", blockSoe, blockSignature, blocklistPart);
-                }
-            } else {
-                log.info("券无品类限制: ruleJson={}", cleanJson.substring(0, Math.min(200, cleanJson.length())));
-            }
-
-            if (linkedProductId > 0) {
-                // 指定商品兑换券：仅限标准杯
-                if (items != null) {
-                    for (ItemCheckDTO item : items) {
-                        if (item.getProductId() != null && item.getProductId() == linkedProductId) {
-                            // v6.1: 指定商品兑换券仅限标准杯
-                            String cupSize = item.getCupSize() != null ? item.getCupSize().toUpperCase() : "STANDARD";
-                            if (!cupSize.equals("STANDARD") && !cupSize.equals("MEDIUM")) {
-                                throw new BusinessException("此兑换券仅限标准杯使用，请调整杯型后再试");
-                            }
-                            
-                            // v6.1: 兑换券只抵扣标准杯基础价格，升杯和加料费用由用户额外支付
-                            try {
-                                CoffeeProductDTO product = orderService.getProduct(linkedProductId);
-                                if (product != null && product.getPrice() != null) {
-                                    BigDecimal standardPrice = product.getPrice(); // 标准杯基础价格
-                                    log.info("指定商品兑换券：productId={}, 标准杯价格={}, 实际商品价格={}", 
-                                            linkedProductId, standardPrice, item.getPrice());
-                                    return standardPrice.min(maxDiscount);
-                                }
-                            } catch (Exception e) {
-                                log.warn("查询商品标准价格失败，回退到使用商品实际价格: productId={}", linkedProductId, e);
-                            }
-                            
-                            // 兜底：如果查询失败，使用商品实际价格
-                            return item.getPrice().min(maxDiscount);
-                        }
-                    }
-                    throw new BusinessException("此兑换券仅限指定商品使用");
-                }
-                return BigDecimal.ZERO;
-            } else {
-
-                // 通兑券：自动匹配价格最高的符合条件商品
-                if (items == null || items.isEmpty())
-                    return BigDecimal.ZERO;
-
-                BigDecimal maxPrice = BigDecimal.ZERO;
-                String matchedProductInfo = null;
-                
-                // v5.3.6: 检测是否为烘焙甜品免单券
-                String couponName = (coupon.getDisplayTitle() != null ? coupon.getDisplayTitle() : "").toLowerCase();
-                boolean isCakeCoupon = cleanJson.contains("\"scope\":\"CAKE_ONLY\"") ||
-                                       couponName.contains("烘培") ||
-                                       couponName.contains("烘焙") ||
-                                       couponName.contains("甜品") ||
-                                       couponName.contains("蛋糕");
-                
-                for (ItemCheckDTO item : items) {
-                    if (isCakeCoupon) {
-                        // 烘焙甜品免单券：仅匹配烘焙商品
-                        if (!isBakery(item.getCategory())) {
-                            continue;
-                        }
-                    } else {
-                        // 饮品免单券：仅匹配饮品 (排除面包甜点)
-                        if (!isDrink(item.getCategory())) {
-                            continue;
-                        }
-                    }
-                    
-                    // v5.3.4: 品类黑名单检查
-                    if (item.getCategory() != null) {
-                        String cat = item.getCategory().toLowerCase();
-                        
-                        // 检查是否需要排除SOE/手冲（检查 category 字段）
-                        if (blockSoe) {
-                            boolean isSoe = cat.contains("soe") || cat.contains("手冲") || cat.contains("pour-over") || cat.contains("pour_over");
-                            if (isSoe) {
-                                log.info("免单券排除SOE/手冲品类: category={}", cat);
-                                continue;
-                            }
-                        }
-                        
-                        // 检查是否需要排除特调（排除SOE后再检查特调）
-                        if (blockSignature && (cat.contains("signature") || cat.contains("特调") || cat.contains("季节限定"))) {
-                            log.info("免单券排除特调品类: category={}", cat);
-                            continue;
-                        }
-                    }
-                    
-                    // v5.3: 杯型限制检查 (STANDARD_ONLY)
-                    if (standardOnly && item.getCupSize() != null) {
-                        String cupSize = item.getCupSize().toUpperCase();
-                        if (!cupSize.equals("STANDARD") && !cupSize.equals("MEDIUM")) {
-                            log.info("免单券仅限标准杯，跳过: cupSize={}", cupSize);
-                            continue;
-                        }
-                    }
-                    
-                    if (item.getPrice().compareTo(maxPrice) > 0) {
-                        maxPrice = item.getPrice();
-                        matchedProductInfo = "productId=" + item.getProductId() + ", cupSize=" + item.getCupSize();
-                    }
-                }
-                
-                if (maxPrice.equals(BigDecimal.ZERO)) {
-                    if (standardOnly) {
-                        throw new BusinessException("此免单券仅限标准杯饮品使用，请调整杯型后再试");
-                    }
-                    if (blockSoe) {
-                        throw new BusinessException("此免单券不适用于SOE/手冲类产品");
-                    }
-                    // v5.3.6: 根据券类型显示正确的错误信息
-                    if (isCakeCoupon) {
-                        throw new BusinessException("此券仅限烘焙甜品使用");
-                    }
-                    throw new BusinessException("通兑券仅限饮品使用");
-                }
-                
-                log.info("免单券匹配最高价商品: {}, maxPrice={}, discount={}, isCakeCoupon={}", matchedProductInfo, maxPrice, maxPrice.min(maxDiscount), isCakeCoupon);
-                return maxPrice.min(maxDiscount);
-            }
-
-        } else if ("DISCOUNT".equals(type)) {
-            // v2.1: 按行业规范重构折扣计算
-
-            // 1. 获取折扣百分比，兼容多种格式
-            int discountPercent = value;
-            if (discountPercent <= 0) {
-                // 尝试解析浮点数 discountRate（如 0.5 表示 5折）
-                double floatRate = parseDoubleValue(ruleJson, "discountRate");
-                if (floatRate > 0 && floatRate < 1) {
-                    discountPercent = (int) (floatRate * 100); // 0.5 -> 50
-                } else if (floatRate >= 1 && floatRate <= 10) {
-                    discountPercent = (int) (floatRate * 10); // 5 -> 50
-                } else {
-                    discountPercent = (int) floatRate;
-                }
-            }
-
-            if (discountPercent <= 0) {
-                log.warn("折扣券无效: discountPercent={}, ruleJson={}", discountPercent, ruleJson);
-                return BigDecimal.ZERO;
-            }
-
-            // 2. 解析配置
-            // 2. 解析配置 (v5.3: 增强 JSON 解析健壮性，移除空格后再匹配)
-            String cleanJson = ruleJson != null ? ruleJson.replace(" ", "").replace("\n", "").replace("\t", "") : "";
-            boolean isDrinkOnly = cleanJson.contains("\"scope\":\"DRINK_ONLY\"");
-            boolean isCakeOnly = cleanJson.contains("\"scope\":\"CAKE_ONLY\""); // v5.3.4: 烘培甜品专用
-            boolean isSingleItem = cleanJson.contains("\"limit\":\"SINGLE_ITEM\"");
-            int maxDiscountAmount = parseValue(ruleJson, "maxDiscountAmount");
-
-            // 3. 确定折扣基数
-            BigDecimal baseAmount = orderAmount;
-
-            if (isCakeOnly) {
-                // v5.3.4: 蛋糕5折券 - 仅作用于单个最贵烘培甜品
-                BigDecimal maxBakeryPrice = BigDecimal.ZERO;
-
-                if (items != null) {
-                    for (ItemCheckDTO item : items) {
-                        if (isBakery(item.getCategory())) {
-                            if (item.getPrice().compareTo(maxBakeryPrice) > 0) {
-                                maxBakeryPrice = item.getPrice();
-                            }
-                        }
-                    }
-                }
-
-                if (maxBakeryPrice.equals(BigDecimal.ZERO)) {
-                    throw new BusinessException("此券仅限烘培甜品使用，订单中无烘培商品");
-                }
-
-                baseAmount = maxBakeryPrice;
-                log.info("蛋糕5折券(CAKE_ONLY): 仅作用于最贵烘培甜品={}", maxBakeryPrice);
-
-            } else if (isDrinkOnly || isSingleItem) {
-                // 筛选饮品
-                BigDecimal maxDrinkPrice = BigDecimal.ZERO;
-                BigDecimal drinkTotal = BigDecimal.ZERO;
-
-                if (items != null) {
-                    for (ItemCheckDTO item : items) {
-                        if (isDrink(item.getCategory())) {
-                            int qty = item.getQuantity() != null ? item.getQuantity() : 1;
-                            drinkTotal = drinkTotal.add(item.getPrice().multiply(BigDecimal.valueOf(qty)));
-                            if (item.getPrice().compareTo(maxDrinkPrice) > 0) {
-                                maxDrinkPrice = item.getPrice();
-                            }
-                        }
-                    }
-                }
-
-                if (maxDrinkPrice.equals(BigDecimal.ZERO)) {
-                    throw new BusinessException("此券仅限饮品使用，订单中无饮品");
-                }
-
-                if (isSingleItem) {
-                    // 行业规范：大额折扣只作用于单杯最贵饮品
-                    baseAmount = maxDrinkPrice;
-                    log.info("折扣券(SINGLE_ITEM): 仅作用于最贵饮品={}", maxDrinkPrice);
-                } else {
-                    // 仅限饮品但可作用于多杯
-                    baseAmount = drinkTotal;
-                    log.info("折扣券(DRINK_ONLY): 作用于饮品总额={}", drinkTotal);
-                }
-            }
-
-            // 4. 计算折扣金额
-            BigDecimal rate = new BigDecimal(discountPercent).divide(new BigDecimal(100), 2, RoundingMode.HALF_UP);
-            BigDecimal discount = baseAmount.multiply(BigDecimal.ONE.subtract(rate));
-            discount = discount.setScale(2, RoundingMode.HALF_UP);
-
-            // 5. 封顶控制
-            if (maxDiscountAmount > 0) {
-                BigDecimal maxCap = new BigDecimal(maxDiscountAmount);
-                if (discount.compareTo(maxCap) > 0) {
-                    log.info("折扣券封顶: 原折扣={}, 封顶={}", discount, maxCap);
-                    discount = maxCap;
-                }
-            }
-
-            return discount;
-
-        } else if ("FULL_REDUCE".equals(type)) {
-            // 满减券
-            if (minOrderAmount > 0 && orderAmount.compareTo(new BigDecimal(minOrderAmount)) < 0) {
-                throw new BusinessException("订单金额未满 " + minOrderAmount + " 元");
-            }
-            return new BigDecimal(value);
-
-        } else if ("BOGO".equals(type)) {
-            // 买一送一：低价免单
-            if (items == null || items.isEmpty()) {
-                throw new BusinessException("无法获取商品信息");
-            }
-
-            List<BigDecimal> drinkPrices = new ArrayList<>();
-            for (ItemCheckDTO item : items) {
-                if (isDrink(item.getCategory())) {
-                    int qty = item.getQuantity() != null ? item.getQuantity() : 1;
-                    for (int i = 0; i < qty; i++) {
-                        drinkPrices.add(item.getPrice());
-                    }
-                }
-            }
-
-            if (drinkPrices.size() < 2) {
-                throw new BusinessException("买一送一券需要至少2杯饮品");
-            }
-
-            Collections.sort(drinkPrices); // 升序：p1 <= p2 <= p3 <= p4
-
-            // v5.7: 从 ruleJson 读取封顶金额，默认40
-            int maxDiscountFromRule = parseValue(ruleJson, "maxDiscount");
-            BigDecimal maxPerCup = maxDiscountFromRule > 0 ? new BigDecimal(maxDiscountFromRule) : new BigDecimal("40");
-            BigDecimal cheapestPrice = drinkPrices.get(0);
-            BigDecimal discount = cheapestPrice.min(maxPerCup);
-            
-            log.info("BOGO券抵扣: 最便宜饮品={}，封顶={}, 实际抵扣={}", cheapestPrice, maxPerCup, discount);
-            return discount;
-        } else if ("SHOT".equals(type)) {
-            // v5.3 加浓缩券：前置条件检查
-            boolean hasExtraShot = false;
-
-            if (items != null && !items.isEmpty()) {
-                for (ItemCheckDTO item : items) {
-                    // 检查 modifiersJson 字段
-                    String modifiers = item.getModifiersJson();
-                    if (modifiers != null &&
-                            (modifiers.contains("\"extraShot\":true") ||
-                                    modifiers.toLowerCase().contains("extra_shot") ||
-                                    modifiers.contains("加浓"))) {
-                        hasExtraShot = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!hasExtraShot) {
-                throw new BusinessException("此券仅在点单时选择了【加浓缩】选项后可用");
-            }
-
-            int shotValue = parseValue(ruleJson, "value");
-            if (shotValue == 0)
-                shotValue = 5;
-            return new BigDecimal(shotValue);
-
-        } else if ("DELIVERY_FEE".equals(type)) {
-            // v5.0 配送费抵扣券
-            int maxFeeDiscount = parseValue(ruleJson, "value");
-            if (maxFeeDiscount == 0)
-                maxFeeDiscount = 3; // v5.3: 统一配送费3元
-            return new BigDecimal(maxFeeDiscount);
-
-        } else if ("NEW_PRODUCT_HALF".equals(type)) {
-            // v5.3.4 新品半价券：自动选择价格最高的新品，最高封顶20元
-            if (items == null || items.isEmpty()) {
-                throw new BusinessException("此券仅适用于新品饮品，请先添加新品商品");
-            }
-            
-            // 查找订单中价格最高的新品（智能选择最优惠方案）
-            ItemCheckDTO highestNewProduct = null;
-            BigDecimal highestPrice = BigDecimal.ZERO;
-            
-            for (ItemCheckDTO item : items) {
-                if (Boolean.TRUE.equals(item.getIsNewProduct())) {
-                    BigDecimal itemPrice = item.getPrice();
-                    if (highestNewProduct == null || itemPrice.compareTo(highestPrice) > 0) {
-                        highestNewProduct = item;
-                        highestPrice = itemPrice;
-                    }
-                }
-            }
-            
-            if (highestNewProduct == null) {
-                throw new BusinessException("此券仅限新品饮品使用，当前订单中没有新品商品");
-            }
-            
-            // 计算半价优惠，封顶20元
-            BigDecimal halfPrice = highestPrice.divide(new BigDecimal("2"), 2, java.math.RoundingMode.HALF_UP);
-            BigDecimal maxDiscount = new BigDecimal("20");
-            return halfPrice.compareTo(maxDiscount) > 0 ? maxDiscount : halfPrice;
-
-        } else if ("NEW_PRODUCT_FREE".equals(type)) {
-            // v5.3.4 新品免单券：自动选择价格最高的新品，最高封顶40元
-            if (items == null || items.isEmpty()) {
-                throw new BusinessException("此券仅适用于新品饮品，请先添加新品商品");
-            }
-            
-            // 查找订单中价格最高的新品（智能选择最优惠方案）
-            ItemCheckDTO highestNewProduct = null;
-            BigDecimal highestPrice = BigDecimal.ZERO;
-            
-            for (ItemCheckDTO item : items) {
-                if (Boolean.TRUE.equals(item.getIsNewProduct())) {
-                    BigDecimal itemPrice = item.getPrice();
-                    if (highestNewProduct == null || itemPrice.compareTo(highestPrice) > 0) {
-                        highestNewProduct = item;
-                        highestPrice = itemPrice;
-                    }
-                }
-            }
-            
-            if (highestNewProduct == null) {
-                throw new BusinessException("此券仅限新品饮品使用，当前订单中没有新品商品");
-            }
-            
-            // 计算免单优惠，封顶40元
-            BigDecimal maxDiscount = new BigDecimal("40");
-            return highestPrice.compareTo(maxDiscount) > 0 ? maxDiscount : highestPrice;
-
-        } else if ("CAKE_HALF".equals(type) || (ruleJson != null && ruleJson.contains("CAKE_ONLY"))) {
-            // v5.3.4 蛋糕5折券：仅限烘培甜品，自动选择最高价商品，最高优惠¥50
-            if (items == null || items.isEmpty()) {
-                throw new BusinessException("此券仅适用于烘培甜品，请先添加烘培商品");
-            }
-            
-            // 查找订单中价格最高的烘培甜品（智能选择最优惠方案）
-            ItemCheckDTO highestBakeryProduct = null;
-            BigDecimal highestPrice = BigDecimal.ZERO;
-            
-            for (ItemCheckDTO item : items) {
-                if (isBakery(item.getCategory())) {
-                    BigDecimal itemPrice = item.getPrice();
-                    if (highestBakeryProduct == null || itemPrice.compareTo(highestPrice) > 0) {
-                        highestBakeryProduct = item;
-                        highestPrice = itemPrice;
-                    }
-                }
-            }
-            
-            if (highestBakeryProduct == null) {
-                throw new BusinessException("此券仅限烘培甜品使用，当前订单中没有烘培商品");
-            }
-            
-            // 计算5折优惠（50% off），封顶50元
-            BigDecimal halfPrice = highestPrice.divide(new BigDecimal("2"), 2, java.math.RoundingMode.HALF_UP);
-            BigDecimal maxDiscount = new BigDecimal("50");
-            return halfPrice.compareTo(maxDiscount) > 0 ? maxDiscount : halfPrice;
         }
-
-        return BigDecimal.ZERO;
+        CouponCalculator calculator = couponCalculators.get(coupon.getCouponType());
+        if (calculator == null) {
+            log.warn("未知券类型，不抵扣: type={}, ruleJson={}", coupon.getCouponType(), coupon.getRuleJson());
+            return BigDecimal.ZERO;
+        }
+        return calculator.calculate(coupon, orderAmount, items);
     }
-
     private boolean isBakery(String category) {
-        if (category == null) return false;
-        String c = category.toLowerCase();
-        return c.contains("bakery") || c.contains("dessert") || c.contains("cake") || c.contains("food");
+        return CouponRuleUtil.isBakery(category);
     }
 
     private boolean isDrink(String category) {
-        if (category == null)
-            return true;
-        String c = category.toLowerCase();
-        return !c.contains("bakery") && !c.contains("dessert") && !c.contains("food");
+        return CouponRuleUtil.isDrink(category);
     }
 
-    /**
-     * 解析规则 JSON 中的 value
-     * 改进版：处理冒号后的空格
-     */
     private int parseValue(String ruleJson, String key) {
-        if (ruleJson == null || key == null)
-            return 0;
-        try {
-            // 查找 "key": 或 "key" : （处理空格）
-            String search = "\"" + key + "\"";
-            int idx = ruleJson.indexOf(search);
-            if (idx >= 0) {
-                int colonPos = idx + search.length();
-                // 跳过空格找到冒号
-                while (colonPos < ruleJson.length() &&
-                        (ruleJson.charAt(colonPos) == ' ' || ruleJson.charAt(colonPos) == '\t')) {
-                    colonPos++;
-                }
-                // 确认是冒号
-                if (colonPos < ruleJson.length() && ruleJson.charAt(colonPos) == ':') {
-                    colonPos++; // 跳过冒号
-                    // 跳过冒号后的空格
-                    while (colonPos < ruleJson.length() &&
-                            (ruleJson.charAt(colonPos) == ' ' || ruleJson.charAt(colonPos) == '\t')) {
-                        colonPos++;
-                    }
-                    // 读取数字（包括小数点）
-                    int start = colonPos;
-                    int end = start;
-                    while (end < ruleJson.length() &&
-                            (Character.isDigit(ruleJson.charAt(end)) || ruleJson.charAt(end) == '.')) {
-                        end++;
-                    }
-                    if (end > start) {
-                        String valStr = ruleJson.substring(start, end);
-                        // 如果包含小数点，转换为整数（如 8.5 -> 8）
-                        double doubleVal = Double.parseDouble(valStr);
-                        int result = (int) doubleVal;
-                        log.debug("解析JSON成功: key={}, value={}", key, result);
-                        return result;
-                    }
-                }
-            }
-            log.debug("JSON解析跳过（未找到key）: key={}", key);
-        } catch (Exception e) {
-            log.error("JSON解析异常: key={}, json={}", key, ruleJson, e);
-        }
-        return 0;
+        return CouponRuleUtil.parseValue(ruleJson, key);
     }
 
-    /**
-     * 解析规则 JSON 中的 long 值（用于 linkedProductId）
-     * 改进版：处理冒号后的空格
-     */
     private long parseLongValue(String ruleJson, String key) {
-        if (ruleJson == null || key == null)
-            return 0;
-        try {
-            // 查找 "key": 或 "key" : （处理空格）
-            String search = "\"" + key + "\"";
-            int idx = ruleJson.indexOf(search);
-            if (idx >= 0) {
-                int colonPos = idx + search.length();
-                // 跳过空格找到冒号
-                while (colonPos < ruleJson.length() &&
-                        (ruleJson.charAt(colonPos) == ' ' || ruleJson.charAt(colonPos) == '\t')) {
-                    colonPos++;
-                }
-                // 确认是冒号
-                if (colonPos < ruleJson.length() && ruleJson.charAt(colonPos) == ':') {
-                    colonPos++; // 跳过冒号
-                    // 跳过冒号后的空格
-                    while (colonPos < ruleJson.length() &&
-                            (ruleJson.charAt(colonPos) == ' ' || ruleJson.charAt(colonPos) == '\t')) {
-                        colonPos++;
-                    }
-                    // 读取数字
-                    int start = colonPos;
-                    int end = start;
-                    while (end < ruleJson.length() && Character.isDigit(ruleJson.charAt(end))) {
-                        end++;
-                    }
-                    if (end > start) {
-                        String valStr = ruleJson.substring(start, end);
-                        long result = Long.parseLong(valStr);
-                        log.debug("解析JSON成功: key={}, value={}", key, result);
-                        return result;
-                    }
-                }
-            }
-            log.debug("JSON解析跳过（未找到key）: key={}", key);
-        } catch (Exception e) {
-            log.error("JSON解析异常: key={}, json={}", key, ruleJson, e);
-            return 0;
-        }
-        return 0;
+        return CouponRuleUtil.parseLongValue(ruleJson, key);
     }
 
-    /**
-     * 解析规则 JSON 中的 minOrderAmount（满减门槛）
-     * 注意：这里必须与 issueCouponToUser 方法中写入的 key 一致
-     */
     private int parseMinAmount(String ruleJson) {
         return parseValue(ruleJson, "minOrderAmount");
     }
 
-    /**
-     * v2.0: 解析浮点数值（用于 discountRate 等）
-     */
     private double parseDoubleValue(String ruleJson, String key) {
-        if (ruleJson == null || key == null)
-            return 0.0;
-        try {
-            String searchKey = "\"" + key + "\":";
-            int keyIndex = ruleJson.indexOf(searchKey);
-            if (keyIndex >= 0) {
-                int colonPos = keyIndex + searchKey.length();
-                // 跳过空格
-                while (colonPos < ruleJson.length() &&
-                        (ruleJson.charAt(colonPos) == ' ' || ruleJson.charAt(colonPos) == '\t')) {
-                    colonPos++;
-                }
-                // 读取数字
-                int start = colonPos;
-                int end = start;
-                while (end < ruleJson.length() &&
-                        (Character.isDigit(ruleJson.charAt(end)) || ruleJson.charAt(end) == '.'
-                                || ruleJson.charAt(end) == '-')) {
-                    end++;
-                }
-                if (end > start) {
-                    return Double.parseDouble(ruleJson.substring(start, end));
-                }
-            }
-        } catch (Exception e) {
-            log.debug("解析浮点数失败: key={}, error={}", key, e.getMessage());
-        }
-        return 0.0;
+        return CouponRuleUtil.parseDoubleValue(ruleJson, key);
     }
 
     /**
@@ -2330,60 +1795,75 @@ public class PointsMallServiceImpl implements PointsMallService {
         coupon.setExpiresAt(LocalDateTime.now().plusDays(validDays));
         coupon.setCreatedAt(LocalDateTime.now());
 
-        // 根据券类型设置不同的 couponType 和 ruleJson
-        // v5.3: 统一添加 productName 字段供前端展示
-        String actualType;
-        String ruleJson;
-
-        if (couponType != null && couponType.contains("BOGO")) {
-            // 买一送一券：第二杯免费（最高抵扣 maxDiscount）
-            actualType = "BOGO";
-            String name = couponType.contains("BIRTHDAY") ? "生日买一赠一券" : "买一赠一券";
-            ruleJson = "{\"maxDiscount\":" + (int) discountAmount + "}";
-            coupon.setDisplayTitle(name);
-            coupon.setDisplaySubTitle("买一送一 | 封顶¥" + (int) discountAmount);
-        } else if (couponType != null && couponType.contains("SHOT")) {
-            // v5.0 附加券：加浓缩券（可与主券叠加）
-            actualType = "SHOT";
-            ruleJson = "{\"value\":5}";
-            coupon.setDisplayTitle("免费加浓缩券");
-            coupon.setDisplaySubTitle("抵扣¥5");
-        } else if (couponType != null && couponType.contains("DELIVERY_FEE")) {
-            // v5.3 附加券：配送费抵扣券，统一3元
-            actualType = "DELIVERY_FEE";
-            ruleJson = "{\"value\":3}";
-            coupon.setDisplayTitle("配送费抵扣券");
-            coupon.setDisplaySubTitle("免运费");
-        } else if (couponType != null && couponType.contains("NEW_PRODUCT_HALF")) {
-            // v5.3 新品半价券
-            actualType = "NEW_PRODUCT_HALF";
-            ruleJson = "{\"maxDiscount\":20}";
-            coupon.setDisplayTitle("新品5折券");
-            coupon.setDisplaySubTitle("封顶¥20");
-        } else if (couponType != null && couponType.contains("NEW_PRODUCT_FREE")) {
-            // v5.3 新品免单券
-            actualType = "NEW_PRODUCT_FREE";
-            ruleJson = "{\"maxDiscount\":40}";
-            coupon.setDisplayTitle("新品免单券");
-            coupon.setDisplaySubTitle("封顶¥40");
-        } else if (couponType != null && couponType.contains("FREE_DRINK")) {
-            // 全场饮品通兑券（无关联商品限制）
-            actualType = "EXCHANGE";
-            String name = couponType.contains("BIRTHDAY") ? "生日免单券" : "全场饮品通兑券";
-            String subTitle = couponType.contains("BIRTHDAY") ? "排除SOE | 封顶¥" + (int) discountAmount : "任选饮品 | 封顶¥" + (int) discountAmount;
-            // v5.3.5: 生日免单券排除SOE/手冲
-            String categoryBlocklist = couponType.contains("BIRTHDAY") ? ",\"categoryBlocklist\":[\"soe\",\"pour-over\"]" : "";
-            ruleJson = "{\"maxDiscount\":" + (int) discountAmount + categoryBlocklist + "}";
-            coupon.setDisplayTitle(name);
+        // 券模板驱动（配置见 cozy.mall.coupon-template）；未命中模板走满减兜底
+        CouponTemplateConfig.CouponTemplate template = couponTemplateConfig.match(couponType);
+        if (template != null) {
+            applyCouponTemplate(coupon, template, couponType, minAmount, discountAmount);
+        } else {
+            coupon.setCouponType("FULL_REDUCE");
+            coupon.setRuleJson("{\"minOrderAmount\":" + (int) minAmount + ",\"value\":" + (int) discountAmount + "}");
+            String title = (int) minAmount > 0 ? "满" + (int) minAmount + "减" + (int) discountAmount : (int) discountAmount + "元代金券";
+            String subTitle = (int) minAmount > 0 ? "满" + (int) minAmount + "可用" : "无门槛";
+            coupon.setDisplayTitle(title);
             coupon.setDisplaySubTitle(subTitle);
-        } else if (couponType != null && couponType.contains("EXCHANGE_")) {
-            // 单商品兑换券（关联了特定商品ID）- 抵消标准杯价格
-            actualType = "EXCHANGE";
-            // 从 couponType 中提取商品ID (格式: "EXCHANGE_123")
+        }
+
+        userCouponMapper.insert(coupon);
+        log.info("优惠券发放成功: userId={}, type={}, ruleJson={}, minAmount={}, discount={}, validDays={}",
+                userId, couponType, coupon.getRuleJson(), minAmount, discountAmount, validDays);
+    }
+
+    /**
+     * 按券模板生成券属性（type/ruleJson/displayTitle/SubTitle）。
+     * 动态部分：BOGO 生日标题、FREE_DRINK 生日排除、EXCHANGE_ 商品名、通用折扣券 rate 与折数标题。
+     */
+    private void applyCouponTemplate(UserCoupon coupon, CouponTemplateConfig.CouponTemplate t,
+            String couponType, double minAmount, double discountAmount) {
+        String type = t.getType();
+        coupon.setCouponType(type);
+
+        Map<String, Object> rule = new LinkedHashMap<>();
+        if (t.getValue() != null) {
+            rule.put("value", t.getValue());
+        }
+        if (t.getDiscountRate() != null) {
+            rule.put("discountRate", t.getDiscountRate());
+        }
+        if (t.getMaxDiscountAmount() != null) {
+            rule.put("maxDiscountAmount", t.getMaxDiscountAmount());
+        }
+        int maxDiscount = resolveMaxDiscount(t, discountAmount);
+        if (maxDiscount > 0) {
+            rule.put("maxDiscount", maxDiscount);
+        }
+        if (t.getScope() != null) {
+            rule.put("scope", t.getScope());
+        }
+        if (t.getSkuLimit() != null) {
+            rule.put("skuLimit", t.getSkuLimit());
+        }
+        if (t.getLimit() != null) {
+            rule.put("limit", t.getLimit());
+        }
+        if (t.getCategoryBlocklist() != null && !t.getCategoryBlocklist().isEmpty()) {
+            rule.put("categoryBlocklist", t.getCategoryBlocklist());
+        }
+        if (Boolean.TRUE.equals(t.getFreeAddon())) {
+            rule.put("freeAddon", 1);
+        }
+
+        if (t.getDisplayTitle() != null) {
+            coupon.setDisplayTitle(replacePlaceholders(t.getDisplayTitle(), minAmount, discountAmount));
+        }
+        if (t.getDisplaySubTitle() != null) {
+            coupon.setDisplaySubTitle(replacePlaceholders(t.getDisplaySubTitle(), minAmount, discountAmount));
+        }
+
+        if (Boolean.TRUE.equals(t.getLinkedProductFromCode())) {
+            // EXCHANGE_123：解析商品 ID 并查询名称
             String productIdStr = couponType.substring(couponType.indexOf("_") + 1);
             Long linkedProductId = Long.parseLong(productIdStr);
-            
-            // 查询商品名称
+            rule.put("linkedProductId", linkedProductId);
             String productName = "商品";
             try {
                 var coffeeProduct = orderService.getProduct(linkedProductId);
@@ -2393,161 +1873,67 @@ public class PointsMallServiceImpl implements PointsMallService {
             } catch (Exception e) {
                 log.warn("查询关联商品失败: linkedProductId={}", linkedProductId, e);
             }
-            
-            String name = productName + "兑换券";
-            String subTitle = "限标准杯，升杯加料需补差价";
-            ruleJson = "{\"linkedProductId\":" + linkedProductId + "}";
-            coupon.setDisplayTitle(name);
-            coupon.setDisplaySubTitle(subTitle);
-        } else if (couponType != null && couponType.contains("FREE_CAKE")) {
-            // v5.3.5 免费蛋糕券 (生日礼) - 黑金权益
-            actualType = "EXCHANGE";
-            ruleJson = "{\"scope\":\"CAKE_ONLY\",\"maxDiscount\":" + (int) discountAmount + "}";
-            coupon.setDisplayTitle("烘培甜品免单券");
-            coupon.setDisplaySubTitle("封顶¥" + (int) discountAmount);
-        } else if (couponType != null && couponType.contains("CAKE_HALF")) {
-            // v5.3 蛋糕5折券 (生日礼) - 钻石权益
-            actualType = "DISCOUNT";
-            ruleJson = "{\"value\":50,\"scope\":\"CAKE_ONLY\"}";
-            coupon.setDisplayTitle("烘培甜品5折券");
-            coupon.setDisplaySubTitle("限烘焙甜品");
-        } else if (couponType != null && couponType.contains("UPGRADE_SILVER_DISCOUNT")) {
-            // v5.3.2 白银升级礼：单饮品5折券，最高抵¥20
-            actualType = "DISCOUNT";
-            ruleJson = "{\"value\":50,\"limit\":\"SINGLE_ITEM\",\"scope\":\"DRINK_ONLY\",\"maxDiscountAmount\":20}";
-            coupon.setDisplayTitle("晋升白银5折券");
-            coupon.setDisplaySubTitle("限饮品 | 封顶¥20");
-        } else if (couponType != null && couponType.contains("UPGRADE_GOLD_BOGO")) {
-            // v5.3.2 黄金升级礼：BOGO券，赠品杯最高抵¥40
-            actualType = "BOGO";
-            ruleJson = "{\"maxDiscount\":" + (int) discountAmount + ",\"scope\":\"DRINK_ONLY\"}";
-            coupon.setDisplayTitle("晋升黄金买一赠一券");
-            coupon.setDisplaySubTitle("封顶¥" + (int) discountAmount);
-        } else if (couponType != null && couponType.contains("UPGRADE_DIAMOND_STANDARD_FREE")) {
-            // v5.3.4 钻石升级礼：优选饮品免单券，仅限标准杯，仅排除SOE（可用于特调）
-            actualType = "EXCHANGE";
-            ruleJson = "{\"maxDiscount\":" + (int) discountAmount + ",\"skuLimit\":\"STANDARD_ONLY\",\"categoryBlocklist\":[\"soe\",\"pour-over\"]}";
-            coupon.setDisplayTitle("晋升钻石优选饮品免单券");
-            coupon.setDisplaySubTitle("限标准杯 | 封顶¥" + (int) discountAmount);
-        } else if (couponType != null && couponType.contains("UPGRADE_BLACK_PREMIUM")) {
-            // v5.7 黑金尊享通兑券：不限杯型，含特调/SOE，无封顶
-            actualType = "EXCHANGE";
-            ruleJson = "{\"skuLimit\":\"ALL\",\"freeAddon\":1}";
-            coupon.setDisplayTitle("黑金尊享通兑券");
-            coupon.setDisplaySubTitle("不限杯型 | 含SOE | 无封顶");
-        } else if (couponType != null && couponType.contains("MONTHLY_BLACK_FREE")) {
-            // v5.6 T3_ALL_FREE: 黑金月度全通兑免单券(不限杯型，含特调，排除SOE)，封顶¥40
-            actualType = "EXCHANGE";
-            ruleJson = "{\"maxDiscount\":40,\"skuLimit\":\"ALL\",\"categoryBlocklist\":[\"soe\",\"pour-over\"]}";
-            coupon.setDisplayTitle("黑金月度全通兑免单券");
-            coupon.setDisplaySubTitle("不限杯型 | 封顶¥40");
-        } else if (couponType != null && couponType.contains("MONTHLY_DIAMOND_FREE")) {
-            // v5.6 T2_PRE_FREE: 钻石月度优选饮品免单券(限标准杯，含特调，排除SOE)，封顶¥40
-            actualType = "EXCHANGE";
-            ruleJson = "{\"maxDiscount\":40,\"skuLimit\":\"STANDARD_ONLY\",\"categoryBlocklist\":[\"soe\",\"pour-over\"]}";
-            coupon.setDisplayTitle("钻石月度优选饮品免单券");
-            coupon.setDisplaySubTitle("限标准杯 | 封顶¥40");
-        } else if (couponType != null && couponType.contains("BIRTHDAY_BLACK_FREE")) {
-            // v5.6 T3_ALL_FREE: 黑金生日全通兑免单券(不限杯型，含特调，排除SOE)，封顶¥40
-            actualType = "EXCHANGE";
-            ruleJson = "{\"maxDiscount\":40,\"skuLimit\":\"ALL\",\"categoryBlocklist\":[\"soe\",\"pour-over\"]}";
-            coupon.setDisplayTitle("🎂黑金生日全通兑免单券");
-            coupon.setDisplaySubTitle("不限杯型 | 封顶¥40");
-        } else if (couponType != null && couponType.contains("BIRTHDAY_DIAMOND_FREE")) {
-            // v5.6 T2_PRE_FREE: 钻石生日优选饮品免单券(限标准杯，含特调，排除SOE)，封顶¥40
-            actualType = "EXCHANGE";
-            ruleJson = "{\"maxDiscount\":" + (int) discountAmount + ",\"skuLimit\":\"STANDARD_ONLY\",\"categoryBlocklist\":[\"soe\",\"pour-over\"]}";
-            coupon.setDisplayTitle("🎂钻石生日优选饮品免单券");
-            coupon.setDisplaySubTitle("限标准杯 | 封顶¥" + (int) discountAmount);
-        } else if (couponType != null && couponType.contains("BIRTHDAY_GOLD_FREE")) {
-            // v6.1 黄金生日标准饮品免单券: T1_STD_FREE标准，限标准杯，排除特调&SOE，封顶¥40
-            actualType = "EXCHANGE";
-            ruleJson = "{\"maxDiscount\":" + (int) discountAmount + ",\"skuLimit\":\"STANDARD_ONLY\",\"categoryBlocklist\":[\"signature\",\"soe\",\"pour-over\"]}";
-            coupon.setDisplayTitle("🎂黄金生日标准饮品免单券");
-            coupon.setDisplaySubTitle("限标准杯/不含特调、SOE");
-        } else if (couponType != null && couponType.contains("BIRTHDAY_SILVER_BOGO")) {
-            // v5.6 T5_BOGO: 白银生日买一赠一券，赠品封顶¥40
-            actualType = "BOGO";
-            ruleJson = "{\"maxDiscount\":40,\"scope\":\"DRINK_ONLY\"}";
-            coupon.setDisplayTitle("🎂白银生日买一赠一券");
-            coupon.setDisplaySubTitle("封顶¥40");
-        } else if (couponType != null && couponType.contains("BIRTHDAY_BASIC_DISCOUNT")) {
-            // v5.6 T6_50_OFF Override: 基础会员生日5折券(限标准杯)，封顶¥20
-            actualType = "DISCOUNT";
-            ruleJson = "{\"discountRate\":0.5,\"limit\":\"SINGLE_ITEM\",\"skuLimit\":\"STANDARD_ONLY\",\"scope\":\"DRINK_ONLY\",\"maxDiscountAmount\":20}";
-            coupon.setDisplayTitle("🎂基础会员生日5折券");
-            coupon.setDisplaySubTitle("限标准杯 | 封顶¥20");
-        } else if (couponType != null && couponType.contains("STANDARD_FREE")) {
-            // v5.3.4 标准饮品免单券（通用，仅排除SOE/手冲，可用于特调） - 注意：此条件必须在 UPGRADE_DIAMOND_STANDARD_FREE 之后
-            actualType = "EXCHANGE";
-            ruleJson = "{\"maxDiscount\":" + (int) discountAmount + ",\"skuLimit\":\"STANDARD_ONLY\",\"categoryBlocklist\":[\"soe\",\"pour-over\"]}";
-            coupon.setDisplayTitle("标准饮品免单券");
-            coupon.setDisplaySubTitle("封顶¥" + (int) discountAmount);
-        } else if (couponType != null && (couponType.contains("DISCOUNT") || couponType.contains("HALF_PRICE"))) {
-            // 折扣券 (含生日5折)
-            actualType = "DISCOUNT";
-            // 如果是半价券，强制费率为 0.5
-            double rate = couponType.contains("HALF_PRICE") ? 0.5 : discountAmount;
-            String extraRules = "";
-            String title;
-            String subTitle;
-            
-            if (couponType.contains("BIRTHDAY")) {
-                // v5.3.1: 基础会员生日5折券 - 限单饮品 + 标准杯 + 最高20元
-                title = "🎂基础会员生日5折券";
-                subTitle = "限标准杯 | 封顶¥20";
-                extraRules = ",\"limit\":\"SINGLE_ITEM\",\"skuLimit\":\"STANDARD_ONLY\",\"scope\":\"DRINK_ONLY\",\"maxDiscountAmount\":20";
-            } else if (couponType.contains("DISCOUNT_SINGLE")) {
-                // v6.0 积分兑换低折扣券：限单商品（7折及以下）
-                double discount = rate >= 10 ? rate / 10 : (rate < 1 ? rate * 10 : rate);
-                String discountStr = discount == Math.floor(discount) 
-                    ? String.format("%.0f", discount) 
-                    : String.format("%.1f", discount);
-                title = discountStr + "折券";
-                subTitle = "限单件商品";
-                extraRules = ",\"limit\":\"SINGLE_ITEM\",\"scope\":\"DRINK_ONLY\"";
-            } else {
-                // v5.3.2: 修正折扣显示逻辑（支持8.8折等小数折扣）
-                double discount;
-                if (rate >= 10) {
-                    discount = rate / 10;
-                } else if (rate < 1) {
-                    discount = rate * 10;
-                } else {
-                    discount = rate;
-                }
-                
-                // 格式化折扣显示
-                String discountStr;
-                if (discount == Math.floor(discount)) {
-                    discountStr = String.format("%.0f", discount);
-                } else {
-                    discountStr = String.format("%.1f", discount);
-                }
-                
-                title = discountStr + "折券";
-                subTitle = "全场饮品";
+            coupon.setDisplayTitle(productName + "兑换券");
+            if (coupon.getDisplaySubTitle() == null) {
+                coupon.setDisplaySubTitle("限标准杯，升杯加料需补差价");
             }
-            
-            ruleJson = "{\"discountRate\":" + rate + extraRules + "}";
-            coupon.setDisplayTitle(title);
-            coupon.setDisplaySubTitle(subTitle);
-        } else {
-            // 默认：满减券 (FULL_REDUCE)
-            actualType = "FULL_REDUCE";
-            String title = (int) minAmount > 0 ? "满" + (int) minAmount + "减" + (int) discountAmount : (int) discountAmount + "元代金券";
-            String subTitle = (int) minAmount > 0 ? "满" + (int) minAmount + "可用" : "无门槛";
-            ruleJson = "{\"minOrderAmount\":" + (int) minAmount + ",\"value\":" + (int) discountAmount + "}";
-            coupon.setDisplayTitle(title);
-            coupon.setDisplaySubTitle(subTitle);
+        } else if ("BOGO".equals(type) && coupon.getDisplayTitle() == null) {
+            coupon.setDisplayTitle(couponType.contains("BIRTHDAY") ? "生日买一赠一券" : "买一赠一券");
+        } else if ("EXCHANGE".equals(type) && couponType.contains("FREE_DRINK")) {
+            boolean birthday = couponType.contains("BIRTHDAY");
+            coupon.setDisplayTitle(birthday ? "生日免单券" : "全场饮品通兑券");
+            coupon.setDisplaySubTitle((birthday ? "排除SOE | " : "任选饮品 | ") + "封顶¥" + (int) discountAmount);
+            if (birthday) {
+                rule.put("categoryBlocklist", List.of("soe", "pour-over"));
+            }
+        } else if ("DISCOUNT".equals(type) && t.getDiscountRate() == null && t.getValue() == null
+                && coupon.getDisplayTitle() == null) {
+            // 通用折扣券：rate 由 discountAmount 计算，折数标题动态
+            double rate = couponType.contains("HALF_PRICE") ? 0.5 : discountAmount;
+            double discount = rate >= 10 ? rate / 10 : (rate < 1 ? rate * 10 : rate);
+            if (couponType.contains("DISCOUNT_SINGLE")) {
+                coupon.setDisplayTitle(formatDiscount(discount) + "折券");
+                coupon.setDisplaySubTitle("限单件商品");
+                rule.put("limit", "SINGLE_ITEM");
+                rule.put("scope", "DRINK_ONLY");
+            } else {
+                coupon.setDisplayTitle(formatDiscount(discount) + "折券");
+                coupon.setDisplaySubTitle("全场饮品");
+            }
+            rule.put("discountRate", rate);
         }
 
-        coupon.setCouponType(actualType);
-        coupon.setRuleJson(ruleJson);
-        
-        userCouponMapper.insert(coupon);
-        log.info("优惠券发放成功: userId={}, type={}, actualType={}, minAmount={}, discount={}, validDays={}",
-                userId, couponType, actualType, minAmount, discountAmount, validDays);
+        coupon.setRuleJson(toJson(rule));
+    }
+
+    private int resolveMaxDiscount(CouponTemplateConfig.CouponTemplate t, double discountAmount) {
+        if (Boolean.TRUE.equals(t.getUseDiscountAmountAsMaxDiscount())) {
+            return (int) discountAmount;
+        }
+        return t.getMaxDiscount() != null ? t.getMaxDiscount() : 0;
+    }
+
+    private String replacePlaceholders(String text, double minAmount, double discountAmount) {
+        if (text == null) {
+            return null;
+        }
+        return text.replace("{discountAmount}", String.valueOf((int) discountAmount))
+                .replace("{minAmount}", String.valueOf((int) minAmount));
+    }
+
+    private String formatDiscount(double discount) {
+        return discount == Math.floor(discount)
+                ? String.format("%.0f", discount)
+                : String.format("%.1f", discount);
+    }
+
+    private String toJson(Map<String, Object> rule) {
+        try {
+            return objectMapper.writeValueAsString(rule);
+        } catch (Exception e) {
+            log.warn("券规则JSON序列化失败: {}", e.getMessage());
+            return "{}";
+        }
     }
 
     @Override
