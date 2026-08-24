@@ -13,6 +13,8 @@ public class CheckoutPreviewDTO implements Serializable {
     private BigDecimal subtotal;
     private BigDecimal discount;
     private BigDecimal payable;
+    private Integer pointsEarned;
+    private Integer expEarned;
     private String previewToken;
     private LocalDateTime expiresAt;
 }

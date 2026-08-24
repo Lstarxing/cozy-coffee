@@ -5,6 +5,8 @@ import com.cozy.common.exception.BusinessException;
 import com.cozy.mall.api.PointsMallService;
 import com.cozy.mall.dto.request.ItemCheckDTO;
 import com.cozy.mall.dto.response.CouponUsageResult;
+import com.cozy.member.api.MemberService;
+import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.order.dto.request.CartCheckRequest;
 import com.cozy.order.dto.request.CreateOrderRequest;
 import com.cozy.order.dto.request.OrderItemRequest;
@@ -12,6 +14,7 @@ import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.dto.response.CheckoutPreviewDTO;
 import com.cozy.order.entity.CoffeeProduct;
 import com.cozy.order.mapper.CoffeeProductMapper;
+import com.cozy.order.service.impl.OrderRewardService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -40,9 +43,13 @@ public class OrderPreviewService {
     private final CoffeeProductMapper productMapper;
     private final ProductSkuValidationService skuValidationService;
     private final ObjectMapper objectMapper;
+    private final OrderRewardService orderRewardService;
 
     @DubboReference(check = false)
     private PointsMallService pointsMallService;
+
+    @DubboReference(check = false)
+    private MemberService memberService;
 
     public CartCheckResultDTO preview(Long userId, String memberLevel, CartCheckRequest request) {
         if (userId == null) {
@@ -122,6 +129,19 @@ public class OrderPreviewService {
         preview.setPayable(subtotal.subtract(discount).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
         preview.setPreviewToken(buildToken(memberLevel, request, canonicalLines));
         preview.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+
+        // 可得积分/成长值预估（与下单落库同一口径：全等级分段，基数=实付不含配送费）
+        try {
+            MemberDTO member = memberService.getMemberByUserId(userId);
+            OrderRewardService.RewardEstimate est = orderRewardService.estimateRewards(preview.getPayable(), member);
+            preview.setPointsEarned(est.pointsEarned);
+            preview.setExpEarned(est.expEarned);
+        } catch (Exception e) {
+            log.warn("预览奖励预估失败: userId={}", userId, e);
+            int exp = preview.getPayable().setScale(0, RoundingMode.HALF_UP).intValue();
+            preview.setExpEarned(exp);
+            preview.setPointsEarned(exp);
+        }
 
         CartCheckResultDTO result = new CartCheckResultDTO();
         result.setChangedItems(changedItems);

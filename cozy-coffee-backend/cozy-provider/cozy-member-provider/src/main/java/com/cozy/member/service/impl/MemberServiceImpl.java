@@ -1,6 +1,7 @@
 package com.cozy.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.common.constant.PointsRateConfig;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.member.api.MemberService;
@@ -126,6 +127,7 @@ public class MemberServiceImpl implements MemberService {
         // 实时根据 EXP 计算等级（而非读取存储值）
         String computedLevel = computeLevelByExp(expTotal);
         dto.setMemberLevel(computedLevel);
+        dto.setPointsRate(PointsRateConfig.getBaseRate(computedLevel));
 
         // 如果计算出的等级与存储值不同，同步更新数据库
         if (!computedLevel.equals(info.getMemberLevel())) {
@@ -269,6 +271,7 @@ public class MemberServiceImpl implements MemberService {
             dto.setCurrentPoints(info.getCurrentPoints());
             dto.setTotalPoints(info.getTotalPoints());
             dto.setMemberLevel(info.getMemberLevel());
+            dto.setPointsRate(PointsRateConfig.getBaseRate(info.getMemberLevel()));
 
             // 填充用户信息
             UserDTO user = userMap.get(info.getUserId());

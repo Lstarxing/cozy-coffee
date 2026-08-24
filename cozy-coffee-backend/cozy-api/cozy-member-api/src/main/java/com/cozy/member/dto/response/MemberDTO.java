@@ -24,6 +24,9 @@ public class MemberDTO implements Serializable {
     // 会员等级
     private String memberLevel;
 
+    // 当前等级基础积分倍率（与 PointsRateConfig 单一事实源一致，不含会员日加成）
+    private BigDecimal pointsRate;
+
     // 月度消费统计（用于黑卡加速包）
     private BigDecimal monthlySpent;
     private String monthlySpentMonth;

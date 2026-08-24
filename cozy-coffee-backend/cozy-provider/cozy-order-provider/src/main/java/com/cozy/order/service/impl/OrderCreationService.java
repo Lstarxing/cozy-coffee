@@ -481,82 +481,27 @@ public class OrderCreationService {
         LocalDate businessDate = pickupCodeService.calculateBusinessDate(now);
 
         // ============================================================
-        // 计算预估奖励
-        // 【核心业务逻辑 v4.2 修正】
-        // - 所有类型的优惠券都按实付金额计算 EXP 和 Points
-        // - 兑换券抵扣的金额已经从 payAmount 中扣除，无需特殊处理
+        // 计算预估奖励（复用 OrderRewardService 全等级分段口径）
+        // - 奖励基数 = 实付 - 配送费（配送费不计入，与发放一致）
+        // - 按 currentExp 跨越的等级阈值逐段计倍率，黑卡段走加速包
         // ============================================================
         int estimatedExp = 0;
         int estimatedPoints = 0;
         BigDecimal effectiveRate = BigDecimal.ONE; // 实际生效的积分倍率
 
-        // 只要实付金额 > 0，就按实付金额计算 EXP 和积分
+        // 只要实付金额 > 0，就按奖励基数计算 EXP 和积分
         if (payAmount.compareTo(BigDecimal.ZERO) > 0) {
-            estimatedExp = payAmount.setScale(0, RoundingMode.HALF_UP).intValue();
+            BigDecimal rewardBase = payAmount.subtract(deliveryFee).max(BigDecimal.ZERO);
             try {
-                // 获取会员详细信息（包含 EXP 和月度消费统计）
                 MemberDTO member = memberService.getMemberByUserId(userId);
-                int currentExp = (member != null && member.getExpTotal() != null) ? member.getExpTotal() : 0;
-                // v5.3.5: 修复黑卡门槛，与 MemberServiceImpl 保持一致 (9000 EXP)
-                final int BLACK_THRESHOLD = 9000;
-
-                if (currentExp >= BLACK_THRESHOLD) {
-                    // 1. 已经是黑卡：直接按加速包逻辑计算
-                    BigDecimal monthlySpent = BigDecimal.ZERO;
-                    // 与 MemberServiceImpl 一致：monthly_spent_month 是 DATE(月初)，写/比完整日期 "yyyy-MM-dd"
-                    String currentMonth = LocalDate.now().withDayOfMonth(1).toString();
-
-                    // 获取月度加速包剩余额度
-                    BigDecimal accelerateRemaining = member.getMonthlyAccelerateRemaining() != null
-                            ? member.getMonthlyAccelerateRemaining()
-                            : new BigDecimal("300");
-
-                    if (member != null && currentMonth.equals(member.getMonthlySpentMonth())) {
-                        monthlySpent = member.getMonthlySpent() != null ? member.getMonthlySpent() : BigDecimal.ZERO;
-                    }
-
-                    log.info(
-                            "黑卡加速包计算参数: userId={}, currentExp={}, monthlySpentMonth={}, currentMonth={}, monthlySpent={}, accelerateRemaining={}",
-                            userId, currentExp, member.getMonthlySpentMonth(), currentMonth, monthlySpent,
-                            accelerateRemaining);
-
-                    // 使用加速包剩余额度计算积分（而非 monthlySpent）
-                    estimatedPoints = rewardService.calculateBlackCardPoints(payAmount, accelerateRemaining);
-
-                    effectiveRate = payAmount.compareTo(BigDecimal.ZERO) > 0
-                            ? new BigDecimal(estimatedPoints).divide(payAmount, 2, RoundingMode.HALF_UP)
-                            : rewardService.getPointsRate("black");
-
-                    log.info("黑卡加速包预估: userId={}, payAmount={}, points={}, effectiveRate={}", userId, payAmount,
-                            estimatedPoints, effectiveRate);
-
-                } else if (currentExp + estimatedExp > BLACK_THRESHOLD) {
-                    // 2. 本单触发升级：分段计算
-                    int toUpgrade = BLACK_THRESHOLD - currentExp; // 升级所需金额
-                    BigDecimal preUpgradeAmount = new BigDecimal(Math.min(toUpgrade, payAmount.intValue()));
-                    BigDecimal postUpgradeAmount = payAmount.subtract(preUpgradeAmount);
-
-                    // 升级前的部分（按当前等级倍率计算）
-                    int prePoints = preUpgradeAmount.multiply(rewardService.getPointsRate(memberLevel))
-                            .setScale(0, RoundingMode.HALF_UP).intValue();
-                    // 升级后的部分（按黑卡 1.70x 加速逻辑计算，此时加速包从满额 300 开始计）
-                    int postPoints = rewardService.calculateBlackCardPoints(postUpgradeAmount, new BigDecimal("300"));
-
-                    estimatedPoints = prePoints + postPoints;
-                    effectiveRate = payAmount.compareTo(BigDecimal.ZERO) > 0
-                            ? new BigDecimal(estimatedPoints).divide(payAmount, 2, RoundingMode.HALF_UP)
-                            : rewardService.getPointsRate(memberLevel);
-
-                    log.info("跨级订单积分预估: userId={}, pre={}@{}, post={}@加速包, total={}",
-                            userId, preUpgradeAmount, rewardService.getPointsRate(memberLevel), postUpgradeAmount, estimatedPoints);
-                } else {
-                    // 3. 普通等级：简单倍率
-                    BigDecimal baseRate = rewardService.getPointsRate(memberLevel);
-                    estimatedPoints = payAmount.multiply(baseRate).setScale(0, RoundingMode.HALF_UP).intValue();
-                    effectiveRate = baseRate;
-                }
+                OrderRewardService.RewardEstimate est = rewardService.estimateRewards(rewardBase, member);
+                estimatedExp = est.expEarned;
+                estimatedPoints = est.pointsEarned;
+                effectiveRate = est.effectiveRate;
             } catch (Exception e) {
                 log.warn("计算预估奖励失败", e);
+                estimatedExp = rewardBase.setScale(0, RoundingMode.HALF_UP).intValue();
+                estimatedPoints = estimatedExp;
             }
         }
 
