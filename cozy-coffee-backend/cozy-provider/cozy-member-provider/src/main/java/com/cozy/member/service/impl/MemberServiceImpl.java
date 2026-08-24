@@ -3,7 +3,9 @@ package com.cozy.member.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.BirthdayRewardConfig;
 import com.cozy.common.constant.MemberLevelConfig;
+import com.cozy.common.constant.MonthlyBenefitConfig;
 import com.cozy.common.constant.PointsRateConfig;
+import com.cozy.common.constant.UpgradeRewardConfig;
 import com.cozy.common.constant.RedemptionDiscountConfig;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
@@ -72,6 +74,12 @@ public class MemberServiceImpl implements MemberService {
 
     // 生日权益配置（单一事实源，见 cozy.member.birthday）
     private final BirthdayRewardConfig birthdayRewardConfig;
+
+    // 晋升礼配置（单一事实源，见 cozy.member.upgrade）
+    private final UpgradeRewardConfig upgradeRewardConfig;
+
+    // 月度权益配置（单一事实源，见 cozy.member.monthly-benefit）
+    private final MonthlyBenefitConfig monthlyBenefitConfig;
 
     @DubboReference(check = false)
     private UserService userService;
@@ -151,6 +159,12 @@ public class MemberServiceImpl implements MemberService {
                 info.getMonthlyAccelerateRemaining() != null ? info.getMonthlyAccelerateRemaining()
                         : memberLevelConfig.getAccelerateMonthlyCap());
         dto.setAccelerateMonthlyCap(memberLevelConfig.getAccelerateMonthlyCap());
+
+        // 各等级积分倍率/兑换折扣（权益页对比展示，单一事实源）
+        dto.setLevelBenefits(List.of(
+                levelBenefitItem("basic"), levelBenefitItem("silver"),
+                levelBenefitItem("gold"), levelBenefitItem("diamond"),
+                levelBenefitItem("black")));
 
         // 即将到期积分（近30天）
         dto.setExpiringPoints(getExpiringPoints(userId, 30));
@@ -788,32 +802,26 @@ public class MemberServiceImpl implements MemberService {
 
     private void grantUpgradeReward(Long userId, String level) {
         String uniqueKey = "upgrade_" + level + "_" + userId;
+        UpgradeRewardConfig.LevelUpgrade reward = upgradeRewardConfig.getLevel(level);
+        if (reward == null) {
+            return;
+        }
         try {
-            switch (level) {
-                case "silver" -> {
-                    // 白银: 单饮品5折券 - 限单杯，全场饮品，最高抵¥20，有效期60天
-                    pointsMallService.issueCouponToUser(userId, "UPGRADE_SILVER_DISCOUNT", uniqueKey, 0, 50, 60);
-                    log.info("获得白银晋升礼包: userId={}, 单饮品5折券(最高抵¥20)", userId);
-                }
-                case "gold" -> {
-                    // 黄金: 买一赠一券(赠品杯最高抵¥40) + 50积分，有效期60天
-                    pointsMallService.issueCouponToUser(userId, "UPGRADE_GOLD_BOGO", uniqueKey + "_bogo", 0, 40, 60);
-                    grantOneOffPoints(userId, 50, uniqueKey, "黄金晋升奖励");
-                    log.info("获得黄金晋升礼包: userId={}, BOGO券(赠品杯最高¥40) + 50积分", userId);
-                }
-                case "diamond" -> {
-                    // 钻石: 标准饮品免单券(仅限标准杯，排除SOE/手冲，最高¥40) + 100积分，有效期60天
-                    pointsMallService.issueCouponToUser(userId, "UPGRADE_DIAMOND_STANDARD_FREE", uniqueKey + "_free", 0, 40, 60);
-                    grantOneOffPoints(userId, 100, uniqueKey, "钻石晋升奖励");
-                    log.info("获得钻石晋升礼包: userId={}, 标准饮品免单券(限标准杯，排除SOE) + 100积分", userId);
-                }
-                case "black" -> {
-                    // v5.6 T4_ULT_FREE: 黑金晋升礼 - 尊享通兑券(不限杯型，全品类含SOE，含1份免费加料，无上限) + 1688积分
-                    pointsMallService.issueCouponToUser(userId, "UPGRADE_BLACK_PREMIUM", uniqueKey + "_premium", 0, 999, 60);
-                    grantOneOffPoints(userId, 1688, uniqueKey, "黑金晋升奖励");
-                    log.info("获得黑金晋升礼包: userId={}, 尊享通兑券(T4_ULT_FREE) + 1688积分", userId);
+            // 晋升券（配置驱动，见 cozy.member.upgrade）
+            int idx = 0;
+            for (UpgradeRewardConfig.CouponGrant c : reward.getCoupons()) {
+                for (int i = 0; i < c.getCount(); i++) {
+                    pointsMallService.issueCouponToUser(userId, c.getCouponType(),
+                            uniqueKey + "_c" + idx, c.getMinAmount(), c.getDiscountAmount(), c.getValidDays());
+                    idx++;
                 }
             }
+            // 晋升一次性积分（黑金 1688 等）
+            if (reward.getPoints() > 0) {
+                grantOneOffPoints(userId, reward.getPoints(), uniqueKey, levelName(level) + "晋升奖励");
+            }
+            log.info("晋升礼包发放: userId={}, level={}, points={}, couponCount={}", userId, level,
+                    reward.getPoints(), idx);
         } catch (Exception e) {
             // Unique Index 冲突意味着已领取过 (One-off)，忽略
             log.info("晋升礼包已领取或发放失败(One-off): userId={}, level={}", userId, level);
@@ -1054,6 +1062,14 @@ public class MemberServiceImpl implements MemberService {
         };
     }
 
+    private MemberDTO.LevelBenefitItem levelBenefitItem(String level) {
+        MemberDTO.LevelBenefitItem item = new MemberDTO.LevelBenefitItem();
+        item.setLevel(level);
+        item.setPointsRate(PointsRateConfig.getBaseRate(level));
+        item.setRedeemDiscount(RedemptionDiscountConfig.getDiscount(level));
+        return item;
+    }
+
     // ==================== v5.0 保级/休眠机制 ====================
     // 保级/唤醒阈值与落点 EXP 统一在 MemberLevelConfig（cozy.member.level），此处不再硬编码
 
@@ -1223,14 +1239,9 @@ public class MemberServiceImpl implements MemberService {
         // v5.3: 所有等级（含基础）均有月度权益
         boolean canClaim = true;
 
-        String benefitName = switch (level) {
-            case "basic" -> "免费加浓缩券×1";
-            case "silver" -> "配送费抵扣券×1 + 加浓缩券×2";
-            case "gold" -> "BOGO×1 + 8.8折券×2 + 配送费抵扣券×2";
-            case "diamond" -> "免单券×1(限标准杯，排除特调/SOE) + BOGO×2 + 配送费抵扣券×5 + 新品5折券×1";
-            case "black" -> "免单券×2(全品类，不限杯型) + BOGO×5 + 无限免运费 + 新品免费券×1";
-            default -> "免费加浓缩券×1";
-        };
+        // 权益展示文案（配置见 cozy.member.monthly-benefit）
+        MonthlyBenefitConfig.LevelBenefit benefit = monthlyBenefitConfig.getLevel(level);
+        String benefitName = benefit != null ? benefit.getBenefitName() : "免费加浓缩券×1";
 
         Map<String, Object> result = new HashMap<>();
         result.put("claimed", claimed);
@@ -1264,51 +1275,16 @@ public class MemberServiceImpl implements MemberService {
         String level = member.getMemberLevel();
 
         try {
-            switch (level) {
-                case "basic" -> {
-                    // v5.3 基础: 免费加浓缩券×1
-                    pointsMallService.issueCouponToUser(userId, "SHOT", uniqueKeyBase + "_shot", 0, 5, 30);
-                }
-                case "silver" -> {
-                    // v5.3 白银: 配送费抵扣券×1 + 免费加浓缩券×2
-                    pointsMallService.issueCouponToUser(userId, "DELIVERY_FEE", uniqueKeyBase + "_del", 0, 6, 30);
-                    pointsMallService.issueCouponToUser(userId, "SHOT", uniqueKeyBase + "_shot1", 0, 5, 30);
-                    pointsMallService.issueCouponToUser(userId, "SHOT", uniqueKeyBase + "_shot2", 0, 5, 30);
-                }
-                case "gold" -> {
-                    // v5.3 黄金: BOGO×1 + 8.8折券×2 + 配送费抵扣券×2
-                    pointsMallService.issueCouponToUser(userId, "BOGO", uniqueKeyBase + "_bogo", 0, 40, 30);
-                    pointsMallService.issueCouponToUser(userId, "DISCOUNT", uniqueKeyBase + "_dis1", 0, 88, 30); // 88表示8.8折
-                    pointsMallService.issueCouponToUser(userId, "DISCOUNT", uniqueKeyBase + "_dis2", 0, 88, 30);
-                    pointsMallService.issueCouponToUser(userId, "DELIVERY_FEE", uniqueKeyBase + "_del1", 0, 6, 30);
-                    pointsMallService.issueCouponToUser(userId, "DELIVERY_FEE", uniqueKeyBase + "_del2", 0, 6, 30);
-                }
-                case "diamond" -> {
-                    // v5.6 钻石月度权益：T2_PRE_FREE×1(限标准杯，含特调，排除SOE，封顶¥40) + BOGO×2 + 配送费抵扣券×5 + 新品5折券×1
-                    pointsMallService.issueCouponToUser(userId, "MONTHLY_DIAMOND_FREE", uniqueKeyBase + "_free", 0, 40, 30);
-                    pointsMallService.issueCouponToUser(userId, "BOGO", uniqueKeyBase + "_bogo1", 0, 40, 30);
-                    pointsMallService.issueCouponToUser(userId, "BOGO", uniqueKeyBase + "_bogo2", 0, 40, 30);
-                    for (int i = 1; i <= 5; i++) {
-                        pointsMallService.issueCouponToUser(userId, "DELIVERY_FEE", uniqueKeyBase + "_del" + i, 0, 6,
-                                30);
+            // 发券（配置见 cozy.member.monthly-benefit）
+            MonthlyBenefitConfig.LevelBenefit benefit = monthlyBenefitConfig.getLevel(level);
+            if (benefit != null) {
+                int idx = 0;
+                for (MonthlyBenefitConfig.CouponGrant c : benefit.getCoupons()) {
+                    for (int i = 0; i < c.getCount(); i++) {
+                        pointsMallService.issueCouponToUser(userId, c.getCouponType(),
+                                uniqueKeyBase + "_c" + idx, c.getMinAmount(), c.getDiscountAmount(), c.getValidDays());
+                        idx++;
                     }
-                    pointsMallService.issueCouponToUser(userId, "NEW_PRODUCT_HALF", uniqueKeyBase + "_new", 0, 50, 30);
-                }
-                case "black" -> {
-                    // v5.6 黑金月度权益：T3_ALL_FREE×2(不限杯型，含特调，排除SOE，封顶¥40) + BOGO×5 + 无限免运费(系统自动) + 新品免费券×1
-                    pointsMallService.issueCouponToUser(userId, "MONTHLY_BLACK_FREE", uniqueKeyBase + "_free1", 0, 40, 30);
-                    pointsMallService.issueCouponToUser(userId, "MONTHLY_BLACK_FREE", uniqueKeyBase + "_free2", 0, 40, 30);
-                    for (int i = 1; i <= 5; i++) {
-                        pointsMallService.issueCouponToUser(userId, "BOGO", uniqueKeyBase + "_bogo" + i, 0, 40, 30);
-                    }
-                    // v5.3 黑金无限免运费：无需发券，由系统在创建外卖订单时自动判断等级并抵扣配送费
-                    // （已在 OrderServiceImpl.createOrder 中实现黑金自动免配送费逻辑）
-                    pointsMallService.issueCouponToUser(userId, "NEW_PRODUCT_FREE", uniqueKeyBase + "_new_free", 0, 40,
-                            30);
-                }
-                default -> {
-                    // 默认: 免费加浓缩券×1
-                    pointsMallService.issueCouponToUser(userId, "SHOT", uniqueKeyBase + "_shot", 0, 5, 30);
                 }
             }
 

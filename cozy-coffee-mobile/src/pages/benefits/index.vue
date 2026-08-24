@@ -39,7 +39,7 @@
         <text class="b-icon">礼</text>
         <view class="b-copy">
           <text class="b-name">生日礼遇</text>
-          <text class="b-desc">生日当月赠送双倍积分</text>
+          <text class="b-desc">生日月自动发放生日礼包（各等级券 + 积分）</text>
         </view>
         <view class="b-btn muted" @click="birthdayTip">去领取</view>
       </view>
@@ -127,14 +127,24 @@ const monthlyBenefitStatus = ref({
 
 const levelAccent = computed(() => (MEMBER_LEVEL_THEMES[currentLevel.value] || {}).accent || '#753A22')
 
-// 各等级权益对比（对齐原型 / web 端）
-const compare = [
-  { level: 'basic', name: '基础会员', text: '1× 积分' },
-  { level: 'silver', name: '白银会员', text: '1.2× 积分 · 95 折兑换' },
-  { level: 'gold', name: '黄金会员', text: '1.5× 积分 · 9 折兑换' },
-  { level: 'diamond', name: '钻石会员', text: '2× 积分 · 85 折兑换' },
-  { level: 'black', name: '黑金会员', text: '3× 积分 · 8 折兑换' }
-]
+// 各等级权益对比：由后端 levelBenefits（PointsRateConfig/RedemptionDiscountConfig 单一事实源）驱动
+const compare = computed(() => {
+  const list = userStore.memberInfo?.levelBenefits || []
+  if (!list.length) return []
+  return list.map(b => ({
+    level: b.level,
+    name: getLevelName(b.level),
+    text: `${formatRate(b.pointsRate)} · ${formatDiscount(b.redeemDiscount, b.level)}`
+  }))
+})
+function formatRate(rate) {
+  const n = Number(rate) || 0
+  return (Number.isInteger(n) ? n : n.toFixed(1)) + '× 积分'
+}
+function formatDiscount(discount, level) {
+  if (level === 'basic') return '原价兑换'
+  return Math.round(Number(discount) * 100) + ' 折兑换'
+}
 
 // 升级门槛表格
 const ruleRows = levels.map(level => ({
@@ -167,7 +177,7 @@ const progressMotivation = computed(() => {
 const benefitDone = computed(() => monthlyBenefitStatus.value.claimed)
 const monthlyBenefitText = computed(() => {
   if (monthlyBenefitStatus.value.claimed) return '本月兑换券已领取，可在券包查看'
-  return '95 折兑换券 · 本月有效'
+  return monthlyBenefitStatus.value.benefitName || '本月等级权益券'
 })
 const benefitActionText = computed(() => {
   if (benefitLoading.value) return '查询中…'
@@ -218,7 +228,7 @@ async function handleReceiveMonthlyBenefit() {
 }
 
 function birthdayTip() {
-  uni.showToast({ title: '生日当月自动赠送双倍积分', icon: 'none' })
+  uni.showToast({ title: '生日月自动发放生日礼包（券 + 积分）', icon: 'none' })
 }
 
 onShow(loadBenefitsPage)

@@ -4,6 +4,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class MemberDTO implements Serializable {
@@ -29,6 +30,16 @@ public class MemberDTO implements Serializable {
 
     // 积分商城兑换折扣（与 RedemptionDiscountConfig 单一事实源一致）
     private BigDecimal redeemDiscount;
+
+    // 各等级积分倍率/兑换折扣（权益页对比展示，与 PointsRateConfig/RedemptionDiscountConfig 一致）
+    private List<LevelBenefitItem> levelBenefits;
+
+    @Data
+    public static class LevelBenefitItem {
+        private String level;
+        private BigDecimal pointsRate;
+        private BigDecimal redeemDiscount;
+    }
 
     // 月度消费统计（用于黑卡加速包）
     private BigDecimal monthlySpent;

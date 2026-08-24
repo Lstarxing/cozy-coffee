@@ -169,3 +169,121 @@ cozy:
     first-order:
       points: 200
       source-type: first_order_bonus
+    # 会员晋升礼配置（UpgradeRewardConfig）
+    upgrade:
+      levels:
+        silver:
+          points: 0
+          coupons:
+            - coupon-type: UPGRADE_SILVER_DISCOUNT
+              min-amount: 0
+              discount-amount: 50
+              valid-days: 60
+              count: 1
+        gold:
+          points: 50
+          coupons:
+            - coupon-type: UPGRADE_GOLD_BOGO
+              min-amount: 0
+              discount-amount: 40
+              valid-days: 60
+              count: 1
+        diamond:
+          points: 100
+          coupons:
+            - coupon-type: UPGRADE_DIAMOND_STANDARD_FREE
+              min-amount: 0
+              discount-amount: 40
+              valid-days: 60
+              count: 1
+        black:
+          points: 1688
+          coupons:
+            - coupon-type: UPGRADE_BLACK_PREMIUM
+              min-amount: 0
+              discount-amount: 999
+              valid-days: 60
+              count: 1
+    # 会员月度权益配置（MonthlyBenefitConfig）
+    monthly-benefit:
+      levels:
+        basic:
+          benefit-name: "免费加浓缩券×1"
+          coupons:
+            - coupon-type: SHOT
+              min-amount: 0
+              discount-amount: 5
+              valid-days: 30
+              count: 1
+        silver:
+          benefit-name: "配送费抵扣券×1 + 加浓缩券×2"
+          coupons:
+            - coupon-type: DELIVERY_FEE
+              min-amount: 0
+              discount-amount: 6
+              valid-days: 30
+              count: 1
+            - coupon-type: SHOT
+              min-amount: 0
+              discount-amount: 5
+              valid-days: 30
+              count: 2
+        gold:
+          benefit-name: "BOGO×1 + 8.8折券×2 + 配送费抵扣券×2"
+          coupons:
+            - coupon-type: BOGO
+              min-amount: 0
+              discount-amount: 40
+              valid-days: 30
+              count: 1
+            - coupon-type: DISCOUNT
+              min-amount: 0
+              discount-amount: 88
+              valid-days: 30
+              count: 2
+            - coupon-type: DELIVERY_FEE
+              min-amount: 0
+              discount-amount: 6
+              valid-days: 30
+              count: 2
+        diamond:
+          benefit-name: "免单券×1(限标准杯，排除特调/SOE) + BOGO×2 + 配送费抵扣券×5 + 新品5折券×1"
+          coupons:
+            - coupon-type: MONTHLY_DIAMOND_FREE
+              min-amount: 0
+              discount-amount: 40
+              valid-days: 30
+              count: 1
+            - coupon-type: BOGO
+              min-amount: 0
+              discount-amount: 40
+              valid-days: 30
+              count: 2
+            - coupon-type: DELIVERY_FEE
+              min-amount: 0
+              discount-amount: 6
+              valid-days: 30
+              count: 5
+            - coupon-type: NEW_PRODUCT_HALF
+              min-amount: 0
+              discount-amount: 50
+              valid-days: 30
+              count: 1
+        black:
+          benefit-name: "免单券×2(全品类，不限杯型) + BOGO×5 + 无限免运费 + 新品免费券×1"
+          coupons:
+            - coupon-type: MONTHLY_BLACK_FREE
+              min-amount: 0
+              discount-amount: 40
+              valid-days: 30
+              count: 2
+            - coupon-type: BOGO
+              min-amount: 0
+              discount-amount: 40
+              valid-days: 30
+              count: 5
+            - coupon-type: NEW_PRODUCT_FREE
+              min-amount: 0
+              discount-amount: 40
+              valid-days: 30
+              count: 1
