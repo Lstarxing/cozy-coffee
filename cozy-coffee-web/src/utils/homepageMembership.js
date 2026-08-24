@@ -1,11 +1,3 @@
-const POINTS_RATES = {
-  basic: 1,
-  silver: 1.1,
-  gold: 1.2,
-  diamond: 1.3,
-  black: 1.5
-}
-
 const REDEMPTION_DISCOUNTS = {
   basic: 1,
   silver: 0.98,
@@ -14,9 +6,9 @@ const REDEMPTION_DISCOUNTS = {
   black: 0.85
 }
 
-export function calculateEarnedPoints(amount, level = 'basic', isCozyDay = false) {
-  const rate = (POINTS_RATES[level] || POINTS_RATES.basic) + (isCozyDay ? 0.5 : 0)
-  return Math.round(Number(amount || 0) * rate)
+// 积分计算不再维护倍率表：倍率由后端 MemberDTO.pointsRate 传入（PointsRateConfig 单一事实源）
+export function calculateEarnedPoints(amount, rate = 1, isCozyDay = false) {
+  return Math.round(Number(amount || 0) * (Number(rate || 0) + (isCozyDay ? 0.5 : 0)))
 }
 
 export function calculateRedemptionCost(basePrice, level = 'basic', quantity = 1) {
@@ -29,5 +21,4 @@ export function calculateProgress(currentPoints, targetPoints) {
   return Math.min(100, Math.round((Number(currentPoints || 0) / targetPoints) * 100))
 }
 
-export const POINTS_RATES_BY_LEVEL = POINTS_RATES
 export const REDEMPTION_DISCOUNTS_BY_LEVEL = REDEMPTION_DISCOUNTS

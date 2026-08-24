@@ -3,14 +3,14 @@ import { getMemberInfo, getMonthlyTask } from '@/api/member'
 import {
   calculateEarnedPoints,
   calculateProgress,
-  calculateRedemptionCost,
-  POINTS_RATES_BY_LEVEL
+  calculateRedemptionCost
 } from '@/utils/homepageMembership'
 
 const membershipState = ref('auth-resolving')
 const memberInfo = ref(null)
 const monthlyTask = ref(null)
 
+// 等级营销卡：权益/折扣/名称为静态文案；rate/cozyDay 倍率列需与后端 PointsRateConfig 保持同步
 const levels = [
   { key: 'basic', name: '基础 Classic', threshold: '0 EXP', rate: '1.0×', cozyDay: '1.5×', discount: '—', benefit: '免费加浓缩券×1' },
   { key: 'silver', name: '白银 Silver', threshold: '500 EXP', rate: '1.1×', cozyDay: '1.6×', discount: '9.8 折', benefit: '配送券×1+加浓缩券×2 · 生日BOGO' },
@@ -28,14 +28,15 @@ export function useHomeMembership(userStore) {
   const normalizedLevel = computed(() => {
     if (membershipState.value === 'anonymous') return 'silver'
     const level = memberInfo.value?.memberLevel || memberInfo.value?.level || 'basic'
-    return POINTS_RATES_BY_LEVEL[level] ? level : 'basic'
+    return ['basic', 'silver', 'gold', 'diamond', 'black'].includes(level) ? level : 'basic'
   })
   const currentLevel = computed(() => levels.find(level => level.key === normalizedLevel.value) || levels[0])
   const currentLevelLabel = computed(() => currentLevel.value.name.split(' ')[0] + '会员')
-  const currentRate = computed(() => POINTS_RATES_BY_LEVEL[normalizedLevel.value] || 1)
+  // 倍率走后端 MemberDTO.pointsRate（单一事实源）；匿名展示兜底 1.1（白银示例）
+  const currentRate = computed(() => Number(memberInfo.value?.pointsRate) || (membershipState.value === 'anonymous' ? 1.1 : 1))
   const currentPoints = computed(() => membershipState.value === 'anonymous' ? 131 : Number(memberInfo.value?.currentPoints || 0))
   const rewardTarget = computed(() => calculateRedemptionCost(150, normalizedLevel.value))
-  const earnedPoints = computed(() => calculateEarnedPoints(35, normalizedLevel.value, false))
+  const earnedPoints = computed(() => calculateEarnedPoints(35, currentRate.value, false))
   const levelLabel = computed(() => currentLevel.value.name.split(' ')[0])
   const currentDiscount = computed(() => currentLevel.value.discount)
   const remainingPoints = computed(() => Math.max(0, rewardTarget.value - currentPoints.value))

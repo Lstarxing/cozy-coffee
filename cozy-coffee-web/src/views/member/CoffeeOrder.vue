@@ -18,13 +18,9 @@ import CoffeeOrderView from '@/components/CoffeeOrderView.vue'
 const userStore = useUserStore()
 const router = useRouter()
 
+// 积分倍率走后端 MemberDTO.pointsRate（单一事实源），本地不再维护倍率表
 function getConsumeMultiplier() {
-  const level = userStore.userLevel || 'basic'
-  const map = { basic: 1, silver: 1.1, gold: 1.2, diamond: 1.3, black: 1.5 }
-  if (level === 'black' && (userStore.userInfo?.monthlyAccelerateRemaining || 0) > 0) {
-    return 1.7
-  }
-  return map[level] || 1
+  return Number(userStore.userInfo?.pointsRate) || 1
 }
 
 function handleCoffeeOrderCreated(order) {
