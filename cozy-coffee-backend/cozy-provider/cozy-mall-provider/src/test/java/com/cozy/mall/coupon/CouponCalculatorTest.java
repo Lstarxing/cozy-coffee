@@ -1,12 +1,14 @@
 package com.cozy.mall.coupon;
 
 import com.cozy.common.exception.BusinessException;
+import com.cozy.common.constant.CouponTemplateConfig;
 import com.cozy.mall.dto.request.ItemCheckDTO;
 import com.cozy.mall.entity.UserCoupon;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -207,5 +209,38 @@ class CouponCalculatorTest {
         ItemCheckDTO small = item(2L, new BigDecimal("30"), "cake", 1, "STANDARD", false);
         assertEquals(0, new BigDecimal("15").compareTo(
                 calc.calculate(coupon("CAKE_HALF", "{}"), BigDecimal.ZERO, List.of(small))));
+    }
+
+    // ==================== 真实发券模板配置 → 抵扣（闭环） ====================
+
+    @Test
+    void monthlyDiamondFree_fromCouponTemplateConfig() {
+        // MONTHLY_DIAMOND_FREE 模板（cozy.mall.coupon-template）→ ruleJson → 免单抵扣
+        CouponTemplateConfig config = new CouponTemplateConfig();
+        CouponTemplateConfig.CouponTemplate t = config.match("MONTHLY_DIAMOND_FREE");
+        String blocklist = t.getCategoryBlocklist().stream()
+                .map(s -> "\"" + s + "\"").collect(Collectors.joining(","));
+        String ruleJson = String.format("{\"maxDiscount\":%d,\"skuLimit\":\"%s\",\"categoryBlocklist\":[%s]}",
+                t.getMaxDiscount(), t.getSkuLimit(), blocklist);
+
+        BigDecimal d = new ExchangeCouponCalculator().calculate(
+                coupon("EXCHANGE", ruleJson), BigDecimal.ZERO,
+                List.of(drink(1, new BigDecimal("30")), drink(2, new BigDecimal("20"))));
+        // 选最高价饮品 30，封顶 40 → 抵扣 30
+        assertEquals(0, new BigDecimal("30").compareTo(d));
+    }
+
+    @Test
+    void bogo_fromCouponTemplateConfig() {
+        // BOGO 模板：useDiscountAmountAsMaxDiscount → 发券时 discountAmount=40 写入 maxDiscount → 免最低价
+        CouponTemplateConfig config = new CouponTemplateConfig();
+        CouponTemplateConfig.CouponTemplate t = config.match("BOGO");
+        String ruleJson = "{\"maxDiscount\":40}";
+
+        BigDecimal d = new BogoCouponCalculator().calculate(
+                coupon("BOGO", ruleJson), BigDecimal.ZERO,
+                List.of(drink(1, new BigDecimal("15")), drink(2, new BigDecimal("30"))));
+        // 低价免单 → 抵扣 15
+        assertEquals(0, new BigDecimal("15").compareTo(d));
     }
 }

@@ -147,6 +147,40 @@ class OrderRewardServiceTest {
         assertEquals(0, expected.compareTo(est.effectiveRate));
     }
 
+    // ==================== 真实订单场景（扣券后实付 → 积分/EXP） ====================
+    // 抵扣金额由 CouponCalculator（mall 侧）计算；此处以扣券后实付作为 rewardBase，
+    // 验证「发的券下单抵扣后 → 积分/EXP 发放」正确（含配送费不计入）。
+
+    @Test
+    void silverBogoCoupon_scenario() {
+        // 2 杯 30+20，BOGO 免最低 20 → 实付 30；配送费 3 → rewardBase 27
+        assertEstimate(800, "silver", 27, round(27, "silver"));
+    }
+
+    @Test
+    void diamondFreeCoupon_scenario() {
+        // 免单券免最高 30 → 实付 20（无配送费）→ rewardBase 20
+        assertEstimate(4100, "diamond", 20, round(20, "diamond"));
+    }
+
+    @Test
+    void goldDiscountCoupon_scenario() {
+        // 8.8 折券：30 元 → 抵扣 3.6 → 实付 26.4 → rewardBase 26（取整）
+        assertEstimate(1600, "gold", 26, round(26, "gold"));
+    }
+
+    @Test
+    void deliveryFeeNotCounted_scenario() {
+        // 实付 30（含配送费 5）→ rewardBase 25：积分按 25 而非 30
+        assertEstimate(100, "basic", 25, round(25, "basic"));
+    }
+
+    @Test
+    void blackAccelerateAfterCoupon_scenario() {
+        // 黑金用券后实付 40（余量 30）：30×1.7 + 10×1.5
+        assertEstimateBlack(9500, "30", 40, blackPoints(40, "30"));
+    }
+
     // ==================== 工具方法 ====================
 
     private void assertEstimate(int expTotal, String level, int amount, int expectedPoints) {
