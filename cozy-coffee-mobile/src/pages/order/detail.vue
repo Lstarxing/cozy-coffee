@@ -169,7 +169,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { onLoad, onShow, onHide, onUnload, onPullDownRefresh } from '@dcloudio/uni-app'
+import { onLoad, onShow, onHide, onUnload, onBackPress, onPullDownRefresh } from '@dcloudio/uni-app'
 import { getOrderDetail, acceptOrder, cancelOrder } from '@/api/order'
 import { getRedemptionDetail } from '@/api/member'
 import { useSessionStore } from '@/stores/session'
@@ -363,6 +363,16 @@ onHide(stopPolling)
 onUnload(() => {
   stopPolling()
   stopCountdownTicker()
+})
+// 下单成功从点单页跳进详情（栈底是点单页）：返回应去订单页而非点单页
+onBackPress(() => {
+  const pages = getCurrentPages()
+  const prev = pages[pages.length - 2]
+  if (prev && prev.route === 'pages/menu/menu') {
+    uni.switchTab({ url: '/pages/order/order' })
+    return true
+  }
+  return false
 })
 onPullDownRefresh(async () => {
   if (orderId.value) {

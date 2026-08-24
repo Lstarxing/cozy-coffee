@@ -33,9 +33,15 @@ const props = defineProps({
   preview: { type: Object, default: null }
 })
 
-// 积分/成长值按商品实付金额计算（实付 - 配送费），配送费不计入
-const earnedPoints = computed(() => Math.floor(Math.max(0, Number(props.preview?.payable || 0) - Number(props.preview?.deliveryFee || 0))))
-const earnedExp = computed(() => earnedPoints.value)
+// 可得积分/成长值：走后端口径预估（含等级倍率/会员日/黑卡加速）；本地试算兜底 1:1
+const earnedPoints = computed(() => {
+  if (props.preview?.pointsEarned != null) return Number(props.preview.pointsEarned)
+  return Math.floor(Math.max(0, Number(props.preview?.payable || 0) - Number(props.preview?.deliveryFee || 0)))
+})
+const earnedExp = computed(() => {
+  if (props.preview?.expEarned != null) return Number(props.preview.expEarned)
+  return earnedPoints.value
+})
 </script>
 
 <style lang="scss" scoped>
