@@ -83,3 +83,89 @@ cozy:
       # 会员日（Cozy Day）：每周五积分倍率 +0.5
       cozy-day-bonus: 0.5
       cozy-day-of-week: FRIDAY
+    # 月度挑战任务配置（MonthlyChallengeConfig 单一事实源，白皮书「月度挑战任务」表）
+    monthly-challenge:
+      items:
+        - key: order
+          title: 打卡达人
+          description: 当月完成 4 笔订单
+          target: 4
+          reward: 40
+          stats-field: orderCount
+        - key: morning
+          title: 晨间唤醒
+          description: 当月完成 3 笔上午 10 点前订单
+          target: 3
+          reward: 60
+          stats-field: morningOrderCount
+        - key: delivery
+          title: 外卖尝鲜
+          description: 当月完成 2 笔外卖
+          target: 2
+          reward: 50
+          stats-field: deliveryOrderCount
+        - key: newproduct
+          title: 新品猎人
+          description: 当月购买 3 款新品
+          target: 3
+          reward: 80
+          stats-field: newProductCount
+    # 生日权益配置（BirthdayRewardConfig，白皮书「生日礼」阶梯权益）
+    birthday:
+      levels:
+        black:
+          points: 888
+          coupons:
+            - coupon-type: BIRTHDAY_BLACK_FREE
+              min-amount: 0
+              discount-amount: 40
+              valid-days: 30
+            - coupon-type: BIRTHDAY_FREE_CAKE
+              min-amount: 0
+              discount-amount: 40
+              valid-days: 30
+        diamond:
+          points: 0
+          coupons:
+            - coupon-type: BIRTHDAY_DIAMOND_FREE
+              min-amount: 0
+              discount-amount: 40
+              valid-days: 30
+            - coupon-type: BIRTHDAY_CAKE_HALF
+              min-amount: 0
+              discount-amount: 50
+              valid-days: 30
+        gold:
+          points: 0
+          coupons:
+            - coupon-type: BIRTHDAY_GOLD_FREE
+              min-amount: 0
+              discount-amount: 40
+              valid-days: 30
+        silver:
+          points: 0
+          coupons:
+            - coupon-type: BIRTHDAY_SILVER_BOGO
+              min-amount: 0
+              discount-amount: 40
+              valid-days: 30
+        basic:
+          points: 0
+          coupons:
+            - coupon-type: BIRTHDAY_BASIC_DISCOUNT
+              min-amount: 0
+              discount-amount: 50
+              valid-days: 30
+    # 签到奖励配置（SigninRewardConfig）
+    signin:
+      daily-points: 2
+      seven-day-coupon-after-days: 7
+      seven-day-coupon:
+        coupon-type: SIGNIN_7DAY
+        min-amount: 35
+        discount-amount: 10
+        valid-days: 3
+    # 首单奖励配置（FirstOrderRewardConfig）
+    first-order:
+      points: 200
+      source-type: first_order_bonus

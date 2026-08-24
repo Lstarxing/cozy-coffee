@@ -1,11 +1,15 @@
 package com.cozy.user;
 
+import com.cozy.common.constant.InviteRewardConfig;
+import com.cozy.common.constant.ProfileRewardConfig;
 import org.apache.dubbo.config.spring.context.annotation.EnableDubbo;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication(scanBasePackages = { "com.cozy.user", "com.cozy.common" })
+@EnableConfigurationProperties({ InviteRewardConfig.class, ProfileRewardConfig.class })
 @EnableDubbo
 @MapperScan("com.cozy.user.mapper")
 public class UserProviderApplication {

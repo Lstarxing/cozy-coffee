@@ -1,6 +1,7 @@
 package com.cozy.member.mq;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.common.constant.FirstOrderRewardConfig;
 import com.cozy.common.mq.MqTags;
 import com.cozy.common.mq.MqTopics;
 import com.cozy.common.mq.OrderCompletedEvent;
@@ -37,6 +38,9 @@ public class FirstOrderConsumer implements RocketMQListener<OrderCompletedEvent>
     private final MemberService memberService;
     private final PointsLotMapper pointsLotMapper;
 
+    // 首单奖励配置（单一事实源 @ConfigurationProperties，见 cozy.member.first-order）
+    private final FirstOrderRewardConfig firstOrderRewardConfig;
+
     @DubboReference(check = false)
     private UserService userService;
 
@@ -46,14 +50,15 @@ public class FirstOrderConsumer implements RocketMQListener<OrderCompletedEvent>
             return;
         }
         long count = pointsLotMapper.selectCount(new LambdaQueryWrapper<PointsLot>()
-                .eq(PointsLot::getSourceType, "first_order_bonus")
+                .eq(PointsLot::getSourceType, firstOrderRewardConfig.getSourceType())
                 .eq(PointsLot::getSourceId, event.getOrderId()));
         if (count > 0) {
             log.debug("首单奖励已发放，跳过: orderId={}", event.getOrderId());
             return;
         }
         try {
-            memberService.addPointsWithLot(event.getUserId(), 200, "first_order_bonus",
+            memberService.addPointsWithLot(event.getUserId(), firstOrderRewardConfig.getPoints(),
+                    firstOrderRewardConfig.getSourceType(),
                     event.getOrderId(), "新用户首单奖励");
         } catch (DuplicateKeyException e) {
             log.info("首单奖励并发发放被拦截(幂等): orderId={}", event.getOrderId());

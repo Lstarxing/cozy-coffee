@@ -1,6 +1,7 @@
 package com.cozy.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.common.constant.BirthdayRewardConfig;
 import com.cozy.common.constant.MemberLevelConfig;
 import com.cozy.common.constant.PointsRateConfig;
 import com.cozy.common.constant.RedemptionDiscountConfig;
@@ -68,6 +69,9 @@ public class MemberServiceImpl implements MemberService {
 
     // 等级门槛/保级/唤醒/加速包/会员日策略配置（单一事实源 @ConfigurationProperties，见 cozy.member.level）
     private final MemberLevelConfig memberLevelConfig;
+
+    // 生日权益配置（单一事实源，见 cozy.member.birthday）
+    private final BirthdayRewardConfig birthdayRewardConfig;
 
     @DubboReference(check = false)
     private UserService userService;
@@ -146,6 +150,7 @@ public class MemberServiceImpl implements MemberService {
         dto.setMonthlyAccelerateRemaining(
                 info.getMonthlyAccelerateRemaining() != null ? info.getMonthlyAccelerateRemaining()
                         : memberLevelConfig.getAccelerateMonthlyCap());
+        dto.setAccelerateMonthlyCap(memberLevelConfig.getAccelerateMonthlyCap());
 
         // 即将到期积分（近30天）
         dto.setExpiringPoints(getExpiringPoints(userId, 30));
@@ -961,7 +966,7 @@ public class MemberServiceImpl implements MemberService {
 
     /**
      * 设置生日时立即发放权益包（供 UserService 调用）
-     * 配置：500 积分 (后续可从 system_config 表读取)
+     * 权益配置见 cozy.member.birthday（等级→积分+券）
      * 幂等性：source_type=birthday_gift, source_id=userId+year 确保每年只能领取一次
      * 
      * @return true 如果发放成功，false 如果已领取过
@@ -1008,44 +1013,45 @@ public class MemberServiceImpl implements MemberService {
         String baseKey = "birthday_" + userId + "_" + year;
         long sourceId = Math.abs((long) baseKey.hashCode());
 
+        BirthdayRewardConfig.LevelBirthday reward = birthdayRewardConfig.getLevel(level);
+        if (reward == null) {
+            reward = birthdayRewardConfig.getLevel("basic");
+        }
+
         try {
-            switch (level) {
-                case "black" -> {
-                    // v5.6 T3_ALL_FREE: 黑金生日全通兑免单券×1(不限杯型，含特调，排除SOE，封顶¥40) + 免费切片蛋糕券×1 + 888积分
-                    pointsMallService.issueCouponToUser(userId, "BIRTHDAY_BLACK_FREE", baseKey + "_free", 0, 40, 30);
-                    pointsMallService.issueCouponToUser(userId, "BIRTHDAY_FREE_CAKE", baseKey + "_cake", 0, 40, 30);
-                    addPointsWithLot(userId, 888, "birthday_gift", sourceId, "🎂 生日快乐！黑金会员专属888积分贺礼已发放");
-                    log.info("黑金生日权益发放: userId={}, 全通兑免单券(¥40封顶)+免费蛋糕券+888积分", userId);
-                }
-                case "diamond" -> {
-                    // v5.6 T2_PRE_FREE: 钻石生日优选饮品免单券×1(限标准杯，含特调，排除SOE，封顶¥40) + 蛋糕5折券×1
-                    pointsMallService.issueCouponToUser(userId, "BIRTHDAY_DIAMOND_FREE", baseKey + "_free", 0, 40, 30);
-                    pointsMallService.issueCouponToUser(userId, "BIRTHDAY_CAKE_HALF", baseKey + "_cake_half", 0, 50, 30);
-                    recordTransaction(userId, 0, currentPoints, "birthday_gift", null, "生日快乐！钻石会员获赠优选饮品免单券及蛋糕5折券");
-                    log.info("钻石生日权益发放: userId={}, 优选饮品免单券(¥40封顶)+蛋糕5折券", userId);
-                }
-                case "gold" -> {
-                    // v5.6 T1_STD_FREE: 黄金生日标准饮品免单券×1(限标准杯，排除特调&SOE，封顶¥40)
-                    pointsMallService.issueCouponToUser(userId, "BIRTHDAY_GOLD_FREE", baseKey + "_free", 0, 40, 30);
-                    recordTransaction(userId, 0, currentPoints, "birthday_gift", null, "生日快乐！黄金会员获赠标准饮品免单券");
-                    log.info("黄金生日权益发放: userId={}, 标准饮品免单券x1(最高抵扣¥40)", userId);
-                }
-                case "silver" -> {
-                    // v5.6 T5_BOGO: 白银生日买一赠一券×1(全品类，赠品封顶¥40)
-                    pointsMallService.issueCouponToUser(userId, "BIRTHDAY_SILVER_BOGO", baseKey + "_bogo", 0, 40, 30);
-                    recordTransaction(userId, 0, currentPoints, "birthday_gift", null, "生日快乐！白银会员获赠买一赠一券");
-                    log.info("白银生日权益发放: userId={}, 买一赠一券x1(全场饮品)", userId);
-                }
-                default -> {
-                    // v5.6 T6_50_OFF Override: 基础会员生日5折券×1(限标准杯，封顶¥20)
-                    pointsMallService.issueCouponToUser(userId, "BIRTHDAY_BASIC_DISCOUNT", baseKey + "_discount", 0, 50, 30);
-                    recordTransaction(userId, 0, currentPoints, "birthday_gift", null, "生日快乐！获赠单饮品5折券(限标准杯)");
-                    log.info("基础生日权益发放: userId={}, 单饮品5折券x1(限标准杯)", userId);
-                }
+            // 生日积分（黑金 888，其余等级 0），配置见 cozy.member.birthday
+            if (reward.getPoints() > 0) {
+                addPointsWithLot(userId, reward.getPoints(), "birthday_gift", sourceId,
+                        "🎂 生日快乐！" + levelName(level) + "会员专属" + reward.getPoints() + "积分贺礼已发放");
             }
+
+            // 各等级生日券（配置驱动）
+            int idx = 1;
+            for (BirthdayRewardConfig.BirthdayCoupon c : reward.getCoupons()) {
+                pointsMallService.issueCouponToUser(userId, c.getCouponType(),
+                        baseKey + "_gift" + idx, c.getMinAmount(), c.getDiscountAmount(), c.getValidDays());
+                idx++;
+            }
+
+            if (reward.getPoints() <= 0) {
+                recordTransaction(userId, 0, currentPoints, "birthday_gift", null,
+                        "生日快乐！" + levelName(level) + "会员生日礼已发放");
+            }
+            log.info("生日权益发放: userId={}, level={}, points={}, couponCount={}", userId, level,
+                    reward.getPoints(), reward.getCoupons().size());
         } catch (Exception e) {
             log.warn("生日权益发放失败: userId={}, level={}, error={}", userId, level, e.getMessage());
         }
+    }
+
+    private String levelName(String level) {
+        return switch (level) {
+            case "black" -> "黑金";
+            case "diamond" -> "钻石";
+            case "gold" -> "黄金";
+            case "silver" -> "白银";
+            default -> "基础";
+        };
     }
 
     // ==================== v5.0 保级/休眠机制 ====================

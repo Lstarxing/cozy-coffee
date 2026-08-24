@@ -2,6 +2,7 @@ package com.cozy.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
+import com.cozy.common.constant.SigninRewardConfig;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.mall.api.PointsMallService;
 import com.cozy.member.api.SigninService;
@@ -49,6 +50,9 @@ public class SigninServiceImpl implements SigninService {
     private final PointsLotMapper pointsLotMapper;
     private final StringRedisTemplate stringRedisTemplate;
 
+    // 签到奖励配置（单一事实源 @ConfigurationProperties，见 cozy.member.signin）
+    private final SigninRewardConfig signinRewardConfig;
+
     // v5.0: 通过 RPC 调用 PointsMallService 发放7日连签券
     @DubboReference(check = false, timeout = 2000, retries = 0)
     private PointsMallService pointsMallService;
@@ -81,8 +85,8 @@ public class SigninServiceImpl implements SigninService {
             consecutiveDays = member.getConsecutiveSignDays() + 1;
         }
 
-        // v5.0 白皮书: 每日固定 +2 积分
-        int actualPoints = 2;
+        // 每日签到积分（配置见 cozy.member.signin.daily-points）
+        int actualPoints = signinRewardConfig.getDailyPoints();
 
         // 更新会员信息
         member.setLastSigninDate(today);
@@ -128,8 +132,11 @@ public class SigninServiceImpl implements SigninService {
         result.setSuccess(true);
 
         String message = "签到成功！获得" + actualPoints + "积分";
-        if (consecutiveDays == 7) {
-            message += "，连续7天达成！赠送满35减10元优惠券";
+        int couponAfterDays = signinRewardConfig.getSevenDayCouponAfterDays();
+        if (consecutiveDays == couponAfterDays) {
+            SigninRewardConfig.SevenDayCoupon coupon = signinRewardConfig.getSevenDayCoupon();
+            message += "，连续" + couponAfterDays + "天达成！赠送满" + (int) coupon.getMinAmount()
+                    + "减" + (int) coupon.getDiscountAmount() + "元优惠券";
         } else if (consecutiveDays > 1) {
             message += "（连续" + consecutiveDays + "天）";
         }
@@ -142,8 +149,8 @@ public class SigninServiceImpl implements SigninService {
 
         log.info("签到成功: userId={}, points={}, consecutiveDays={}", userId, actualPoints, consecutiveDays);
 
-        // v5.0: 检查7日连签奖励 - 发放"满35减10"券
-        if (consecutiveDays == 7) {
+        // 检查连签奖励 - 发放连签券（配置见 cozy.member.signin.seven-day-coupon）
+        if (consecutiveDays == signinRewardConfig.getSevenDayCouponAfterDays()) {
             // 奖励发券异步执行，避免下游波动拖慢签到主链路。
             CompletableFuture.runAsync(() -> grant7DayCoupon(userId, record.getId()));
         }
@@ -322,23 +329,22 @@ public class SigninServiceImpl implements SigninService {
     }
 
     /**
-     * v5.0: 发放7日连签奖励 - "满35减10元优惠券"(有效期3天)
+     * 发放连签奖励券（配置见 cozy.member.signin.seven-day-coupon）
      * 通过 RPC 调用 PointsMallService 发放券
-     * 
-     * @param signinRecordId 触发奖励的签到记录ID（第7天）
+     *
+     * @param signinRecordId 触发奖励的签到记录ID（第 N 天）
      */
     private void grant7DayCoupon(Long userId, Long signinRecordId) {
         try {
-            // 调用 PointsMallService 发放券
-            // 券规则: 满35减10, 有效期3天
+            SigninRewardConfig.SevenDayCoupon coupon = signinRewardConfig.getSevenDayCoupon();
             if (pointsMallService != null) {
                 pointsMallService.issueCouponToUser(
                         userId,
-                        "SIGNIN_7DAY", // 券模板类型
+                        coupon.getCouponType(), // 券模板类型
                         "signin_7day_" + signinRecordId, // 唯一标识，防止重复发放
-                        35.0, // 使用门槛
-                        10.0, // 优惠金额
-                        3 // 有效天数
+                        coupon.getMinAmount(), // 使用门槛
+                        coupon.getDiscountAmount(), // 优惠金额
+                        coupon.getValidDays() // 有效天数
                 );
                 log.info("7日连签券发放成功: userId={}, signinRecordId={}", userId, signinRecordId);
             } else {

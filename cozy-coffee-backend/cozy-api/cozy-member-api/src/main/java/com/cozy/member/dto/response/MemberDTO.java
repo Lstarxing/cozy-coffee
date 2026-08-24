@@ -34,6 +34,8 @@ public class MemberDTO implements Serializable {
     private BigDecimal monthlySpent;
     private String monthlySpentMonth;
     private BigDecimal monthlyAccelerateRemaining;
+    // 黑卡加速包每月额度（MemberLevelConfig.accelerateMonthlyCap，供前端展示进度）
+    private BigDecimal accelerateMonthlyCap;
 
     // 签到相关
     private LocalDate lastSigninDate;

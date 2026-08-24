@@ -2,6 +2,7 @@ package com.cozy.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.cozy.common.constant.MonthlyChallengeConfig;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.api.MonthlyTaskService;
 import com.cozy.member.dto.response.MonthlyChallengeDTO;
@@ -25,15 +26,15 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
- * 月度任务服务实现 (v4.2)
- * 
+ * 月度任务服务实现
+ *
  * 核心规则:
  * - 订单完成时自动更新月度消费
- * - 满300/600/1000逐级自动发放积分
- * - 等级加成: 银+5%, 金+10%, 钻石+15%, 黑+20%
- * - 积分取整: HALF_UP
+ * - 月度挑战任务（打卡达人/晨间唤醒/外卖尝鲜/新品猎人）达标自动发放积分
+ * - 挑战配置（key/title/description/target/reward）单一事实源在 MonthlyChallengeConfig（cozy.member.monthly-challenge）
  */
 @Slf4j
 @Service
@@ -46,14 +47,11 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
     private final MemberService memberService;
     private final TransactionTemplate transactionTemplate;
 
+    // 挑战任务配置（单一事实源 @ConfigurationProperties，见 cozy.member.monthly-challenge）
+    private final MonthlyChallengeConfig monthlyChallengeConfig;
+
     @DubboReference(check = false)
     private OrderService orderService;
-
-    // v5.0: 挑战任务奖励积分（与前端展示一致）
-    private static final int REWARD_ORDER = 40; // 打卡达人(4次下单)
-    private static final int REWARD_MORNING = 60; // 晨间唤醒(3次10点前下单)
-    private static final int REWARD_DELIVERY = 50; // 外卖尝鲜(2笔外卖)
-    private static final int REWARD_NEWPRODUCT = 80; // 新品猎人(3款新品)
 
     @Override
     public void updateMonthlySpent(Long userId, Long orderId, BigDecimal amount) {
@@ -163,21 +161,53 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
         return dto;
     }
 
-    /** 组装 4 个挑战任务配置（与 checkAndGrantRewards 的阈值/奖励一致） */
+    /** 按配置组装挑战任务列表（单一事实源：MonthlyChallengeConfig） */
     private List<MonthlyChallengeDTO> buildChallenges(MonthlyTask task, MonthlyStatsDTO stats) {
         List<MonthlyChallengeDTO> list = new ArrayList<>();
         if (task == null || stats == null) {
             return list;
         }
-        list.add(challenge("order", "打卡达人", "当月完成 4 笔订单", 4, REWARD_ORDER,
-                stats.getOrderCount(), Boolean.TRUE.equals(task.getChallengeOrderClaimed())));
-        list.add(challenge("morning", "晨间唤醒", "当月完成 3 笔上午 10 点前订单", 3, REWARD_MORNING,
-                stats.getMorningOrderCount(), Boolean.TRUE.equals(task.getChallengeMorningClaimed())));
-        list.add(challenge("delivery", "外卖尝鲜", "当月完成 2 笔外卖", 2, REWARD_DELIVERY,
-                stats.getDeliveryOrderCount(), Boolean.TRUE.equals(task.getChallengeDeliveryClaimed())));
-        list.add(challenge("newproduct", "新品猎人", "当月购买 3 款新品", 3, REWARD_NEWPRODUCT,
-                stats.getNewProductCount(), Boolean.TRUE.equals(task.getChallengeNewproductClaimed())));
+        for (MonthlyChallengeConfig.ChallengeItem item : monthlyChallengeConfig.getItems()) {
+            list.add(challenge(item.getKey(), item.getTitle(), item.getDescription(),
+                    item.getTarget(), item.getReward(),
+                    statsCount(stats, item.getStatsField()),
+                    isChallengeClaimed(task, item.getKey())));
+        }
         return list;
+    }
+
+    /** 按 statsField 从月度订单统计取当前计数 */
+    private int statsCount(MonthlyStatsDTO stats, String field) {
+        if (stats == null) return 0;
+        return switch (field) {
+            case "orderCount" -> stats.getOrderCount();
+            case "morningOrderCount" -> stats.getMorningOrderCount();
+            case "deliveryOrderCount" -> stats.getDeliveryOrderCount();
+            case "newProductCount" -> stats.getNewProductCount();
+            default -> 0;
+        };
+    }
+
+    /** 挑战 key → monthly_task 对应 claimed 字段 */
+    private boolean isChallengeClaimed(MonthlyTask task, String key) {
+        return switch (key) {
+            case "order" -> Boolean.TRUE.equals(task.getChallengeOrderClaimed());
+            case "morning" -> Boolean.TRUE.equals(task.getChallengeMorningClaimed());
+            case "delivery" -> Boolean.TRUE.equals(task.getChallengeDeliveryClaimed());
+            case "newproduct" -> Boolean.TRUE.equals(task.getChallengeNewproductClaimed());
+            default -> false;
+        };
+    }
+
+    /** 挑战 key → claimed 读取函数（乐观锁判定用） */
+    private Function<MonthlyTask, Boolean> claimGetter(String key) {
+        return switch (key) {
+            case "order" -> MonthlyTask::getChallengeOrderClaimed;
+            case "morning" -> MonthlyTask::getChallengeMorningClaimed;
+            case "delivery" -> MonthlyTask::getChallengeDeliveryClaimed;
+            case "newproduct" -> MonthlyTask::getChallengeNewproductClaimed;
+            default -> t -> false;
+        };
     }
 
     private MonthlyChallengeDTO challenge(String key, String title, String description, int target, int reward,
@@ -252,32 +282,21 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
 
         if (stats == null) return;
 
-        // v6.2 修复: MQ 解耦后调用时机已晚于订单状态提交，+1 补偿逻辑已移除
-        int orderCount = stats.getOrderCount();
-        int morningCount = stats.getMorningOrderCount();
-        int deliveryCount = stats.getDeliveryOrderCount();
-        int newProductCount = stats.getNewProductCount();
         log.info("月度挑战检查: userId={}, orderId={}, orderCount={}, morning={}, delivery={}, newProduct={}",
-                userId, orderId, orderCount, morningCount, deliveryCount, newProductCount);
+                userId, orderId, stats.getOrderCount(), stats.getMorningOrderCount(),
+                stats.getDeliveryOrderCount(), stats.getNewProductCount());
 
         String month = YearMonth.now().toString();
 
-        tryGrantChallenge(userId, month, orderId,
-                orderCount, 4, MonthlyTask::getChallengeOrderClaimed,
-                "challenge_order_claimed", "challenge_order",
-                REWARD_ORDER, "挑战任务【打卡达人】完成奖励");
-        tryGrantChallenge(userId, month, orderId,
-                morningCount, 3, MonthlyTask::getChallengeMorningClaimed,
-                "challenge_morning_claimed", "challenge_morning",
-                REWARD_MORNING, "挑战任务【晨间唤醒】完成奖励");
-        tryGrantChallenge(userId, month, orderId,
-                deliveryCount, 2, MonthlyTask::getChallengeDeliveryClaimed,
-                "challenge_delivery_claimed", "challenge_delivery",
-                REWARD_DELIVERY, "挑战任务【外卖尝鲜】完成奖励");
-        tryGrantChallenge(userId, month, orderId,
-                newProductCount, 3, MonthlyTask::getChallengeNewproductClaimed,
-                "challenge_newproduct_claimed", "challenge_newproduct",
-                REWARD_NEWPRODUCT, "挑战任务【新品猎人】完成奖励");
+        for (MonthlyChallengeConfig.ChallengeItem item : monthlyChallengeConfig.getItems()) {
+            tryGrantChallenge(userId, month, orderId,
+                    statsCount(stats, item.getStatsField()), item.getTarget(),
+                    claimGetter(item.getKey()),
+                    "challenge_" + item.getKey() + "_claimed",
+                    "challenge_" + item.getKey(),
+                    item.getReward(),
+                    "挑战任务【" + item.getTitle() + "】完成奖励");
+        }
     }
 
     /**
@@ -287,7 +306,7 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
      */
     private void tryGrantChallenge(Long userId, String month, Long orderId,
             int actualCount, int threshold,
-            java.util.function.Function<MonthlyTask, Boolean> claimedGetter,
+            Function<MonthlyTask, Boolean> claimedGetter,
             String claimedColumn, String sourceType, int points, String description) {
         if (actualCount < threshold) return;
 

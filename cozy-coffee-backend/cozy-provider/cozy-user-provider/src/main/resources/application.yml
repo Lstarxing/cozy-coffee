@@ -48,3 +48,18 @@ dubbo:
   consumer:
     timeout: 30000
     check: false
+
+# 首单邀请奖励配置（InviteRewardConfig，被邀请人首单完成时为邀请人发券）
+cozy:
+  user:
+    invite:
+      coupon-type: BOGO
+      min-amount: 0
+      discount-amount: 40
+      valid-days: 30
+      unique-key-prefix: invite_firstorder
+    # 完善个人资料奖励（ProfileRewardConfig，首次补齐手机号+邮箱发积分）
+    profile:
+      points: 20
+      source-type: profile
+      description: 完善个人资料（手机号+邮箱）奖励

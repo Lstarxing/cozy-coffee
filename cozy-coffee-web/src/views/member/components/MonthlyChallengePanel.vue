@@ -29,81 +29,27 @@
           <div class="progress-fill" :style="{ width: accelerateProgressPercent + '%' }"></div>
         </div>
         <div class="progress-info">
-          <span>已加速 ¥{{ (300 - (userInfo?.monthlyAccelerateRemaining ?? 0)).toFixed(2) }}</span>
+          <span>已加速 ¥{{ ((userInfo?.accelerateMonthlyCap ?? 300) - (userInfo?.monthlyAccelerateRemaining ?? 0)).toFixed(2) }}</span>
         </div>
       </div>
     </div>
 
     <div :key="taskRefreshKey" class="task-list-premium">
-      <div class="task-item-row" :class="{ 'task-completed': isOrderTaskCompleted }">
-        <div class="task-icon-bg"><CalendarCheck :size="20" /></div>
+      <div v-for="task in tasks" :key="task.key" class="task-item-row" :class="{ 'task-completed': task.completed }">
+        <div class="task-icon-bg"><component :is="task.icon" :size="20" /></div>
         <div class="task-main">
           <div class="task-top">
-            <span class="name">打卡达人</span>
-            <span v-if="!isOrderTaskCompleted" class="reward">+40 积分</span>
+            <span class="name">{{ task.title }}</span>
+            <span v-if="!task.completed" class="reward">+{{ task.reward }} 积分</span>
             <span v-else class="reward claimed">✓ 已领取</span>
           </div>
-          <div class="task-desc">本月完成订单 4 次</div>
+          <div class="task-desc">{{ task.description }}</div>
           <div class="task-progress-bar">
-            <div class="fill" :style="{ width: Math.min(100, ((taskData.monthlyOrderCount ?? userInfo?.monthlyOrderCount ?? 0) / 4) * 100) + '%' }"></div>
+            <div class="fill" :style="{ width: task.progress + '%' }"></div>
           </div>
         </div>
         <div class="task-action">
-          <span class="status-text" :class="{ 'completed': isOrderTaskCompleted }">{{ taskData.monthlyOrderCount ?? userInfo?.monthlyOrderCount ?? 0 }}/4</span>
-        </div>
-      </div>
-
-      <div class="task-item-row" :class="{ 'task-completed': isMorningTaskCompleted }">
-        <div class="task-icon-bg"><Sun :size="20" /></div>
-        <div class="task-main">
-          <div class="task-top">
-            <span class="name">晨间唤醒</span>
-            <span v-if="!isMorningTaskCompleted" class="reward">+60 积分</span>
-            <span v-else class="reward claimed">✓ 已领取</span>
-          </div>
-          <div class="task-desc">10:00前完成订单 3 次</div>
-          <div class="task-progress-bar">
-            <div class="fill" :style="{ width: Math.min(100, ((taskData.morningOrderCount ?? userInfo?.morningOrderCount ?? 0) / 3) * 100) + '%' }"></div>
-          </div>
-        </div>
-        <div class="task-action">
-          <span class="status-text" :class="{ 'completed': isMorningTaskCompleted }">{{ taskData.morningOrderCount ?? userInfo?.morningOrderCount ?? 0 }}/3</span>
-        </div>
-      </div>
-
-      <div class="task-item-row" :class="{ 'task-completed': isDeliveryTaskCompleted }">
-        <div class="task-icon-bg"><Truck :size="20" /></div>
-        <div class="task-main">
-          <div class="task-top">
-            <span class="name">外卖尝鲜</span>
-            <span v-if="!isDeliveryTaskCompleted" class="reward">+50 积分</span>
-            <span v-else class="reward claimed">✓ 已领取</span>
-          </div>
-          <div class="task-desc">完成 2 笔外卖订单</div>
-          <div class="task-progress-bar">
-            <div class="fill" :style="{ width: Math.min(100, ((taskData.currentDeliveryOrders ?? userInfo?.monthlyDeliveryOrders ?? 0) / 2) * 100) + '%' }"></div>
-          </div>
-        </div>
-        <div class="task-action">
-          <span class="status-text" :class="{ 'completed': isDeliveryTaskCompleted }">{{ taskData.currentDeliveryOrders ?? userInfo?.monthlyDeliveryOrders ?? 0 }}/2</span>
-        </div>
-      </div>
-
-      <div class="task-item-row" :class="{ 'task-completed': isNewProductTaskCompleted }">
-        <div class="task-icon-bg"><ShoppingBag :size="20" /></div>
-        <div class="task-main">
-          <div class="task-top">
-            <span class="name">新品猎人</span>
-            <span v-if="!isNewProductTaskCompleted" class="reward">+80 积分</span>
-            <span v-else class="reward claimed">✓ 已领取</span>
-          </div>
-          <div class="task-desc">尝试 3 款限定新品</div>
-          <div class="task-progress-bar">
-            <div class="fill" :style="{ width: Math.min(100, ((taskData.newProductCount ?? userInfo?.newProductCount ?? 0) / 3) * 100) + '%' }"></div>
-          </div>
-        </div>
-        <div class="task-action">
-          <span class="status-text" :class="{ 'completed': isNewProductTaskCompleted }">{{ taskData.newProductCount ?? userInfo?.newProductCount ?? 0 }}/3</span>
+          <span class="status-text" :class="{ 'completed': task.completed }">{{ task.current }}/{{ task.target }}</span>
         </div>
       </div>
     </div>
@@ -128,34 +74,35 @@ const taskData = ref({
   currentSpent: 0, currentDeliveryOrders: 0,
   monthlyOrderCount: 0, morningOrderCount: 0, newProductCount: 0,
   challengeOrderClaimed: false, challengeMorningClaimed: false,
-  challengeDeliveryClaimed: false, challengeNewproductClaimed: false
+  challengeDeliveryClaimed: false, challengeNewproductClaimed: false,
+  challenges: []
 })
 
-const isOrderTaskCompleted = computed(() => {
-  const claimed = taskData.value.challengeOrderClaimed ?? props.userInfo?.challengeOrderClaimed ?? false
-  if (claimed) return true
-  return (taskData.value.monthlyOrderCount ?? props.userInfo?.monthlyOrderCount ?? 0) >= 4
-})
-const isMorningTaskCompleted = computed(() => {
-  const claimed = taskData.value.challengeMorningClaimed ?? props.userInfo?.challengeMorningClaimed ?? false
-  if (claimed) return true
-  return (taskData.value.morningOrderCount ?? props.userInfo?.morningOrderCount ?? 0) >= 3
-})
-const isDeliveryTaskCompleted = computed(() => {
-  const claimed = taskData.value.challengeDeliveryClaimed ?? props.userInfo?.challengeDeliveryClaimed ?? false
-  if (claimed) return true
-  return (taskData.value.currentDeliveryOrders ?? props.userInfo?.monthlyDeliveryOrders ?? 0) >= 2
-})
-const isNewProductTaskCompleted = computed(() => {
-  const claimed = taskData.value.challengeNewproductClaimed ?? props.userInfo?.challengeNewproductClaimed ?? false
-  if (claimed) return true
-  return (taskData.value.newProductCount ?? props.userInfo?.newProductCount ?? 0) >= 3
-})
+const ICONS = { order: CalendarCheck, morning: Sun, delivery: Truck, newproduct: ShoppingBag }
+
+// 挑战任务由后端 MonthlyTaskDTO.challenges 驱动（key/title/description/target/reward/current/claimed）
+const tasks = computed(() => (taskData.value.challenges || []).map(item => {
+  const current = Number(item.current) || 0
+  const target = Number(item.target) || 0
+  const claimed = Boolean(item.claimed)
+  return {
+    key: item.key,
+    icon: ICONS[item.key] || CalendarCheck,
+    title: item.title,
+    description: item.description,
+    target,
+    reward: Number(item.reward) || 0,
+    current: Math.min(current, target),
+    progress: Math.min(100, Math.round((current / (target || 1)) * 100)),
+    completed: claimed || (target > 0 && current >= target)
+  }
+}))
 
 const accelerateProgressPercent = computed(() => {
-  const remaining = parseFloat(props.userInfo?.monthlyAccelerateRemaining ?? 300)
-  const used = Math.max(0, 300 - remaining)
-  return Math.min(100, (used / 300) * 100)
+  const cap = parseFloat(props.userInfo?.accelerateMonthlyCap ?? 300)
+  const remaining = parseFloat(props.userInfo?.monthlyAccelerateRemaining ?? cap)
+  const used = Math.max(0, cap - remaining)
+  return Math.min(100, (used / cap) * 100)
 })
 
 const isRefreshingTask = ref(false)
@@ -178,17 +125,15 @@ async function loadMonthlyTaskData(retryCount = 0) {
     target.challengeMorningClaimed = d.challengeMorningClaimed ?? false
     target.challengeDeliveryClaimed = d.challengeDeliveryClaimed ?? false
     target.challengeNewproductClaimed = d.challengeNewproductClaimed ?? false
+    target.challenges = Array.isArray(d.challenges) ? d.challenges : []
     target.taskMonth = d.taskMonth
     target.userId = d.userId
     taskRefreshKey.value++
 
     if (!retryCount) retryCount = 0
-    const needRetry = (
-      (d.monthlyOrderCount >= 4 && !d.challengeOrderClaimed) ||
-      (d.morningOrderCount >= 3 && !d.challengeMorningClaimed) ||
-      ((d.currentDeliveryOrders || d.monthlyDeliveryOrders) >= 2 && !d.challengeDeliveryClaimed) ||
-      (d.newProductCount >= 3 && !d.challengeNewproductClaimed)
-    )
+    // 有达标但未领取的任务则稍后重拉（发放可能有延迟）
+    const needRetry = Array.isArray(d.challenges) && d.challenges.some(c =>
+      (Number(c.current) || 0) >= (Number(c.target) || 0) && !c.claimed)
     if (needRetry && retryCount < 2) {
       setTimeout(() => loadMonthlyTaskData(retryCount + 1), 500)
     }

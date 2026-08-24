@@ -1,6 +1,8 @@
 package com.cozy.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.common.constant.InviteRewardConfig;
+import com.cozy.common.constant.ProfileRewardConfig;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.common.util.JwtUtil;
@@ -49,6 +51,12 @@ public class UserServiceImpl implements UserService {
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    // 首单邀请奖励配置（单一事实源 @ConfigurationProperties，见 cozy.user.invite）
+    private final InviteRewardConfig inviteRewardConfig;
+
+    // 完善资料奖励配置（单一事实源 @ConfigurationProperties，见 cozy.user.profile）
+    private final ProfileRewardConfig profileRewardConfig;
 
     @DubboReference(check = false, timeout = 60000)
     private MemberService memberService;
@@ -574,7 +582,8 @@ public class UserServiceImpl implements UserService {
         if (shouldReward) {
             CompletableFuture.runAsync(() -> {
                 try {
-                    memberService.addPoints(userId, 20, "profile", "完善个人资料（手机号+邮箱）奖励");
+                    memberService.addPoints(userId, profileRewardConfig.getPoints(),
+                            profileRewardConfig.getSourceType(), profileRewardConfig.getDescription());
                     log.info("完善资料奖励积分: userId={}", userId);
                 } catch (Exception e) {
                     log.error("完善资料奖励积分失败: userId={}, error={}", userId, e.getMessage());
@@ -857,11 +866,12 @@ public class UserServiceImpl implements UserService {
         log.info("用户 {} 完成首单，准备为邀请人 {} 发放买一送一券", userId, inviterId);
 
         try {
-            // 发放买一送一券给邀请人
+            // 发放买一送一券给邀请人（配置见 cozy.user.invite）
             if (pointsMallService != null) {
-                String inviteKey = "invite_firstorder_" + userId + "_" + inviterId;
-                pointsMallService.issueCouponToUser(inviterId, "BOGO",
-                        inviteKey, 0, 40, 30); // 买一送一券，最高抵扣40元，有效期30天
+                String inviteKey = inviteRewardConfig.getUniqueKeyPrefix() + "_" + userId + "_" + inviterId;
+                pointsMallService.issueCouponToUser(inviterId, inviteRewardConfig.getCouponType(),
+                        inviteKey, inviteRewardConfig.getMinAmount(),
+                        inviteRewardConfig.getDiscountAmount(), inviteRewardConfig.getValidDays());
                 log.info("邀请人 {} 获得买一送一券奖励（被邀请人 {} 首单）", inviterId, userId);
             } else {
                 log.error("券服务不可用，无法为邀请人 {} 发放首单奖励", inviterId);
