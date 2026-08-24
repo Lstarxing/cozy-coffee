@@ -18,11 +18,11 @@ describe('memberRules', () => {
   })
 
   it('calculates the same rounded-up redemption cost as the backend', () => {
-    expect(getDiscountedPointsCost(101, 2, 'basic')).toBe(202)
-    expect(getDiscountedPointsCost(101, 2, 'silver')).toBe(198)
-    expect(getDiscountedPointsCost(101, 2, 'gold')).toBe(192)
-    expect(getDiscountedPointsCost(101, 2, 'diamond')).toBe(182)
-    expect(getDiscountedPointsCost(101, 2, 'black')).toBe(172)
+    expect(getDiscountedPointsCost(101, 2, 1)).toBe(202)
+    expect(getDiscountedPointsCost(101, 2, 0.98)).toBe(198)
+    expect(getDiscountedPointsCost(101, 2, 0.95)).toBe(192)
+    expect(getDiscountedPointsCost(101, 2, 0.90)).toBe(182)
+    expect(getDiscountedPointsCost(101, 2, 0.85)).toBe(172)
   })
 
   it('limits quantity by stock and remaining monthly quota', () => {
@@ -31,16 +31,15 @@ describe('memberRules', () => {
     expect(getRedeemQuantityLimit({ stock: 8, monthlyLimit: 3, currentUserMonthlyRedeemed: 3 })).toBe(0)
   })
 
-  it('builds only the in-scope pickup challenges and clamps progress', () => {
+  it('builds challenges from backend task.challenges and clamps progress', () => {
     const tasks = buildMonthlyChallenges({
-      monthlyOrderCount: 6,
-      morningOrderCount: 1,
-      newProductCount: 3,
-      challengeOrderClaimed: true,
-      currentDeliveryOrders: 2
+      challenges: [
+        { key: 'order', title: '打卡达人', description: '当月完成 4 笔订单', current: 6, target: 4, reward: 40, claimed: true },
+        { key: 'morning', title: '晨间唤醒', description: '当月完成 3 笔上午 10 点前订单', current: 1, target: 3, reward: 60, claimed: false }
+      ]
     })
 
-    expect(tasks.map(item => item.key)).toEqual(['order', 'morning', 'newproduct'])
+    expect(tasks.map(item => item.key)).toEqual(['order', 'morning'])
     expect(tasks[0]).toMatchObject({ displayCurrent: 4, progress: 100, claimed: true })
     expect(tasks[1]).toMatchObject({ displayCurrent: 1, progress: 33 })
   })

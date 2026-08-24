@@ -28,21 +28,22 @@
 import { computed } from 'vue'
 import CozyIcon from '@/components/CozyIcon.vue'
 import { money } from '@/utils/format'
+import { estimateEarned } from '@/domain/reward/rewardEstimate'
 
 const props = defineProps({
   preview: { type: Object, default: null },
   pointsRate: { type: Number, default: 1 }
 })
 
-// 可得积分/成长值：走后端口径预估（含等级倍率/会员日/黑卡加速）；
-// 后端预估不可用（本地试算）时按会员倍率预计算，避免直接显示实付
+// 可得积分/成长值：优先走后端预估（积分含倍率 pointsEarned / 成长值 1:1 expEarned）；
+// 本地试算 fallback 用 rewardEstimate（基数 = 实付 − 配送费，口径与后端 rewardBase 一致）
 const earnedPoints = computed(() => {
   if (props.preview?.pointsEarned != null) return Number(props.preview.pointsEarned)
-  return Math.floor(Math.max(0, Number(props.preview?.payable || 0)) * Number(props.pointsRate || 1))
+  return estimateEarned(props.preview, props.pointsRate).points
 })
 const earnedExp = computed(() => {
   if (props.preview?.expEarned != null) return Number(props.preview.expEarned)
-  return earnedPoints.value
+  return estimateEarned(props.preview, props.pointsRate).exp
 })
 </script>
 

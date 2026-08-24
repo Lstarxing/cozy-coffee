@@ -67,7 +67,7 @@
         <text class="submit-cost">{{ totalCost.toLocaleString() }} 积分</text>
         <text class="submit-hint">兑换后剩余 {{ remaining.toLocaleString() }} 积分</text>
       </view>
-      <view class="submit-btn" :class="{ disabled: !canSubmit }" @click="submitRedeem">{{ submitting ? '兑换中…' : '确认兑换' }}</view>
+      <view class="submit-btn" :class="{ disabled: !canSubmit }" @click="submitRedeem">{{ submitting ? '兑换中…' : !hasEnoughPoints ? '积分不足' : '确认兑换' }}</view>
     </view>
 
     <AddressPickerSheet
@@ -131,10 +131,10 @@ const selectedQuantityLimit = computed(() => getRedeemQuantityLimit(product.valu
 const totalCost = computed(() => getDiscountedPointsCost(product.value?.pointsPrice, quantity.value, redeemDiscount.value))
 const remaining = computed(() => Math.max(0, (userStore.memberInfo?.currentPoints || 0) - totalCost.value))
 const hasEnoughPoints = computed(() => (userStore.memberInfo?.currentPoints || 0) >= totalCost.value)
+// 数量上限只受库存/月限限制；积分不足由提交按钮拦截提示，避免 +/- 点击无响应
 const canIncrease = computed(() => {
-  if (!product.value || quantity.value >= selectedQuantityLimit.value) return false
-  const next = getDiscountedPointsCost(product.value.pointsPrice, quantity.value + 1, redeemDiscount.value)
-  return (userStore.memberInfo?.currentPoints || 0) >= next
+  if (!product.value) return false
+  return quantity.value < selectedQuantityLimit.value
 })
 const canSubmit = computed(() => {
   if (!product.value || !hasEnoughPoints.value || submitting.value) return false

@@ -34,7 +34,6 @@
             <text v-if="isPending(order.status)" class="expire-countdown" :class="{ urgent: isExpiringSoon(order) }">
               {{ formatCountdown(order) }}
             </text>
-            <text v-else-if="isCompleted(order.status) && isDeliveryOrder(order)" class="expire-countdown">{{ completedNote(order) }}</text>
           </view>
         </view>
 
@@ -273,10 +272,6 @@ function statusBadgeClass(order) {
 
 function fulfillmentLabel(order) {
   return isDeliveryOrder(order) ? '外送' : '到店自提'
-}
-
-function completedNote(order) {
-  return isDeliveryOrder(order) ? '已送达' : '可取'
 }
 
 function goToMenu() {

@@ -35,18 +35,19 @@ function increase() {
   border-radius: 999rpx;
 }
 .stepper-btn {
-  width: 80rpx;
-  padding: 10rpx 0;
+  width: 64rpx;
+  padding: 6rpx 0;
   color: $cozy-ink;
-  font-size: 40rpx;
+  font-size: 32rpx;
+  line-height: 1.2;
   text-align: center;
 
   &.disabled { color: $cozy-placeholder; }
 }
 .stepper-value {
-  min-width: 64rpx;
+  min-width: 48rpx;
   color: $cozy-ink;
-  font-size: 30rpx;
+  font-size: 26rpx;
   font-weight: 600;
   text-align: center;
 }

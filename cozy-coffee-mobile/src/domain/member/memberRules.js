@@ -8,7 +8,8 @@ export function getDiscountedPointsCost(pointsPrice, quantity = 1, discount = 1)
 }
 
 export function getRedeemQuantityLimit(product = {}) {
-  const stock = Math.max(0, Number(product.stock) || 0)
+  // stock 缺失（虚拟券/礼品无库存概念）时不限，避免 limit 恒为 0 导致数量无法增减
+  const stock = product.stock != null ? Math.max(0, Number(product.stock)) : Number.POSITIVE_INFINITY
   const monthlyLimit = Number(product.monthlyLimit) || 0
   const redeemed = Math.max(0, Number(product.currentUserMonthlyRedeemed) || 0)
   const monthlyRemaining = monthlyLimit > 0 ? Math.max(0, monthlyLimit - redeemed) : Number.POSITIVE_INFINITY

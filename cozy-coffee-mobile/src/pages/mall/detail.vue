@@ -92,9 +92,8 @@ const selectedTotalCost = computed(() => getDiscountedPointsCost(
 ))
 const hasEnoughPoints = computed(() => (userStore.memberInfo?.currentPoints || 0) >= selectedTotalCost.value)
 const canIncreaseQuantity = computed(() => {
-  if (!product.value || redeemQuantity.value >= selectedQuantityLimit.value) return false
-  const nextCost = getDiscountedPointsCost(product.value.pointsPrice, redeemQuantity.value + 1, redeemDiscount.value)
-  return (userStore.memberInfo?.currentPoints || 0) >= nextCost
+  if (!product.value) return false
+  return redeemQuantity.value < selectedQuantityLimit.value
 })
 const canRedeemSelected = computed(() => (
   Boolean(product.value) &&
