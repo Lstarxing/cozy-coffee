@@ -1,22 +1,27 @@
 package com.cozy.order.service.impl;
 
+import com.cozy.common.constant.MemberLevelConfig;
 import com.cozy.common.constant.PointsRateConfig;
 import com.cozy.member.dto.response.MemberDTO;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.DayOfWeek;
 
 /**
  * 订单积分/EXP 预估计算服务。
  * 从 OrderServiceImpl 抽出（Phase 4.3），消除 1709 行上帝类中的计算逻辑。
+ * 等级阈值/加速包/会员日配置统一读 MemberLevelConfig（cozy.member.level）。
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class OrderRewardService {
+
+    private final MemberLevelConfig memberLevelConfig;
 
     /**
      * 获取会员等级对应的积分倍率。
@@ -26,50 +31,51 @@ public class OrderRewardService {
     public BigDecimal getPointsRate(String level) {
         BigDecimal baseRate = PointsRateConfig.getBaseRate(level);
 
-        // v6.1 会员日: 周五积分倍率 +0.5x
+        // 会员日（Cozy Day）加成：倍率 + cozyDayBonus
         if (isCozyDay()) {
-            baseRate = baseRate.add(new BigDecimal("0.5"));
-            log.debug("会员日加成生效: 原倍率+0.5, 当前等级={}", level);
+            baseRate = baseRate.add(memberLevelConfig.getCozyDayBonus());
+            log.debug("会员日加成生效: 原倍率+{}, 当前等级={}", memberLevelConfig.getCozyDayBonus(), level);
         }
         return baseRate;
     }
 
     /**
-     * 判断今天是否为会员日 (Cozy Day) -- v6.1: 每周五
+     * 判断今天是否为会员日 (Cozy Day)：cozy.member.level.cozy-day-of-week
      */
     public boolean isCozyDay() {
-        return LocalDate.now().getDayOfWeek() == DayOfWeek.FRIDAY;
+        return LocalDate.now().getDayOfWeek() == memberLevelConfig.getCozyDayOfWeek();
     }
 
     /**
-     * 黑卡加速包：加速包剩余额度内 1.70 倍积分，超出部分 1.5 倍（v5.0）
+     * 黑卡加速包：剩余额度内 accelerateRate 倍积分，超出部分 normalRate 倍
+     * 倍率与每月额度见 cozy.member.level（accelerate-rate/normal-rate/accelerate-monthly-cap）
      *
      * @param payAmount           本次支付金额
-     * @param accelerateRemaining 加速包剩余额度（由 MemberService 维护，每月重置为300）
+     * @param accelerateRemaining 加速包剩余额度（由 MemberService 维护，每月重置）
      */
     public int calculateBlackCardPoints(BigDecimal payAmount, BigDecimal accelerateRemaining) {
         if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
             return 0;
         }
 
-        final BigDecimal ACCELERATE_RATE = new BigDecimal("1.70");
-        final BigDecimal NORMAL_RATE = new BigDecimal("1.5");
+        BigDecimal accelerateRate = memberLevelConfig.getAccelerateRate();
+        BigDecimal normalRate = memberLevelConfig.getNormalRate();
 
         BigDecimal remainingCap = accelerateRemaining != null ? accelerateRemaining.max(BigDecimal.ZERO)
-                : new BigDecimal("300");
+                : memberLevelConfig.getAccelerateMonthlyCap();
 
         BigDecimal acceleratedAmount = payAmount.min(remainingCap);
         BigDecimal normalAmount = payAmount.subtract(acceleratedAmount);
 
-        int acceleratedPoints = acceleratedAmount.multiply(ACCELERATE_RATE)
+        int acceleratedPoints = acceleratedAmount.multiply(accelerateRate)
                 .setScale(0, RoundingMode.HALF_UP).intValue();
-        int normalPoints = normalAmount.multiply(NORMAL_RATE)
+        int normalPoints = normalAmount.multiply(normalRate)
                 .setScale(0, RoundingMode.HALF_UP).intValue();
 
         int totalPoints = acceleratedPoints + normalPoints;
 
         log.info("黑卡加速包计算明细: payAmount={}, accelerateRemaining={}, accelerated={}@{}, normal={}@{}, total={}",
-                payAmount, accelerateRemaining, acceleratedAmount, ACCELERATE_RATE, normalAmount, NORMAL_RATE,
+                payAmount, accelerateRemaining, acceleratedAmount, accelerateRate, normalAmount, normalRate,
                 totalPoints);
 
         return totalPoints;
@@ -85,16 +91,11 @@ public class OrderRewardService {
         public BigDecimal effectiveRate;
     }
 
-    private static final int SILVER_THRESHOLD = 500;
-    private static final int GOLD_THRESHOLD = 1500;
-    private static final int DIAMOND_THRESHOLD = 4000;
-    private static final int BLACK_THRESHOLD = 9000;
-
     /**
      * 奖励预估（全等级分段）：以 rewardBase（实付 - 配送费）为基数。
-     * 按 currentExp → currentExp + 本次EXP 跨越的等级阈值（500/1500/4000/9000）逐段计倍率；
-     * 黑卡段走加速包（已黑卡用会员剩余额度，本单升级黑卡按满额 300 起算）；
-     * 非黑卡段按对应等级倍率（含周五会员日加成）。
+     * 按 currentExp → currentExp + 本次EXP 跨越的等级阈值逐段计倍率（阈值见 cozy.member.level）；
+     * 黑卡段走加速包（已黑卡用会员剩余额度，本单升级黑卡按满额起算）；
+     * 非黑卡段按对应等级倍率（含会员日加成）。
      */
     public RewardEstimate estimateRewards(BigDecimal rewardBase, MemberDTO member) {
         RewardEstimate est = new RewardEstimate();
@@ -112,19 +113,19 @@ public class OrderRewardService {
         }
 
         int currentExp = member.getExpTotal() != null ? member.getExpTotal() : 0;
-        boolean alreadyBlack = currentExp >= BLACK_THRESHOLD;
+        boolean alreadyBlack = currentExp >= memberLevelConfig.getBlackExp();
         BigDecimal blackBudget = alreadyBlack && member.getMonthlyAccelerateRemaining() != null
                 ? member.getMonthlyAccelerateRemaining()
-                : new BigDecimal("300");
+                : memberLevelConfig.getAccelerateMonthlyCap();
 
         int remainingExp = est.expEarned;
         int expCursor = currentExp;
         long totalPoints = 0;
 
         while (remainingExp > 0) {
-            int nextThreshold = nextLevelThreshold(expCursor);
+            int nextThreshold = memberLevelConfig.nextLevelThreshold(expCursor);
             int segmentExp = nextThreshold > 0 ? Math.min(nextThreshold - expCursor, remainingExp) : remainingExp;
-            String segLevel = levelForExp(expCursor);
+            String segLevel = memberLevelConfig.levelForExp(expCursor);
 
             if ("black".equals(segLevel)) {
                 totalPoints += calculateBlackCardPoints(new BigDecimal(segmentExp), blackBudget);
@@ -143,19 +144,4 @@ public class OrderRewardService {
         return est;
     }
 
-    private int nextLevelThreshold(int exp) {
-        if (exp < SILVER_THRESHOLD) return SILVER_THRESHOLD;
-        if (exp < GOLD_THRESHOLD) return GOLD_THRESHOLD;
-        if (exp < DIAMOND_THRESHOLD) return DIAMOND_THRESHOLD;
-        if (exp < BLACK_THRESHOLD) return BLACK_THRESHOLD;
-        return -1;
-    }
-
-    private String levelForExp(int exp) {
-        if (exp >= BLACK_THRESHOLD) return "black";
-        if (exp >= DIAMOND_THRESHOLD) return "diamond";
-        if (exp >= GOLD_THRESHOLD) return "gold";
-        if (exp >= SILVER_THRESHOLD) return "silver";
-        return "basic";
-    }
 }

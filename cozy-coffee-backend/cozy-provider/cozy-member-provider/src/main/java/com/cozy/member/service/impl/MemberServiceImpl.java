@@ -1,7 +1,9 @@
 package com.cozy.member.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.common.constant.MemberLevelConfig;
 import com.cozy.common.constant.PointsRateConfig;
+import com.cozy.common.constant.RedemptionDiscountConfig;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.member.api.MemberService;
@@ -64,11 +66,8 @@ public class MemberServiceImpl implements MemberService {
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
 
-    // 等级门槛（EXP）- v5.0 白皮书
-    private static final int SILVER_THRESHOLD = 500; // 0-499 basic → 500-1499 silver
-    private static final int GOLD_THRESHOLD = 1500; // 1500-3999 gold
-    private static final int DIAMOND_THRESHOLD = 4000; // 4000-8999 diamond
-    private static final int BLACK_THRESHOLD = 9000; // 9000+ black
+    // 等级门槛/保级/唤醒/加速包/会员日策略配置（单一事实源 @ConfigurationProperties，见 cozy.member.level）
+    private final MemberLevelConfig memberLevelConfig;
 
     @DubboReference(check = false)
     private UserService userService;
@@ -128,6 +127,7 @@ public class MemberServiceImpl implements MemberService {
         String computedLevel = computeLevelByExp(expTotal);
         dto.setMemberLevel(computedLevel);
         dto.setPointsRate(PointsRateConfig.getBaseRate(computedLevel));
+        dto.setRedeemDiscount(RedemptionDiscountConfig.getDiscount(computedLevel));
 
         // 如果计算出的等级与存储值不同，同步更新数据库
         if (!computedLevel.equals(info.getMemberLevel())) {
@@ -145,7 +145,7 @@ public class MemberServiceImpl implements MemberService {
         dto.setMonthlySpentMonth(info.getMonthlySpentMonth());
         dto.setMonthlyAccelerateRemaining(
                 info.getMonthlyAccelerateRemaining() != null ? info.getMonthlyAccelerateRemaining()
-                        : new BigDecimal("300"));
+                        : memberLevelConfig.getAccelerateMonthlyCap());
 
         // 即将到期积分（近30天）
         dto.setExpiringPoints(getExpiringPoints(userId, 30));
@@ -272,6 +272,7 @@ public class MemberServiceImpl implements MemberService {
             dto.setTotalPoints(info.getTotalPoints());
             dto.setMemberLevel(info.getMemberLevel());
             dto.setPointsRate(PointsRateConfig.getBaseRate(info.getMemberLevel()));
+            dto.setRedeemDiscount(RedemptionDiscountConfig.getDiscount(info.getMemberLevel()));
 
             // 填充用户信息
             UserDTO user = userMap.get(info.getUserId());
@@ -523,11 +524,11 @@ public class MemberServiceImpl implements MemberService {
         // monthly_spent_month 列是 DATE(月初)，必须写完整日期 "yyyy-MM-dd"
         String currentMonth = LocalDate.now().withDayOfMonth(1).toString();
 
-        // 跨月处理：如果是新月份，先把加速包重置为 300
+        // 跨月处理：如果是新月份，先把加速包重置为默认额度
         if (!currentMonth.equals(member.getMonthlySpentMonth())) {
             member.setMonthlySpentMonth(currentMonth);
             member.setMonthlySpent(BigDecimal.ZERO);
-            member.setMonthlyAccelerateRemaining(new BigDecimal("300"));
+            member.setMonthlyAccelerateRemaining(memberLevelConfig.getAccelerateMonthlyCap());
         }
 
         int newExpTotal = oldExp + exp;
@@ -535,19 +536,19 @@ public class MemberServiceImpl implements MemberService {
 
         // 计算本次消费中落在“黑卡”区间的部分
         BigDecimal acceleratedSpentInThisOrder = BigDecimal.ZERO;
-        if (oldExp >= BLACK_THRESHOLD) {
+        if (oldExp >= memberLevelConfig.getBlackExp()) {
             // 原本就是黑卡，全部消费都在加速区间
             acceleratedSpentInThisOrder = payAmount;
-        } else if (newExpTotal > BLACK_THRESHOLD) {
-            // 本次升级黑卡，仅计算超出 10000 的部分
-            acceleratedSpentInThisOrder = new BigDecimal(newExpTotal - BLACK_THRESHOLD);
+        } else if (newExpTotal > memberLevelConfig.getBlackExp()) {
+            // 本次升级黑卡，仅计算超出黑卡阈值的部分
+            acceleratedSpentInThisOrder = new BigDecimal(newExpTotal - memberLevelConfig.getBlackExp());
         }
 
         // 仅当有“黑卡区间”消费时才扣减加速包
         if (acceleratedSpentInThisOrder.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal remaining = member.getMonthlyAccelerateRemaining() != null
                     ? member.getMonthlyAccelerateRemaining()
-                    : new BigDecimal("300");
+                    : memberLevelConfig.getAccelerateMonthlyCap();
             member.setMonthlyAccelerateRemaining(remaining.subtract(acceleratedSpentInThisOrder).max(BigDecimal.ZERO));
         }
 
@@ -754,19 +755,7 @@ public class MemberServiceImpl implements MemberService {
         MemberInfo member = getMemberInfoByUserId(userId);
         int expTotal = member.getExpTotal() != null ? member.getExpTotal() : 0;
         String currentLevel = member.getMemberLevel();
-        String newLevel;
-
-        if (expTotal >= BLACK_THRESHOLD) {
-            newLevel = "black";
-        } else if (expTotal >= DIAMOND_THRESHOLD) {
-            newLevel = "diamond";
-        } else if (expTotal >= GOLD_THRESHOLD) {
-            newLevel = "gold";
-        } else if (expTotal >= SILVER_THRESHOLD) {
-            newLevel = "silver";
-        } else {
-            newLevel = "basic";
-        }
+        String newLevel = memberLevelConfig.levelForExp(expTotal);
 
         if (!newLevel.equals(currentLevel)) {
             // Update level first
@@ -783,23 +772,13 @@ public class MemberServiceImpl implements MemberService {
             // 但如果是 periodic settlement 导致的降级，也会触发 update。
             // 只有当 newLevel 对应的 exp 阈值 > currentLevel 对应的 exp 阈值时才是升级。
             // 简单判定：利用阈值比较
-            int currentThreshold = getThresholdByLevel(currentLevel);
-            int newThreshold = getThresholdByLevel(newLevel);
+            int currentThreshold = memberLevelConfig.thresholdByLevel(currentLevel);
+            int newThreshold = memberLevelConfig.thresholdByLevel(newLevel);
 
             if (newThreshold > currentThreshold) {
                 grantUpgradeReward(userId, newLevel);
             }
         }
-    }
-
-    private int getThresholdByLevel(String level) {
-        return switch (level) {
-            case "black" -> BLACK_THRESHOLD;
-            case "diamond" -> DIAMOND_THRESHOLD;
-            case "gold" -> GOLD_THRESHOLD;
-            case "silver" -> SILVER_THRESHOLD;
-            default -> 0;
-        };
     }
 
     private void grantUpgradeReward(Long userId, String level) {
@@ -924,17 +903,7 @@ public class MemberServiceImpl implements MemberService {
      * 根据 EXP 计算会员等级
      */
     private String computeLevelByExp(int expTotal) {
-        if (expTotal >= BLACK_THRESHOLD) {
-            return "black";
-        } else if (expTotal >= DIAMOND_THRESHOLD) {
-            return "diamond";
-        } else if (expTotal >= GOLD_THRESHOLD) {
-            return "gold";
-        } else if (expTotal >= SILVER_THRESHOLD) {
-            return "silver";
-        } else {
-            return "basic";
-        }
+        return memberLevelConfig.levelForExp(expTotal);
     }
 
     /**
@@ -1080,16 +1049,7 @@ public class MemberServiceImpl implements MemberService {
     }
 
     // ==================== v5.0 保级/休眠机制 ====================
-
-    // 保级门槛（年度 EXP）
-    private static final int SILVER_KEEP_THRESHOLD = 300;
-    private static final int GOLD_KEEP_THRESHOLD = 1000;
-    private static final int DIAMOND_KEEP_THRESHOLD = 2500;
-    private static final int BLACK_KEEP_THRESHOLD = 4000;
-
-    // 唤醒门槛（单月 EXP）
-    private static final int DIAMOND_AWAKEN_THRESHOLD = 600;
-    private static final int BLACK_AWAKEN_THRESHOLD = 800;
+    // 保级/唤醒阈值与落点 EXP 统一在 MemberLevelConfig（cozy.member.level），此处不再硬编码
 
     /**
      * v5.0: 年度保级判定（每年1月1日凌晨执行）
@@ -1134,35 +1094,35 @@ public class MemberServiceImpl implements MemberService {
 
                     switch (level) {
                         case "black" -> {
-                            if (annualExp < BLACK_KEEP_THRESHOLD) {
-                                // 进入黑金休眠态，保持 4500 EXP
+                            if (annualExp < memberLevelConfig.getBlackKeepExp()) {
+                                // 进入黑金休眠态，保留黑金 EXP
                                 member.setMemberStatus("DORMANT");
-                                member.setExpTotal(4500);
+                                member.setExpTotal(memberLevelConfig.getBlackDormantExp());
                                 needDormant = true;
                                 log.info("黑金休眠: userId={}, annualExp={}", member.getUserId(), annualExp);
                             }
                         }
                         case "diamond" -> {
-                            if (annualExp < DIAMOND_KEEP_THRESHOLD) {
-                                // 降至黄金顶端 (1499 EXP)
+                            if (annualExp < memberLevelConfig.getDiamondKeepExp()) {
+                                // 降至黄金顶端 EXP
                                 member.setMemberLevel("gold");
-                                member.setExpTotal(1499);
+                                member.setExpTotal(memberLevelConfig.getDiamondDemoteExp());
                                 log.info("钻石降级: userId={}, annualExp={}", member.getUserId(), annualExp);
                             }
                         }
                         case "gold" -> {
-                            if (annualExp < GOLD_KEEP_THRESHOLD) {
-                                // 降至白银 (500 EXP)
+                            if (annualExp < memberLevelConfig.getGoldKeepExp()) {
+                                // 降至白银 EXP
                                 member.setMemberLevel("silver");
-                                member.setExpTotal(500);
+                                member.setExpTotal(memberLevelConfig.getGoldDemoteExp());
                                 log.info("黄金降级: userId={}, annualExp={}", member.getUserId(), annualExp);
                             }
                         }
                         case "silver" -> {
-                            if (annualExp < SILVER_KEEP_THRESHOLD) {
-                                // 降至基础 (0 EXP)
+                            if (annualExp < memberLevelConfig.getSilverKeepExp()) {
+                                // 降至基础 EXP
                                 member.setMemberLevel("basic");
-                                member.setExpTotal(0);
+                                member.setExpTotal(memberLevelConfig.getSilverDemoteExp());
                                 log.info("白银降级: userId={}, annualExp={}", member.getUserId(), annualExp);
                             }
                         }
@@ -1204,10 +1164,10 @@ public class MemberServiceImpl implements MemberService {
         String level = member.getMemberLevel();
         boolean shouldAwaken = false;
 
-        if ("black".equals(level) && monthlyExp >= BLACK_AWAKEN_THRESHOLD) {
+        if ("black".equals(level) && monthlyExp >= memberLevelConfig.getBlackAwakenExp()) {
             shouldAwaken = true;
         } else if ("diamond".equals(computeLevelByExp(member.getExpTotal()))
-                && monthlyExp >= DIAMOND_AWAKEN_THRESHOLD) {
+                && monthlyExp >= memberLevelConfig.getDiamondAwakenExp()) {
             // 钻石休眠后降到gold，但exp仍在钻石范围
             shouldAwaken = true;
             member.setMemberLevel("diamond");

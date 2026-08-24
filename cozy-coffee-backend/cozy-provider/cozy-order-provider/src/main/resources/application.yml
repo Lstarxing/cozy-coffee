@@ -72,3 +72,31 @@ cozy:
       batch-size: 100
       pickup-grace-minutes: 60
       delivery-grace-minutes: 60
+  # 会员等级与保级策略配置（MemberLevelConfig 单一事实源，改动只改这里）
+  member:
+    level:
+      # 升级 EXP 阈值
+      silver-exp: 500
+      gold-exp: 1500
+      diamond-exp: 4000
+      black-exp: 9000
+      # 保级门槛（年度 EXP）
+      silver-keep-exp: 300
+      gold-keep-exp: 1000
+      diamond-keep-exp: 2500
+      black-keep-exp: 4000
+      # 唤醒门槛（单月 EXP）
+      diamond-awaken-exp: 600
+      black-awaken-exp: 800
+      # 保级失败落点 EXP（休眠/降级后的 EXP）
+      black-dormant-exp: 4500
+      diamond-demote-exp: 1499
+      gold-demote-exp: 500
+      silver-demote-exp: 0
+      # 黑卡加速包：剩余额度内 1.7x，超出 1.5x，每月额度 300
+      accelerate-rate: 1.70
+      normal-rate: 1.5
+      accelerate-monthly-cap: 300
+      # 会员日（Cozy Day）：每周五积分倍率 +0.5
+      cozy-day-bonus: 0.5
+      cozy-day-of-week: FRIDAY

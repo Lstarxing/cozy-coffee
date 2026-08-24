@@ -30,13 +30,15 @@ import CozyIcon from '@/components/CozyIcon.vue'
 import { money } from '@/utils/format'
 
 const props = defineProps({
-  preview: { type: Object, default: null }
+  preview: { type: Object, default: null },
+  pointsRate: { type: Number, default: 1 }
 })
 
-// 可得积分/成长值：走后端口径预估（含等级倍率/会员日/黑卡加速）；本地试算兜底 1:1
+// 可得积分/成长值：走后端口径预估（含等级倍率/会员日/黑卡加速）；
+// 后端预估不可用（本地试算）时按会员倍率预计算，避免直接显示实付
 const earnedPoints = computed(() => {
   if (props.preview?.pointsEarned != null) return Number(props.preview.pointsEarned)
-  return Math.floor(Math.max(0, Number(props.preview?.payable || 0) - Number(props.preview?.deliveryFee || 0)))
+  return Math.floor(Math.max(0, Number(props.preview?.payable || 0)) * Number(props.pointsRate || 1))
 })
 const earnedExp = computed(() => {
   if (props.preview?.expEarned != null) return Number(props.preview.expEarned)

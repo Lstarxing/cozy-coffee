@@ -1,5 +1,6 @@
 package com.cozy.order.service.impl;
 
+import com.cozy.common.constant.MemberLevelConfig;
 import com.cozy.common.constant.PointsRateConfig;
 import com.cozy.member.dto.response.MemberDTO;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,15 +16,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * 覆盖：不同等级平坦倍率、跨级分段（500/1500/4000/9000）、黑卡加速包（余量内 1.7 / 超出 1.5 / 升级满额 300）、
  * 会员日加成、券后基数（rewardBase）、零值/空会员兜底。
  * <p>
- * 非黑卡段的期望倍率用 getPointsRate 动态取（自动包含会员日），保证测试与当天星期无关。
+ * 非黑卡段的期望倍率用 getPointsRate 动态取（自动包含会员日），保证测试与当天星期无关；
+ * 阈值/倍率/额度均取 MemberLevelConfig 默认值（与生产一致）。
  */
 class OrderRewardServiceTest {
 
+    private final MemberLevelConfig levelConfig = new MemberLevelConfig();
     private OrderRewardService service;
 
     @BeforeEach
     void setUp() {
-        service = new OrderRewardService();
+        service = new OrderRewardService(levelConfig);
     }
 
     // ==================== getPointsRate ====================
@@ -32,7 +35,7 @@ class OrderRewardServiceTest {
     void getPointsRate_matchesSharedConfigPlusFriday() {
         for (String level : new String[]{"basic", "silver", "gold", "diamond", "black", null}) {
             BigDecimal expected = PointsRateConfig.getBaseRate(level)
-                    .add(service.isCozyDay() ? new BigDecimal("0.5") : BigDecimal.ZERO);
+                    .add(service.isCozyDay() ? levelConfig.getCozyDayBonus() : BigDecimal.ZERO);
             assertEquals(expected, service.getPointsRate(level), "level=" + level);
         }
     }

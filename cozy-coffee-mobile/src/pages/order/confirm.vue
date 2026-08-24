@@ -30,6 +30,7 @@
           <CheckoutPriceSummary
             v-else
             :preview="checkoutStore.latestPreview"
+            :points-rate="Number(sessionStore.memberInfo?.pointsRate) || 1"
           />
         </view>
       </view>
@@ -116,6 +117,7 @@ import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { useCartStore } from '@/stores/cart'
 import { useCheckoutStore } from '@/stores/checkout'
 import { useUserStore } from '@/stores/user'
+import { useSessionStore } from '@/stores/session'
 import { createDefaultCheckoutWorkflow } from '@/services/checkout/CheckoutWorkflow'
 import { resolveDeliveryAddress } from '@/services/address/DeliveryAddressResolver'
 import { formatCoffeeSpec } from '@/utils/spec'
@@ -133,6 +135,7 @@ import CozyIcon from '@/components/CozyIcon.vue'
 const cartStore = useCartStore()
 const checkoutStore = useCheckoutStore()
 const userStore = useUserStore()
+const sessionStore = useSessionStore()
 const workflow = createDefaultCheckoutWorkflow()
 const selectedCoupon = ref(null)
 const phoneVisible = ref(false)

@@ -35,7 +35,7 @@ export function useHomeMembership(userStore) {
   // 倍率走后端 MemberDTO.pointsRate（单一事实源）；匿名展示兜底 1.1（白银示例）
   const currentRate = computed(() => Number(memberInfo.value?.pointsRate) || (membershipState.value === 'anonymous' ? 1.1 : 1))
   const currentPoints = computed(() => membershipState.value === 'anonymous' ? 131 : Number(memberInfo.value?.currentPoints || 0))
-  const rewardTarget = computed(() => calculateRedemptionCost(150, normalizedLevel.value))
+  const rewardTarget = computed(() => calculateRedemptionCost(150, Number(memberInfo.value?.redeemDiscount) || 1))
   const earnedPoints = computed(() => calculateEarnedPoints(35, currentRate.value, false))
   const levelLabel = computed(() => currentLevel.value.name.split(' ')[0])
   const currentDiscount = computed(() => currentLevel.value.discount)

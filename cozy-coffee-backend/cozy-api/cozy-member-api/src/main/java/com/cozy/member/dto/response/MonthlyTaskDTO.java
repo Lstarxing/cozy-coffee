@@ -4,6 +4,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 月度任务DTO (v4.2)
@@ -48,4 +49,7 @@ public class MonthlyTaskDTO implements Serializable {
     private Boolean challengeMorningClaimed; // 晨间唤醒已完成
     private Boolean challengeDeliveryClaimed; // 外卖尝鲜已完成
     private Boolean challengeNewproductClaimed; // 新品猎人已完成
+
+    // 挑战任务配置（单一事实源：key/title/description/target/reward/current/claimed）
+    private List<MonthlyChallengeDTO> challenges;
 }

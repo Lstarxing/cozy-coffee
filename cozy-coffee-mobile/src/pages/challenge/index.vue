@@ -61,13 +61,8 @@ const loading = ref(false)
 const errorMessage = ref('')
 const taskData = ref({})
 
-// 与 web 端 MonthlyChallengePanel / buildMonthlyChallenges 对齐
-const TASKS = [
-  { key: 'order', icon: 'calendar', name: '打卡达人', desc: '本月完成订单 4 次', target: 4, reward: 40, getCount: d => Number(d.monthlyOrderCount) || 0, getClaimed: d => Boolean(d.challengeOrderClaimed) },
-  { key: 'morning', icon: 'sun', name: '晨间唤醒', desc: '10:00 前完成订单 3 次', target: 3, reward: 60, getCount: d => Number(d.morningOrderCount) || 0, getClaimed: d => Boolean(d.challengeMorningClaimed) },
-  { key: 'delivery', icon: 'truck', name: '外卖尝鲜', desc: '完成 2 笔外卖订单', target: 2, reward: 50, getCount: d => Number(d.currentDeliveryOrders) || 0, getClaimed: d => Boolean(d.challengeDeliveryClaimed) },
-  { key: 'newproduct', icon: 'bag', name: '新品猎人', desc: '尝试 3 款限定新品', target: 3, reward: 80, getCount: d => Number(d.newProductCount) || 0, getClaimed: d => Boolean(d.challengeNewproductClaimed) }
-]
+// 挑战任务配置由后端 MonthlyTaskDTO.challenges 返回（单一事实源），本地只保留图标映射
+const ICONS = { order: 'calendar', morning: 'sun', delivery: 'truck', newproduct: 'bag' }
 
 const currentMonth = computed(() => {
   const d = taskData.value?.taskMonth
@@ -75,15 +70,21 @@ const currentMonth = computed(() => {
   return new Date().getMonth() + 1 + ' 月'
 })
 
-const tasks = computed(() => TASKS.map(task => {
-  const current = task.getCount(taskData.value)
-  const claimed = task.getClaimed(taskData.value)
+const tasks = computed(() => (taskData.value?.challenges || []).map(item => {
+  const current = Number(item.current) || 0
+  const target = Number(item.target) || 0
+  const claimed = Boolean(item.claimed)
   return {
-    ...task,
+    key: item.key,
+    icon: ICONS[item.key] || 'calendar',
+    name: item.title,
+    desc: item.description,
+    target,
+    reward: Number(item.reward) || 0,
     current,
-    displayCurrent: Math.min(current, task.target),
-    progress: Math.min(100, Math.round((current / task.target) * 100)),
-    done: claimed || current >= task.target
+    displayCurrent: Math.min(current, target),
+    progress: Math.min(100, Math.round((current / (target || 1)) * 100)),
+    done: claimed || (target > 0 && current >= target)
   }
 }))
 

@@ -1,6 +1,7 @@
 package com.cozy.mall.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.common.constant.RedemptionDiscountConfig;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -1574,16 +1575,8 @@ public class PointsMallServiceImpl implements PointsMallService {
      * v5.0: black 0.85, diamond 0.90, gold 0.95, silver 0.98
      */
     private int calculateCost(int basePrice, int quantity, String memberLevel) {
-        double discount = 1.0;
-        if ("black".equals(memberLevel)) {
-            discount = 0.85;
-        } else if ("diamond".equals(memberLevel)) {
-            discount = 0.90;
-        } else if ("gold".equals(memberLevel)) {
-            discount = 0.95; // v5.0: 0.90→0.95
-        } else if ("silver".equals(memberLevel)) {
-            discount = 0.98; // v5.0: 0.95→0.98
-        }
+        // 兑换折扣单一事实源：RedemptionDiscountConfig（black 0.85/diamond 0.90/gold 0.95/silver 0.98/basic 1.0）
+        double discount = RedemptionDiscountConfig.getDiscount(memberLevel).doubleValue();
         return (int) Math.ceil(basePrice * quantity * discount);
     }
 

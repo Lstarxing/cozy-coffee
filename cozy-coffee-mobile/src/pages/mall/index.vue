@@ -37,7 +37,7 @@
         <view class="product-info">
           <text class="product-name">{{ item.name }}</text>
           <view class="product-points">
-            <text class="points-num">{{ getDiscountedPointsCost(item.pointsPrice, 1, userStore.userLevel) }}</text>
+            <text class="points-num">{{ getDiscountedPointsCost(item.pointsPrice, 1, redeemDiscount) }}</text>
             <text class="points-unit">积分</text>
             <text v-if="redeemDiscount < 1" class="points-original">{{ item.pointsPrice }}</text>
           </view>
@@ -54,7 +54,6 @@ import { useUserStore } from '@/stores/user'
 import { getPointsProducts } from '@/api/product'
 import { getMemberInfo } from '@/api/member'
 import {
-  POINTS_REDEEM_DISCOUNTS,
   getDiscountedPointsCost
 } from '@/domain/member/memberRules'
 
@@ -63,7 +62,7 @@ const products = ref([])
 const productLoading = ref(false)
 const productError = ref('')
 
-const redeemDiscount = computed(() => POINTS_REDEEM_DISCOUNTS[userStore.userLevel] || 1)
+const redeemDiscount = computed(() => Number(userStore.memberInfo?.redeemDiscount) || 1)
 
 async function loadMember() {
   const response = await getMemberInfo()

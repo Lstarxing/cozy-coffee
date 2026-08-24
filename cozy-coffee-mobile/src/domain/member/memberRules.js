@@ -1,18 +1,10 @@
 export { MEMBER_LEVELS, MEMBER_LEVEL_THRESHOLDS } from '@/constants/member'
 
-export const POINTS_REDEEM_DISCOUNTS = Object.freeze({
-  basic: 1,
-  silver: 0.98,
-  gold: 0.95,
-  diamond: 0.9,
-  black: 0.85
-})
-
-export function getDiscountedPointsCost(pointsPrice, quantity = 1, memberLevel = 'basic') {
+// 兑换折扣走后端 MemberDTO.redeemDiscount（RedemptionDiscountConfig 单一事实源），本地不再维护折扣表
+export function getDiscountedPointsCost(pointsPrice, quantity = 1, discount = 1) {
   const price = Math.max(0, Number(pointsPrice) || 0)
   const count = Math.max(1, Math.floor(Number(quantity) || 1))
-  const discount = POINTS_REDEEM_DISCOUNTS[memberLevel] || 1
-  return Math.ceil(price * count * discount)
+  return Math.ceil(price * count * Number(discount || 1))
 }
 
 export function getRedeemQuantityLimit(product = {}) {
@@ -23,38 +15,18 @@ export function getRedeemQuantityLimit(product = {}) {
   return Math.max(0, Math.min(stock, monthlyRemaining, 99))
 }
 
+// 挑战任务配置由后端 MonthlyTaskDTO.challenges 返回（单一事实源，含外送挑战），本地不再硬编码
 export function buildMonthlyChallenges(task = {}) {
-  return [
-    {
-      key: 'order',
-      title: '打卡达人',
-      description: '当月完成 4 笔订单',
-      current: Number(task.monthlyOrderCount) || 0,
-      target: 4,
-      reward: 40,
-      claimed: Boolean(task.challengeOrderClaimed)
-    },
-    {
-      key: 'morning',
-      title: '晨间唤醒',
-      description: '当月完成 3 笔上午 10 点前订单',
-      current: Number(task.morningOrderCount) || 0,
-      target: 3,
-      reward: 60,
-      claimed: Boolean(task.challengeMorningClaimed)
-    },
-    {
-      key: 'newproduct',
-      title: '新品猎人',
-      description: '当月购买 3 款新品',
-      current: Number(task.newProductCount) || 0,
-      target: 3,
-      reward: 80,
-      claimed: Boolean(task.challengeNewproductClaimed)
-    }
-  ].map(item => ({
-    ...item,
-    displayCurrent: Math.min(item.current, item.target),
-    progress: Math.min(100, Math.round((item.current / item.target) * 100))
+  const list = Array.isArray(task.challenges) ? task.challenges : []
+  return list.map(item => ({
+    key: item.key,
+    title: item.title,
+    description: item.description,
+    current: Number(item.current) || 0,
+    target: Number(item.target) || 0,
+    reward: Number(item.reward) || 0,
+    claimed: Boolean(item.claimed),
+    displayCurrent: Math.min(Number(item.current) || 0, Number(item.target) || 0),
+    progress: Math.min(100, Math.round(((Number(item.current) || 0) / (Number(item.target) || 1)) * 100))
   }))
 }

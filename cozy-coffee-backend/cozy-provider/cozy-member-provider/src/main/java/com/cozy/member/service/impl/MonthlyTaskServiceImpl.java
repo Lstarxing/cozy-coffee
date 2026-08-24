@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.api.MonthlyTaskService;
+import com.cozy.member.dto.response.MonthlyChallengeDTO;
 import com.cozy.member.dto.response.MonthlyTaskDTO;
 import com.cozy.member.entity.MonthlyTask;
 import com.cozy.member.entity.MonthlyTaskOrder;
@@ -22,6 +23,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 月度任务服务实现 (v4.2)
@@ -139,28 +142,55 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
                 task.getChallengeNewproductClaimed() != null ? task.getChallengeNewproductClaimed() : false);
 
         // v5.0: 获取月度订单统计
+        MonthlyStatsDTO stats = null;
         try {
             if (orderService != null) {
-                MonthlyStatsDTO stats = orderService.getMonthlyStats(userId);
+                stats = orderService.getMonthlyStats(userId);
                 if (stats != null) {
                     dto.setMonthlyOrderCount(stats.getOrderCount());
                     dto.setMorningOrderCount(stats.getMorningOrderCount());
                     dto.setCurrentDeliveryOrders(stats.getDeliveryOrderCount());
                     dto.setNewProductCount(stats.getNewProductCount());
-
-                    // =========================================================
-                    // v5.3.1 修复: 移除自动补发逻辑，仅在订单完成时触发奖励
-                    // 问题: getCurrentMonthTask每次查询都会尝试补发，导致重复发放积分
-                    // 解决: 挑战任务奖励仅在checkAndGrantRewards中发放（订单完成触发）
-                    // =========================================================
-                    // 自动补发逻辑已移除 - 仅展示进度状态
                 }
             }
         } catch (Exception e) {
             log.warn("获取月度订单统计失败: {}", e.getMessage());
         }
 
+        // 挑战任务配置（单一事实源：含 target/reward，移动端不再硬编码）
+        dto.setChallenges(buildChallenges(task, stats));
+
         return dto;
+    }
+
+    /** 组装 4 个挑战任务配置（与 checkAndGrantRewards 的阈值/奖励一致） */
+    private List<MonthlyChallengeDTO> buildChallenges(MonthlyTask task, MonthlyStatsDTO stats) {
+        List<MonthlyChallengeDTO> list = new ArrayList<>();
+        if (task == null || stats == null) {
+            return list;
+        }
+        list.add(challenge("order", "打卡达人", "当月完成 4 笔订单", 4, REWARD_ORDER,
+                stats.getOrderCount(), Boolean.TRUE.equals(task.getChallengeOrderClaimed())));
+        list.add(challenge("morning", "晨间唤醒", "当月完成 3 笔上午 10 点前订单", 3, REWARD_MORNING,
+                stats.getMorningOrderCount(), Boolean.TRUE.equals(task.getChallengeMorningClaimed())));
+        list.add(challenge("delivery", "外卖尝鲜", "当月完成 2 笔外卖", 2, REWARD_DELIVERY,
+                stats.getDeliveryOrderCount(), Boolean.TRUE.equals(task.getChallengeDeliveryClaimed())));
+        list.add(challenge("newproduct", "新品猎人", "当月购买 3 款新品", 3, REWARD_NEWPRODUCT,
+                stats.getNewProductCount(), Boolean.TRUE.equals(task.getChallengeNewproductClaimed())));
+        return list;
+    }
+
+    private MonthlyChallengeDTO challenge(String key, String title, String description, int target, int reward,
+            int current, boolean claimed) {
+        MonthlyChallengeDTO c = new MonthlyChallengeDTO();
+        c.setKey(key);
+        c.setTitle(title);
+        c.setDescription(description);
+        c.setTarget(target);
+        c.setReward(reward);
+        c.setCurrent(current);
+        c.setClaimed(claimed);
+        return c;
     }
 
     /**
@@ -268,9 +298,12 @@ public class MonthlyTaskServiceImpl implements MonthlyTaskService {
             memberService.addPointsWithLot(userId, points, sourceType, orderId, description);
 
             // H6: 乐观锁 — UPDATE monthly_task SET claimed=1 WHERE id=? AND claimed=0
+            // 注意：claimedColumn 是内部常量列名，必须字面量内联。apply 的 {0} 是参数占位，
+            // 会把列名当绑定值生成 'challenge_order_claimed'=0（恒假），且 "AND " 前缀会产生重复 AND ——
+            // 原写法导致 claimed 永远更新失败，后续订单再达阈值会重复发放奖励。
             LambdaUpdateWrapper<MonthlyTask> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.eq(MonthlyTask::getId, latestTask.getId())
-                    .apply("AND {0} = 0", claimedColumn);
+                    .apply(claimedColumn + " = 0");
             updateWrapper.setSql(claimedColumn + " = 1");
             taskMapper.update(null, updateWrapper);
 

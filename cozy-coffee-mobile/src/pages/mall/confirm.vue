@@ -85,7 +85,6 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
 import { getMemberInfo, redeemPoints } from '@/api/member'
 import {
-  POINTS_REDEEM_DISCOUNTS,
   getDiscountedPointsCost,
   getRedeemQuantityLimit
 } from '@/domain/member/memberRules'
@@ -127,14 +126,14 @@ async function loadMember() {
 }
 
 const isPhysical = computed(() => isPhysicalProduct(product.value))
-const redeemDiscount = computed(() => POINTS_REDEEM_DISCOUNTS[userStore.userLevel] || 1)
+const redeemDiscount = computed(() => Number(userStore.memberInfo?.redeemDiscount) || 1)
 const selectedQuantityLimit = computed(() => getRedeemQuantityLimit(product.value || {}))
-const totalCost = computed(() => getDiscountedPointsCost(product.value?.pointsPrice, quantity.value, userStore.userLevel))
+const totalCost = computed(() => getDiscountedPointsCost(product.value?.pointsPrice, quantity.value, redeemDiscount.value))
 const remaining = computed(() => Math.max(0, (userStore.memberInfo?.currentPoints || 0) - totalCost.value))
 const hasEnoughPoints = computed(() => (userStore.memberInfo?.currentPoints || 0) >= totalCost.value)
 const canIncrease = computed(() => {
   if (!product.value || quantity.value >= selectedQuantityLimit.value) return false
-  const next = getDiscountedPointsCost(product.value.pointsPrice, quantity.value + 1, userStore.userLevel)
+  const next = getDiscountedPointsCost(product.value.pointsPrice, quantity.value + 1, redeemDiscount.value)
   return (userStore.memberInfo?.currentPoints || 0) >= next
 })
 const canSubmit = computed(() => {

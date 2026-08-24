@@ -50,7 +50,6 @@ import { getMemberLevelName } from '@/constants/member'
 import Stepper from '@/components/common/Stepper.vue'
 import { isPhysicalProduct } from '@/utils/product'
 import {
-  POINTS_REDEEM_DISCOUNTS,
   getDiscountedPointsCost,
   getRedeemQuantityLimit
 } from '@/domain/member/memberRules'
@@ -82,19 +81,19 @@ async function loadMember() {
   } catch (_) { /* 静默 */ }
 }
 
-const redeemDiscount = computed(() => POINTS_REDEEM_DISCOUNTS[userStore.userLevel] || 1)
+const redeemDiscount = computed(() => Number(userStore.memberInfo?.redeemDiscount) || 1)
 const isPhysical = computed(() => isPhysicalProduct(product.value))
 const needStorePickup = computed(() => product.value?.fulfillmentType === 'PICKUP' || isPhysical.value)
 const selectedQuantityLimit = computed(() => getRedeemQuantityLimit(product.value || {}))
 const selectedTotalCost = computed(() => getDiscountedPointsCost(
   product.value?.pointsPrice,
   redeemQuantity.value,
-  userStore.userLevel
+  redeemDiscount.value
 ))
 const hasEnoughPoints = computed(() => (userStore.memberInfo?.currentPoints || 0) >= selectedTotalCost.value)
 const canIncreaseQuantity = computed(() => {
   if (!product.value || redeemQuantity.value >= selectedQuantityLimit.value) return false
-  const nextCost = getDiscountedPointsCost(product.value.pointsPrice, redeemQuantity.value + 1, userStore.userLevel)
+  const nextCost = getDiscountedPointsCost(product.value.pointsPrice, redeemQuantity.value + 1, redeemDiscount.value)
   return (userStore.memberInfo?.currentPoints || 0) >= nextCost
 })
 const canRedeemSelected = computed(() => (
