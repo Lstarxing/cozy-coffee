@@ -1,30 +1,37 @@
 package com.cozy.order.service;
 
+import com.cozy.member.api.MemberService;
+import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.order.dto.request.CartCheckRequest;
 import com.cozy.order.dto.request.OrderItemRequest;
 import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.entity.CoffeeProduct;
 import com.cozy.order.mapper.CoffeeProductMapper;
+import com.cozy.order.service.impl.OrderRewardService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class OrderPreviewServiceTest {
 
     private CoffeeProductMapper productMapper;
+    private OrderRewardService rewardService;
     private OrderPreviewService service;
 
     @BeforeEach
     void setUp() {
         productMapper = mock(CoffeeProductMapper.class);
-        service = new OrderPreviewService(productMapper, new ProductSkuValidationService(), new ObjectMapper());
+        rewardService = mock(OrderRewardService.class);
+        service = new OrderPreviewService(productMapper, new ProductSkuValidationService(), new ObjectMapper(), rewardService);
     }
 
     @Test
@@ -59,6 +66,39 @@ class OrderPreviewServiceTest {
         String firstToken = service.preview(7L, "basic", first).getPreview().getPreviewToken();
         assertEquals(firstToken, service.preview(7L, "basic", same).getPreview().getPreviewToken());
         assertNotEquals(firstToken, service.preview(7L, "basic", changed).getPreview().getPreviewToken());
+    }
+
+    @Test
+    void previewReturnsPointsEstimateFromBackend() throws Exception {
+        when(productMapper.selectById(20L)).thenReturn(product(20L, "active", "20.00"));
+
+        MemberService memberService = mock(MemberService.class);
+        MemberDTO member = new MemberDTO();
+        member.setMemberLevel("gold");
+        member.setExpTotal(1600);
+        when(memberService.getMemberByUserId(7L)).thenReturn(member);
+        Field field = OrderPreviewService.class.getDeclaredField("memberService");
+        field.setAccessible(true);
+        field.set(service, memberService);
+
+        OrderRewardService.RewardEstimate est = new OrderRewardService.RewardEstimate();
+        est.expEarned = 20;
+        est.pointsEarned = 24;
+        when(rewardService.estimateRewards(any(), any())).thenReturn(est);
+
+        CartCheckResultDTO result = service.preview(7L, "gold", request(item(20L, 1, "STANDARD")));
+
+        assertEquals(Integer.valueOf(24), result.getPreview().getPointsEarned());
+        assertEquals(Integer.valueOf(20), result.getPreview().getExpEarned());
+    }
+
+    @Test
+    void previewFallsBackToOneToOneWhenMemberUnavailable() {
+        when(productMapper.selectById(21L)).thenReturn(product(21L, "active", "20.00"));
+        // memberService 未注入 → 预估失败回退 1:1（points=exp=payable）
+        CartCheckResultDTO result = service.preview(7L, "basic", request(item(21L, 1, "STANDARD")));
+        assertEquals(Integer.valueOf(20), result.getPreview().getPointsEarned());
+        assertEquals(Integer.valueOf(20), result.getPreview().getExpEarned());
     }
 
     private CartCheckRequest request(OrderItemRequest item) {
