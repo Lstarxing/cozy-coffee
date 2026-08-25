@@ -94,6 +94,7 @@ import { formatCoffeeSpec } from '@/utils/spec'
 import { formatFullTime, money } from '@/utils/format'
 import { resolveImageUrl } from '@/config/image'
 import { useCartStore } from '@/stores/cart'
+import { useCheckoutStore } from '@/stores/checkout'
 import { restoreOrderToCart } from '@/services/order/ReorderService'
 import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
@@ -109,6 +110,7 @@ const loading = ref(false)
 const errorMessage = ref('')
 const nowTs = ref(Date.now())
 const cartStore = useCartStore()
+const checkoutStore = useCheckoutStore()
 const reorderingOrderId = ref('')
 let ticker = null
 
@@ -333,6 +335,11 @@ async function reOrder(order) {
   reorderingOrderId.value = String(order?.id || '')
   uni.showLoading({ title: '正在恢复商品', mask: true })
   try {
+    // 复现原订单配送方式（外送/自提），进确认页时保持一致；券不强制复现，由用户重新选
+    const orderDining = String(order?.diningMethod || '').toUpperCase()
+    checkoutStore.diningMethod = orderDining === 'DELIVERY' ? 'DELIVERY' : 'TAKEOUT'
+    checkoutStore.clearCoupon()
+
     const result = await restoreOrderToCart({ order, cartStore })
     uni.hideLoading()
     if (!result.restoredQuantity) {

@@ -102,7 +102,7 @@
               <text class="total-value">{{ formatPoints(consumePoints) }} 积分</text>
             </view>
           </template>
-          <!-- 金额明细（商品小计/优惠合计可折叠/配送费/实付）公用组件；优惠明细默认展开逐条显示券金额 -->
+          <!-- 金额明细（商品小计/优惠合计可折叠/配送费/实付）公用组件；优惠合计默认折叠 -->
           <PriceBreakdown
             v-else
             :subtotal="order.totalAmount || 0"
@@ -111,7 +111,6 @@
             :payable="payAmount"
             :payable-label="`共 ${totalCount} 件商品，实付`"
             :coupon-items="couponItems"
-            initially-expanded
           />
         </view>
 
@@ -149,6 +148,10 @@
               </view>
             </view>
           </template>
+          <view v-if="order.remark" class="sp-divider" />
+          <view v-if="order.remark" class="meta-row"><text>订单备注</text><text class="meta-value">{{ order.remark }}</text></view>
+          <view v-if="orderPhone" class="sp-divider" />
+          <view v-if="orderPhone" class="meta-row"><text>预留电话</text><text class="meta-value"><text selectable>{{ orderPhone }}</text></text></view>
         </view>
       </view>
 
@@ -255,6 +258,8 @@ const deliveryContact = computed(() => {
   const parts = [order.value?.receiverName, order.value?.receiverPhone].filter(Boolean)
   return parts.join(' · ') || '—'
 })
+// 预留电话：自提订单展示确认页填的预留电话（外送订单的 receiverPhone 已在配送联系人里展示，不重复）
+const orderPhone = computed(() => (isDelivery.value ? '' : order.value?.receiverPhone || ''))
 const statusText = computed(() => {
   const status = normalizedStatus.value
   const redeem = {

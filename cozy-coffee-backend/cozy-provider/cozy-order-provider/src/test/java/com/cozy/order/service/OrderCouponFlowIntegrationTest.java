@@ -101,6 +101,12 @@ public class OrderCouponFlowIntegrationTest {
 
         ShopOrderDTO order = orderService.createOrder(USER_ID, MEMBER_LEVEL, "it-main-addon", request);
         assertEquals(0, new BigDecimal("6").compareTo(order.getPayAmount()));
+        // 落库的每张券明细应随 createOrder 返回（订单详情页逐条展示）
+        assertEquals(2, order.getCouponDetails().size());
+        assertEquals("主券", order.getCouponDetails().get(0).getTitle());
+        assertEquals(0, new BigDecimal("11").compareTo(order.getCouponDetails().get(0).getDiscount()));
+        assertEquals("辅券", order.getCouponDetails().get(1).getTitle());
+        assertEquals(0, new BigDecimal("5").compareTo(order.getCouponDetails().get(1).getDiscount()));
     }
 
     @Test
@@ -151,7 +157,19 @@ public class OrderCouponFlowIntegrationTest {
         combo.setMainDiscount(new BigDecimal(main));
         combo.setAddonDiscount(new BigDecimal(addon));
         combo.setDeliveryFeeDiscount(new BigDecimal(deliveryFee));
+        // 组装每张券明细（title/discount），供下单落库 couponDetails 验证
+        if (main > 0) combo.getDetails().add(detail("主券", main, true));
+        if (addon > 0) combo.getDetails().add(detail("辅券", addon, false));
+        if (deliveryFee > 0) combo.getDetails().add(detail("配送费券", deliveryFee, false));
         return combo;
+    }
+
+    private CouponCombinationResult.CouponDetail detail(String title, int discount, boolean main) {
+        CouponCombinationResult.CouponDetail d = new CouponCombinationResult.CouponDetail();
+        d.setTitle(title);
+        d.setDiscount(new BigDecimal(discount));
+        d.setMain(main);
+        return d;
     }
 
     private CreateOrderRequest orderRequest(String couponCode) {

@@ -55,12 +55,16 @@
           </view>
         </view>
         <view class="form-divider" />
-        <view class="form-row" @click="openPhone">
+        <view class="form-input-row">
           <text class="form-label">预留电话</text>
-          <view class="form-value-wrap">
-            <text class="form-value" :class="{ filled: checkoutStore.phone }">{{ checkoutStore.phone || '选填' }}</text>
-            <CozyIcon name="pencil" :size="20" color="#756A63" />
-          </view>
+          <input
+            v-model="checkoutStore.phone"
+            type="number"
+            maxlength="11"
+            placeholder="选填，方便门店联系您"
+            placeholder-class="form-placeholder"
+            class="form-input"
+          />
         </view>
       </view>
 
@@ -81,27 +85,6 @@
       :disabled="submitDisabled"
       @submit="submitOrder"
     />
-
-    <!-- 预留电话编辑 -->
-    <view v-if="phoneVisible" class="phone-layer">
-      <view class="phone-mask" @click="phoneVisible = false" />
-      <view class="phone-sheet safe-area-bottom">
-        <view class="phone-header">
-          <text class="phone-title">预留电话</text>
-          <view class="phone-close" @click="phoneVisible = false">×</view>
-        </view>
-        <input
-          v-model="phoneDraft"
-          type="number"
-          maxlength="11"
-          class="phone-input"
-          placeholder="请输入联系电话"
-          placeholder-class="phone-placeholder"
-          focus
-        />
-        <view class="phone-save" :class="{ disabled: !phoneDraft.trim() }" @click="savePhone">保存</view>
-      </view>
-    </view>
 
     <AddressPickerSheet
       :visible="addressPickerVisible"
@@ -132,15 +115,12 @@ import LoadingState from '@/components/states/LoadingState.vue'
 import EmptyState from '@/components/states/EmptyState.vue'
 import RetryState from '@/components/states/RetryState.vue'
 import OfflineState from '@/components/states/OfflineState.vue'
-import CozyIcon from '@/components/CozyIcon.vue'
 
 const cartStore = useCartStore()
 const checkoutStore = useCheckoutStore()
 const userStore = useUserStore()
 const sessionStore = useSessionStore()
 const workflow = createDefaultCheckoutWorkflow()
-const phoneVisible = ref(false)
-const phoneDraft = ref('')
 const diningMethod = computed(() => checkoutStore.diningMethod || 'TAKEOUT')
 const previewError = ref('')
 const checkoutSubmitting = ref(false)
@@ -307,21 +287,6 @@ function goToRemark() {
   uni.navigateTo({ url: '/pages/order/remark' })
 }
 
-function openPhone() {
-  phoneDraft.value = checkoutStore.phone || ''
-  phoneVisible.value = true
-}
-
-function savePhone() {
-  const phone = phoneDraft.value.trim()
-  if (phone && !/^1\d{10}$/.test(phone)) {
-    uni.showToast({ title: '请输入正确的手机号', icon: 'none' })
-    return
-  }
-  checkoutStore.phone = phone
-  phoneVisible.value = false
-}
-
 async function submitOrder() {
   if (submitDisabled.value) return
   if (diningMethod.value === 'DELIVERY' && !checkoutStore.deliveryAddressId) {
@@ -434,15 +399,9 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 .mock-tip-copy { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 21rpx; line-height: 1.5; }
 .bottom-spacer { height: 180rpx; }
 
-/* ── 预留电话编辑 sheet ── */
-.phone-layer { position: fixed; inset: 0; z-index: 120; }
-.phone-mask { position: absolute; inset: 0; background: rgba(25, 18, 14, .46); }
-.phone-sheet { position: absolute; left: 0; right: 0; bottom: 0; padding: 24rpx 32rpx max(24rpx, env(safe-area-inset-bottom)); border-radius: 32rpx 32rpx 0 0; background: #fff; }
-.phone-header { display: flex; align-items: center; justify-content: space-between; padding: 4rpx 4rpx 20rpx; }
-.phone-title { color: $cozy-ink; font-family: $font-display; font-size: 32rpx; font-weight: 600; }
-.phone-close { width: 72rpx; height: 72rpx; display: flex; align-items: center; justify-content: center; color: $cozy-muted; font-size: 44rpx; }
-.phone-input { height: 92rpx; padding: 0 28rpx; border-radius: $cozy-radius-md; background: $cozy-surface; color: $cozy-ink; font-size: 30rpx; }
-.phone-placeholder { color: $cozy-placeholder; }
-.phone-save { margin-top: 24rpx; height: 92rpx; display: flex; align-items: center; justify-content: center; border-radius: 999rpx; background: $cozy-ink; color: #fff; font-size: 30rpx; font-weight: 600; }
-.phone-save.disabled { opacity: .4; }
+/* ── 预留电话（直接输入，对齐地址页） ── */
+.form-input-row { display: flex; align-items: center; gap: 16rpx; padding: 24rpx 0; }
+.form-input-row .form-label { flex: none; }
+.form-input { flex: 1; min-width: 0; height: 72rpx; padding: 0 24rpx; border-radius: $cozy-radius-md; background: $cozy-surface; color: $cozy-ink; font-size: 28rpx; }
+.form-placeholder { color: $cozy-placeholder; }
 </style>
