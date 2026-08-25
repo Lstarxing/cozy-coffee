@@ -22,4 +22,25 @@ describe('OrderService', () => {
     expect(api.createOrder.mock.calls[0][1]).toEqual({ header: { 'Idempotency-Key': 'checkout-key' } })
     expect(api.createOrder.mock.calls[0][0].previewToken).toBe('p1')
   })
+
+  it('passes main coupon + addon coupons to both check and create', async () => {
+    const api = { checkCart: vi.fn().mockResolvedValue({ data: { preview: {} } }), createOrder: vi.fn().mockResolvedValue({ data: { id: 9 } }), getOrderDetail: vi.fn() }
+    const context = {
+      items: [{ productId: 1, quantity: 1 }],
+      coupon: { couponCode: 'MAIN_5ZHE' },
+      addonCouponCodes: ['SHOT_1', 'DELIVERY_FEE_1']
+    }
+    const svc = new OrderService(api)
+    await svc.checkCart(context)
+    await svc.create(context, 'key-1')
+
+    expect(api.checkCart).toHaveBeenCalledWith(expect.objectContaining({
+      couponCode: 'MAIN_5ZHE',
+      addonCouponCodes: ['SHOT_1', 'DELIVERY_FEE_1']
+    }))
+    expect(api.createOrder.mock.calls[0][0]).toEqual(expect.objectContaining({
+      couponCode: 'MAIN_5ZHE',
+      addonCouponCodes: ['SHOT_1', 'DELIVERY_FEE_1']
+    }))
+  })
 })
