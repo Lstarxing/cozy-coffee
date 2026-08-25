@@ -33,9 +33,24 @@ describe('CheckoutPreviewService', () => {
       })
     }
     const result = await new CheckoutPreviewService({ orderService }).preview({ ...context, diningMethod: 'DELIVERY' })
-    expect(result).toMatchObject({ subtotal: 20, discount: 10, deliveryFee: 3, payable: 13, source: 'server' })
+    // 金额口径由后端 preview 统一返回（payable 已含配送费/配送券抵扣），前端不再本地拼实付
+    expect(result).toMatchObject({ subtotal: 20, discount: 10, payable: 10, source: 'server' })
     expect(result.couponDetails).toHaveLength(1)
     expect(result.couponDetails[0].title).toBe('5折券')
+  })
+
+  it('uses server deliveryFee and payable that already include delivery coupon deduction', async () => {
+    const orderService = {
+      checkCart: vi.fn().mockResolvedValue({
+        invalidItems: [], changedItems: [],
+        preview: {
+          subtotal: 20, discount: 13, deliveryFee: 3, payable: 10,
+          couponDetails: [{ title: '配送费抵扣券', discount: 3, main: false }]
+        }
+      })
+    }
+    const result = await new CheckoutPreviewService({ orderService }).preview({ ...context, diningMethod: 'DELIVERY' })
+    expect(result).toMatchObject({ subtotal: 20, discount: 13, deliveryFee: 3, payable: 10, source: 'server' })
   })
 
   it('fallback computes DISCOUNT coupon as percentage (5折), not flat value', async () => {

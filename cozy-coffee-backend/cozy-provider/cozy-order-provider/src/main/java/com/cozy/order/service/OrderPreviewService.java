@@ -124,16 +124,37 @@ public class OrderPreviewService {
                     addonPrices, itemChecks);
         }
         if (combo != null) {
-            discount = discount.add(nullSafe(combo.getMainDiscount())).add(nullSafe(combo.getAddonDiscount()));
+            discount = discount.add(nullSafe(combo.getMainDiscount()))
+                    .add(nullSafe(combo.getAddonDiscount()));
         }
-        if (discount.compareTo(subtotal) > 0) {
-            discount = subtotal;
+
+        // 配送费与优惠合计：与 create 逐行同口径
+        //  - 外送 3 元；黑金会员免运费（配送费计入商品抵扣）；配送费券从配送费扣除
+        //  - 配送费券抵扣计入优惠合计，实付=小计−优惠合计+配送费，等价于 create 的
+        //    (商品−主券−附加券)+(配送费−配送券)
+        BigDecimal deliveryFee = BigDecimal.ZERO;
+        if ("DELIVERY".equalsIgnoreCase(request.getDiningMethod())) {
+            deliveryFee = new BigDecimal("3");
+            if ("black".equalsIgnoreCase(memberLevel)) {
+                discount = discount.add(deliveryFee); // 黑金免运费：配送费计入抵扣
+            }
         }
+        BigDecimal deliveryFeeDiscount = combo != null ? nullSafe(combo.getDeliveryFeeDiscount()) : BigDecimal.ZERO;
+        if (deliveryFeeDiscount.signum() > 0 && !"DELIVERY".equalsIgnoreCase(request.getDiningMethod())) {
+            throw new BusinessException(BusinessErrorCode.ITEM_CHANGED, "配送费券仅限外卖订单使用");
+        }
+        discount = discount.add(deliveryFeeDiscount);
+
+        BigDecimal payable = subtotal.subtract(discount).add(deliveryFee).max(BigDecimal.ZERO);
 
         CheckoutPreviewDTO preview = new CheckoutPreviewDTO();
         preview.setSubtotal(subtotal.setScale(2, RoundingMode.HALF_UP));
-        preview.setDiscount(discount.setScale(2, RoundingMode.HALF_UP));
-        preview.setPayable(subtotal.subtract(discount).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
+        // 展示用优惠合计：最高不超过 小计+配送费（避免负实付时优惠虚高）
+        BigDecimal displayDiscount = discount.compareTo(subtotal.add(deliveryFee)) > 0
+                ? subtotal.add(deliveryFee) : discount;
+        preview.setDiscount(displayDiscount.setScale(2, RoundingMode.HALF_UP));
+        preview.setDeliveryFee(deliveryFee.setScale(2, RoundingMode.HALF_UP));
+        preview.setPayable(payable.setScale(2, RoundingMode.HALF_UP));
         preview.setPreviewToken(buildToken(memberLevel, request, canonicalLines));
         preview.setExpiresAt(LocalDateTime.now().plusMinutes(5));
         if (combo != null && combo.getDetails() != null) {
@@ -148,15 +169,16 @@ public class OrderPreviewService {
                     .collect(Collectors.toList()));
         }
 
-        // 可得积分/成长值预估（与下单落库同一口径：全等级分段，基数=实付不含配送费）
+        // 可得积分/成长值预估（与下单落库同一口径：基数=实付−配送费）
         try {
             MemberDTO member = memberService.getMemberByUserId(userId);
-            OrderRewardService.RewardEstimate est = orderRewardService.estimateRewards(preview.getPayable(), member);
+            BigDecimal rewardBase = payable.subtract(deliveryFee).max(BigDecimal.ZERO);
+            OrderRewardService.RewardEstimate est = orderRewardService.estimateRewards(rewardBase, member);
             preview.setPointsEarned(est.pointsEarned);
             preview.setExpEarned(est.expEarned);
         } catch (Exception e) {
             log.warn("预览奖励预估失败: userId={}", userId, e);
-            int exp = preview.getPayable().setScale(0, RoundingMode.HALF_UP).intValue();
+            int exp = payable.setScale(0, RoundingMode.HALF_UP).intValue();
             preview.setExpEarned(exp);
             preview.setPointsEarned(exp);
         }
@@ -175,6 +197,9 @@ public class OrderPreviewService {
         check.setAddonCouponCodes(request.getAddonCouponCodes());
         check.setStoreId(request.getStoreId());
         check.setPickupTime(request.getPickupTime());
+        // 配送方式必须透传：preview 的配送费/配送费券校验依赖它，漏传会导致下单校验与预览口径不一致
+        check.setDiningMethod(request.getDiningMethod());
+        check.setDeliveryAddressId(request.getDeliveryAddressId());
         CartCheckResultDTO result = preview(userId, memberLevel, check);
         if (!result.getInvalidItems().isEmpty()) {
             throw new BusinessException(BusinessErrorCode.ITEM_OFFLINE,

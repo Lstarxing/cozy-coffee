@@ -14,4 +14,6 @@ public class CartCheckRequest implements Serializable {
     private List<String> addonCouponCodes;
     private Long storeId;
     private String pickupTime;
+    private String diningMethod;
+    private Long deliveryAddressId;
 }

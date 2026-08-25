@@ -115,6 +115,26 @@ public class OrderCouponFlowIntegrationTest {
         assertEquals(0, new BigDecimal("22").compareTo(order.getPayAmount()));
     }
 
+    @Test
+    void previewAndCreateOrder_deliveryWithDeliveryFeeCoupon_consistent() {
+        // 外送：配送费 3 元，配送费券抵扣 3 元 → 实付 = 22 − 0 − 3 + 3 = 22
+        stubCombination(discount(0, 0, 3), 999L, "DELIVERY_FEE");
+        CreateOrderRequest request = orderRequest("CPN_DELIVERY_FEE");
+        request.setDiningMethod("DELIVERY");
+        request.setAddonCouponCodes(Collections.singletonList("CPN_DELIVERY_FEE"));
+
+        CartCheckResultDTO check = orderService.checkCart(USER_ID, MEMBER_LEVEL, toCartCheck(request));
+        // 配送费券计入优惠合计，实付 = 小计 − 折扣 + 配送费 = 22 − 3 + 3
+        assertEquals(0, new BigDecimal("3").compareTo(check.getPreview().getDiscount()));
+        assertEquals(0, new BigDecimal("3").compareTo(check.getPreview().getDeliveryFee()));
+        assertEquals(0, new BigDecimal("22").compareTo(check.getPreview().getPayable()));
+
+        ShopOrderDTO order = orderService.createOrder(USER_ID, MEMBER_LEVEL, "it-delivery-fee-coupon", request);
+        assertEquals(0, new BigDecimal("22").compareTo(order.getPayAmount()));
+        // preview 与 create 口径一致
+        assertEquals(0, check.getPreview().getPayable().compareTo(order.getPayAmount()));
+    }
+
     // ==================== 工具 ====================
 
     private void stubCombination(CouponCombinationResult combo, Long mainCouponId, String mainType) {
@@ -154,6 +174,8 @@ public class OrderCouponFlowIntegrationTest {
         check.setAddonCouponCodes(request.getAddonCouponCodes());
         check.setStoreId(1L);
         check.setPickupTime("ASAP");
+        check.setDiningMethod(request.getDiningMethod());
+        check.setDeliveryAddressId(request.getDeliveryAddressId());
         return check;
     }
 }

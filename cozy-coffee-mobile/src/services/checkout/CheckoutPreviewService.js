@@ -25,8 +25,8 @@ export class CheckoutPreviewService {
   }
 
   async preview(context) {
-    const deliveryFee = deliveryFeeFor(context?.diningMethod)
-    const local = computeCheckoutPreview({ ...context, deliveryFee })
+    const localDeliveryFee = deliveryFeeFor(context?.diningMethod)
+    const local = computeCheckoutPreview({ ...context, deliveryFee: localDeliveryFee })
     try {
       const result = await this.orderService.checkCart(context)
       if (result?.invalidItems?.length) {
@@ -45,13 +45,12 @@ export class CheckoutPreviewService {
         throw new BusinessError('结算预览响应不完整', { code: 'INVALID_PREVIEW_RESPONSE' })
       }
 
-      const subtotal = Number(result.preview.subtotal ?? local.subtotal)
-      const discount = Number(result.preview.discount ?? local.discount)
+      // 金额口径由后端 preview 统一返回（含配送费、配送费券抵扣、黑金免运），前端不再本地拼实付
       return Object.freeze({
-        subtotal,
-        discount,
-        deliveryFee,
-        payable: money(Math.max(0, subtotal - discount + deliveryFee)),
+        subtotal: Number(result.preview.subtotal ?? local.subtotal),
+        discount: Number(result.preview.discount ?? local.discount),
+        deliveryFee: Number(result.preview.deliveryFee ?? localDeliveryFee),
+        payable: Number(result.preview.payable ?? local.payable),
         previewToken: result.preview.previewToken,
         previewVersion: result.preview.previewToken || local.previewVersion,
         expiresAt: result.preview.expiresAt || null,

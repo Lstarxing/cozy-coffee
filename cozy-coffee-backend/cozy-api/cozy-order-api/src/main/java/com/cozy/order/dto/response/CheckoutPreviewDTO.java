@@ -15,6 +15,8 @@ public class CheckoutPreviewDTO implements Serializable {
     private BigDecimal subtotal;
     private BigDecimal discount;
     private BigDecimal payable;
+    /** 配送费（外送 3 元；黑金会员免运费为 0）。前端展示与实付口径统一走后端。 */
+    private BigDecimal deliveryFee;
     private Integer pointsEarned;
     private Integer expEarned;
     private String previewToken;
