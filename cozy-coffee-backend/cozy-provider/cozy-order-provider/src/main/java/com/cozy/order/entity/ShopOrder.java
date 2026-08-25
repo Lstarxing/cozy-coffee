@@ -57,6 +57,9 @@ public class ShopOrder {
     // v5.0: 附加券ID列表 (JSON格式，如 "[1,2,3]"，用于取消时回滚)
     private String appliedAddonCouponIds;
 
+    // v5.8: 优惠券抵扣明细快照 (JSON格式，如 [{"title":"5折券","discount":11,"main":true}])，订单详情页逐条展示
+    private String couponDetails;
+
     // 取餐码相关
     private Long storeId;
     private LocalDate businessDate;

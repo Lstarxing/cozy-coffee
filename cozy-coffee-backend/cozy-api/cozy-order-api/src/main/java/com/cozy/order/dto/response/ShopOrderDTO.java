@@ -5,6 +5,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -50,6 +51,16 @@ public class ShopOrderDTO implements Serializable {
     // 券信息
     private Long appliedCouponId;
     private List<String> appliedCouponNames; // 本单使用的优惠券名称（主券 + 附加券）
+    /** 每张券抵扣明细（订单详情页逐条展示，与 preview.couponDetails 同构）；无券时为空列表 */
+    private List<CouponDetailItem> couponDetails = new ArrayList<>();
+
+    @Data
+    public static class CouponDetailItem implements Serializable {
+        private static final long serialVersionUID = 1L;
+        private String title;
+        private BigDecimal discount;
+        private boolean main;
+    }
 
     // 商品摘要（列表展示用，如"美式x2,拿铁x1"）
     private String itemsSummary;

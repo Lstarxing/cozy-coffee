@@ -9,6 +9,8 @@ import com.cozy.order.dto.response.ShopOrderDTO;
 import com.cozy.order.entity.ShopOrder;
 import com.cozy.order.entity.ShopOrderItem;
 import com.cozy.order.mapper.ShopOrderItemMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -37,6 +39,7 @@ public class OrderDtoEnricher {
 
     private final OrderDtoConverter dtoConverter;
     private final ShopOrderItemMapper orderItemMapper;
+    private final ObjectMapper objectMapper;
 
     @DubboReference(check = false)
     private MemberService memberService;
@@ -148,8 +151,22 @@ public class OrderDtoEnricher {
         dto.setExpectedDeliveryAt(entity.getExpectedDeliveryAt()); // v6.4: 外送预计送达
         populateExpiryInfo(entity, dto);
         enrichCouponNames(dto, entity);
+        enrichCouponDetails(dto, entity);
 
         return dto;
+    }
+
+    /** 解析订单落库的每张券抵扣明细快照（与 preview.couponDetails 同构），失败不影响订单装配。 */
+    private void enrichCouponDetails(ShopOrderDTO dto, ShopOrder entity) {
+        String json = entity.getCouponDetails();
+        if (json == null || json.isBlank()) return;
+        try {
+            List<ShopOrderDTO.CouponDetailItem> details = objectMapper.readValue(json,
+                    new TypeReference<List<ShopOrderDTO.CouponDetailItem>>() {});
+            dto.setCouponDetails(details);
+        } catch (Exception e) {
+            log.warn("解析优惠券抵扣明细失败(不影响订单): orderId={}, error={}", entity.getId(), e.getMessage());
+        }
     }
 
     /** 解析本单使用的优惠券名称（主券 + 附加券），失败不影响订单装配。 */

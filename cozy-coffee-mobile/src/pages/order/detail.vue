@@ -102,7 +102,7 @@
               <text class="total-value">{{ formatPoints(consumePoints) }} 积分</text>
             </view>
           </template>
-          <!-- 金额明细（商品小计/优惠合计可折叠/配送费/实付）公用组件 -->
+          <!-- 金额明细（商品小计/优惠合计可折叠/配送费/实付）公用组件；优惠明细默认展开逐条显示券金额 -->
           <PriceBreakdown
             v-else
             :subtotal="order.totalAmount || 0"
@@ -111,6 +111,7 @@
             :payable="payAmount"
             :payable-label="`共 ${totalCount} 件商品，实付`"
             :coupon-items="couponItems"
+            initially-expanded
           />
         </view>
 
@@ -329,11 +330,18 @@ const couponNames = computed(() => {
 })
 const deliveryFee = computed(() => Number(order.value?.deliveryFee || 0))
 const discount = computed(() => Number(order.value?.discountAmount || 0))
-// 优惠合计展开的券明细：每张券 { title, discount }（沿用旧逻辑：券名 + 总优惠额）
-const couponItems = computed(() => couponNames.value.map(name => ({
-  title: name,
-  discount: order.value?.discountAmount || 0
-})))
+// 优惠合计展开的券明细：优先用后端落库的每张券明细（couponDetails，含各自抵扣金额）；
+// 旧订单/无明细时回退"券名 + 总优惠额"（沿用旧逻辑）
+const couponItems = computed(() => {
+  const details = order.value?.couponDetails
+  if (Array.isArray(details) && details.length) {
+    return details.map(d => ({ title: d.title, discount: Number(d.discount || 0) }))
+  }
+  return couponNames.value.map(name => ({
+    title: name,
+    discount: order.value?.discountAmount || 0
+  }))
+})
 
 onLoad(options => {
   orderId.value = options.id || options.orderId || ''

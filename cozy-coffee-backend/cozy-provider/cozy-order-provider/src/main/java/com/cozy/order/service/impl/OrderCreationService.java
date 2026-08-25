@@ -281,6 +281,7 @@ public class OrderCreationService {
         BigDecimal addonDiscount = BigDecimal.ZERO; // 商品附加券折扣（如加浓缩券）
         BigDecimal deliveryFeeDiscount = BigDecimal.ZERO; // 配送费折扣（如配送费券）
         List<Long> addonCouponIds = new ArrayList<>();
+        String couponDetailsJson = null; // 每张券抵扣明细快照（订单详情页逐条展示）
         List<String> couponCodes = collectCouponCodes(request);
 
         if (!couponCodes.isEmpty()) {
@@ -293,6 +294,13 @@ public class OrderCreationService {
                 addonDiscount = combo.getAddonDiscount();
                 deliveryFeeDiscount = combo.getDeliveryFeeDiscount();
                 addonCouponIds = combo.getAddonCouponIds();
+                if (combo.getDetails() != null && !combo.getDetails().isEmpty()) {
+                    try {
+                        couponDetailsJson = objectMapper.writeValueAsString(combo.getDetails());
+                    } catch (Exception e) {
+                        log.warn("序列化优惠券抵扣明细失败: {}", e.getMessage());
+                    }
+                }
                 log.info("整组券核销成功: userId={}, codes={}, mainDiscount={}, addonDiscount={}, deliveryFeeDiscount={}, exchange={}, exclusive={}",
                         userId, couponCodes, discountAmount, addonDiscount, deliveryFeeDiscount,
                         combo.isExchangeCoupon(), combo.isExclusive());
@@ -433,6 +441,8 @@ public class OrderCreationService {
                 log.warn("序列化附加券ID失败: {}", e.getMessage());
             }
         }
+        // v5.8: 保存每张券抵扣明细快照（订单详情页逐条展示，与确认页 preview.couponDetails 同构）
+        order.setCouponDetails(couponDetailsJson);
         order.setCreatedAt(now);
         order.setUpdatedAt(now);
 
