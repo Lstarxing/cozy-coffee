@@ -104,32 +104,49 @@ const getLocalDateText = () => {
   return `${year}-${month}-${day}`
 }
 
+const getYesterdayText = () => {
+  const now = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// 断签检测：最近签到既不是今天也不是昨天 → 连续天数应重置为 0（未高亮，今日豆高亮待签）
+const lastSigninDate = ref('')
+const effectiveConsecutiveDays = computed(() => {
+  if (!lastSigninDate.value) return 0
+  if (lastSigninDate.value === getLocalDateText()) return consecutiveDays.value // 今天已签
+  if (lastSigninDate.value === getYesterdayText()) return consecutiveDays.value // 昨天签过，连续延续
+  return 0 // 断签
+})
+
 // 已签到的天数（未签今天时第7天礼盒未激活）
-const signedCount = computed(() => hasSigned.value ? Math.min(consecutiveDays.value, 7) : Math.min(consecutiveDays.value, 6))
-const signedAll = computed(() => consecutiveDays.value >= 7)
+const signedCount = computed(() => hasSigned.value ? Math.min(effectiveConsecutiveDays.value, 7) : Math.min(effectiveConsecutiveDays.value, 6))
+const signedAll = computed(() => effectiveConsecutiveDays.value >= 7)
 const trackPercent = computed(() => {
   if (signedAll.value) return 100
-  return Math.max(0, (consecutiveDays.value / 6) * 100)
+  return Math.max(0, (effectiveConsecutiveDays.value / 6) * 100)
 })
 
 function stepClass(index) {
   return {
     active: index < signedCount.value || signedAll.value,
-    today: !hasSigned.value && index === consecutiveDays.value
+    today: !hasSigned.value && index === effectiveConsecutiveDays.value
   }
 }
 
 function beanClass(index) {
   return {
     active: index < signedCount.value || signedAll.value,
-    today: !hasSigned.value && index === consecutiveDays.value,
+    today: !hasSigned.value && index === effectiveConsecutiveDays.value,
     'is-gift': index === 6
   }
 }
 
 function label(index) {
   if (index === 6) return '礼包'
-  if (!hasSigned.value && index === consecutiveDays.value) return '今日'
+  if (!hasSigned.value && index === effectiveConsecutiveDays.value) return '今日'
   return '+2'
 }
 
@@ -139,8 +156,9 @@ onShow(async () => {
     if (res.code === 200) {
       currentPoints.value = res.data.currentPoints ?? 0
       consecutiveDays.value = res.data.consecutiveSignDays ?? 0
+      lastSigninDate.value = res.data.lastSigninDate || ''
       userStore.setMemberInfo(res.data)
-      hasSigned.value = res.data.lastSigninDate === getLocalDateText()
+      hasSigned.value = lastSigninDate.value === getLocalDateText()
     }
   } catch (e) {
     console.error('获取会员信息失败', e)
@@ -160,12 +178,13 @@ const handleSignin = async () => {
       currentPoints.value = res.data.currentPoints ?? currentPoints.value + earnedPoints.value
       showBanner.value = true
       setTimeout(() => { showBanner.value = false }, 2200)
+      lastSigninDate.value = getLocalDateText()
 
       userStore.setMemberInfo({
         currentPoints: currentPoints.value,
         totalPoints: res.data.totalPoints ?? userStore.memberInfo?.totalPoints,
         consecutiveSignDays: consecutiveDays.value,
-        lastSigninDate: getLocalDateText()
+        lastSigninDate: lastSigninDate.value
       })
     }
   } catch (error) {
@@ -221,7 +240,8 @@ const handleSignin = async () => {
 .bean-track { position: relative; padding: 44rpx 0 12rpx; }
 .track-line {
   position: absolute;
-  top: 68rpx; left: 32rpx; right: 32rpx;
+  /* 豆中心 = padding-top 44rpx + icon 64rpx/2 = 76rpx；translateY(-50%) 使线中心落在豆中心 */
+  top: 76rpx; left: 32rpx; right: 32rpx;
   height: 6rpx;
   border-radius: 4rpx;
   background: $cozy-border;
@@ -262,17 +282,22 @@ const handleSignin = async () => {
     background: $cozy-primary;
     border-color: $cozy-primary;
   }
+  /* 今日未签：主题色描边 + 光晕，突出待签位置 */
+  &.today:not(.active) {
+    border-color: $cozy-primary;
+    box-shadow: 0 0 0 8rpx rgba(198,156,109,.35);
+  }
   &.active.today {
     box-shadow: 0 0 0 8rpx rgba(198,156,109,.35);
   }
   &.is-gift { border-radius: 24rpx; }
 }
 .bean-label {
-  font-size: 22rpx;
+  font-size: 20rpx;
   color: $cozy-placeholder;
 }
-.bean-step.active .bean-label { color: $cozy-ink; font-weight: 600; }
-.bean-step.active.today .bean-label { color: $cozy-primary; font-weight: 700; }
+/* 已签豆的 +2 弱化为次要信息；今日豆 label 主题色突出 */
+.bean-step.active .bean-label { color: $cozy-muted; }
 .bean-step.today .bean-label { color: $cozy-primary; font-weight: 700; }
 
 /* 签到主操作按钮 */
