@@ -192,20 +192,11 @@ function changeQty(delta) {
   form.quantity = Math.max(1, Math.min(10, form.quantity + delta))
 }
 
-function addToCart() {
-  if (!product.value || !product.value.name) return
-  const p = product.value
+function buildSelection() {
   const addons = []
   if (form.coffeeStrength === 'STRONG') addons.push({ code: 'EXTRA_SHOT', name: '加浓', price: 5 })
   if (supportsMilk.value && form.milkType && form.milkType !== 'WHOLE') addons.push({ code: 'SPECIAL_MILK', name: form.milkType, price: 4 })
-
-  cartStore.addItem({
-    ...p,
-    productId: String(p.productId || p.id),
-    id: p.id,
-    name: p.name,
-    image: p.image,
-    basePrice: Number(p.basePrice ?? p.price ?? 0),
+  return {
     price: unitPrice.value,
     cupSize: form.cupSize,
     temperature: form.temperature,
@@ -214,7 +205,28 @@ function addToCart() {
     coffeeStrength: isEspresso.value ? form.coffeeStrength : '',
     addons,
     quantity: form.quantity
-  }, form.quantity)
+  }
+}
+
+function addToCart() {
+  if (!product.value || !product.value.name) return
+  const p = product.value
+  const selection = buildSelection()
+
+  if (editing.value && line.value?.lineKey) {
+    // 从购物车进入编辑：更新当前行（新规格与已有其他行一致时自动合并），而非新增
+    cartStore.updateOptions(line.value.lineKey, selection)
+  } else {
+    cartStore.addItem({
+      ...p,
+      productId: String(p.productId || p.id),
+      id: p.id,
+      name: p.name,
+      image: p.image,
+      basePrice: Number(p.basePrice ?? p.price ?? 0),
+      ...selection
+    }, form.quantity)
+  }
   try { uni.vibrateShort({ type: 'light' }) } catch (_) {}
   uni.showToast({ title: editing.value ? '已保存修改' : `已加入购物车 · ${p.name} ×${form.quantity}`, icon: 'none', duration: 900 })
   setTimeout(() => uni.navigateBack(), 500)

@@ -35,13 +35,22 @@
         </view>
       </view>
 
-      <!-- 优惠券（独立一块） -->
-      <view class="coupon-block" @click="goToCoupon">
+      <!-- 优惠券（独立一块，可展开看明细） -->
+      <view class="coupon-block" @click="onCouponTap">
         <text class="coupon-label">优惠券</text>
         <view class="coupon-value-wrap">
           <text class="coupon-value" :class="{ accent: Boolean(checkoutStore.selectedCoupon) }">{{ couponDisplayText }}</text>
-          <text class="coupon-chevron">›</text>
+          <text class="coupon-chevron" :class="{ expanded: couponExpanded }">›</text>
         </view>
+      </view>
+
+      <!-- 优惠详情（展开） -->
+      <view v-if="couponExpanded && couponDetailItems.length" class="coupon-detail">
+        <view v-for="(item, idx) in couponDetailItems" :key="idx" class="coupon-detail-row">
+          <text class="coupon-detail-name">{{ item.title || '优惠券' }}</text>
+          <text class="coupon-detail-amount" :class="{ muted: !Number(item.discount) }">{{ formatCouponAmount(item.discount) }}</text>
+        </view>
+        <view class="coupon-detail-change" @click="changeCoupon">更换优惠券 ›</view>
       </view>
 
       <!-- 订单备注 + 预留电话（底部） -->
@@ -143,6 +152,7 @@ const diningMethod = computed(() => checkoutStore.diningMethod || 'TAKEOUT')
 const previewError = ref('')
 const checkoutSubmitting = ref(false)
 const addressPickerVisible = ref(false)
+const couponExpanded = ref(false)
 
 // 预计送达：当前本地时间 + 50~60 分钟区间
 const deliveryEtaText = computed(() => {
@@ -152,7 +162,14 @@ const deliveryEtaText = computed(() => {
   return `现在下单，预计 ${pad(start.getHours())}:${pad(start.getMinutes())}-${pad(end.getHours())}:${pad(end.getMinutes())} 送达`
 })
 
-const couponDisplayText = computed(() => checkoutStore.selectedCoupon ? couponTitle(checkoutStore.selectedCoupon) : '选择优惠券')
+const couponDisplayText = computed(() => {
+  if (checkoutStore.selectedCoupon) {
+    const base = couponTitle(checkoutStore.selectedCoupon)
+    const addonCount = (checkoutStore.selectedAddonCoupons || []).length
+    return addonCount ? `${base} +辅券${addonCount}` : base
+  }
+  return '选择优惠券'
+})
 const submitDisabled = computed(() => (
   checkoutStore.isBusy ||
   checkoutStore.status === 'offline' ||
@@ -166,11 +183,15 @@ onLoad(() => {
   checkoutStore.storeId = 1
   uni.$on('addressSelected', handleAddressSelected)
   uni.$on('couponSelected', handleCouponSelected)
+  uni.$on('addonCouponsSelected', handleAddonCouponsSelected)
 })
 
 onUnload(() => {
   uni.$off('addressSelected', handleAddressSelected)
   uni.$off('couponSelected', handleCouponSelected)
+  uni.$off('addonCouponsSelected', handleAddonCouponsSelected)
+  // 离开确认页（返回上一级）时清空选中券，下次进入重新选
+  checkoutStore.clearCoupon()
 })
 
 function onStoreTap() {
@@ -230,14 +251,55 @@ function goToCoupon() {
   uni.setStorageSync('cozy_coupon_cart', JSON.stringify({
     items: cartStore.items,
     diningMethod: checkoutStore.diningMethod || 'TAKEOUT',
-    selectedCouponCode: checkoutStore.selectedCoupon ? couponKey(checkoutStore.selectedCoupon) : ''
+    selectedCouponCode: checkoutStore.selectedCoupon ? couponKey(checkoutStore.selectedCoupon) : '',
+    selectedAddonCodes: (checkoutStore.selectedAddonCoupons || []).map(c => couponKey(c))
   }))
   uni.navigateTo({ url: '/pages/coupon/list?select=1' })
+}
+
+// 优惠行：无券时点选券；有券时展开/折叠详情
+function onCouponTap() {
+  if (!checkoutStore.selectedCoupon && !(checkoutStore.selectedAddonCoupons || []).length) {
+    goToCoupon()
+    return
+  }
+  couponExpanded.value = !couponExpanded.value
+}
+
+function changeCoupon() {
+  couponExpanded.value = false
+  goToCoupon()
+}
+
+// 优惠详情：优先走后端 preview 的 couponDetails（每张券名称+抵扣金额）；
+// 本地试算/后端未返回时兜底展示券名（无金额）
+const couponDetailItems = computed(() => {
+  const details = checkoutStore.latestPreview?.couponDetails
+  if (Array.isArray(details) && details.length) return details
+  const items = []
+  if (checkoutStore.selectedCoupon) {
+    items.push({ title: couponTitle(checkoutStore.selectedCoupon), discount: 0, main: true })
+  }
+  ;(checkoutStore.selectedAddonCoupons || []).forEach(addon => {
+    items.push({ title: couponTitle(addon), discount: 0, main: false })
+  })
+  return items
+})
+
+function formatCouponAmount(discount) {
+  const value = Number(discount || 0)
+  return value > 0 ? `-¥${value.toFixed(2)}` : '--'
 }
 
 function handleCouponSelected(coupon) {
   checkoutStore.selectedCoupon = coupon
   checkoutStore.selectedCouponId = coupon ? couponKey(coupon) : null
+  checkoutStore.invalidatePreview()
+  loadPreview()
+}
+
+function handleAddonCouponsSelected(addons) {
+  checkoutStore.selectedAddonCoupons = addons || []
   checkoutStore.invalidatePreview()
   loadPreview()
 }
@@ -345,7 +407,23 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 .coupon-value-wrap { min-width: 0; flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 12rpx; }
 .coupon-value { overflow: hidden; color: $cozy-muted; font-size: 24rpx; white-space: nowrap; text-overflow: ellipsis; }
 .coupon-value.accent { color: $cozy-primary; }
-.coupon-chevron { color: $cozy-placeholder; font-size: 42rpx; font-weight: 300; }
+.coupon-chevron { color: $cozy-placeholder; font-size: 42rpx; font-weight: 300; transition: transform $cozy-duration $cozy-ease-out, color $cozy-duration $cozy-ease-out; }
+.coupon-chevron.expanded { transform: rotate(90deg); color: $cozy-ink; }
+
+/* ── 优惠详情（展开） ── */
+.coupon-detail {
+  margin: -28rpx 0 0;
+  padding: 0 32rpx 28rpx;
+  border-radius: 0 0 28rpx 28rpx;
+  background: #fff;
+  position: relative;
+  z-index: 1;
+}
+.coupon-detail-row { min-height: 64rpx; display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
+.coupon-detail-name { min-width: 0; flex: 1; overflow: hidden; color: $cozy-ink; font-size: 24rpx; white-space: nowrap; text-overflow: ellipsis; }
+.coupon-detail-amount { flex: none; color: $cozy-primary; font-size: 24rpx; font-weight: 650; }
+.coupon-detail-amount.muted { color: $cozy-placeholder; font-weight: 400; }
+.coupon-detail-change { margin-top: 12rpx; padding-top: 20rpx; border-top: 1rpx solid $cozy-border; color: $cozy-primary; font-size: 24rpx; font-weight: 650; text-align: center; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20rpx; }
 .section-title { color: $cozy-ink; font-family: $font-display; font-size: 30rpx; font-weight: 600; }
 .section-note { color: $cozy-muted; font-size: 22rpx; }

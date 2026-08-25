@@ -55,7 +55,8 @@ export class CheckoutPreviewService {
         previewToken: result.preview.previewToken,
         previewVersion: result.preview.previewToken || local.previewVersion,
         expiresAt: result.preview.expiresAt || null,
-        source: 'server'
+        source: 'server',
+        couponDetails: result.preview.couponDetails || null
       })
     } catch (error) {
       if (!canUseLocalFallback(error)) throw error

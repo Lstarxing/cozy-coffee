@@ -15,6 +15,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
   const deliveryAddress = ref(null) // 选中的收货地址对象（外送）
   const selectedCoupon = ref(null) // 选中的优惠券对象（与 selectedCouponId 同生同灭，供展示/预览）
   const selectedCouponId = ref(null)
+  const selectedAddonCoupons = ref([]) // 选中的辅券对象数组（DELIVERY_FEE 单选 / SHOT 多选）
   const remark = ref('')
   const phone = ref('')
   const status = ref(CHECKOUT_STATUS.IDLE)
@@ -63,6 +64,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
   function clearCoupon() {
     selectedCoupon.value = null
     selectedCouponId.value = null
+    selectedAddonCoupons.value = []
   }
 
   function reset({ preserveIntent = false } = {}) {
@@ -89,6 +91,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
     deliveryAddress,
     selectedCoupon,
     selectedCouponId,
+    selectedAddonCoupons,
     remark,
     phone,
     status,
