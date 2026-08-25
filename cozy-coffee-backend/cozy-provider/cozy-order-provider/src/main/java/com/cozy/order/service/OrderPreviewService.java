@@ -4,7 +4,7 @@ import com.cozy.common.exception.BusinessErrorCode;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.mall.api.PointsMallService;
 import com.cozy.mall.dto.request.ItemCheckDTO;
-import com.cozy.mall.dto.response.CouponUsageResult;
+import com.cozy.mall.dto.response.CouponCombinationResult;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.order.dto.request.CartCheckRequest;
@@ -70,6 +70,7 @@ public class OrderPreviewService {
         BigDecimal baseSubtotal = BigDecimal.ZERO;
         BigDecimal memberDiscount = BigDecimal.ZERO;
         BigDecimal addonsTotal = BigDecimal.ZERO;
+        List<BigDecimal> addonPrices = new ArrayList<>(); // 原始加料价（尊享通兑券 freeAddon 免加料用）
 
         for (OrderItemRequest item : request.getItems()) {
             if (item == null || item.getProductId() == null) {
@@ -98,6 +99,7 @@ public class OrderPreviewService {
             }
             BigDecimal lineBase = unitPrice.multiply(BigDecimal.valueOf(quantity));
             BigDecimal lineAddons = parseAddonsFee(item.getAddonsJson()).multiply(BigDecimal.valueOf(quantity));
+            addonPrices.addAll(collectAddonPrices(item.getAddonsJson()));
             BigDecimal lineTotal = lineBase.add(lineAddons);
             subtotal = subtotal.add(lineTotal);
             baseSubtotal = baseSubtotal.add(lineBase);
@@ -117,7 +119,7 @@ public class OrderPreviewService {
         BigDecimal discount = memberDiscount;
         if (invalidItems.isEmpty()) {
             discount = discount.add(previewCoupons(userId, request, baseSubtotal.subtract(memberDiscount), addonsTotal,
-                    itemChecks));
+                    addonPrices, itemChecks));
         }
         if (discount.compareTo(subtotal) > 0) {
             discount = subtotal;
@@ -170,29 +172,16 @@ public class OrderPreviewService {
     }
 
     private BigDecimal previewCoupons(Long userId, CartCheckRequest request, BigDecimal couponBase,
-            BigDecimal addonsTotal, List<ItemCheckDTO> items) {
-        BigDecimal discount = BigDecimal.ZERO;
+            BigDecimal addonsTotal, List<BigDecimal> addonPrices, List<ItemCheckDTO> items) {
+        List<String> codes = collectCouponCodes(request);
+        if (codes.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
         try {
-            if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
-                CouponUsageResult main = pointsMallService.previewCouponWithResult(userId,
-                        request.getCouponCode().trim(), couponBase, items);
-                discount = discount.add(nullSafe(main.getDiscountAmount()));
-                int freeAddons = main.getFreeAddonCount();
-                if (freeAddons > 0 && addonsTotal.signum() > 0) {
-                    discount = discount.add(calculateFreeAddons(request.getItems(), freeAddons));
-                }
-            }
-            if (request.getAddonCouponCodes() != null) {
-                for (String code : request.getAddonCouponCodes()) {
-                    if (code == null || code.isBlank()) continue;
-                    CouponUsageResult addon = pointsMallService.previewCouponWithResult(userId, code.trim(),
-                            couponBase.add(addonsTotal), items);
-                    if (!"DELIVERY_FEE".equals(addon.getCouponType())) {
-                        discount = discount.add(nullSafe(addon.getDiscountAmount()));
-                    }
-                }
-            }
-            return discount;
+            // 组合引擎统一校验+计算（主券/辅券分类由 mall 侧判定）；配送费券折扣不进入预览商品折扣
+            CouponCombinationResult result = pointsMallService.previewCouponCombination(
+                    userId, codes, couponBase, addonsTotal, addonPrices, items);
+            return nullSafe(result.getMainDiscount()).add(nullSafe(result.getAddonDiscount()));
         } catch (Exception e) {
             String message = e.getMessage() != null ? e.getMessage() : "优惠券不可用";
             BusinessErrorCode code = message.contains("过期") ? BusinessErrorCode.COUPON_EXPIRED
@@ -201,26 +190,40 @@ public class OrderPreviewService {
         }
     }
 
-    private BigDecimal calculateFreeAddons(List<OrderItemRequest> items, int count) {
-        List<BigDecimal> prices = new ArrayList<>();
-        for (OrderItemRequest item : items) {
-            String json = item.getAddonsJson();
-            if (json == null || json.isBlank()) continue;
-            try {
-                JsonNode addons = objectMapper.readTree(json);
-                if (addons.isArray()) {
-                    for (JsonNode addon : addons) {
-                        if (addon.has("price")) prices.add(addon.get("price").decimalValue());
-                    }
+    /** 合并主券 + 辅券为整组券码列表（分类交给组合引擎） */
+    private List<String> collectCouponCodes(CartCheckRequest request) {
+        List<String> codes = new ArrayList<>();
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            codes.add(request.getCouponCode().trim());
+        }
+        if (request.getAddonCouponCodes() != null) {
+            for (String code : request.getAddonCouponCodes()) {
+                if (code != null && !code.isBlank()) {
+                    codes.add(code.trim());
                 }
-            } catch (Exception ignored) {
-                // Invalid addon JSON contributes no price, matching the existing creation path.
             }
         }
-        prices.sort(Comparator.reverseOrder());
-        BigDecimal result = BigDecimal.ZERO;
-        for (int i = 0; i < Math.min(count, prices.size()); i++) result = result.add(prices.get(i));
-        return result;
+        return codes;
+    }
+
+    private List<BigDecimal> collectAddonPrices(String json) {
+        List<BigDecimal> prices = new ArrayList<>();
+        if (json == null || json.isBlank()) {
+            return prices;
+        }
+        try {
+            JsonNode addons = objectMapper.readTree(json);
+            if (addons.isArray()) {
+                for (JsonNode addon : addons) {
+                    if (addon.has("price")) {
+                        prices.add(addon.get("price").decimalValue());
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Invalid addon JSON contributes no price, matching the existing creation path.
+        }
+        return prices;
     }
 
     private BigDecimal parseAddonsFee(String json) {

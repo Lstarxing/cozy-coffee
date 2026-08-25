@@ -46,6 +46,12 @@ public final class CouponRuleUtil {
         return node == null ? 0.0 : node.asDouble();
     }
 
+    /** 解析规则 JSON 中的字符串值（用于 stacking 等）；缺失返回 null */
+    public static String parseStringValue(String ruleJson, String key) {
+        JsonNode node = field(ruleJson, key);
+        return node == null ? null : node.asText();
+    }
+
     private static JsonNode field(String ruleJson, String key) {
         if (key == null) {
             return null;

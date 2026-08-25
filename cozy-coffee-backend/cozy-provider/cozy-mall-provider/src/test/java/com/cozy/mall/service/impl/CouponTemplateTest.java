@@ -2,6 +2,7 @@ package com.cozy.mall.service.impl;
 
 import com.cozy.common.constant.CouponTemplateConfig;
 import com.cozy.mall.coupon.CouponCalculator;
+import com.cozy.mall.coupon.CouponCombinationService;
 import com.cozy.mall.entity.UserCoupon;
 import com.cozy.mall.mapper.MonthlyRedemptionMapper;
 import com.cozy.mall.mapper.PointsOrderFulfillmentMapper;
@@ -47,7 +48,8 @@ class CouponTemplateTest {
                 mock(PointsProductMapper.class), mock(PointsOrderMapper.class),
                 mock(MonthlyRedemptionMapper.class), mock(PointsOrderFulfillmentMapper.class),
                 userCouponMapper, mock(RedisTemplate.class), mock(StringRedisTemplate.class),
-                objectMapper, new CouponTemplateConfig(), new HashMap<String, CouponCalculator>());
+                objectMapper, new CouponTemplateConfig(), new HashMap<String, CouponCalculator>(),
+                mock(CouponCombinationService.class));
     }
 
     private UserCoupon issue(String couponType, double minAmount, double discountAmount) {

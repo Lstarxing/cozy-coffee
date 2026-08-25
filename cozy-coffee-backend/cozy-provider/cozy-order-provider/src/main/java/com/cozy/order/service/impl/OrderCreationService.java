@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.member.api.MemberService;
 import com.cozy.mall.api.PointsMallService;
 import com.cozy.mall.dto.request.ItemCheckDTO;
-import com.cozy.mall.dto.response.CouponUsageResult;
+import com.cozy.mall.dto.response.CouponCombinationResult;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.common.exception.BusinessErrorCode;
@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -126,6 +125,7 @@ public class OrderCreationService {
         BigDecimal totalAmount = BigDecimal.ZERO; // 订单总金额（基础+加料）
         BigDecimal baseTotalAmount = BigDecimal.ZERO; // 基础商品总金额（基础价+杯型加价）
         BigDecimal addonsTotalAmount = BigDecimal.ZERO; // 加料总费用
+        List<BigDecimal> addonPrices = new ArrayList<>(); // 原始加料价（尊享通兑券 freeAddon 免加料用）
         int totalQuantity = 0;
         List<ShopOrderItem> orderItems = new ArrayList<>();
         // v5.0: 用于券核销的商品检查列表
@@ -183,6 +183,7 @@ public class OrderCreationService {
                             if (addon.has("price")) {
                                 BigDecimal addonPrice = addon.get("price").decimalValue();
                                 addonsFee = addonsFee.add(addonPrice);
+                                addonPrices.add(addonPrice);
                             }
                         }
                     }
@@ -273,80 +274,30 @@ public class OrderCreationService {
             }
         }
 
-        // 券核销
+        // 券核销（组合引擎统一：主券/辅券分类、组合校验、金额计算、整组冻结）
         BigDecimal discountAmount = BigDecimal.ZERO;
         Long appliedCouponId = null;
-        String couponCode = request.getCouponCode();
-        boolean isExchangeCoupon = false; // 标记是否使用兑换券
-        boolean isExclusiveCoupon = false; // v5.2: 标记是否为互斥券（不可叠加其他优惠）
         String mainCouponType = null; // 主券类型，用于免运费等判断
+        BigDecimal addonDiscount = BigDecimal.ZERO; // 商品附加券折扣（如加浓缩券）
+        BigDecimal deliveryFeeDiscount = BigDecimal.ZERO; // 配送费折扣（如配送费券）
+        List<Long> addonCouponIds = new ArrayList<>();
+        List<String> couponCodes = collectCouponCodes(request);
 
-        if (couponCode != null && !couponCode.trim().isEmpty()) {
+        if (!couponCodes.isEmpty()) {
             try {
-                // 收集商品ID列表用于验证兑换券
-                List<Long> productIds = orderItems.stream()
-                        .map(ShopOrderItem::getProductId)
-                        .collect(Collectors.toList());
-
-                log.info(
-                        "准备核销优惠券: couponCode={}, baseTotalAmount={}, addonsTotalAmount={}, totalAmount={}, productIds={}",
-                        couponCode.trim(), baseTotalAmount, addonsTotalAmount, totalAmount, productIds);
-
-                // v5.3.2: 主券只对基础商品金额（含杯型加价）打折，不包含加料费用
-                // 使用新方法获取券类型信息（传入 itemChecks 以支持精准核销）
-                CouponUsageResult couponResult = pointsMallService
-                        .useCouponWithResult(userId, couponCode.trim(), baseTotalAmount, itemChecks);
-
-                discountAmount = couponResult.getDiscountAmount();
-                appliedCouponId = couponResult.getCouponId();
-                isExchangeCoupon = couponResult.isExchangeCoupon();
-                isExclusiveCoupon = couponResult.isExclusive();
-                mainCouponType = couponResult.getCouponType();
-
-                // v5.7: 尊享通兑券免费加料逻辑（免除金额最高的 N 个加料）
-                int freeAddonCount = couponResult.getFreeAddonCount();
-                if (freeAddonCount > 0 && addonsTotalAmount.compareTo(BigDecimal.ZERO) > 0) {
-                    // 收集所有加料价格，找出最高的 N 个免除
-                    List<BigDecimal> addonPrices = new ArrayList<>();
-                    for (ShopOrderItem item : orderItems) {
-                        if (item.getAddonsJson() != null && !item.getAddonsJson().trim().isEmpty()) {
-                            try {
-                                JsonNode addons = objectMapper.readTree(item.getAddonsJson());
-                                if (addons.isArray()) {
-                                    for (JsonNode addon : addons) {
-                                        if (addon.has("price")) {
-                                            addonPrices.add(addon.get("price").decimalValue());
-                                        }
-                                    }
-                                }
-                            } catch (Exception e) {
-                                log.warn("解析加料信息失败", e);
-                            }
-                        }
-                    }
-                    // 按金额从高到低排序，取前 freeAddonCount 个
-                    addonPrices.sort((a, b) -> b.compareTo(a));
-                    BigDecimal addonDiscount = BigDecimal.ZERO;
-                    for (int i = 0; i < Math.min(freeAddonCount, addonPrices.size()); i++) {
-                        addonDiscount = addonDiscount.add(addonPrices.get(i));
-                    }
-                    discountAmount = discountAmount.add(addonDiscount);
-                    log.info("尊享通兑券免费加料: freeAddonCount={}, addonPrices={}, addonDiscount={}, totalDiscount={}",
-                            freeAddonCount, addonPrices, addonDiscount, discountAmount);
-                }
-
-                // v5.0: 修正后的折扣逻辑已在 PointsMallService 中计算，此处无需再次修正
-                // 仅记录日志
-                if (isExchangeCoupon) {
-                    log.info("兑换券核销(来自MallService): discount={}, linkedProductId={}",
-                            discountAmount, couponResult.getLinkedProductId());
-                }
-
-                log.info("券核销成功: couponCode={}, type={}, discount={}, isExchange={}, exclusive={}, freeAddon={}",
-                        couponCode, couponResult.getCouponType(), discountAmount, isExchangeCoupon, isExclusiveCoupon,
-                        freeAddonCount);
+                CouponCombinationResult combo = pointsMallService.useCouponCombination(userId, couponCodes,
+                        baseTotalAmount, addonsTotalAmount, addonPrices, itemChecks);
+                discountAmount = combo.getMainDiscount();
+                appliedCouponId = combo.getMainCouponId();
+                mainCouponType = combo.getMainCouponType();
+                addonDiscount = combo.getAddonDiscount();
+                deliveryFeeDiscount = combo.getDeliveryFeeDiscount();
+                addonCouponIds = combo.getAddonCouponIds();
+                log.info("整组券核销成功: userId={}, codes={}, mainDiscount={}, addonDiscount={}, deliveryFeeDiscount={}, exchange={}, exclusive={}",
+                        userId, couponCodes, discountAmount, addonDiscount, deliveryFeeDiscount,
+                        combo.isExchangeCoupon(), combo.isExclusive());
             } catch (Exception e) {
-                log.warn("券核销失败: couponCode={}, error={}", couponCode, e.getMessage());
+                log.warn("整组券核销失败: userId={}, codes={}, error={}", userId, couponCodes, e.getMessage());
                 throw new BusinessException("优惠券使用失败: " + e.getMessage());
             }
         }
@@ -357,9 +308,6 @@ public class OrderCreationService {
         BigDecimal deliveryFee = BigDecimal.ZERO;
         boolean deliveryFeeWaived = false;
         String deliveryFeeWaivedReason = null;
-        BigDecimal addonDiscount = BigDecimal.ZERO; // 商品附加券折扣（如加浓缩券）
-        BigDecimal deliveryFeeDiscount = BigDecimal.ZERO; // 配送费折扣（如配送费券）
-        List<Long> addonCouponIds = new ArrayList<>();
 
         // 仅外卖订单有配送费
         if ("DELIVERY".equals(request.getDiningMethod())) {
@@ -369,7 +317,7 @@ public class OrderCreationService {
             if ("black".equals(memberLevel)) {
                 deliveryFeeWaived = true;
                 deliveryFeeWaivedReason = "BLACK_GOLD_UNLIMITED";
-                addonDiscount = deliveryFee; // 直接免除全部配送费
+                addonDiscount = addonDiscount.add(deliveryFee); // 免掉的配送费计入商品抵扣
                 log.info("黑金会员无限免运费: userId={}, deliveryFee={}", userId, deliveryFee);
             }
             // v5.8: 主券为配送费券时标记免运费
@@ -379,74 +327,13 @@ public class OrderCreationService {
             }
         }
 
-        // ============================================================
-        // v5.3: 附加券核销（独立于配送方式，所有订单类型都可用）
-        // ============================================================
-        List<String> addonCouponCodes = request.getAddonCouponCodes();
-
-        // 互斥检查
-        if (isExclusiveCoupon && addonCouponCodes != null && !addonCouponCodes.isEmpty()) {
-            throw new BusinessException("当前优惠券不可与其他优惠（如免运费券）叠加使用");
+        // 配送费券仅限外卖订单（组合引擎已校验配送费券张数上限）
+        if (deliveryFeeDiscount.compareTo(BigDecimal.ZERO) > 0 && !"DELIVERY".equals(request.getDiningMethod())) {
+            throw new BusinessException("配送费券仅限外卖订单使用");
         }
-
-        // v5.3: 校验配送费券数量（一单只能用一张）
-        if (addonCouponCodes != null && !addonCouponCodes.isEmpty()) {
-            long deliveryFeeCouponCount = addonCouponCodes.stream()
-                    .filter(code -> code != null && code.contains("DELIVERY_FEE"))
-                    .count();
-            if (deliveryFeeCouponCount > 1) {
-                throw new BusinessException("配送费券一单只能使用一张");
-            }
-        }
-
-        if (addonCouponCodes != null && !addonCouponCodes.isEmpty()) {
-            for (String addonCode : addonCouponCodes) {
-                if (addonCode == null || addonCode.trim().isEmpty())
-                    continue;
-
-                try {
-                    log.info("核销附加券: userId={}, addonCode={}, diningMethod={}, itemChecks.size={}",
-                            userId, addonCode.trim(), request.getDiningMethod(), itemChecks.size());
-
-                    // v5.3: 统一传入商品总额和商品列表，由 PointsMallService 根据券类型自动判断
-                    CouponUsageResult addonResult = pointsMallService
-                            .useCouponWithResult(userId, addonCode.trim(), totalAmount, itemChecks);
-
-                    if (addonResult != null && addonResult.getDiscountAmount() != null) {
-                        String couponType = addonResult.getCouponType();
-
-                        // v5.3.2: 区分商品附加券和配送费券
-                        if ("DELIVERY_FEE".equals(couponType)) {
-                            // 配送费券只在外卖订单时生效
-                            if (!"DELIVERY".equals(request.getDiningMethod())) {
-                                throw new BusinessException("配送费券仅限外卖订单使用");
-                            }
-                            // 累加配送费折扣
-                            deliveryFeeDiscount = deliveryFeeDiscount.add(addonResult.getDiscountAmount());
-                            // 更新配送费减免状态
-                            if (deliveryFeeDiscount.compareTo(deliveryFee) >= 0) {
-                                deliveryFeeWaived = true;
-                                deliveryFeeWaivedReason = "COUPON";
-                            }
-                        } else {
-                            // 其他附加券（如加浓缩券SHOT）从商品金额中扣除
-                            addonDiscount = addonDiscount.add(addonResult.getDiscountAmount());
-                        }
-
-                        if (addonResult.getCouponId() != null) {
-                            addonCouponIds.add(addonResult.getCouponId());
-                        }
-
-                        log.info("附加券核销成功: addonCode={}, type={}, discount={}",
-                                addonCode, couponType, addonResult.getDiscountAmount());
-                    }
-                } catch (Exception e) {
-                    log.error("附加券核销失败: addonCode={}, userId={}, error={}",
-                            addonCode, userId, e.getMessage(), e);
-                    // v5.3: 附加券核销失败时必须抛出异常，避免用户以为用了券但实际没核销
-                    throw new BusinessException("使用优惠券失败: " + e.getMessage());
-                }
-            }
+        if (deliveryFeeDiscount.compareTo(deliveryFee) >= 0) {
+            deliveryFeeWaived = true;
+            deliveryFeeWaivedReason = "COUPON";
         }
 
         // ============================================================
@@ -622,6 +509,22 @@ public class OrderCreationService {
         }
 
         return "{\"extraShot\":" + hasExtraShot + "}";
+    }
+
+    /** 合并主券 + 辅券为整组券码列表（分类交给组合引擎，本层不再理解主/辅） */
+    private List<String> collectCouponCodes(CreateOrderRequest request) {
+        List<String> codes = new ArrayList<>();
+        if (request.getCouponCode() != null && !request.getCouponCode().trim().isEmpty()) {
+            codes.add(request.getCouponCode().trim());
+        }
+        if (request.getAddonCouponCodes() != null) {
+            for (String code : request.getAddonCouponCodes()) {
+                if (code != null && !code.trim().isEmpty()) {
+                    codes.add(code.trim());
+                }
+            }
+        }
+        return codes;
     }
 
     private String generateOrderNo() {

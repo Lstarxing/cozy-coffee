@@ -2,6 +2,7 @@ package com.cozy.mall.api;
 
 import com.cozy.mall.dto.request.ItemCheckDTO;
 import com.cozy.mall.dto.request.RedeemRequest;
+import com.cozy.mall.dto.response.CouponCombinationResult;
 import com.cozy.mall.dto.response.CouponUsageResult;
 import com.cozy.mall.dto.response.PointsOrderDTO;
 import com.cozy.mall.dto.response.PointsProductDTO;
@@ -88,6 +89,24 @@ public interface PointsMallService {
          * Calculate and validate a coupon without consuming it. Checkout preview must use this method.
          */
         CouponUsageResult previewCouponWithResult(Long userId, String couponCode, BigDecimal orderAmount,
+                        List<ItemCheckDTO> items);
+
+        /**
+         * 整组券预览（不消费）：组合校验（主券≤1 / 独占唯一 / 配送费券上限 / SHOT 杯数 / 重复）+ 统一计算。
+         * 主券基数 couponBase（商品小计−会员折扣，不含加料）；辅券基数 couponBase+addonsTotal；
+         * addonPrices 供尊享通兑券 freeAddon 免加料取最高 N 个。
+         * 与 useCouponCombination 共用同一套组合校验与计算。
+         */
+        CouponCombinationResult previewCouponCombination(Long userId, List<String> couponCodes,
+                        BigDecimal couponBase, BigDecimal addonsTotal, List<BigDecimal> addonPrices,
+                        List<ItemCheckDTO> items);
+
+        /**
+         * 整组券核销（下单用）：组合校验 + 计算 + 整组冻结（ISSUED→FROZEN）。
+         * 订单落库失败时由 publishCouponRollbackEvent 整组回滚。
+         */
+        CouponCombinationResult useCouponCombination(Long userId, List<String> couponCodes,
+                        BigDecimal couponBase, BigDecimal addonsTotal, List<BigDecimal> addonPrices,
                         List<ItemCheckDTO> items);
 
         // ==================== 管理端方法 ====================

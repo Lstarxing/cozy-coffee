@@ -190,3 +190,9 @@ cozy:
           type: DISCOUNT
         - template-code: DISCOUNT
           type: DISCOUNT
+    # 优惠券叠加规则（CouponStackingConfig 单一事实源；分类判定：ruleJson.stacking → categories[type] → MAIN）
+    coupon-stacking:
+      categories:
+        DELIVERY_FEE: ADDON
+        SHOT: ADDON
+      max-delivery-fee: 1

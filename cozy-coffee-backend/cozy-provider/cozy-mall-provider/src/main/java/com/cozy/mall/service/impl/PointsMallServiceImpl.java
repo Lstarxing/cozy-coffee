@@ -8,6 +8,7 @@ import com.cozy.common.exception.BusinessException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.cozy.mall.coupon.CouponCalculator;
+import com.cozy.mall.coupon.CouponCombinationService;
 import com.cozy.mall.util.CouponRuleUtil;
 import com.cozy.mall.entity.PointsOrder;
 import com.cozy.mall.entity.PointsOrderFulfillment;
@@ -26,6 +27,7 @@ import com.cozy.mall.dto.request.ItemCheckDTO;
 import com.cozy.mall.dto.request.RedeemRequest;
 import com.cozy.member.dto.response.AddressDTO;
 import com.cozy.member.dto.response.MemberDTO;
+import com.cozy.mall.dto.response.CouponCombinationResult;
 import com.cozy.mall.dto.response.PointsOrderDTO;
 import com.cozy.mall.dto.response.PointsProductDTO;
 import com.cozy.order.api.OrderService;
@@ -96,6 +98,9 @@ public class PointsMallServiceImpl implements PointsMallService {
 
     // 优惠券抵扣策略（按 coupon_type 分发，Spring 注入 @Component(type) 实现）
     private final Map<String, CouponCalculator> couponCalculators;
+
+    // 优惠券组合引擎（主券/辅券分类 + 组合校验 + 统一计算）
+    private final CouponCombinationService couponCombinationService;
 
     // 跨服务调用：会员服务（获取积分、扣减积分）
     @DubboReference(check = false)
@@ -841,6 +846,21 @@ public class PointsMallServiceImpl implements PointsMallService {
         int freeAddonCount = parseValue(coupon.getRuleJson(), "freeAddon");
         return new CouponUsageResult(discountAmount, coupon.getCouponType(), coupon.getId(), linkedProductId,
                 exclusive, freeAddonCount);
+    }
+
+    @Override
+    public CouponCombinationResult previewCouponCombination(Long userId, List<String> couponCodes,
+            BigDecimal couponBase, BigDecimal addonsTotal, List<BigDecimal> addonPrices,
+            List<ItemCheckDTO> items) {
+        return couponCombinationService.preview(userId, couponCodes, couponBase, addonsTotal, addonPrices, items);
+    }
+
+    @Override
+    @Transactional
+    public CouponCombinationResult useCouponCombination(Long userId, List<String> couponCodes,
+            BigDecimal couponBase, BigDecimal addonsTotal, List<BigDecimal> addonPrices,
+            List<ItemCheckDTO> items) {
+        return couponCombinationService.use(userId, couponCodes, couponBase, addonsTotal, addonPrices, items);
     }
 
     private BigDecimal calculateCouponDiscount(UserCoupon coupon, BigDecimal orderAmount,
@@ -1850,6 +1870,9 @@ public class PointsMallServiceImpl implements PointsMallService {
         }
         if (Boolean.TRUE.equals(t.getFreeAddon())) {
             rule.put("freeAddon", 1);
+        }
+        if (t.getStacking() != null && !t.getStacking().isBlank()) {
+            rule.put("stacking", t.getStacking());
         }
 
         if (t.getDisplayTitle() != null) {

@@ -63,6 +63,8 @@ public class CouponTemplateConfig {
         private List<String> categoryBlocklist = new ArrayList<>();
         /** 附加项：freeAddon=1 */
         private Boolean freeAddon;
+        /** 叠加类别：MAIN / ADDON / EXCLUSIVE；缺省按类型映射（CouponStackingConfig）或 MAIN 处理 */
+        private String stacking;
         /** 为 true 时商品 ID 从 couponType 尾部解析（EXCHANGE_123） */
         private Boolean linkedProductFromCode;
         /** 展示标题；缺省表示代码动态生成 */
