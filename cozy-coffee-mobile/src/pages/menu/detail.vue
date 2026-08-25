@@ -50,6 +50,7 @@
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getProductDetail } from '@/api/product'
+import { resolveImageUrl } from '@/config/image'
 import { useCartStore } from '@/stores/cart'
 import { money } from '@/utils/format'
 import ProductSpecSheet from '@/components/order/ProductSpecSheet.vue'
@@ -91,7 +92,7 @@ async function loadProduct() {
     product.value = {
       ...data,
       productId: String(data.id ?? productId.value),
-      image: data.imageUrl || data.image || '/static/images/default-product.png',
+      image: resolveImageUrl(data.imageUrl) || resolveImageUrl(data.image) || '/static/images/default-product.png',
       price: Number(data.price || 0)
     }
   } catch (error) {

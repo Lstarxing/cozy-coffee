@@ -17,10 +17,13 @@ describe('getImageUrl', () => {
     expect(getImageUrl(cdnUrl)).toBe(cdnUrl)
   })
 
-  it('prepends API base to relative paths', () => {
-    // VITE_API_BASE_URL from .env.development = http://127.0.0.1:8080/api
-    const result = getImageUrl('/uploads/products/latte.png')
-    expect(result).toContain('/uploads/products/latte.png')
-    expect(result).not.toBe('/uploads/products/latte.png')
+  it('passes through /static local packaged assets unchanged', () => {
+    expect(getImageUrl('/static/images/default-avatar.png')).toBe('/static/images/default-avatar.png')
+  })
+
+  it('prepends IMAGE_BASE to relative paths', () => {
+    // IMAGE_BASE from config/image.js = http://127.0.0.1:8080
+    const result = getImageUrl('/images/seed/coffee.png')
+    expect(result).toBe('http://127.0.0.1:8080/images/seed/coffee.png')
   })
 })

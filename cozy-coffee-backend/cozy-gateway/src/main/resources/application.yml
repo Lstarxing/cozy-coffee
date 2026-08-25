@@ -47,14 +47,16 @@ logging:
     com.cozy.gateway.mq: DEBUG
 
 # 对象存储配置（环境变量注入，敏感信息不放仓库）
+# OSS 到期临时用本地存储：STORAGE_TYPE=local（默认）；上线配好 OSS 后设 STORAGE_TYPE=oss
 storage:
-  type: ${STORAGE_TYPE:oss}
+  type: ${STORAGE_TYPE:local}
   endpoint: ${STORAGE_ENDPOINT:}
   bucket: ${STORAGE_BUCKET:}
   access-key-id: ${STORAGE_ACCESS_KEY_ID:}
   access-key-secret: ${STORAGE_ACCESS_KEY_SECRET:}
   dir-prefix: ${STORAGE_DIR_PREFIX:images/}
   public-base-url: ${STORAGE_PUBLIC_BASE_URL:}
+  local-upload-dir: ${LOCAL_UPLOAD_DIR:./uploads}
 
 # 认证配置：微信登录（未配置 secret 时走开发登录）
 cozy:

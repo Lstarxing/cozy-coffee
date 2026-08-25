@@ -39,7 +39,7 @@
 
         <view class="receipt-items">
           <view v-for="item in order.items" :key="item.id || `${item.productName}-${item.spec}`" class="order-item">
-            <view class="item-image"><image v-if="item.productImage" :src="item.productImage" class="item-img" mode="aspectFill" /></view>
+            <view class="item-image"><image v-if="item.productImage" :src="resolveImageUrl(item.productImage)" class="item-img" mode="aspectFill" /></view>
             <view class="item-info">
               <text class="item-name">{{ item.productName }}</text>
               <text class="item-spec">{{ item.spec || '默认规格' }}</text>
@@ -92,6 +92,7 @@ import { onLoad, onShow, onUnload, onPullDownRefresh } from '@dcloudio/uni-app'
 import { getOrderList, acceptOrder as acceptOrderApi, cancelOrder as cancelOrderApi, confirmOrder as confirmOrderApi } from '@/api/order'
 import { formatCoffeeSpec } from '@/utils/spec'
 import { formatFullTime, money } from '@/utils/format'
+import { resolveImageUrl } from '@/config/image'
 import { useCartStore } from '@/stores/cart'
 import { restoreOrderToCart } from '@/services/order/ReorderService'
 import LoadingState from '@/components/states/LoadingState.vue'

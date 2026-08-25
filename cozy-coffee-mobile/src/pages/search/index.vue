@@ -91,6 +91,7 @@
 <script setup>
 import { ref } from 'vue'
 import { searchCoffeeProducts } from '@/api/product'
+import { resolveImageUrl } from '@/config/image'
 
 const keyword = ref('')
 const hasSearched = ref(false)
@@ -106,7 +107,7 @@ const doSearch = async () => {
     const res = await searchCoffeeProducts(keyword.value.trim())
     searchResults.value = (res.data || []).map(p => ({
       ...p,
-      image: p.imageUrl || p.image || '/static/images/default-product.png'
+      image: resolveImageUrl(p.imageUrl) || resolveImageUrl(p.image) || '/static/images/default-product.png'
     }))
   } catch (error) {
     searchResults.value = []

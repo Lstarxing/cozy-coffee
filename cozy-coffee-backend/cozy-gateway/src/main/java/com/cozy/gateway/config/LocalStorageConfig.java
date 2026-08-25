@@ -3,7 +3,7 @@ package com.cozy.gateway.config;
 import com.cozy.gateway.storage.LocalStorageService;
 import com.cozy.gateway.storage.StorageProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,9 +12,9 @@ import org.springframework.context.annotation.Configuration;
 public class LocalStorageConfig {
 
     @Bean
-    @ConditionalOnExpression("'${storage.access-key-id:}'.isEmpty()")
+    @ConditionalOnProperty(name = "storage.type", havingValue = "local")
     public LocalStorageService localStorageService(StorageProperties properties) {
-        log.info("OSS 未配置，启用本地文件存储: uploadDir={}", properties.getLocalUploadDir());
+        log.info("本地文件存储启用: uploadDir={}", properties.getLocalUploadDir());
         return new LocalStorageService(properties);
     }
 }

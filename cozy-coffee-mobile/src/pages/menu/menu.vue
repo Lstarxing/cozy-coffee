@@ -196,6 +196,7 @@
 import { computed, nextTick, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { FIXED_STORE } from '@/config/store'
+import { resolveImageUrl } from '@/config/image'
 import { getMenuData } from '@/api/product'
 import { useCartStore } from '@/stores/cart'
 import { useCheckoutStore } from '@/stores/checkout'
@@ -320,7 +321,7 @@ async function loadMenu() {
         categoryMap.get(cid).products.push({
           ...p,
           productId: String(p.id),
-          image: p.imageUrl || p.image || '/static/images/default-product.png',
+          image: resolveImageUrl(p.imageUrl) || resolveImageUrl(p.image) || '/static/images/default-product.png',
           price: Number(p.price || 0)
         })
       })

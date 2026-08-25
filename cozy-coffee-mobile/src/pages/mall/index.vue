@@ -53,6 +53,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
 import { getPointsProducts } from '@/api/product'
 import { getMemberInfo } from '@/api/member'
+import { resolveImageUrl } from '@/config/image'
 import {
   getDiscountedPointsCost
 } from '@/domain/member/memberRules'
@@ -76,7 +77,7 @@ async function loadProducts() {
     const response = await getPointsProducts()
     products.value = (response.data || []).map(item => ({
       ...item,
-      image: item.imageUrl || item.image || '',
+      image: resolveImageUrl(item.imageUrl) || resolveImageUrl(item.image) || '',
       description: item.description || '',
       category: item.category || (item.productType === 'PHYSICAL' ? 'physical' : 'coupon')
     }))

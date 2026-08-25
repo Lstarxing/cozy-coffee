@@ -30,10 +30,11 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         Path uploadPath = Paths.get(localUploadDir).toAbsolutePath().normalize();
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + uploadPath.toString().replace('\\', '/') + "/");
-        registry.addResourceHandler("/api/uploads/**")
-                .addResourceLocations("file:" + uploadPath.toString().replace('\\', '/') + "/");
+        // 用 toUri() 生成规范 file:/// 前缀，Windows 下 "file:C:/..." 会导致资源处理器抛异常
+        String location = uploadPath.toUri().toString();
+        if (!location.endsWith("/")) location += "/";
+        registry.addResourceHandler("/uploads/**").addResourceLocations(location);
+        registry.addResourceHandler("/api/uploads/**").addResourceLocations(location);
     }
 
     @Override

@@ -1,7 +1,7 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+import { IMAGE_BASE } from '@/config/image'
 
-export function getImageUrl(url) {
-  if (!url) return '/static/images/default-product.png'
-  if (url.startsWith('http')) return url
-  return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`
+export function getImageUrl(url, fallback = '/static/images/default-product.png') {
+  if (!url) return fallback
+  if (url.startsWith('http') || url.startsWith('/static/')) return url
+  return `${IMAGE_BASE}${url.startsWith('/') ? '' : '/'}${url}`
 }

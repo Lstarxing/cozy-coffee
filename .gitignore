@@ -99,3 +99,6 @@ coverage/
 
 # 本地上传文件（OSS 未配置时的本地存储）
 uploads/
+
+# 本地图片静态资源（OSS 到期临时放入网关 classpath，不入库）
+cozy-coffee-backend/cozy-gateway/src/main/resources/static/images/

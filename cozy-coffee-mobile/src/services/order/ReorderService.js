@@ -1,4 +1,5 @@
 import { getMenuData } from '@/api/product'
+import { resolveImageUrl } from '@/config/image'
 import { BusinessError } from '@/services/errors/AppError'
 
 function parseJsonObject(value) {
@@ -86,7 +87,8 @@ export function createReorderCartLine(item, product) {
     id: product.id ?? product.productId,
     skuId: options.skuId ?? item?.skuId ?? '',
     name: product.name || item?.productName || item?.name || '商品',
-    image: product.imageUrl || product.image || item?.productImage || item?.image || '/static/images/default-product.png',
+    image: resolveImageUrl(product.imageUrl) || resolveImageUrl(product.image)
+      || resolveImageUrl(item?.productImage) || resolveImageUrl(item?.image) || '/static/images/default-product.png',
     basePrice: Number(product.price || 0),
     cupSize: size.value,
     temperature: temperature.value,
