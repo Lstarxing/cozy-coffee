@@ -83,6 +83,12 @@ class CouponCombinationServiceTest {
         assertEquals(0, new BigDecimal("25").compareTo(r.getMainDiscount()));
         assertEquals(0, new BigDecimal("5").compareTo(r.getAddonDiscount()));
         assertEquals(2L, r.getAddonCouponIds().get(0).longValue());
+        // 明细：主券在前（含 freeAddon 后的整额），辅券次之
+        assertEquals(2, r.getDetails().size());
+        assertTrue(r.getDetails().get(0).isMain());
+        assertEquals(0, new BigDecimal("25").compareTo(r.getDetails().get(0).getDiscount()));
+        assertTrue(!r.getDetails().get(1).isMain());
+        assertEquals(0, new BigDecimal("5").compareTo(r.getDetails().get(1).getDiscount()));
     }
 
     @Test

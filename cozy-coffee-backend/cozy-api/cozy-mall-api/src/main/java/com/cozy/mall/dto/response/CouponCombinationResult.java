@@ -41,4 +41,20 @@ public class CouponCombinationResult implements Serializable {
 
     /** 是否互斥券（不可与其他券叠加） */
     private boolean exclusive;
+
+    /** 逐张券抵扣明细（优惠详情展开用，主券在前） */
+    private List<CouponDetail> details = new ArrayList<>();
+
+    @Data
+    public static class CouponDetail implements Serializable {
+        private static final long serialVersionUID = 1L;
+        private Long couponId;
+        private String couponType;
+        /** 券展示标题（user_coupons.displayTitle） */
+        private String title;
+        /** 该券抵扣金额 */
+        private BigDecimal discount;
+        /** 是否主券 */
+        private boolean main;
+    }
 }

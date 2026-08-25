@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -117,9 +118,13 @@ public class OrderPreviewService {
         }
 
         BigDecimal discount = memberDiscount;
+        CouponCombinationResult combo = null;
         if (invalidItems.isEmpty()) {
-            discount = discount.add(previewCoupons(userId, request, baseSubtotal.subtract(memberDiscount), addonsTotal,
-                    addonPrices, itemChecks));
+            combo = previewCoupons(userId, request, baseSubtotal.subtract(memberDiscount), addonsTotal,
+                    addonPrices, itemChecks);
+        }
+        if (combo != null) {
+            discount = discount.add(nullSafe(combo.getMainDiscount())).add(nullSafe(combo.getAddonDiscount()));
         }
         if (discount.compareTo(subtotal) > 0) {
             discount = subtotal;
@@ -131,6 +136,17 @@ public class OrderPreviewService {
         preview.setPayable(subtotal.subtract(discount).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
         preview.setPreviewToken(buildToken(memberLevel, request, canonicalLines));
         preview.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+        if (combo != null && combo.getDetails() != null) {
+            preview.setCouponDetails(combo.getDetails().stream()
+                    .map(d -> {
+                        CheckoutPreviewDTO.CouponPreviewItem item = new CheckoutPreviewDTO.CouponPreviewItem();
+                        item.setTitle(d.getTitle());
+                        item.setDiscount(d.getDiscount());
+                        item.setMain(d.isMain());
+                        return item;
+                    })
+                    .collect(Collectors.toList()));
+        }
 
         // 可得积分/成长值预估（与下单落库同一口径：全等级分段，基数=实付不含配送费）
         try {
@@ -171,17 +187,16 @@ public class OrderPreviewService {
         return result.getPreview();
     }
 
-    private BigDecimal previewCoupons(Long userId, CartCheckRequest request, BigDecimal couponBase,
+    private CouponCombinationResult previewCoupons(Long userId, CartCheckRequest request, BigDecimal couponBase,
             BigDecimal addonsTotal, List<BigDecimal> addonPrices, List<ItemCheckDTO> items) {
         List<String> codes = collectCouponCodes(request);
         if (codes.isEmpty()) {
-            return BigDecimal.ZERO;
+            return null;
         }
         try {
             // 组合引擎统一校验+计算（主券/辅券分类由 mall 侧判定）；配送费券折扣不进入预览商品折扣
-            CouponCombinationResult result = pointsMallService.previewCouponCombination(
+            return pointsMallService.previewCouponCombination(
                     userId, codes, couponBase, addonsTotal, addonPrices, items);
-            return nullSafe(result.getMainDiscount()).add(nullSafe(result.getAddonDiscount()));
         } catch (Exception e) {
             String message = e.getMessage() != null ? e.getMessage() : "优惠券不可用";
             BusinessErrorCode code = message.contains("过期") ? BusinessErrorCode.COUPON_EXPIRED

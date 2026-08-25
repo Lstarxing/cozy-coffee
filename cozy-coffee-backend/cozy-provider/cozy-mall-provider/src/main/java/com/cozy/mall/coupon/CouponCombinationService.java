@@ -143,35 +143,19 @@ public class CouponCombinationService {
     private CouponCombinationResult compute(List<UserCoupon> coupons, BigDecimal couponBase,
             BigDecimal addonsTotal, List<BigDecimal> addonPrices, List<ItemCheckDTO> items) {
         CouponCombinationResult result = new CouponCombinationResult();
-        BigDecimal mainDiscount = BigDecimal.ZERO;
-        BigDecimal addonDiscount = BigDecimal.ZERO;
-        BigDecimal deliveryFeeDiscount = BigDecimal.ZERO;
         BigDecimal mainBase = nullSafe(couponBase);
         BigDecimal addonBase = mainBase.add(nullSafe(addonsTotal));
-        List<Long> addonCouponIds = new ArrayList<>();
-        UserCoupon mainCoupon = null;
 
-        for (UserCoupon coupon : coupons) {
-            // MAIN / EXCLUSIVE 均按主券口径计算（EXCLUSIVE 只是不可叠加，折扣仍是主券型）
-            if (CATEGORY_MAIN.equals(classify(coupon)) || CATEGORY_EXCLUSIVE.equals(classify(coupon))) {
-                if (mainCoupon == null) {
-                    mainCoupon = coupon;
-                }
-            } else {
-                BigDecimal discount = calculate(coupon, addonBase, items);
-                if ("DELIVERY_FEE".equals(coupon.getCouponType())) {
-                    deliveryFeeDiscount = deliveryFeeDiscount.add(discount);
-                } else {
-                    addonDiscount = addonDiscount.add(discount);
-                }
-                if (coupon.getId() != null) {
-                    addonCouponIds.add(coupon.getId());
-                }
-            }
-        }
+        // 主券（MAIN / EXCLUSIVE 均按主券口径，EXCLUSIVE 只是不可叠加）
+        UserCoupon mainCoupon = coupons.stream()
+                .filter(c -> {
+                    String cat = classify(c);
+                    return CATEGORY_MAIN.equals(cat) || CATEGORY_EXCLUSIVE.equals(cat);
+                })
+                .findFirst().orElse(null);
 
         if (mainCoupon != null) {
-            mainDiscount = calculate(mainCoupon, mainBase, items);
+            BigDecimal mainDiscount = calculate(mainCoupon, mainBase, items);
             int freeAddonCount = CouponRuleUtil.parseValue(mainCoupon.getRuleJson(), "freeAddon");
             if (freeAddonCount > 0 && nullSafe(addonsTotal).signum() > 0
                     && addonPrices != null && !addonPrices.isEmpty()) {
@@ -179,17 +163,47 @@ public class CouponCombinationService {
                 mainDiscount = mainDiscount.add(freeAddonDiscount);
                 log.info("尊享通兑券免费加料: freeAddonCount={}, discount={}", freeAddonCount, freeAddonDiscount);
             }
+            result.setMainDiscount(mainDiscount);
             result.setMainCouponId(mainCoupon.getId());
             result.setMainCouponType(mainCoupon.getCouponType());
             result.setExchangeCoupon("EXCHANGE".equals(mainCoupon.getCouponType()));
+            result.getDetails().add(detail(mainCoupon, mainDiscount, true));
         }
 
-        result.setMainDiscount(mainDiscount);
+        BigDecimal addonDiscount = BigDecimal.ZERO;
+        BigDecimal deliveryFeeDiscount = BigDecimal.ZERO;
+        List<Long> addonCouponIds = new ArrayList<>();
+        for (UserCoupon coupon : coupons) {
+            if (coupon == mainCoupon) {
+                continue;
+            }
+            BigDecimal discount = calculate(coupon, addonBase, items);
+            if ("DELIVERY_FEE".equals(coupon.getCouponType())) {
+                deliveryFeeDiscount = deliveryFeeDiscount.add(discount);
+            } else {
+                addonDiscount = addonDiscount.add(discount);
+            }
+            if (coupon.getId() != null) {
+                addonCouponIds.add(coupon.getId());
+            }
+            result.getDetails().add(detail(coupon, discount, false));
+        }
+
         result.setAddonDiscount(addonDiscount);
         result.setDeliveryFeeDiscount(deliveryFeeDiscount);
         result.setAddonCouponIds(addonCouponIds);
         result.setExclusive(coupons.stream().anyMatch(c -> CATEGORY_EXCLUSIVE.equals(classify(c))));
         return result;
+    }
+
+    private CouponCombinationResult.CouponDetail detail(UserCoupon coupon, BigDecimal discount, boolean main) {
+        CouponCombinationResult.CouponDetail d = new CouponCombinationResult.CouponDetail();
+        d.setCouponId(coupon.getId());
+        d.setCouponType(coupon.getCouponType());
+        d.setTitle(coupon.getDisplayTitle());
+        d.setDiscount(discount);
+        d.setMain(main);
+        return d;
     }
 
     private BigDecimal calculate(UserCoupon coupon, BigDecimal orderAmount, List<ItemCheckDTO> items) {
