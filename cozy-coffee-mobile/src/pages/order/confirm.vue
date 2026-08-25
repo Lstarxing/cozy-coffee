@@ -31,26 +31,18 @@
             v-else
             :preview="checkoutStore.latestPreview"
             :points-rate="Number(sessionStore.memberInfo?.pointsRate) || 1"
+            :coupon-items="couponDetailItems"
           />
         </view>
       </view>
 
-      <!-- 优惠券（独立一块，可展开看明细） -->
-      <view class="coupon-block" @click="onCouponTap">
+      <!-- 优惠券（独立一块，点击进入选券；优惠合计/券明细在下方金额区展开） -->
+      <view class="coupon-block" @click="goToCoupon">
         <text class="coupon-label">优惠券</text>
         <view class="coupon-value-wrap">
           <text class="coupon-value" :class="{ accent: Boolean(checkoutStore.selectedCoupon) }">{{ couponDisplayText }}</text>
-          <text class="coupon-chevron" :class="{ expanded: couponExpanded }">›</text>
+          <text class="coupon-chevron">›</text>
         </view>
-      </view>
-
-      <!-- 优惠详情（展开） -->
-      <view v-if="couponExpanded && couponDetailItems.length" class="coupon-detail">
-        <view v-for="(item, idx) in couponDetailItems" :key="idx" class="coupon-detail-row">
-          <text class="coupon-detail-name">{{ item.title || '优惠券' }}</text>
-          <text class="coupon-detail-amount" :class="{ muted: !Number(item.discount) }">{{ formatCouponAmount(item.discount) }}</text>
-        </view>
-        <view class="coupon-detail-change" @click="changeCoupon">更换优惠券 ›</view>
       </view>
 
       <!-- 订单备注 + 预留电话（底部） -->
@@ -129,6 +121,7 @@ import { useUserStore } from '@/stores/user'
 import { useSessionStore } from '@/stores/session'
 import { createDefaultCheckoutWorkflow } from '@/services/checkout/CheckoutWorkflow'
 import { resolveDeliveryAddress } from '@/services/address/DeliveryAddressResolver'
+import { calculateCouponDiscount } from '@/utils/couponRules'
 import { formatCoffeeSpec } from '@/utils/spec'
 import { AuthError, NetworkError } from '@/services/errors/AppError'
 import StoreSummary from '@/components/order/StoreSummary.vue'
@@ -152,7 +145,6 @@ const diningMethod = computed(() => checkoutStore.diningMethod || 'TAKEOUT')
 const previewError = ref('')
 const checkoutSubmitting = ref(false)
 const addressPickerVisible = ref(false)
-const couponExpanded = ref(false)
 
 // 预计送达：当前本地时间 + 50~60 分钟区间
 const deliveryEtaText = computed(() => {
@@ -257,38 +249,37 @@ function goToCoupon() {
   uni.navigateTo({ url: '/pages/coupon/list?select=1' })
 }
 
-// 优惠行：无券时点选券；有券时展开/折叠详情
-function onCouponTap() {
-  if (!checkoutStore.selectedCoupon && !(checkoutStore.selectedAddonCoupons || []).length) {
-    goToCoupon()
-    return
-  }
-  couponExpanded.value = !couponExpanded.value
-}
-
-function changeCoupon() {
-  couponExpanded.value = false
-  goToCoupon()
-}
-
-// 优惠详情：优先走后端 preview 的 couponDetails（每张券名称+抵扣金额）；
-// 本地试算/后端未返回时兜底展示券名（无金额）
+// 优惠明细：优先走后端 preview 的 couponDetails（每张券名称+抵扣金额）；
+// 本地试算/后端未返回明细时兜底用本地券规则估算每张券金额（展示用，结算以后端为准）
 const couponDetailItems = computed(() => {
   const details = checkoutStore.latestPreview?.couponDetails
   if (Array.isArray(details) && details.length) return details
   const items = []
   if (checkoutStore.selectedCoupon) {
-    items.push({ title: couponTitle(checkoutStore.selectedCoupon), discount: 0, main: true })
+    items.push({ title: couponTitle(checkoutStore.selectedCoupon), discount: couponDetailAmount(checkoutStore.selectedCoupon), main: true })
   }
   ;(checkoutStore.selectedAddonCoupons || []).forEach(addon => {
-    items.push({ title: couponTitle(addon), discount: 0, main: false })
+    items.push({ title: couponTitle(addon), discount: couponDetailAmount(addon), main: false })
   })
   return items
 })
 
-function formatCouponAmount(discount) {
-  const value = Number(discount || 0)
-  return value > 0 ? `-¥${value.toFixed(2)}` : '--'
+// 兜底估算单张券抵扣额：辅券取面值；主券用本地券规则（DISCOUNT 按百分比、满减/兑换按规则）
+function couponDetailAmount(coupon) {
+  if (!coupon) return 0
+  const type = String(coupon.couponType || '').toUpperCase()
+  if (type === 'SHOT' || type === 'DELIVERY_FEE') return Number(coupon.value || 0)
+  try {
+    const parsedRule = JSON.parse(coupon.ruleJson || '{}')
+    const pricing = {
+      subtotal: cartStore.subtotal,
+      baseSubtotal: cartStore.items.reduce((sum, i) => sum + Number(i.basePrice ?? i.price ?? 0) * Number(i.quantity || 1), 0),
+      cupExtraTotal: 0
+    }
+    return Number(calculateCouponDiscount({ ...coupon, parsedRule }, cartStore.items, pricing) || 0)
+  } catch (_) {
+    return 0
+  }
 }
 
 function handleCouponSelected(coupon) {
@@ -407,23 +398,7 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 .coupon-value-wrap { min-width: 0; flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 12rpx; }
 .coupon-value { overflow: hidden; color: $cozy-muted; font-size: 24rpx; white-space: nowrap; text-overflow: ellipsis; }
 .coupon-value.accent { color: $cozy-primary; }
-.coupon-chevron { color: $cozy-placeholder; font-size: 42rpx; font-weight: 300; transition: transform $cozy-duration $cozy-ease-out, color $cozy-duration $cozy-ease-out; }
-.coupon-chevron.expanded { transform: rotate(90deg); color: $cozy-ink; }
-
-/* ── 优惠详情（展开） ── */
-.coupon-detail {
-  margin: -28rpx 0 0;
-  padding: 0 32rpx 28rpx;
-  border-radius: 0 0 28rpx 28rpx;
-  background: #fff;
-  position: relative;
-  z-index: 1;
-}
-.coupon-detail-row { min-height: 64rpx; display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
-.coupon-detail-name { min-width: 0; flex: 1; overflow: hidden; color: $cozy-ink; font-size: 24rpx; white-space: nowrap; text-overflow: ellipsis; }
-.coupon-detail-amount { flex: none; color: $cozy-primary; font-size: 24rpx; font-weight: 650; }
-.coupon-detail-amount.muted { color: $cozy-placeholder; font-weight: 400; }
-.coupon-detail-change { margin-top: 12rpx; padding-top: 20rpx; border-top: 1rpx solid $cozy-border; color: $cozy-primary; font-size: 24rpx; font-weight: 650; text-align: center; }
+.coupon-chevron { color: $cozy-placeholder; font-size: 42rpx; font-weight: 300; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20rpx; }
 .section-title { color: $cozy-ink; font-family: $font-display; font-size: 30rpx; font-weight: 600; }
 .section-note { color: $cozy-muted; font-size: 22rpx; }

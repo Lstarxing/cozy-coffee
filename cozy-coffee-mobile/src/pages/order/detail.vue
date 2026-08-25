@@ -97,34 +97,22 @@
           <template v-if="isRedeem">
             <view class="sp-amount-row"><text>消耗积分</text><text>{{ formatPoints(consumePoints) }} 积分</text></view>
             <view class="sp-amount-row"><text>兑换后剩余</text><text>{{ formatPoints(remainingPoints) }} 积分</text></view>
-          </template>
-          <template v-else>
-            <view class="sp-amount-row"><text>商品小计</text><text>¥{{ money(order.totalAmount) }}</text></view>
-
-            <!-- 可折叠：配送费 / 优惠合计 → 展开券明细 -->
-            <view v-if="deliveryFee || discount" class="sp-collapse" @click="amountExpanded = !amountExpanded">
-              <view v-if="deliveryFee" class="sp-amount-row"><text>配送费</text><text>¥{{ money(deliveryFee) }}</text></view>
-              <view v-if="discount" class="sp-amount-row discount">
-                <view class="collapse-left">
-                  <text>优惠合计</text>
-                  <text class="collapse-arrow" :class="{ open: amountExpanded }">›</text>
-                </view>
-                <text>-¥{{ money(order.discountAmount) }}</text>
-              </view>
-            </view>
-            <view class="sp-collapse-body" :class="{ open: amountExpanded }">
-              <view v-for="(name, idx) in couponNames" :key="idx" class="sp-coupon-line">
-                <text>{{ name }}</text>
-                <text>-¥{{ money(order.discountAmount) }}</text>
-              </view>
+            <view class="sp-total-line">
+              <text class="total-muted">共 {{ totalCount }} 件商品，实付</text>
+              <text class="total-value">{{ formatPoints(consumePoints) }} 积分</text>
             </view>
           </template>
-
-          <view class="sp-total-line">
-            <text class="total-muted">共 {{ totalCount }} 件商品，实付</text>
-            <text v-if="isRedeem" class="total-value">{{ formatPoints(consumePoints) }} 积分</text>
-            <text v-else class="total-value">¥{{ money(payAmount) }}</text>
-          </view>
+          <!-- 金额明细（商品小计/优惠合计可折叠/配送费/实付）公用组件 -->
+          <PriceBreakdown
+            v-else
+            :subtotal="order.totalAmount || 0"
+            :discount="order.discountAmount || 0"
+            :delivery-fee="deliveryFee"
+            :payable="payAmount"
+            :payable-label="`共 ${totalCount} 件商品，实付`"
+            :coupon-items="couponItems"
+          />
+        </view>
 
           <!-- 本次获得（完成订单，紧贴实付下方） -->
           <view v-if="rewards" class="sp-reward">
@@ -180,6 +168,7 @@ import { formatFullTime, formatPoints, money } from '@/utils/format'
 import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
 import CozyIcon from '@/components/CozyIcon.vue'
+import PriceBreakdown from '@/components/order/PriceBreakdown.vue'
 
 const orderId = ref('')
 const type = ref('coffee')
@@ -260,7 +249,6 @@ const pendingRemain = computed(() => {
   const ss = String(remain % 60).padStart(2, '0')
   return `${mm}:${ss}`
 })
-const amountExpanded = ref(false)
 const deliveryAddress = computed(() => order.value?.receiverAddress || '—')
 const deliveryContact = computed(() => {
   const parts = [order.value?.receiverName, order.value?.receiverPhone].filter(Boolean)
@@ -341,6 +329,11 @@ const couponNames = computed(() => {
 })
 const deliveryFee = computed(() => Number(order.value?.deliveryFee || 0))
 const discount = computed(() => Number(order.value?.discountAmount || 0))
+// 优惠合计展开的券明细：每张券 { title, discount }（沿用旧逻辑：券名 + 总优惠额）
+const couponItems = computed(() => couponNames.value.map(name => ({
+  title: name,
+  discount: order.value?.discountAmount || 0
+})))
 
 onLoad(options => {
   orderId.value = options.id || options.orderId || ''
@@ -752,41 +745,6 @@ async function cancelPendingOrder() {
 
   &.discount { color: $cozy-primary; }
 }
-.collapse-left {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-}
-.collapse-arrow {
-  font-size: 30rpx;
-  line-height: 1;
-  color: $cozy-placeholder;
-  transform: rotate(90deg);
-  transition: transform .3s $cozy-ease-out;
-}
-.collapse-arrow.open { transform: rotate(270deg); }
-.sp-collapse-body {
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height .3s $cozy-ease-out, opacity .25s ease;
-}
-.sp-collapse-body.open {
-  max-height: 200rpx;
-  opacity: 1;
-}
-.sp-coupon-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24rpx;
-  margin: 4rpx 4rpx 4rpx 24rpx;
-  padding: 14rpx 4rpx 14rpx 20rpx;
-  border-left: 2rpx solid $cozy-border;
-  font-size: 24rpx;
-  color: $cozy-ink;
-}
-.sp-coupon-line text:last-child { color: $cozy-primary; font-weight: 650; }
 
 /* 实付（右对齐 + 共X件商品） */
 .sp-total-line {
