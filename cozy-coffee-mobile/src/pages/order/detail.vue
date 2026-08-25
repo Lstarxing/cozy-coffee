@@ -137,6 +137,7 @@
             <text>订单编号</text>
             <view class="meta-value"><text selectable>{{ order.orderNo }}</text><text class="copy-btn" @click="copyOrderNo">复制</text></view>
           </view>
+          <view v-if="order.remark" class="meta-row"><text>订单备注</text><text class="meta-value">{{ order.remark }}</text></view>
           <template v-if="isDelivery">
             <view class="sp-divider" />
             <view class="meta-row"><text>配送方式</text><text>外送</text></view>
@@ -148,8 +149,6 @@
               </view>
             </view>
           </template>
-          <view v-if="order.remark" class="sp-divider" />
-          <view v-if="order.remark" class="meta-row"><text>订单备注</text><text class="meta-value">{{ order.remark }}</text></view>
           <view v-if="orderPhone" class="sp-divider" />
           <view v-if="orderPhone" class="meta-row"><text>预留电话</text><text class="meta-value"><text selectable>{{ orderPhone }}</text></text></view>
         </view>
