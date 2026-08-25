@@ -167,12 +167,15 @@ export class CheckoutWorkflow {
         this.log('warn', 'Payment Cancel', startedAt, { traceId, orderId: order?.id })
         // 支付取消同样清空购物车（商品已进入订单，支付弹窗时购物车保留以维持确认页展示）
         this.cartStore.clearCart()
+        this.checkoutStore.clearCoupon()
         return { status: 'cancelled', order, payment }
       }
 
       this.checkoutStore.transition('PAYMENT_SUCCEEDED')
       // 支付成功：购物车清空（商品已进入订单）
       this.cartStore.clearCart()
+      // 券已随订单使用，清空选中券避免带入下一单
+      this.checkoutStore.clearCoupon()
       // 支付成功后自动接单：待支付 pending → 制作中 preparing
       if (order?.id) {
         this.orderService.accept(order.id).catch(error => {

@@ -39,7 +39,7 @@
       <view class="coupon-block" @click="goToCoupon">
         <text class="coupon-label">优惠券</text>
         <view class="coupon-value-wrap">
-          <text class="coupon-value" :class="{ accent: Boolean(selectedCoupon) }">{{ couponDisplayText }}</text>
+          <text class="coupon-value" :class="{ accent: Boolean(checkoutStore.selectedCoupon) }">{{ couponDisplayText }}</text>
           <text class="coupon-chevron">›</text>
         </view>
       </view>
@@ -137,7 +137,6 @@ const checkoutStore = useCheckoutStore()
 const userStore = useUserStore()
 const sessionStore = useSessionStore()
 const workflow = createDefaultCheckoutWorkflow()
-const selectedCoupon = ref(null)
 const phoneVisible = ref(false)
 const phoneDraft = ref('')
 const diningMethod = computed(() => checkoutStore.diningMethod || 'TAKEOUT')
@@ -153,7 +152,7 @@ const deliveryEtaText = computed(() => {
   return `现在下单，预计 ${pad(start.getHours())}:${pad(start.getMinutes())}-${pad(end.getHours())}:${pad(end.getMinutes())} 送达`
 })
 
-const couponDisplayText = computed(() => selectedCoupon.value ? couponTitle(selectedCoupon.value) : '选择优惠券')
+const couponDisplayText = computed(() => checkoutStore.selectedCoupon ? couponTitle(checkoutStore.selectedCoupon) : '选择优惠券')
 const submitDisabled = computed(() => (
   checkoutStore.isBusy ||
   checkoutStore.status === 'offline' ||
@@ -212,7 +211,7 @@ async function loadPreview() {
   if (!cartStore.items.length || checkoutStore.isBusy) return
   previewError.value = ''
   try {
-    await workflow.preview({ coupon: selectedCoupon.value })
+    await workflow.preview({ coupon: checkoutStore.selectedCoupon })
   } catch (error) {
     if (error instanceof AuthError) {
       promptLogin()
@@ -230,13 +229,14 @@ async function recoverPreview() {
 function goToCoupon() {
   uni.setStorageSync('cozy_coupon_cart', JSON.stringify({
     items: cartStore.items,
-    diningMethod: checkoutStore.diningMethod || 'TAKEOUT'
+    diningMethod: checkoutStore.diningMethod || 'TAKEOUT',
+    selectedCouponCode: checkoutStore.selectedCoupon ? couponKey(checkoutStore.selectedCoupon) : ''
   }))
   uni.navigateTo({ url: '/pages/coupon/list?select=1' })
 }
 
 function handleCouponSelected(coupon) {
-  selectedCoupon.value = coupon
+  checkoutStore.selectedCoupon = coupon
   checkoutStore.selectedCouponId = coupon ? couponKey(coupon) : null
   checkoutStore.invalidatePreview()
   loadPreview()
@@ -272,8 +272,8 @@ async function submitOrder() {
   previewError.value = ''
   try {
     const result = ['awaiting_auth', 'offline', 'failed', 'cancelled'].includes(checkoutStore.status)
-      ? await workflow.recover({ coupon: selectedCoupon.value })
-      : await workflow.submit({ coupon: selectedCoupon.value })
+      ? await workflow.recover({ coupon: checkoutStore.selectedCoupon })
+      : await workflow.submit({ coupon: checkoutStore.selectedCoupon })
 
     if (result.status === 'cancelled') {
       const orderId = result.order?.id || result.order?.orderId

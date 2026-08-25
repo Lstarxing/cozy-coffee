@@ -1,5 +1,5 @@
 <template>
-  <view class="coupon-card" :class="[status, themeClass, { disabled }]">
+  <view class="coupon-card" :class="[status, themeClass, { disabled, selected }]">
     <!-- 左侧：价值锚点 -->
     <view class="card-left">
       <text class="value-symbol">{{ valueSymbol }}</text>
@@ -22,7 +22,7 @@
     <!-- 右侧：行动区 -->
     <view class="card-right">
       <text v-if="isUrgent" class="urgent-tip">即将过期</text>
-      <view v-if="status === 'available'" class="use-btn" :class="{ disabled }" @click.stop="!disabled && $emit('use', coupon)">{{ disabled ? '不可用' : (selectable ? '选择' : '去使用') }}</view>
+      <view v-if="status === 'available'" class="use-btn" :class="{ disabled, selected }" @click.stop="!disabled && $emit('use', coupon)">{{ disabled ? '不可用' : (selectable ? (selected ? '已选择' : '选择') : '去使用') }}</view>
       <text v-else class="status-tag">{{ statusText }}</text>
     </view>
   </view>
@@ -35,6 +35,7 @@ const props = defineProps({
   coupon: { type: Object, required: true },
   selectable: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
+  selected: { type: Boolean, default: false },
   reason: { type: String, default: '' }
 })
 defineEmits(['use'])
@@ -125,6 +126,8 @@ const statusText = computed(() => ({ available: '可使用', frozen: '冻结中'
   }
 
   &.disabled { opacity: .55; }
+
+  &.selected { border-color: $cozy-primary; }
 }
 .condition.disabled { color: $cozy-muted; }
 
@@ -242,6 +245,7 @@ const statusText = computed(() => ({ available: '可使用', frozen: '冻结中'
 
   &:active { opacity: .85; }
   &.disabled { background: $cozy-border; color: $cozy-muted; }
+  &.selected { background: $cozy-primary; }
 }
 .status-tag {
   font-size: 22rpx;

@@ -10,7 +10,8 @@ function fixture(overrides = {}) {
     start() { if (!this.idempotencyKey) this.idempotencyKey = 'same-key' },
     transition(event) { this.status = transitionCheckout(this.status, event) },
     applyPreview(preview) { this.latestPreview = preview; if (this.status === 'previewing') this.transition('PREVIEW_SUCCEEDED') },
-    reset() { this.status = 'idle'; this.latestPreview = null; this.idempotencyKey = '' }
+    reset() { this.status = 'idle'; this.latestPreview = null; this.idempotencyKey = '' },
+    clearCoupon: vi.fn()
   }
   const cartStore = { items: [{ productId: 1, lineKey: 'v1:1', price: 20, quantity: 1 }], clearCart: vi.fn() }
   const networkService = { ensureOnline: vi.fn().mockResolvedValue(true) }

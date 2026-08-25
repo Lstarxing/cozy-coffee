@@ -20,7 +20,7 @@
         class="coupon-tap"
         @click="onCardTap(item)"
       >
-        <CouponCard :coupon="item" :selectable="selectMode" :disabled="item.disabled" :reason="item.reason" @use="handleUse(item)" />
+        <CouponCard :coupon="item" :selectable="selectMode" :disabled="item.disabled" :reason="item.reason" :selected="item.selected" @use="handleUse(item)" />
       </view>
     </view>
 
@@ -50,6 +50,7 @@ const couponTabs = [
 const coupons = ref([])
 const selectMode = ref(false)
 const cartContext = ref(null)
+const selectedCode = ref('')
 
 function parseRule(coupon) {
   try { return JSON.parse(coupon.ruleJson || '{}') } catch (_) { return {} }
@@ -72,6 +73,7 @@ onLoad((options) => {
           hasExtraShot: computeHasExtraShot(cart.items),
           diningMethod: cart.diningMethod || 'TAKEOUT'
         }
+        selectedCode.value = String(cart.selectedCouponCode || '')
         uni.removeStorageSync('cozy_coupon_cart')
       }
     } catch (_) {
@@ -153,21 +155,22 @@ const filteredCoupons = computed(() => {
   return coupons.value.filter(c => c.status === 'available')
 })
 const displayCoupons = computed(() => filteredCoupons.value.map(c => {
-  if (!cartContext.value) return { ...c, disabled: false, reason: '' }
+  const selected = selectedCode.value !== '' && String(c.couponCode || c.code || c.id || '') === selectedCode.value
+  if (!cartContext.value) return { ...c, disabled: false, reason: '', selected }
   const result = validateCouponForCart({ ...c, parsedRule: parseRule(c) }, cartContext.value.items, {
     hasExtraShot: cartContext.value.hasExtraShot,
     diningMethod: cartContext.value.diningMethod
   })
-  return { ...c, disabled: !result.valid, reason: result.reason || '' }
+  return { ...c, disabled: !result.valid, reason: result.reason || '', selected }
 }))
 const tabText = computed(() => TAB_TEXT[currentTab.value])
 
 function onCardTap(item) {
-  if (selectMode.value && item.status === 'available') pickCoupon(item)
+  if (selectMode.value && item.status === 'available') pickCoupon(item.selected ? null : item)
 }
 
 function handleUse(item) {
-  if (selectMode.value) pickCoupon(item)
+  if (selectMode.value) pickCoupon(item.selected ? null : item)
   else useCoupon(item)
 }
 
