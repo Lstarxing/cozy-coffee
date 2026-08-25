@@ -13,15 +13,7 @@
           <text class="section-title">商品明细</text>
           <text class="section-note">{{ cartStore.totalCount }} 件</text>
         </view>
-        <view v-for="line in cartStore.items" :key="line.lineKey" class="checkout-line">
-          <image class="line-image" :src="line.image" mode="aspectFill" />
-          <view class="line-content">
-            <text class="line-name">{{ line.name }}</text>
-            <text class="line-spec">{{ formatCoffeeSpec(line) }}</text>
-            <text class="line-quantity">× {{ line.quantity }}</text>
-          </view>
-          <text class="line-price">¥{{ lineAmount(line) }}</text>
-        </view>
+        <ProductLines :items="productLines" />
 
         <OfflineState v-if="checkoutStore.status === 'offline'" @retry="recoverPreview" />
         <RetryState v-else-if="previewError" title="金额核对失败" :description="previewError" @retry="loadPreview" />
@@ -127,6 +119,7 @@ import { AuthError, NetworkError } from '@/services/errors/AppError'
 import StoreSummary from '@/components/order/StoreSummary.vue'
 import AddressPickerSheet from '@/components/address/AddressPickerSheet.vue'
 import CheckoutPriceSummary from '@/components/order/CheckoutPriceSummary.vue'
+import ProductLines from '@/components/order/ProductLines.vue'
 import CheckoutSubmitBar from '@/components/order/CheckoutSubmitBar.vue'
 import LoadingState from '@/components/states/LoadingState.vue'
 import EmptyState from '@/components/states/EmptyState.vue'
@@ -372,6 +365,16 @@ function couponKey(coupon) { return coupon?.couponCode || coupon?.code || coupon
 function couponTitle(coupon) { return coupon?.name || coupon?.couponName || coupon?.title || coupon?.typeName || '优惠券' }
 
 function lineAmount(line) { return (Number(line.price || 0) * Number(line.quantity || 1)).toFixed(2) }
+
+// 商品明细行（供 ProductLines 公用组件）
+const productLines = computed(() => cartStore.items.map(line => ({
+  key: line.lineKey,
+  image: line.image,
+  name: line.name,
+  spec: formatCoffeeSpec(line),
+  quantity: line.quantity,
+  priceText: lineAmount(line)
+})))
 function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 </script>
 
@@ -407,12 +410,6 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 .pickup-radio-dot { width: 20rpx; height: 20rpx; border-radius: 50%; background: $cozy-primary; }
 .pickup-title { display: block; color: $cozy-ink; font-size: 28rpx; font-weight: 650; }
 .pickup-description { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 22rpx; }
-.checkout-line { display: flex; align-items: center; gap: 24rpx; padding: 20rpx 0; }
-.line-image { width: 116rpx; height: 116rpx; flex: none; border-radius: 16rpx; background: linear-gradient(135deg, #E8DDD2, #D8C8B4); }
-.line-content { min-width: 0; flex: 1; }
-.line-name { display: block; overflow: hidden; color: $cozy-ink; font-size: 28rpx; font-weight: 650; white-space: nowrap; text-overflow: ellipsis; }
-.line-spec, .line-quantity { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 22rpx; }
-.line-price { flex: none; color: $cozy-ink; font-size: 28rpx; font-weight: 700; }
 .form-row { min-height: 88rpx; display: flex; align-items: center; justify-content: space-between; gap: 24rpx; }
 .form-label { flex: none; color: $cozy-ink; font-size: 27rpx; font-weight: 650; }
 .form-value-wrap { min-width: 0; flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 12rpx; }

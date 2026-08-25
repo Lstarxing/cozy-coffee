@@ -91,7 +91,6 @@ function formatAmount(value) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1rpx solid $cozy-border;
 }
 .pb-total-label { color: $cozy-ink; font-size: 26rpx; font-weight: 650; }
 .pb-total-value { color: $cozy-primary; font-size: 34rpx; font-weight: 750; }

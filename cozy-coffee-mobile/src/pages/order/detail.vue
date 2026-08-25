@@ -75,22 +75,8 @@
 
         <view class="sp-divider" />
 
-        <view v-for="item in orderItems" :key="itemKey(item)" class="sp-product">
-          <image v-if="item.productImage" :src="item.productImage" class="sp-product-img" mode="aspectFill" />
-          <view class="sp-product-main">
-            <text class="sp-name">{{ item.productName || item.name }}</text>
-            <text class="sp-spec">{{ itemSpec(item) }}</text>
-          </view>
-          <view class="sp-right">
-            <template v-if="isRedeem">
-              <text class="sp-points">{{ formatPoints(item.pointsCost) }} 积分</text>
-            </template>
-            <template v-else>
-              <text class="sp-price">¥{{ money(item.itemAmount ?? Number(item.unitPrice || 0) * Number(item.quantity || 1)) }}</text>
-              <text class="sp-qty">x{{ item.quantity }}</text>
-            </template>
-          </view>
-        </view>
+        <!-- 商品明细（公用组件：图/名/规格 + 价格数量 或 兑换积分） -->
+        <ProductLines :items="orderProductLines" />
 
         <!-- 金额（商品小计 + 可折叠配送费/优惠合计 + 实付 + 订单信息） -->
         <view class="sp-amount">
@@ -114,21 +100,15 @@
           />
         </view>
 
-          <!-- 本次获得（完成订单，紧贴实付下方） -->
-          <view v-if="rewards" class="sp-reward">
-            <text class="sp-reward-label">本次获得</text>
-            <view class="sp-reward-values">
-              <view v-if="rewards.points" class="sp-reward-item">
-                <CozyIcon name="star" :size="20" color="#753A22" />
-                <text class="sp-reward-text">积分 +{{ rewards.points }}</text>
-              </view>
-              <text v-if="rewards.points && rewards.exp" class="sp-reward-sep">|</text>
-              <view v-if="rewards.exp" class="sp-reward-item">
-                <CozyIcon name="sparkle" :size="20" color="#753A22" />
-                <text class="sp-reward-text">成长值 +{{ rewards.exp }}</text>
-              </view>
-            </view>
-          </view>
+          <!-- 本次获得（完成订单，紧贴实付下方；公用组件，字号与确认页一致） -->
+          <RewardSummary
+            v-if="rewards"
+            label="本次获得"
+            :points="rewards.points ?? null"
+            :exp="rewards.exp ?? null"
+            points-prefix="+"
+            exp-prefix="+"
+          />
 
           <!-- 订单信息（实付下方，分隔线分隔；配送方式/地址仅外送） -->
           <view class="sp-divider" />
@@ -152,7 +132,6 @@
       </view>
 
     </view>
-  </view>
 </template>
 
 <script setup>
@@ -163,12 +142,15 @@ import { getRedemptionDetail } from '@/api/member'
 import { useSessionStore } from '@/stores/session'
 import { refreshMemberProfile } from '@/services/session/MemberProfileService'
 import { FIXED_STORE } from '@/config/store'
+import { resolveImageUrl } from '@/config/image'
 import { formatCoffeeSpec } from '@/utils/spec'
 import { formatFullTime, formatPoints, money } from '@/utils/format'
 import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
 import CozyIcon from '@/components/CozyIcon.vue'
 import PriceBreakdown from '@/components/order/PriceBreakdown.vue'
+import ProductLines from '@/components/order/ProductLines.vue'
+import RewardSummary from '@/components/order/RewardSummary.vue'
 
 const orderId = ref('')
 const type = ref('coffee')
@@ -333,6 +315,17 @@ const discount = computed(() => Number(order.value?.discountAmount || 0))
 const couponItems = computed(() => couponNames.value.map(name => ({
   title: name,
   discount: order.value?.discountAmount || 0
+})))
+
+// 商品明细行（供 ProductLines 公用组件）
+const orderProductLines = computed(() => orderItems.value.map(item => ({
+  key: itemKey(item),
+  image: resolveImageUrl(item.productImage),
+  name: item.productName || item.name,
+  spec: itemSpec(item),
+  quantity: item.quantity,
+  priceText: isRedeem.value ? '' : money(item.itemAmount ?? Number(item.unitPrice || 0) * Number(item.quantity || 1)),
+  pointsText: isRedeem.value ? `${formatPoints(item.pointsCost)} 积分` : ''
 })))
 
 onLoad(options => {
@@ -700,38 +693,6 @@ async function cancelPendingOrder() {
   &:active { opacity: .6; }
 }
 .sp-divider { height: 1rpx; margin: 20rpx 0; background: $cozy-border; }
-.sp-product {
-  display: flex;
-  align-items: center;
-  gap: 24rpx;
-  padding: 26rpx 4rpx;
-}
-.sp-product-img {
-  flex: none;
-  width: 112rpx;
-  height: 112rpx;
-  border-radius: 20rpx;
-  background: linear-gradient(135deg, #E8DDD2, #D8C8B4);
-  overflow: hidden;
-}
-.sp-product-main { flex: 1; min-width: 0; }
-.sp-name {
-  display: block;
-  font-size: 28rpx;
-  font-weight: 650;
-  color: $cozy-ink;
-}
-.sp-spec {
-  display: block;
-  margin-top: 8rpx;
-  font-size: 22rpx;
-  line-height: 1.5;
-  color: $cozy-muted;
-}
-.sp-right { flex: none; text-align: right; }
-.sp-price { display: block; font-size: 28rpx; font-weight: 650; color: $cozy-ink; }
-.sp-qty { display: block; margin-top: 8rpx; font-size: 22rpx; color: $cozy-muted; }
-.sp-points { display: block; font-size: 26rpx; font-weight: 700; color: $cozy-primary; }
 /* ── 金额（商品小计/配送费/优惠合计/实付 + 订单信息，商品详情模块内） ── */
 .sp-amount { padding: 8rpx 4rpx 0; }
 .sp-amount-row {
@@ -764,20 +725,6 @@ async function cancelPendingOrder() {
 .addr-contact { margin-top: 4rpx; color: $cozy-muted; }
 
 /* ── 本次获得（完成订单，位于实付下方，对齐确认页可得积分样式） ── */
-.sp-reward {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 16rpx;
-  margin-top: 12rpx;
-  padding: 0 4rpx;
-}
-.sp-reward-label { flex: none; color: $cozy-muted; font-size: 22rpx; }
-.sp-reward-values { display: flex; align-items: center; gap: 16rpx; }
-.sp-reward-item { display: flex; align-items: center; gap: 6rpx; }
-.sp-reward-text { color: $cozy-primary; font-size: 22rpx; font-weight: 650; }
-.sp-reward-sep { color: $cozy-border; font-size: 22rpx; }
-
 /* ── 订单信息（低权重，位于商品卡实付下方） ── */
 .meta-row {
   display: flex;
