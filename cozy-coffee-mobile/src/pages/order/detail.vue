@@ -76,7 +76,7 @@
         <view class="sp-divider" />
 
         <view v-for="item in orderItems" :key="itemKey(item)" class="sp-product">
-          <image v-if="item.productImage" :src="item.productImage" class="sp-product-img" mode="aspectFill" />
+          <image v-if="item.productImage" :src="resolveImageUrl(item.productImage)" class="sp-product-img" mode="aspectFill" />
           <view class="sp-product-main">
             <text class="sp-name">{{ item.productName || item.name }}</text>
             <text class="sp-spec">{{ itemSpec(item) }}</text>
@@ -152,7 +152,6 @@
       </view>
 
     </view>
-  </view>
 </template>
 
 <script setup>
@@ -169,6 +168,7 @@ import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
 import CozyIcon from '@/components/CozyIcon.vue'
 import PriceBreakdown from '@/components/order/PriceBreakdown.vue'
+import { resolveImageUrl } from '@/config/image'
 
 const orderId = ref('')
 const type = ref('coffee')

@@ -53,15 +53,6 @@
         </view>
       </view>
 
-      <!-- 商品详情 -->
-      <view class="spec-card">
-        <text class="spec-card-title">商品详情</text>
-        <view v-if="detailOrigin" class="spec-row"><text class="spec-row-label">产地</text><text class="spec-row-value">{{ detailOrigin }}</text></view>
-        <view v-if="detailProcess" class="spec-row"><text class="spec-row-label">处理法</text><text class="spec-row-value">{{ detailProcess }}</text></view>
-        <view v-if="detailFlavor" class="spec-row"><text class="spec-row-label">风味</text><text class="spec-row-value">{{ detailFlavor }}</text></view>
-        <view v-if="detailRoast" class="spec-row"><text class="spec-row-label">烘焙度</text><text class="spec-row-value">{{ detailRoast }}</text></view>
-      </view>
-
       <view class="spec-disclaimer">本商品按所选规格现制，出品以门店实物为准。</view>
     </view>
 
@@ -176,10 +167,6 @@ const selectedSpecsText = computed(() => {
 const detailTag = computed(() => product.value?.tag || (product.value?.isNewProduct ? '新品' : ''))
 const detailEyebrow = computed(() => categoryEn(String(product.value?.category || '').toLowerCase()))
 const detailNotes = computed(() => product.value?.notes || product.value?.description || '')
-const detailOrigin = computed(() => product.value?.origin || '')
-const detailProcess = computed(() => product.value?.process || '')
-const detailFlavor = computed(() => product.value?.notes || product.value?.flavorNotes || '')
-const detailRoast = computed(() => product.value?.roast || '')
 
 function categoryEn(code) {
   return ({

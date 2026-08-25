@@ -156,9 +156,17 @@ const deliveryEtaText = computed(() => {
 
 const couponDisplayText = computed(() => {
   if (checkoutStore.selectedCoupon) {
-    const base = couponTitle(checkoutStore.selectedCoupon)
-    const addonCount = (checkoutStore.selectedAddonCoupons || []).length
-    return addonCount ? `${base} +辅券${addonCount}` : base
+    const parts = [couponTitle(checkoutStore.selectedCoupon)]
+    const addons = checkoutStore.selectedAddonCoupons || []
+    if (addons.length) {
+      const byName = new Map()
+      addons.forEach(a => {
+        const t = couponTitle(a)
+        byName.set(t, (byName.get(t) || 0) + 1)
+      })
+      byName.forEach((count, title) => parts.push(`${title} ×${count}`))
+    }
+    return parts.join(' + ')
   }
   return '选择优惠券'
 })

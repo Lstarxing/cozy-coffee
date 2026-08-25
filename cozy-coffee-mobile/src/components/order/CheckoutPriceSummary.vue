@@ -1,6 +1,6 @@
 <template>
   <view class="price-summary">
-    <!-- 金额明细（商品小计/优惠合计可折叠/配送费/实付）公用组件 -->
+    <!-- 金额明细（商品小计/优惠合计可折叠/配送费/实付）公用组件；优惠明细默认展开显示所选券 -->
     <PriceBreakdown
       :subtotal="preview?.subtotal || 0"
       :discount="preview?.discount || 0"
@@ -8,6 +8,7 @@
       :payable="payable"
       :payable-label="payableLabel"
       :coupon-items="couponItems"
+      initially-expanded
     />
 
     <!-- 可得积分 / 成长值 -->
@@ -70,7 +71,7 @@ const earnedExp = computed(() => {
 .earned-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 16rpx;
   margin-top: 12rpx;
 }

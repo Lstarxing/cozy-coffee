@@ -42,10 +42,12 @@ const props = defineProps({
   deliveryFee: { type: [Number, String], default: 0 },
   payable: { type: [Number, String], default: 0 },
   payableLabel: { type: String, default: '实付' },
-  couponItems: { type: Array, default: () => [] } // [{ title, discount }]
+  couponItems: { type: Array, default: () => [] }, // [{ title, discount }]
+  // 优惠明细默认展开（确认页选中券后直接展示券名；订单详情页保持折叠）
+  initiallyExpanded: { type: Boolean, default: false }
 })
 
-const expanded = ref(false)
+const expanded = ref(props.initiallyExpanded)
 const hasDiscountOrFee = computed(() => Number(props.deliveryFee) > 0 || Number(props.discount) > 0)
 
 function formatAmount(value) {
@@ -89,9 +91,9 @@ function formatAmount(value) {
   margin-top: 8rpx;
   padding-top: 16rpx;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-top: 1rpx solid $cozy-border;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 8rpx;
 }
 .pb-total-label { color: $cozy-ink; font-size: 26rpx; font-weight: 650; }
 .pb-total-value { color: $cozy-primary; font-size: 34rpx; font-weight: 750; }
