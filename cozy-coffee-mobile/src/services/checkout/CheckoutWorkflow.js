@@ -49,6 +49,7 @@ export class CheckoutWorkflow {
       deliveryAddressId: this.checkoutStore.deliveryAddressId,
       deliveryAddress: this.checkoutStore.deliveryAddress || null,
       selectedCouponId: this.checkoutStore.selectedCouponId,
+      addonCoupons: this.checkoutStore.selectedAddonCoupons || [],
       addonCouponCodes: (this.checkoutStore.selectedAddonCoupons || []).map(c => c.couponCode || c.code || c.id),
       remark: this.checkoutStore.remark,
       phone: this.checkoutStore.phone,
