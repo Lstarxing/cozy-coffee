@@ -281,8 +281,10 @@ const handleSignin = async () => {
 .bean-track-wrapper { position: relative; padding: 40rpx 0 24rpx; }
 .track-line-base {
   position: absolute;
-  /* 豆中心 = padding-top 40rpx + icon 64rpx/2 = 72rpx；translateY(-50%) 居中 */
-  top: 72rpx; left: 40rpx; right: 40rpx;
+  /* 豆中心 = padding-top 40rpx + 豆圈 48rpx/2 = 64rpx；
+     线两端对齐首尾豆中心（7 列均分，第 1/7 列中心在 100%/14 与 13/14） */
+  top: 64rpx;
+  left: calc(100% / 14); right: calc(100% / 14);
   height: 6rpx;
   border-radius: 3rpx;
   background: #F5F5F5;
@@ -292,25 +294,24 @@ const handleSignin = async () => {
 .track-line-fill {
   height: 100%;
   background: $cozy-primary;
-  border-radius: 4rpx;
+  border-radius: 3rpx;
   transition: width .5s $cozy-ease-out;
 }
 .bean-steps {
   display: flex;
-  justify-content: space-between;
   position: relative;
   z-index: 2;
 }
 .bean-step {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16rpx;
-  width: 80rpx;
 }
 .bean-icon-box {
   position: relative;
-  width: 64rpx; height: 64rpx;
+  width: 48rpx; height: 48rpx;
   border-radius: 50%;
   background: #EFEBE9; /* web 未签圈底 */
   border: 4rpx solid #fff;
@@ -331,28 +332,28 @@ const handleSignin = async () => {
   }
   /* 第 7 天礼盒矩形（web .bean-icon-box.is-gift：永远渐变棕底 + 奶油黄礼盒，激活时 scale(1.1)） */
   &.is-gift {
-    width: 80rpx; height: 80rpx;
-    border-radius: 24rpx;
+    width: 64rpx; height: 64rpx;
+    border-radius: 18rpx;
     background: linear-gradient(135deg, #8D6E63 0%, #5D4037 100%);
-    margin-top: -8rpx; /* 上浮突出 */
+    margin-top: -8rpx; /* 上浮突出（中心仍对齐 64rpx 线） */
   }
 }
-.bean-svg { width: 36rpx; height: 36rpx; display: block; }
-.gift-svg { width: 40rpx; height: 40rpx; display: block; }
+.bean-svg { width: 28rpx; height: 28rpx; display: block; }
+.gift-svg { width: 32rpx; height: 32rpx; display: block; }
 
 /* 今日已激活的额外主题色光环（web .bean-step.is-today 强化） */
 .today-glow {
   position: absolute;
-  inset: -8rpx;
+  inset: -6rpx;
   border-radius: inherit;
-  box-shadow: 0 0 0 8rpx rgba(198, 156, 109, 0.3);
+  box-shadow: 0 0 0 6rpx rgba(198, 156, 109, 0.3);
   pointer-events: none;
 }
 
 /* 今日待签呼吸光环 */
 @keyframes bean-breathe {
-  0%, 100% { box-shadow: 0 0 0 8rpx rgba(198,156,109,.2); }
-  50%      { box-shadow: 0 0 0 28rpx rgba(198,156,109,0); }
+  0%, 100% { box-shadow: 0 0 0 6rpx rgba(198,156,109,.2); }
+  50%      { box-shadow: 0 0 0 20rpx rgba(198,156,109,0); }
 }
 
 /* step 标签 */
