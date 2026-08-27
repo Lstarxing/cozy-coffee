@@ -55,9 +55,9 @@
           <text class="summary-label">共 {{ order.totalQty }} 件 · {{ fulfillmentLabel(order) }}</text>
           <view class="summary-actions">
             <template v-if="isPending(order.status)">
-              <view class="mini-btn md" @click.stop="cancelOrderItem(order)">取消订单</view>
-              <view class="mini-btn md strong" @click.stop="payOrderItem(order)">立即支付</view>
-              <view class="mini-btn md" @click.stop="goToDetail(order.id)">查看详情</view>
+              <MiniButton size="md" @click="cancelOrderItem(order)">取消订单</MiniButton>
+              <MiniButton size="md" variant="strong" @click="payOrderItem(order)">立即支付</MiniButton>
+              <MiniButton size="md" @click="goToDetail(order.id)">查看详情</MiniButton>
             </template>
             <template v-else-if="canConfirmOrder(order)">
               <view class="order-action" @click.stop="confirmOrderItem(order)">{{ confirmActionText(order) }}</view>
@@ -66,7 +66,7 @@
               <view class="order-action" @click.stop="reOrder(order)">再来一单</view>
             </template>
             <template v-else>
-              <view class="mini-btn" @click.stop="goToDetail(order.id)">查看详情</view>
+              <MiniButton @click="goToDetail(order.id)">查看详情</MiniButton>
             </template>
           </view>
         </view>
@@ -98,6 +98,7 @@ import { useCheckoutStore } from '@/stores/checkout'
 import { restoreOrderToCart } from '@/services/order/ReorderService'
 import LoadingState from '@/components/states/LoadingState.vue'
 import RetryState from '@/components/states/RetryState.vue'
+import MiniButton from '@/components/common/MiniButton.vue'
 
 const categories = [
   { value: 'pickup', label: '自提' },
@@ -512,21 +513,6 @@ function openRestoredCart() {
 
   &:active { opacity: .85; }
 }
-.mini-btn {
-  flex: none;
-  padding: 14rpx 28rpx;
-  border: 1rpx solid $cozy-border;
-  border-radius: 12rpx;
-  background: $bg-white;
-  color: $cozy-ink;
-  font-size: 24rpx;
-  font-weight: 600;
-
-  &:active { background: $cozy-surface; }
-}
-.mini-btn.md { padding: 10rpx 20rpx; font-size: 22rpx; }
-.mini-btn.strong { border-color: $cozy-ink; background: transparent; color: $cozy-ink; font-weight: 650; }
-.mini-btn.strong:active { opacity: .85; }
 
 /* ── 空状态 ── */
 .empty-state {
