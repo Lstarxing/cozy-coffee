@@ -8,6 +8,7 @@ import com.cozy.member.api.MonthlyTaskService;
 import com.cozy.member.api.SigninService;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.member.dto.response.MonthlyTaskDTO;
+import com.cozy.member.dto.response.MemberOverviewDTO;
 import com.cozy.member.dto.response.PointsTransactionDTO;
 import com.cozy.member.dto.response.SigninResultDTO;
 import jakarta.validation.Valid;
@@ -96,5 +97,10 @@ public class MemberController {
     public Result<Void> receiveMonthlyBenefit() {
         memberService.receiveMonthlyBenefit(AuthUtil.requireUserId());
         return Result.success(null, "领取成功");
+    }
+
+    @GetMapping("/benefits/overview")
+    public Result<MemberOverviewDTO> getMemberOverview() {
+        return Result.success(memberService.getMemberOverview(AuthUtil.requireUserId()));
     }
 }

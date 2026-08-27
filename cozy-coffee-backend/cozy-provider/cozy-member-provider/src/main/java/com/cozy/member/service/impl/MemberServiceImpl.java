@@ -13,6 +13,7 @@ import com.cozy.member.api.MemberService;
 import com.cozy.mall.api.PointsMallService;
 import java.math.BigDecimal;
 import com.cozy.member.dto.response.MemberDTO;
+import com.cozy.member.dto.response.MemberOverviewDTO;
 import com.cozy.member.dto.response.PointsTransactionDTO;
 import com.cozy.member.entity.MemberInfo;
 import com.cozy.member.entity.MonthlyTask;
@@ -43,6 +44,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -1067,6 +1069,12 @@ public class MemberServiceImpl implements MemberService {
         item.setLevel(level);
         item.setPointsRate(PointsRateConfig.getBaseRate(level));
         item.setRedeemDiscount(RedemptionDiscountConfig.getDiscount(level));
+        // 权益页对比展示：晋升门槛/月权益/生日礼遇（均来自 @ConfigurationProperties 单一事实源）
+        item.setThreshold(memberLevelConfig.thresholdByLevel(level));
+        MonthlyBenefitConfig.LevelBenefit monthly = monthlyBenefitConfig.getLevel(level);
+        item.setMonthlyBenefit(monthly != null ? monthly.getBenefitName() : null);
+        BirthdayRewardConfig.LevelBirthday birthday = birthdayRewardConfig.getLevel(level);
+        item.setBirthdayBenefit(birthday != null ? birthday.getBenefitName() : null);
         return item;
     }
 
@@ -1298,5 +1306,119 @@ public class MemberServiceImpl implements MemberService {
             log.error("月度权益发放失败", e);
             throw new BusinessException("权益发放失败，请稍后重试");
         }
+    }
+
+    // ==================== v6.0: 会员权益面板聚合视图 ====================
+
+    @Override
+    public MemberOverviewDTO getMemberOverview(Long userId) {
+        MemberDTO dto = getMemberByUserId(userId);
+        String level = dto.getMemberLevel();
+        int exp = dto.getExpTotal() != null ? dto.getExpTotal() : 0;
+        int nextExp = memberLevelConfig.nextLevelThreshold(exp);
+
+        MemberOverviewDTO result = new MemberOverviewDTO();
+
+        // 1. 当前等级身份
+        MemberOverviewDTO.CurrentLevel current = new MemberOverviewDTO.CurrentLevel();
+        current.setId(level);
+        current.setName(levelName(level) + "会员");
+        current.setExp(exp);
+        current.setNextLevelExp(nextExp > 0 ? nextExp : null);
+        result.setCurrentLevel(current);
+
+        // 2. 当前等级可享权益（信息型只给状态，行动型带 action）
+        List<MemberDTO.LevelBenefitItem> all = dto.getLevelBenefits();
+        MemberDTO.LevelBenefitItem lb = all.stream().filter(b -> level.equals(b.getLevel())).findFirst().orElse(null);
+        List<MemberOverviewDTO.BenefitItem> benefits = new ArrayList<>();
+        if (lb != null) {
+            BigDecimal rate = lb.getPointsRate() != null ? lb.getPointsRate() : BigDecimal.ONE;
+            benefits.add(benefitItem("POINT_MULTIPLIER", "消费积分", formatRate(rate),
+                    "每消费 1 元获得 " + formatRate(rate) + " 积分", null, null));
+
+            if (lb.getRedeemDiscount() != null) {
+                benefits.add(benefitItem("REDEEM_DISCOUNT", "积分兑换", formatDiscount(lb.getRedeemDiscount(), level),
+                        "积分商城兑换" + formatDiscount(lb.getRedeemDiscount(), level), "mall", null));
+            }
+
+            if (lb.getMonthlyBenefit() != null && !lb.getMonthlyBenefit().isEmpty()) {
+                Map<String, Object> status = getMonthlyBenefitStatus(userId);
+                boolean claimed = Boolean.TRUE.equals(status.get("claimed"));
+                boolean canClaim = Boolean.TRUE.equals(status.get("canClaim"));
+                benefits.add(benefitItem("MONTHLY_REWARD", "每月权益", lb.getMonthlyBenefit(),
+                        claimed ? "本月已领取" : "本月可领取", claimed ? null : "claim", canClaim));
+            }
+
+            if (lb.getBirthdayBenefit() != null && !lb.getBirthdayBenefit().isEmpty()) {
+                benefits.add(benefitItem("BIRTHDAY", "生日礼遇", lb.getBirthdayBenefit(),
+                        "生日当月自动发放", null, null));
+            }
+
+            benefits.add(benefitItem("COZY_DAY", "会员日", formatRate(rate.add(memberLevelConfig.getCozyDayBonus())),
+                    "每周五 Cozy Day 积分倍率 +" + formatRate(memberLevelConfig.getCozyDayBonus()), null, null));
+        }
+        result.setBenefits(benefits);
+
+        // 3. 升级预告（进度 + 激励 + 权益差异）
+        MemberOverviewDTO.UpgradePreview preview = new MemberOverviewDTO.UpgradePreview();
+        if (nextExp > 0) {
+            String nextLevel = memberLevelConfig.levelForExp(nextExp);
+            preview.setIsMax(false);
+            preview.setNextLevelName(levelName(nextLevel) + "会员");
+            preview.setRemainingExp(Math.max(0, nextExp - exp));
+            int curBase = memberLevelConfig.thresholdByLevel(level);
+            int range = nextExp - curBase;
+            preview.setPercentage(range > 0 ? Math.max(0, Math.min(100, (int) ((exp - curBase) * 100.0 / range))) : 0);
+
+            List<String> newBenefits = new ArrayList<>();
+            MemberDTO.LevelBenefitItem nextLb = all.stream().filter(b -> nextLevel.equals(b.getLevel())).findFirst().orElse(null);
+            if (nextLb != null) {
+                String curRate = lb != null && lb.getPointsRate() != null ? formatRate(lb.getPointsRate()) : "1×";
+                newBenefits.add("积分倍率 " + curRate + " → " + formatRate(nextLb.getPointsRate()));
+                if (nextLb.getMonthlyBenefit() != null && !nextLb.getMonthlyBenefit().isEmpty()) {
+                    newBenefits.add("每月可领 " + nextLb.getMonthlyBenefit());
+                }
+                if (nextLb.getBirthdayBenefit() != null && !nextLb.getBirthdayBenefit().isEmpty()) {
+                    newBenefits.add(nextLb.getBirthdayBenefit());
+                }
+            }
+            preview.setNewBenefits(newBenefits);
+        } else {
+            preview.setIsMax(true);
+            preview.setNextLevelName("已满级");
+            preview.setRemainingExp(0);
+            preview.setPercentage(100);
+            preview.setNewBenefits(List.of("已尊享全部等级权益"));
+        }
+        result.setUpgradePreview(preview);
+
+        // 4. 全部等级对比
+        result.setAllLevels(all);
+        return result;
+    }
+
+    private MemberOverviewDTO.BenefitItem benefitItem(String type, String title, String value,
+                                                      String description, String action, Boolean canClaim) {
+        MemberOverviewDTO.BenefitItem item = new MemberOverviewDTO.BenefitItem();
+        item.setType(type);
+        item.setTitle(title);
+        item.setValue(value);
+        item.setDescription(description);
+        item.setAction(action);
+        item.setCanClaim(canClaim);
+        return item;
+    }
+
+    /** 1.0 → "1×"，1.5 → "1.5×" */
+    private String formatRate(BigDecimal rate) {
+        return rate.stripTrailingZeros().toPlainString() + "×";
+    }
+
+    /** basic → "原价兑换"，0.95 → "9.5 折" */
+    private String formatDiscount(BigDecimal discount, String level) {
+        if ("basic".equalsIgnoreCase(level)) {
+            return "原价兑换";
+        }
+        return discount.multiply(BigDecimal.TEN).stripTrailingZeros().toPlainString() + " 折";
     }
 }

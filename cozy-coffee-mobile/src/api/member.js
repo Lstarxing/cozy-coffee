@@ -53,6 +53,11 @@ export const getMemberBenefits = () => {
     return get('/member/benefits/status')
 }
 
+// 会员权益面板聚合视图（当前身份 + 我的权益 + 升级预告 + 全部等级）
+export const getMemberOverview = () => {
+    return get('/member/benefits/overview')
+}
+
 // 领取本月等级权益
 export const receiveMonthlyBenefit = () => {
     return post('/member/benefits/receive-monthly')

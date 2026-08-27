@@ -1,101 +1,117 @@
 <!--
-  会员权益页 - 复现 prototype/benefits.html 极简 Editorial
-  页头（安静身份行）→ 本月可用（行式）→ 权益对比（每级一行）→ 升级规则 → 会员进度（web 端进度条置底）
+  会员权益页 - 我的会员价值面板
+  结构：页头身份 → Tab(我的权益 | 全部等级)
+    我的权益：一张卡五条(消费积分/兑换折扣/每月权益/生日/会员日) + 升级预告(进度+激励+权益差异)
+    全部等级：等级 tab + 当前选中等级详情
+  数据：/member/benefits/overview 单一数据源（currentLevel + benefits + upgradePreview + allLevels）
 -->
 <template>
   <view class="benefits-page">
-    <!-- 页头：安静身份行（等级徽章 + 当前等级，标题交由原生导航栏） -->
+    <!-- 页头：身份行 -->
     <view class="page-head">
       <view class="head-identity">
         <LevelBadge :level="currentLevel" :size="44" />
         <view class="head-level">
-          <text class="head-level-name">{{ getLevelName(currentLevel) }}</text>
+          <text class="head-level-name">{{ currentName }}</text>
           <text class="head-level-en">· {{ currentLevel.toUpperCase() }}</text>
         </view>
       </view>
+      <text v-if="!isMax" class="head-exp">{{ formatExp(exp) }} EXP</text>
     </view>
 
-    <!-- 本月可用 -->
-    <view class="section">
-      <view class="section-head">
-        <text class="section-title">本月可用</text>
-        <text class="section-sub">{{ getLevelName(currentLevel) }}专享</text>
+    <!-- Tab 切换 -->
+    <view class="tab-bar">
+      <view class="tab" :class="{ active: tab === 'mine' }" @click="tab = 'mine'">我的权益</view>
+      <view class="tab" :class="{ active: tab === 'all' }" @click="tab = 'all'">全部等级</view>
+    </view>
+
+    <!-- ══════ 我的权益 ══════ -->
+    <view v-if="tab === 'mine'" class="mine-view">
+      <!-- 我的权益卡：一张卡 5 条 -->
+      <view class="benefit-card">
+        <view class="card-head">
+          <text class="card-title">我的权益</text>
+          <text class="card-sub">{{ currentName }}专属</text>
+        </view>
+        <view v-for="b in benefits" :key="b.type" class="benefit-row">
+          <view class="b-icon"><CozyIcon :name="benefitIcon(b.type)" :size="20" color="#753A22" /></view>
+          <view class="b-copy">
+            <text class="b-name">{{ b.title }}</text>
+            <text class="b-value">{{ b.value }}</text>
+            <text class="b-desc">{{ b.description }}</text>
+          </view>
+          <view
+            v-if="b.action === 'mall'"
+            class="b-btn" @click="goMall"
+          >去商城<text class="b-arrow">›</text></view>
+          <view
+            v-else-if="b.action === 'claim'"
+            class="b-btn"
+            :class="{ muted: !b.canClaim }"
+            @click="handleClaim"
+          >{{ b.canClaim ? '领取' : '暂无可领' }}</view>
+          <view
+            v-else-if="b.type === 'MONTHLY_REWARD'"
+            class="b-btn muted"
+          >已领取 ✓</view>
+        </view>
       </view>
 
-      <view class="benefit-row">
-        <text class="b-icon">券</text>
-        <view class="b-copy">
-          <text class="b-name">月度兑换券</text>
-          <text class="b-desc">{{ monthlyBenefitText }}</text>
+      <!-- 升级预告 -->
+      <view v-if="!isMax" class="upgrade-card">
+        <view class="up-head">
+          <text class="up-title">距{{ nextLevelName }}还差 <text class="up-em">{{ formatExp(remaining) }}</text> EXP</text>
         </view>
-        <view
-          class="b-btn"
-          :class="{ muted: benefitDone }"
-          @click="handleReceiveMonthlyBenefit"
-        >{{ benefitActionText }}</view>
+        <view class="up-track">
+          <view class="up-fill" :style="{ width: percentage + '%', background: progressColor }"></view>
+        </view>
+        <view class="up-benefit">
+          <text class="up-benefit-title">升级后</text>
+          <text v-for="(nb, i) in newBenefits" :key="i" class="up-benefit-item">· {{ nb }}</text>
+        </view>
+        <view class="up-link" @click="tab = 'all'">查看全部等级 <text class="b-arrow">›</text></view>
       </view>
-
-      <view class="benefit-row">
-        <text class="b-icon">礼</text>
-        <view class="b-copy">
-          <text class="b-name">生日礼遇</text>
-          <text class="b-desc">生日月自动发放生日礼包（各等级券 + 积分）</text>
-        </view>
-        <view class="b-btn muted" @click="birthdayTip">去领取</view>
+      <view v-else class="upgrade-card max">
+        <text class="up-title">已尊享全部等级权益</text>
+        <text class="up-desc">解锁黑金全部专属礼遇</text>
       </view>
     </view>
 
-    <!-- 权益对比（每级一行） -->
-    <view class="section">
-      <view class="section-head">
-        <text class="section-title">会员权益对比</text>
-      </view>
-      <view class="compare-list">
-        <view
-          v-for="(c, i) in compare"
-          :key="c.level"
-          class="compare-row"
-          :class="{ current: c.level === currentLevel }"
-        >
-          <text class="compare-name">{{ c.name }}</text>
-          <text class="compare-text">{{ c.text }}</text>
+    <!-- ══════ 全部等级 ══════ -->
+    <view v-else class="all-view">
+      <!-- 等级轨道（与签到豆轨同设计语言：连线填充到当前等级） -->
+      <view class="level-track">
+        <view class="track-line-base">
+          <view class="track-line-fill" :style="{ width: trackFillWidth + '%', background: trackFillColor }"></view>
+        </view>
+        <view class="track-nodes">
+          <view
+            v-for="lv in levelOrder"
+            :key="lv"
+            class="track-node"
+            :class="{ current: selLevel === lv, reached: isReached(lv) }"
+            @click="selLevel = lv"
+          >
+            <view
+              class="node-dot"
+              :style="{ background: levelColor(lv), boxShadow: selLevel === lv ? '0 0 0 6rpx ' + hexToRgba(levelColor(lv), 0.25) : '' }"
+            ></view>
+            <text class="node-name">{{ getLevelName(lv) }}</text>
+            <text class="node-exp">{{ formatExp(thresholdOf(lv)) }}</text>
+          </view>
         </view>
       </view>
-    </view>
-
-    <!-- 升级规则 -->
-    <view class="section">
-      <view class="section-head">
-        <text class="section-title">升级规则</text>
-      </view>
-      <view class="rule-table">
-        <view class="rule-row rule-head">
-          <text class="rule-cell">会员等级</text>
-          <text class="rule-cell">升级门槛</text>
+      <view class="level-detail">
+        <view class="ld-head">
+          <text class="ld-name" :style="{ color: levelColor(selLevel) }">{{ getLevelName(selLevel) }}</text>
+          <text v-if="thresholdOf(selLevel) > 0" class="ld-threshold">满 {{ formatExp(thresholdOf(selLevel)) }} EXP 晋升</text>
+          <text v-else class="ld-threshold">注册即达</text>
         </view>
-        <view
-          v-for="row in ruleRows"
-          :key="row.level"
-          class="rule-row"
-          :class="{ current: row.level === currentLevel }"
-        >
-          <text class="rule-cell">{{ row.name }}</text>
-          <text class="rule-cell">{{ row.threshold }} EXP</text>
+        <view v-for="row in levelBenefitRows" :key="row.label" class="ld-row">
+          <text class="ld-label">{{ row.label }}</text>
+          <text class="ld-value">{{ row.value }}</text>
         </view>
       </view>
-      <view class="rule-note">消费 1 元 = 1 EXP，达到门槛自动升级，升级后权益永久生效。</view>
-    </view>
-
-    <!-- 会员进度（web 端进度条复用，置底） -->
-    <view class="member-progress">
-      <view class="progress-top">
-        <text class="progress-level">{{ getLevelName(currentLevel) }} <em>{{ currentLevel.toUpperCase() }}</em></text>
-        <text class="progress-exp">{{ formatExp(currentExp) }} <i>/ {{ nextThreshold != null ? formatExp(nextThreshold) : '—' }} EXP</i></text>
-      </view>
-      <view class="progress-track">
-        <view class="progress-fill" :style="{ width: progressPercent + '%', background: levelAccent }"></view>
-      </view>
-      <view class="progress-motivation">{{ progressMotivation }}</view>
     </view>
 
     <DevLevelSwitcher />
@@ -103,135 +119,149 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
-import { getMemberBenefits, getMemberInfo, receiveMonthlyBenefit } from '@/api/member'
-import { MEMBER_LEVELS, MEMBER_LEVEL_THRESHOLDS, getMemberLevelName, MEMBER_LEVEL_THEMES } from '@/constants/member'
+import { getMemberOverview, receiveMonthlyBenefit } from '@/api/member'
+import { MEMBER_LEVELS, MEMBER_LEVEL_THRESHOLDS, getMemberLevelName } from '@/constants/member'
 import LevelBadge from '@/components/member/LevelBadge.vue'
+import CozyIcon from '@/components/CozyIcon.vue'
 import DevLevelSwitcher from '@/components/dev/DevLevelSwitcher.vue'
 
 const userStore = useUserStore()
 const getLevelName = getMemberLevelName
-const levels = MEMBER_LEVELS
-const levelThresholds = MEMBER_LEVEL_THRESHOLDS
+const levelOrder = MEMBER_LEVELS
 
+const tab = ref('mine')
+const selLevel = ref(userStore.userLevel || 'basic')
+
+// 面板数据（/member/benefits/overview 单一数据源）
+const overview = ref(null)
 const currentLevel = ref(userStore.userLevel || 'basic')
-const currentExp = ref(Number(userStore.memberInfo?.expTotal) || 0)
-const benefitLoading = ref(false)
-const benefitError = ref('')
-const claimingBenefit = ref(false)
-const monthlyBenefitStatus = ref({
-  claimed: false, canClaim: false, benefitName: '', currentLevel: null, claimedLevel: null
+const currentName = computed(() => getLevelName(currentLevel.value))
+const exp = computed(() => overview.value?.currentLevel?.exp ?? 0)
+const isMax = computed(() => !!overview.value?.upgradePreview?.isMax)
+const nextLevelName = computed(() => overview.value?.upgradePreview?.nextLevelName || '')
+const remaining = computed(() => overview.value?.upgradePreview?.remainingExp ?? 0)
+const percentage = computed(() => overview.value?.upgradePreview?.percentage ?? 0)
+const newBenefits = computed(() => overview.value?.upgradePreview?.newBenefits || [])
+const benefits = computed(() => overview.value?.benefits || [])
+const allLevels = computed(() => overview.value?.allLevels || [])
+
+// 升级进度条按等级配色（对齐 web 端 .progress-fill.basic/silver/...）
+const PROGRESS_COLORS = {
+  basic: 'linear-gradient(90deg, #D7CCC8, #A1887F)',
+  silver: 'linear-gradient(90deg, #ECEFF1, #B0BEC5)',
+  gold: 'linear-gradient(90deg, #FFF176, #FFB300)',
+  diamond: 'linear-gradient(90deg, #64B5F6, #1976D2)',
+  black: 'linear-gradient(90deg, #757575, #212121)'
+}
+const progressColor = computed(() => PROGRESS_COLORS[currentLevel.value] || PROGRESS_COLORS.basic)
+
+// 月权益已领取（后端 claimed 时该条 action 为空）
+const monthlyClaimed = computed(() => {
+  const mb = benefits.value.find(b => b.type === 'MONTHLY_REWARD')
+  return !!mb && mb.action !== 'claim'
 })
 
-const levelAccent = computed(() => (MEMBER_LEVEL_THEMES[currentLevel.value] || {}).accent || '#753A22')
+function benefitIcon(type) {
+  return {
+    POINT_MULTIPLIER: 'coffee',
+    REDEEM_DISCOUNT: 'coupon',
+    MONTHLY_REWARD: 'gift',
+    BIRTHDAY: 'star',
+    COZY_DAY: 'sun'
+  }[type] || 'gift'
+}
 
-// 各等级权益对比：由后端 levelBenefits（PointsRateConfig/RedemptionDiscountConfig 单一事实源）驱动
-const compare = computed(() => {
-  const list = userStore.memberInfo?.levelBenefits || []
-  if (!list.length) return []
-  return list.map(b => ({
-    level: b.level,
-    name: getLevelName(b.level),
-    text: `${formatRate(b.pointsRate)} · ${formatDiscount(b.redeemDiscount, b.level)}`
-  }))
+// 各等级代表色（对齐 web 端 .progress-fill.* 渐变深端）
+const LEVEL_COLORS = {
+  basic: '#A1887F',
+  silver: '#B0BEC5',
+  gold: '#FFB300',
+  diamond: '#1976D2',
+  black: '#212121'
+}
+function levelColor(lv) { return LEVEL_COLORS[lv] || LEVEL_COLORS.basic }
+function hexToRgba(hex, alpha) {
+  const n = parseInt(hex.slice(1), 16)
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`
+}
+
+// 等级轨道：连线填充到当前等级节点中心
+const currentIdx = computed(() => {
+  const i = levelOrder.indexOf(currentLevel.value)
+  return i < 0 ? 0 : i
 })
-function formatRate(rate) {
-  const n = Number(rate) || 0
-  return (Number.isInteger(n) ? n : n.toFixed(1)) + '× 积分'
+const trackFillWidth = computed(() => {
+  if (levelOrder.length <= 1) return 0
+  return (currentIdx.value / (levelOrder.length - 1)) * 100
+})
+const trackFillColor = computed(() => levelColor(currentLevel.value))
+function isReached(lv) {
+  return levelOrder.indexOf(lv) <= currentIdx.value
+}
+
+function formatExp(value) { return Number(value || 0).toLocaleString() }
+function formatRate(n) {
+  const v = Number(n) || 1
+  return (Number.isInteger(v) ? v : v.toFixed(1)) + '×'
 }
 function formatDiscount(discount, level) {
   if (level === 'basic') return '原价兑换'
-  return Math.round(Number(discount) * 100) + ' 折兑换'
+  return (Number(discount) * 10).toFixed(1) + ' 折'
 }
 
-// 升级门槛表格
-const ruleRows = levels.map(level => ({
-  level,
-  name: getLevelName(level),
-  threshold: formatExp(levelThresholds[level])
-}))
+function thresholdOf(level) {
+  const item = allLevels.value.find(x => x.level === level)
+  return item && item.threshold != null ? Number(item.threshold) : (MEMBER_LEVEL_THRESHOLDS[level] || 0)
+}
 
-// 进度
-const nextThreshold = computed(() => {
-  const idx = levels.indexOf(currentLevel.value)
-  return idx < levels.length - 1 ? levelThresholds[levels[idx + 1]] : null
-})
-const nextLevelName = computed(() => {
-  const idx = levels.indexOf(currentLevel.value)
-  return idx < levels.length - 1 ? getLevelName(levels[idx + 1]) : ''
-})
-const progressPercent = computed(() => {
-  const idx = levels.indexOf(currentLevel.value)
-  if (idx >= levels.length - 1) return 100
-  const cur = levelThresholds[currentLevel.value]
-  const next = levelThresholds[levels[idx + 1]]
-  return Math.max(0, Math.min(100, ((currentExp.value - cur) / (next - cur)) * 100))
-})
-const progressMotivation = computed(() => {
-  if (nextThreshold.value == null) return '已到达最高等级，尊享全部会员权益'
-  return '再积 ' + formatExp(nextThreshold.value - currentExp.value) + ' EXP 升级至' + nextLevelName.value
+// 全部等级页：选中等级的行式明细（数据来自后端 allLevels）
+const levelBenefitRows = computed(() => {
+  const item = allLevels.value.find(x => x.level === selLevel.value)
+  if (!item) return []
+  const rows = [
+    { label: '消费积分', value: formatRate(item.pointsRate) },
+    { label: '兑换折扣', value: formatDiscount(item.redeemDiscount, item.level) }
+  ]
+  if (item.monthlyBenefit) rows.push({ label: '每月权益', value: item.monthlyBenefit })
+  if (item.birthdayBenefit) rows.push({ label: '生日礼遇', value: item.birthdayBenefit })
+  rows.push({ label: '会员日', value: formatRate((Number(item.pointsRate) || 1) + 0.5) })
+  return rows
 })
 
-const benefitDone = computed(() => monthlyBenefitStatus.value.claimed)
-const monthlyBenefitText = computed(() => {
-  if (monthlyBenefitStatus.value.claimed) return '本月兑换券已领取，可在券包查看'
-  return monthlyBenefitStatus.value.benefitName || '本月等级权益券'
-})
-const benefitActionText = computed(() => {
-  if (benefitLoading.value) return '查询中…'
-  if (claimingBenefit.value) return '领取中…'
-  if (monthlyBenefitStatus.value.claimed) return '已领取 ✓'
-  if (!monthlyBenefitStatus.value.canClaim) return '暂无可领'
-  return '去领取'
-})
+function goMall() {
+  uni.navigateTo({ url: '/pages/mall/index' })
+}
 
-function formatExp(value) { return Number(value || 0).toLocaleString() }
-
-async function loadBenefitsPage() {
-  benefitLoading.value = true
-  benefitError.value = ''
+async function loadOverview() {
   try {
-    const memberResponse = await getMemberInfo()
-    if (memberResponse.code === 200 && memberResponse.data) {
-      userStore.setMemberInfo(memberResponse.data)
-      currentLevel.value = memberResponse.data.memberLevel || 'basic'
-      currentExp.value = Number(memberResponse.data.expTotal) || 0
+    const res = await getMemberOverview()
+    if (res.code === 200 && res.data) {
+      overview.value = res.data
+      currentLevel.value = res.data.currentLevel?.id || userStore.userLevel || 'basic'
+      selLevel.value = currentLevel.value
+      userStore.setMemberInfo({ ...userStore.memberInfo, memberLevel: currentLevel.value, expTotal: res.data.currentLevel?.exp })
     }
-  } catch (error) {
-    console.warn('会员信息加载失败', error)
-  }
-  try {
-    const benefitResponse = await getMemberBenefits()
-    monthlyBenefitStatus.value = { ...monthlyBenefitStatus.value, ...(benefitResponse.data || {}) }
-  } catch (error) {
-    benefitError.value = error?.message || '本月权益加载失败'
-  } finally {
-    benefitLoading.value = false
+  } catch (e) {
+    console.warn('会员权益面板加载失败', e)
+    uni.showToast({ title: '权益信息加载失败', icon: 'none' })
   }
 }
 
-async function handleReceiveMonthlyBenefit() {
-  if (benefitDone.value || claimingBenefit.value) return
-  claimingBenefit.value = true
+async function handleClaim() {
+  if (monthlyClaimed.value) return
   try {
     await receiveMonthlyBenefit()
     uni.showToast({ title: '权益已发放至券包', icon: 'success' })
-    const response = await getMemberBenefits()
-    monthlyBenefitStatus.value = { ...monthlyBenefitStatus.value, ...(response.data || {}) }
+    await loadOverview()
   } catch (error) {
     uni.showToast({ title: error?.message || '领取失败，请稍后重试', icon: 'none' })
-  } finally {
-    claimingBenefit.value = false
   }
 }
 
-function birthdayTip() {
-  uni.showToast({ title: '生日月自动发放生日礼包（券 + 积分）', icon: 'none' })
-}
-
-onShow(loadBenefitsPage)
+onShow(loadOverview)
 </script>
 
 <style lang="scss" scoped>
@@ -241,213 +271,203 @@ onShow(loadBenefitsPage)
   padding: 40rpx 44rpx 80rpx;
 }
 
-/* ── 页头（安静身份行，非卡） ── */
-.page-head { padding: 12rpx 4rpx 20rpx; }
+/* ── 页头（安静身份行） ── */
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12rpx 4rpx 24rpx;
+}
 .head-identity { display: flex; align-items: center; gap: 20rpx; }
 .head-level { display: flex; align-items: baseline; gap: 12rpx; }
-.head-level-name {
-  font-size: 30rpx;
-  font-weight: 650;
-  color: $cozy-ink;
+.head-level-name { font-size: 30rpx; font-weight: 650; color: $cozy-ink; }
+.head-level-en { font-size: 20rpx; font-weight: 700; letter-spacing: .12em; color: $cozy-muted; }
+.head-exp { font-size: 24rpx; color: $cozy-muted; }
+
+/* ── Tab 切换 ── */
+.tab-bar {
+  display: flex;
+  margin-top: 8rpx;
+  border-bottom: 1rpx solid $cozy-border;
 }
-.head-level-en {
-  font-size: 20rpx;
-  font-weight: 700;
-  letter-spacing: .12em;
+.tab {
+  padding: 20rpx 32rpx;
+  font-size: 26rpx;
   color: $cozy-muted;
+  border-bottom: 4rpx solid transparent;
+  margin-bottom: -1rpx;
+  transition: all .25s $cozy-ease-out;
+
+  &.active {
+    color: $cozy-ink;
+    font-weight: 700;
+    border-bottom-color: $cozy-primary;
+  }
 }
 
-/* ── Editorial section：线性分隔 + 留白 ── */
-.section { margin-top: 32rpx; }
-.section-head {
+/* ── 我的权益卡（一张卡 5 条） ── */
+.benefit-card {
+  margin-top: 32rpx;
+  padding: 40rpx 44rpx;
+  border-radius: 28rpx;
+  background: $bg-white;
+}
+.card-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 20rpx;
-  margin-bottom: 4rpx;
+  margin-bottom: 8rpx;
 }
-.section-title {
-  font-size: 20rpx;
-  font-weight: 700;
-  letter-spacing: .18em;
-  color: $cozy-muted;
-}
-.section-sub { font-size: 20rpx; color: $cozy-muted; }
+.card-title { font-size: 20rpx; font-weight: 700; letter-spacing: .18em; color: $cozy-muted; }
+.card-sub { font-size: 20rpx; color: $cozy-muted; }
 
-/* 本月可用：行式 */
 .benefit-row {
   display: flex;
   align-items: center;
   gap: 24rpx;
-  padding: 34rpx 4rpx;
+  padding: 30rpx 0;
   border-bottom: 1rpx solid $cozy-border;
 
   &:last-child { border-bottom: 0; }
 }
 .b-icon {
   flex: none;
-  width: 76rpx;
-  height: 76rpx;
+  width: 72rpx;
+  height: 72rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: $cozy-bg;
-  color: $cozy-primary;
-  font-family: $font-display;
-  font-size: 26rpx;
-  font-weight: 700;
+  background: $cozy-primary-soft;
 }
-.b-copy { flex: 1; min-width: 0; }
-.b-name {
-  display: block;
-  font-size: 28rpx;
-  font-weight: 600;
-  color: $cozy-ink;
-}
-.b-desc {
-  display: block;
-  margin-top: 8rpx;
-  font-size: 22rpx;
-  color: $cozy-muted;
-  line-height: 1.5;
-}
+.b-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4rpx; }
+.b-name { font-size: 28rpx; font-weight: 600; color: $cozy-ink; }
+.b-value { font-size: 24rpx; color: $cozy-primary; font-weight: 650; }
+.b-desc { font-size: 20rpx; color: $cozy-placeholder; }
 .b-btn {
   flex: none;
-  padding: 14rpx 30rpx;
+  padding: 12rpx 26rpx;
   border-radius: 12rpx;
-  border: 1rpx solid $cozy-primary;
-  background: transparent;
-  color: $cozy-primary;
+  background: $cozy-primary;
+  color: #fff;
   font-size: 22rpx;
   font-weight: 600;
+  display: flex;
+  align-items: center;
 
-  &:active { background: $cozy-bg; }
-
+  &:active { opacity: .85; }
   &.muted {
-    border-color: $cozy-border;
+    background: $cozy-surface;
     color: $cozy-muted;
   }
 }
+.b-arrow { margin-left: 4rpx; font-size: 26rpx; line-height: 1; }
 
-/* 权益对比：每级一行 */
-.compare-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 20rpx;
-  padding: 28rpx 4rpx;
-  border-bottom: 1rpx solid $cozy-border;
+/* ── 升级预告卡（浅底，进度条按等级配色） ── */
+.upgrade-card {
+  margin-top: 28rpx;
+  padding: 40rpx 44rpx;
+  border-radius: 28rpx;
+  background: $bg-white;
 
-  &:last-child { border-bottom: 0; }
+  &.max { display: flex; flex-direction: column; gap: 8rpx; }
 }
-.compare-name { font-size: 28rpx; color: $cozy-ink; font-weight: 500; }
-.compare-text { font-size: 22rpx; color: $cozy-muted; }
-.compare-row.current .compare-name { color: $cozy-primary; font-weight: 700; }
-.compare-row.current .compare-text { color: $cozy-primary; font-weight: 600; }
-.compare-row.current .compare-name::before {
-  content: '';
-  display: inline-block;
-  width: 10rpx;
-  height: 10rpx;
-  border-radius: 50%;
-  background: $cozy-primary;
-  margin-right: 14rpx;
-  vertical-align: 2rpx;
-}
-
-/* 升级规则：一行门槛 */
-.rule-table {
-  margin-top: 20rpx;
-  border: 1rpx solid $cozy-border;
-  border-radius: 12rpx;
+.up-title { font-size: 28rpx; font-weight: 650; color: $cozy-ink; }
+.up-em { color: $cozy-primary; font-weight: 700; }
+.up-track {
+  margin-top: 28rpx;
+  height: 8rpx;
+  border-radius: 4rpx;
+  background: $cozy-surface;
   overflow: hidden;
 }
-.rule-row {
+.up-fill { height: 100%; border-radius: 4rpx; transition: width .6s $cozy-ease-out; }
+.up-benefit {
+  margin-top: 28rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+.up-benefit-title {
+  font-size: 20rpx;
+  letter-spacing: .14em;
+  color: $cozy-muted;
+}
+.up-benefit-item { font-size: 24rpx; color: $cozy-ink; line-height: 1.6; }
+.up-desc { font-size: 24rpx; color: $cozy-muted; }
+.up-link {
+  margin-top: 28rpx;
+  font-size: 22rpx;
+  color: $cozy-primary;
   display: flex;
   align-items: center;
+}
+
+/* ── 全部等级：等级轨道（与签到豆轨同设计语言） ── */
+.level-track { position: relative; padding: 40rpx 0 8rpx; }
+.track-line-base {
+  position: absolute;
+  /* 节点中心 = padding-top 40rpx + dot 30rpx/2 = 55rpx */
+  top: 55rpx; left: calc(100% / 10); right: calc(100% / 10);
+  height: 6rpx;
+  border-radius: 3rpx;
+  background: $cozy-surface;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+.track-line-fill {
+  height: 100%;
+  border-radius: 3rpx;
+  transition: width .5s $cozy-ease-out;
+}
+.track-nodes { display: flex; position: relative; z-index: 2; }
+.track-node {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+}
+.node-dot {
+  width: 30rpx;
+  height: 30rpx;
+  border-radius: 50%;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+  transition: transform .3s $cozy-ease-out;
+}
+.track-node.current .node-dot { transform: scale(1.4); }
+.node-name {
+  font-size: 20rpx;
+  color: $cozy-placeholder;
+  font-weight: 600;
+}
+.track-node.reached .node-name { color: $cozy-ink; }
+.node-exp { font-size: 18rpx; color: $cozy-placeholder; }
+.level-detail {
+  margin-top: 24rpx;
+  padding: 40rpx 44rpx;
+  border-radius: 28rpx;
+  background: $bg-white;
+}
+.ld-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 24rpx;
+  border-bottom: 1rpx solid $cozy-border;
+}
+.ld-name { font-family: $font-display; font-size: 34rpx; font-weight: 600; color: $cozy-ink; }
+.ld-threshold { font-size: 20rpx; color: $cozy-placeholder; }
+.ld-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 26rpx 0;
   border-bottom: 1rpx solid $cozy-border;
 
-  &:last-child { border-bottom: 0; }
-  &.current { background: $cozy-bg; }
+  &:last-child { border-bottom: 0; padding-bottom: 0; }
 }
-.rule-head {
-  background: $cozy-bg;
-}
-.rule-cell {
-  flex: 1;
-  padding: 22rpx 28rpx;
-  font-size: 24rpx;
-  color: $cozy-ink;
-
-  &:last-child { text-align: right; }
-}
-.rule-head .rule-cell {
-  font-size: 20rpx;
-  font-weight: 700;
-  letter-spacing: .06em;
-  color: $cozy-muted;
-}
-.rule-row.current .rule-cell {
-  color: $cozy-primary;
-  font-weight: 650;
-}
-.rule-note {
-  padding: 16rpx 4rpx 0;
-  font-size: 20rpx;
-  line-height: 1.7;
-  color: $cozy-muted;
-}
-
-/* ── 会员进度（web 端进度条复用，适配 Editorial） ── */
-.member-progress {
-  margin-top: 64rpx;
-  padding: 36rpx 4rpx 0;
-  border-top: 1rpx solid $cozy-border;
-}
-.progress-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 20rpx;
-  margin-bottom: 26rpx;
-}
-.progress-level {
-  font-family: $font-display;
-  font-size: 36rpx;
-  font-weight: 600;
-  color: $cozy-ink;
-}
-.progress-level em {
-  font-style: normal;
-  font-size: 20rpx;
-  font-weight: 700;
-  letter-spacing: .12em;
-  color: $cozy-muted;
-  margin-left: 12rpx;
-}
-.progress-exp { font-size: 26rpx; font-weight: 650; color: $cozy-ink; }
-.progress-exp i {
-  font-style: normal;
-  font-size: 20rpx;
-  font-weight: 400;
-  color: $cozy-muted;
-}
-.progress-track {
-  height: 6rpx;
-  border-radius: 4rpx;
-  background: $cozy-border;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  border-radius: 4rpx;
-  transition: width .6s ease;
-}
-.progress-motivation {
-  margin-top: 16rpx;
-  font-size: 20rpx;
-  text-align: center;
-  color: $cozy-muted;
-}
+.ld-label { font-size: 26rpx; color: $cozy-ink; }
+.ld-value { flex: 1; min-width: 0; text-align: right; font-size: 24rpx; color: $cozy-muted; line-height: 1.5; }
 </style>

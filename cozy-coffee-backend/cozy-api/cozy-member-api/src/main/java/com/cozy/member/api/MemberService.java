@@ -1,6 +1,7 @@
 package com.cozy.member.api;
 
 import com.cozy.member.dto.response.MemberDTO;
+import com.cozy.member.dto.response.MemberOverviewDTO;
 import com.cozy.member.dto.response.PointsTransactionDTO;
 
 import java.util.List;
@@ -129,7 +130,7 @@ public interface MemberService {
 
     /**
      * v5.5: 获取本月权益领取状态
-     * 
+     *
      * @return Map containing: claimed(bool), canClaim(bool), benefitName(String)
      */
     Map<String, Object> getMonthlyBenefitStatus(Long userId);
@@ -138,4 +139,11 @@ public interface MemberService {
      * v5.5: 领取本月等级权益
      */
     void receiveMonthlyBenefit(Long userId);
+
+    /**
+     * v6.0: 会员权益面板聚合视图（权益页单一数据源）
+     *
+     * @return 当前等级身份 + 当前可享权益 + 升级预告 + 全部等级对比
+     */
+    MemberOverviewDTO getMemberOverview(Long userId);
 }
