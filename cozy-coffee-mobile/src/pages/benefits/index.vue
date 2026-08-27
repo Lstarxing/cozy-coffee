@@ -1,13 +1,17 @@
 <!--
   会员权益页 - 我的会员价值面板
-  结构：页头身份 → Tab(我的权益 | 全部等级)
+  结构：分类栏(FilterTabs) → 页头身份 → Tab(我的权益 | 全部等级)
     我的权益：一张卡五条(消费积分/兑换折扣/每月权益/生日/会员日) + 升级预告(进度+激励+权益差异)
-    全部等级：等级 tab + 当前选中等级详情
+    全部等级：等级轨道(柔光渐变卡) + 选中等级详情
   数据：/member/benefits/overview 单一数据源（currentLevel + benefits + upgradePreview + allLevels）
 -->
 <template>
   <view class="benefits-page">
-    <!-- 页头：身份行 -->
+    <!-- 分类栏：紧贴原生导航之下 -->
+    <FilterTabs :options="tabs" v-model="tab" />
+
+    <view class="page-content">
+    <!-- 页头：身份行（分类栏下方，两个 tab 均显示） -->
     <view class="page-head">
       <view class="head-identity">
         <LevelBadge :level="currentLevel" :size="44" />
@@ -19,14 +23,8 @@
       <text v-if="!isMax" class="head-exp">{{ formatExp(exp) }} EXP</text>
     </view>
 
-    <!-- Tab 切换 -->
-    <view class="tab-bar">
-      <view class="tab" :class="{ active: tab === 'mine' }" @click="tab = 'mine'">我的权益</view>
-      <view class="tab" :class="{ active: tab === 'all' }" @click="tab = 'all'">全部等级</view>
-    </view>
-
     <!-- ══════ 我的权益 ══════ -->
-    <view v-if="tab === 'mine'" class="mine-view">
+    <view v-if="tab === 'mine'">
       <!-- 我的权益卡：一张卡 5 条 -->
       <view class="benefit-card">
         <view class="card-head">
@@ -40,26 +38,25 @@
             <text class="b-value">{{ b.value }}</text>
             <text class="b-desc">{{ b.description }}</text>
           </view>
-          <view
+          <MiniButton
             v-if="b.action === 'mall'"
-            class="b-btn" @click="goMall"
-          >去商城<text class="b-arrow">›</text></view>
-          <view
+            @click="goMall"
+          >去商城<view class="b-arrow">›</view></MiniButton>
+          <MiniButton
             v-else-if="b.action === 'claim'"
-            class="b-btn"
-            :class="{ muted: !b.canClaim }"
+            :variant="b.canClaim ? '' : 'muted'"
             @click="handleClaim"
-          >{{ b.canClaim ? '领取' : '暂无可领' }}</view>
-          <view
+          >{{ b.canClaim ? '领取' : '暂无可领' }}</MiniButton>
+          <MiniButton
             v-else-if="b.type === 'MONTHLY_REWARD'"
-            class="b-btn muted"
-          >已领取 ✓</view>
+            variant="muted"
+          >已领取 ✓</MiniButton>
         </view>
       </view>
 
       <!-- 升级预告 -->
       <view v-if="!isMax" class="upgrade-card">
-        <view class="up-head">
+        <view>
           <text class="up-title">距{{ nextLevelName }}还差 <text class="up-em">{{ formatExp(remaining) }}</text> EXP</text>
         </view>
         <view class="up-track">
@@ -69,7 +66,7 @@
           <text class="up-benefit-title">升级后</text>
           <text v-for="(nb, i) in newBenefits" :key="i" class="up-benefit-item">· {{ nb }}</text>
         </view>
-        <view class="up-link" @click="tab = 'all'">查看全部等级 <text class="b-arrow">›</text></view>
+        <view class="up-link" @click="tab = 'all'">查看全部等级 <view class="b-arrow">›</view></view>
       </view>
       <view v-else class="upgrade-card max">
         <text class="up-title">已尊享全部等级权益</text>
@@ -78,8 +75,8 @@
     </view>
 
     <!-- ══════ 全部等级 ══════ -->
-    <view v-else class="all-view">
-      <!-- 等级轨道（与签到豆轨同设计语言：连线填充到当前等级） -->
+    <view v-else>
+      <!-- 等级轨道（与签到豆轨同设计语言：连线填充到当前等级，无背景卡） -->
       <view class="level-track">
         <view class="track-line-base">
           <view class="track-line-fill" :style="{ width: trackFillWidth + '%', background: trackFillColor }"></view>
@@ -97,7 +94,7 @@
               :style="{ background: levelColor(lv), boxShadow: selLevel === lv ? '0 0 0 6rpx ' + hexToRgba(levelColor(lv), 0.25) : '' }"
             ></view>
             <text class="node-name">{{ getLevelName(lv) }}</text>
-            <text class="node-exp">{{ formatExp(thresholdOf(lv)) }}</text>
+            <text class="node-exp">{{ formatExp(thresholdOf(lv)) }} EXP</text>
           </view>
         </view>
       </view>
@@ -115,6 +112,7 @@
     </view>
 
     <DevLevelSwitcher />
+    </view>
   </view>
 </template>
 
@@ -126,6 +124,8 @@ import { getMemberOverview, receiveMonthlyBenefit } from '@/api/member'
 import { MEMBER_LEVELS, MEMBER_LEVEL_THRESHOLDS, getMemberLevelName } from '@/constants/member'
 import LevelBadge from '@/components/member/LevelBadge.vue'
 import CozyIcon from '@/components/CozyIcon.vue'
+import FilterTabs from '@/components/common/FilterTabs.vue'
+import MiniButton from '@/components/common/MiniButton.vue'
 import DevLevelSwitcher from '@/components/dev/DevLevelSwitcher.vue'
 
 const userStore = useUserStore()
@@ -133,6 +133,10 @@ const getLevelName = getMemberLevelName
 const levelOrder = MEMBER_LEVELS
 
 const tab = ref('mine')
+const tabs = [
+  { value: 'mine', label: '我的权益' },
+  { value: 'all', label: '全部等级' }
+]
 const selLevel = ref(userStore.userLevel || 'basic')
 
 // 面板数据（/member/benefits/overview 单一数据源）
@@ -202,6 +206,7 @@ function isReached(lv) {
   return levelOrder.indexOf(lv) <= currentIdx.value
 }
 
+// 轨道卡背景：当前等级色柔光径向渐变（柔边虚化观感，不用毛玻璃，符合 Warm Reserve 规范）
 function formatExp(value) { return Number(value || 0).toLocaleString() }
 function formatRate(n) {
   const v = Number(n) || 1
@@ -268,15 +273,17 @@ onShow(loadOverview)
 .benefits-page {
   min-height: 100vh;
   background: $cozy-surface;
-  padding: 40rpx 44rpx 80rpx;
+}
+.page-content {
+  padding: 0 44rpx 80rpx;
 }
 
-/* ── 页头（安静身份行） ── */
+/* ── 页头（安静身份行，上下留白一致） ── */
 .page-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12rpx 4rpx 24rpx;
+  padding: 28rpx 4rpx;
 }
 .head-identity { display: flex; align-items: center; gap: 20rpx; }
 .head-level { display: flex; align-items: baseline; gap: 12rpx; }
@@ -284,30 +291,8 @@ onShow(loadOverview)
 .head-level-en { font-size: 20rpx; font-weight: 700; letter-spacing: .12em; color: $cozy-muted; }
 .head-exp { font-size: 24rpx; color: $cozy-muted; }
 
-/* ── Tab 切换 ── */
-.tab-bar {
-  display: flex;
-  margin-top: 8rpx;
-  border-bottom: 1rpx solid $cozy-border;
-}
-.tab {
-  padding: 20rpx 32rpx;
-  font-size: 26rpx;
-  color: $cozy-muted;
-  border-bottom: 4rpx solid transparent;
-  margin-bottom: -1rpx;
-  transition: all .25s $cozy-ease-out;
-
-  &.active {
-    color: $cozy-ink;
-    font-weight: 700;
-    border-bottom-color: $cozy-primary;
-  }
-}
-
 /* ── 我的权益卡（一张卡 5 条） ── */
 .benefit-card {
-  margin-top: 32rpx;
   padding: 40rpx 44rpx;
   border-radius: 28rpx;
   background: $bg-white;
@@ -344,24 +329,14 @@ onShow(loadOverview)
 .b-name { font-size: 28rpx; font-weight: 600; color: $cozy-ink; }
 .b-value { font-size: 24rpx; color: $cozy-primary; font-weight: 650; }
 .b-desc { font-size: 20rpx; color: $cozy-placeholder; }
-.b-btn {
-  flex: none;
-  padding: 12rpx 26rpx;
-  border-radius: 12rpx;
-  background: $cozy-primary;
-  color: #fff;
-  font-size: 22rpx;
-  font-weight: 600;
-  display: flex;
+.b-arrow {
+  display: inline-flex;
   align-items: center;
-
-  &:active { opacity: .85; }
-  &.muted {
-    background: $cozy-surface;
-    color: $cozy-muted;
-  }
+  justify-content: center;
+  margin-left: 4rpx;
+  font-size: 26rpx;
+  line-height: 1;
 }
-.b-arrow { margin-left: 4rpx; font-size: 26rpx; line-height: 1; }
 
 /* ── 升级预告卡（浅底，进度条按等级配色） ── */
 .upgrade-card {
@@ -403,21 +378,21 @@ onShow(loadOverview)
   align-items: center;
 }
 
-/* ── 全部等级：等级轨道（与签到豆轨同设计语言） ── */
-.level-track { position: relative; padding: 40rpx 0 8rpx; }
+/* ── 全部等级：等级轨道（与签到豆轨同设计语言，无背景卡） ── */
+.level-track { position: relative; padding: 24rpx 0 8rpx; }
 .track-line-base {
   position: absolute;
-  /* 节点中心 = padding-top 40rpx + dot 30rpx/2 = 55rpx */
-  top: 55rpx; left: calc(100% / 10); right: calc(100% / 10);
-  height: 6rpx;
-  border-radius: 3rpx;
-  background: $cozy-surface;
+  /* 节点中心 = padding-top 24rpx + 普通节点 20rpx/2 = 34rpx（当前节点 32rpx 有光环，线仍在光环内） */
+  top: 34rpx; left: calc(100% / 10); right: calc(100% / 10);
+  height: 4rpx;
+  border-radius: 2rpx;
+  background: $cozy-border;
   transform: translateY(-50%);
   z-index: 1;
 }
 .track-line-fill {
   height: 100%;
-  border-radius: 3rpx;
+  border-radius: 2rpx;
   transition: width .5s $cozy-ease-out;
 }
 .track-nodes { display: flex; position: relative; z-index: 2; }
@@ -429,20 +404,38 @@ onShow(loadOverview)
   gap: 12rpx;
 }
 .node-dot {
-  width: 30rpx;
-  height: 30rpx;
+  width: 20rpx;
+  height: 20rpx;
   border-radius: 50%;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
-  transition: transform .3s $cozy-ease-out;
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
+  transition: all .3s $cozy-ease-out;
 }
-.track-node.current .node-dot { transform: scale(1.4); }
+/* 未达节点淡化（未来） */
+.track-node:not(.reached) .node-dot { opacity: .35; }
+/* 当前节点：等级色圆 + 白色内芯（准星感），光环由 JS 内联 boxShadow */
+.track-node.current .node-dot {
+  width: 32rpx;
+  height: 32rpx;
+  position: relative;
+}
+.track-node.current .node-dot::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: #fff;
+}
 .node-name {
   font-size: 20rpx;
   color: $cozy-placeholder;
   font-weight: 600;
 }
 .track-node.reached .node-name { color: $cozy-ink; }
-.node-exp { font-size: 18rpx; color: $cozy-placeholder; }
+.node-exp { font-size: 22rpx; color: $cozy-muted; }
 .level-detail {
   margin-top: 24rpx;
   padding: 40rpx 44rpx;
