@@ -35,12 +35,12 @@
           <div class="card-content-side">
             <h3 class="feature-header">The Ultimate Experience <br><span>尊享极致体验</span></h3>
             <div class="feature-list">
-              <div class="f-item"><span class="f-icon">⚡</span> <div><strong>消费 1元 = 1.5 积分</strong><p>黑卡加速包前300元享 1.7x</p></div></div>
-              <div class="f-item"><span class="f-icon">☕</span> <div><strong>每月：全通兑免单券x2 + 买一赠一券x5</strong><p>Monthly Premium Coupons</p></div></div>
+              <div class="f-item"><span class="f-icon">⚡</span> <div><strong>消费 1元 = {{ blackRate }} 积分</strong><p>黑卡加速包前300元享 1.7x</p></div></div>
+              <div class="f-item"><span class="f-icon">☕</span> <div><strong>每月：{{ blackBenefit.monthlyBenefit || '免单券×2 + BOGO×5' }}</strong><p>Monthly Premium Coupons</p></div></div>
               <div class="f-item"><span class="f-icon">🚚</span> <div><strong>无限次免配送费</strong><p>Unlimited Free Delivery</p></div></div>
               <div class="f-item"><span class="f-icon">🌟</span> <div><strong>新品免费试饮券</strong><p>New Product Trial</p></div></div>
-              <div class="f-item"><span class="f-icon">🎂</span> <div><strong>生日：全通兑免单券+免费蛋糕券+888积分</strong><p>Birthday Ultimate Pack</p></div></div>
-              <div class="f-item"><span class="f-icon">💎</span> <div><strong>积分兑换 8.5 折</strong><p>Premium Redemption Discount</p></div></div>
+              <div class="f-item"><span class="f-icon">🎂</span> <div><strong>{{ blackBenefit.birthdayBenefit || '生日：全通兑免单券+免费蛋糕券+888积分' }}</strong><p>Birthday Ultimate Pack</p></div></div>
+              <div class="f-item"><span class="f-icon">💎</span> <div><strong>积分兑换 {{ blackDiscount }} 折</strong><p>Premium Redemption Discount</p></div></div>
             </div>
 
             <div v-if="userStore.userLevel === 'black'" class="benefit-action-area">
@@ -141,7 +141,7 @@
 import { ref, computed, watch, onMounted, markRaw } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
-import { Coffee, Coins, CalendarCheck, Gift, Zap, Ticket, Truck, Crown, Gem, Medal, Trophy } from 'lucide-vue-next'
+import { Coffee, Coins, Gift, Zap, Ticket, Crown, Gem, Medal, Trophy } from 'lucide-vue-next'
 import { getMemberBenefits, receiveMonthlyBenefit } from '@/api/member'
 
 const userStore = useUserStore()
@@ -170,37 +170,47 @@ const levelName = computed(() => {
   return map[lvl] || '基础会员'
 })
 
+// 各等级升级门槛（MemberLevelConfig 单一事实源，basic 为 0）
+const levelThresholds = computed(() => {
+  const list = userStore.userInfo?.levelBenefits || []
+  const map = {}
+  for (const x of list) map[x.level] = Number(x.threshold) || 0
+  return map
+})
+
 const levelProgress = computed(() => {
   const currentExp = userStore.userInfo?.expTotal || 0
-  let target = 500
-  let benefitText = '解锁 [积分兑换9.8折]'
-  let nextLevelIcon = markRaw(Medal)
-  let nextLevelColor = '#B0BEC5'
-
-  if (currentExp < 500) {
-    target = 500; benefitText = '解锁 [积分兑换9.8折] 与 [生日月免单]'
-    nextLevelIcon = markRaw(Medal); nextLevelColor = '#B0BEC5'
-  } else if (currentExp < 1500) {
-    target = 1500; benefitText = '解锁 [1.2倍积分] 与 [免配送权益]'
-    nextLevelIcon = markRaw(Trophy); nextLevelColor = '#FFB300'
-  } else if (currentExp < 4000) {
-    target = 4000; benefitText = '解锁 [每月2次免配送] 与 [生日大礼包]'
-    nextLevelIcon = markRaw(Gem); nextLevelColor = '#039BE5'
-  } else if (currentExp < 9000) {
-    target = 9000; benefitText = '解锁 [黑金加速包] 与 [线下品鉴权]'
-    nextLevelIcon = markRaw(Crown); nextLevelColor = '#333333'
-  } else {
-    target = 99999; benefitText = '您已尊享最高等级权益'
-    nextLevelIcon = null; nextLevelColor = '#FFD700'
+  const T = levelThresholds.value
+  const order = ['basic', 'silver', 'gold', 'diamond', 'black']
+  const blackT = T.black || 9000
+  if (currentExp >= blackT) {
+    return {
+      current: currentExp, target: 0, percentage: 100, remaining: 0, isMax: true,
+      nextLevelName: '', benefitText: '您已尊享最高等级权益',
+      nextLevelIcon: null, nextLevelColor: '#FFD700'
+    }
   }
 
+  let curIdx = 0
+  for (let i = order.length - 1; i >= 1; i--) {
+    const t = T[order[i]] || 0
+    if (t > 0 && currentExp >= t) { curIdx = i; break }
+  }
+  const nextLevel = order[curIdx + 1]
+  const target = T[nextLevel] || 500
+  const next = (userStore.userInfo?.levelBenefits || []).find(x => x.level === nextLevel)
+  const nextRate = Number(next?.pointsRate) || 1
+  const rateText = Number.isInteger(nextRate) ? nextRate : nextRate.toFixed(1)
+  const benefitText = `解锁 [${rateText}倍积分]${next?.monthlyBenefit ? ` [${next.monthlyBenefit}]` : ''}`
+  const icons = { silver: markRaw(Medal), gold: markRaw(Trophy), diamond: markRaw(Gem), black: markRaw(Crown) }
+  const colors = { silver: '#B0BEC5', gold: '#FFB300', diamond: '#039BE5', black: '#333333' }
   const percentage = target === 0 ? 0 : Math.min(100, (currentExp / target) * 100)
   return {
     current: currentExp, target, percentage,
-    nextLevelName: '', benefitText,
     remaining: Math.max(0, target - currentExp),
-    isMax: currentExp >= 9000,
-    nextLevelIcon, nextLevelColor
+    isMax: false, nextLevelName: getLevelName(nextLevel), benefitText,
+    nextLevelIcon: icons[nextLevel] || markRaw(Medal),
+    nextLevelColor: colors[nextLevel] || '#B0BEC5'
   }
 })
 
@@ -209,37 +219,41 @@ function getLevelName(lvl) {
   return map[lvl] || '会员'
 }
 
+// 各等级权益明细：由后端 levelBenefits（PointsRate/RedemptionDiscount/MonthlyBenefit/Birthday 单一事实源）驱动
 function getLevelBenefits(lvl) {
-  if (lvl === 'basic') return [
-    { icon: markRaw(Coins), text: '消费 1元 = 1.0 积分' },
-    { icon: markRaw(CalendarCheck), text: '每日签到 +2 积分，连续 7 天送优惠券' },
-    { icon: markRaw(Coffee), text: '每月可领：免费加浓缩券 x1' },
-    { icon: markRaw(Gift), text: '生日：单饮品 5 折券' },
-    { icon: markRaw(Zap), text: '周五会员日 1.5x 积分' }
+  const list = userStore.userInfo?.levelBenefits || []
+  const b = list.find(x => x.level === lvl)
+  if (!b) return []
+
+  const rate = Number(b.pointsRate) || 1
+  const rateText = Number.isInteger(rate) ? rate : rate.toFixed(1)
+  const discount = Number(b.redeemDiscount)
+  const discountText = lvl === 'basic'
+    ? '原价兑换'
+    : `积分兑换 ${(discount * 10).toFixed(1)} 折`
+
+  const items = [
+    { icon: markRaw(Coins), text: `消费 1元 = ${rateText} 积分` },
+    { icon: markRaw(Ticket), text: discountText }
   ]
-  if (lvl === 'silver') return [
-    { icon: markRaw(Coins), text: '消费 1元 = 1.1 积分' },
-    { icon: markRaw(Ticket), text: '积分兑换 9.8 折' },
-    { icon: markRaw(Truck), text: '每月可领：配送费抵扣券x1 + 加浓缩券x2' },
-    { icon: markRaw(Gift), text: '生日：买一赠一券 x1' },
-    { icon: markRaw(Zap), text: '周五会员日 1.6x 积分' }
-  ]
-  if (lvl === 'gold') return [
-    { icon: markRaw(Coins), text: '消费 1元 = 1.2 积分' },
-    { icon: markRaw(Ticket), text: '积分兑换 9.5 折' },
-    { icon: markRaw(Gift), text: '每月可领：买一赠一券x1 + 8.8折券x2 + 配送费抵扣x2' },
-    { icon: markRaw(Gift), text: '生日：标准饮品免单券' },
-    { icon: markRaw(Zap), text: '周五会员日 1.7x 积分' }
-  ]
-  if (lvl === 'diamond') return [
-    { icon: markRaw(Coins), text: '消费 1元 = 1.3 积分' },
-    { icon: markRaw(Ticket), text: '积分兑换 9.0 折' },
-    { icon: markRaw(Gift), text: '每月可领：优选饮品免单券x1 + 买一赠一券x2 + 配送费抵扣券x5 + 新品5折券' },
-    { icon: markRaw(Gift), text: '生日：优选饮品免单券 + 烘培甜品 5 折券' },
-    { icon: markRaw(Zap), text: '周五会员日 1.8x 积分' }
-  ]
-  return []
+  if (b.monthlyBenefit) items.push({ icon: markRaw(Coffee), text: `每月可领：${b.monthlyBenefit}` })
+  if (b.birthdayBenefit) items.push({ icon: markRaw(Gift), text: b.birthdayBenefit })
+  items.push({ icon: markRaw(Zap), text: `周五会员日 ${(rate + 0.5).toFixed(1)}x 积分` })
+  return items
 }
+
+// 黑金卡数据行（积分倍率/每月/生日/折扣）走后端 levelBenefits，装饰行静态保留
+const blackBenefit = computed(() => {
+  return (userStore.userInfo?.levelBenefits || []).find(x => x.level === 'black') || {}
+})
+const blackRate = computed(() => {
+  const rate = Number(blackBenefit.value.pointsRate) || 1.5
+  return Number.isInteger(rate) ? rate : rate.toFixed(1)
+})
+const blackDiscount = computed(() => {
+  const d = Number(blackBenefit.value.redeemDiscount) || 0.85
+  return (d * 10).toFixed(1)
+})
 
 async function checkMonthlyBenefitStatus() {
   if (!userStore.isLoggedIn) return

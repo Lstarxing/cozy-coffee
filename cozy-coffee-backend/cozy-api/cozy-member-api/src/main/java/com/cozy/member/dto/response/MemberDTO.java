@@ -40,6 +40,12 @@ public class MemberDTO implements Serializable {
         private String level;
         private BigDecimal pointsRate;
         private BigDecimal redeemDiscount;
+        // 升级门槛 EXP（MemberLevelConfig.thresholdByLevel，basic 为 0）
+        private Integer threshold;
+        // 月权益文案（MonthlyBenefitConfig.levels.*.benefitName）
+        private String monthlyBenefit;
+        // 生日礼遇文案（BirthdayRewardConfig.levels.*.benefitName）
+        private String birthdayBenefit;
     }
 
     // 月度消费统计（用于黑卡加速包）

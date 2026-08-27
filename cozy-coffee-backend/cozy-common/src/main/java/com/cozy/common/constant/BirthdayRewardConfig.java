@@ -29,6 +29,8 @@ public class BirthdayRewardConfig {
 
     @Data
     public static class LevelBirthday {
+        /** 生日权益展示文案（权益页对比展示，前端无需再硬编码） */
+        private String benefitName;
         /** 生日积分（黑金 888，其余等级 0） */
         private int points;
         private List<BirthdayCoupon> coupons = new ArrayList<>();
@@ -46,20 +48,26 @@ public class BirthdayRewardConfig {
 
     private static Map<String, LevelBirthday> defaultLevels() {
         Map<String, LevelBirthday> map = new LinkedHashMap<>();
-        map.put("black", level(888,
+        map.put("black", level("生日：888 积分 + 免单券×2(全品类) + 甜品券",
+                888,
                 coupon("BIRTHDAY_BLACK_FREE", 0, 40, 30),
                 coupon("BIRTHDAY_FREE_CAKE", 0, 40, 30)));
-        map.put("diamond", level(0,
+        map.put("diamond", level("生日：免单券×1(优选饮品) + 甜品 5 折券",
+                0,
                 coupon("BIRTHDAY_DIAMOND_FREE", 0, 40, 30),
                 coupon("BIRTHDAY_CAKE_HALF", 0, 50, 30)));
-        map.put("gold", level(0, coupon("BIRTHDAY_GOLD_FREE", 0, 40, 30)));
-        map.put("silver", level(0, coupon("BIRTHDAY_SILVER_BOGO", 0, 40, 30)));
-        map.put("basic", level(0, coupon("BIRTHDAY_BASIC_DISCOUNT", 0, 50, 30)));
+        map.put("gold", level("生日：标准饮品免单券×1",
+                0, coupon("BIRTHDAY_GOLD_FREE", 0, 40, 30)));
+        map.put("silver", level("生日：买一赠一券×1",
+                0, coupon("BIRTHDAY_SILVER_BOGO", 0, 40, 30)));
+        map.put("basic", level("生日：单饮品 5 折券",
+                0, coupon("BIRTHDAY_BASIC_DISCOUNT", 0, 50, 30)));
         return map;
     }
 
-    private static LevelBirthday level(int points, BirthdayCoupon... coupons) {
+    private static LevelBirthday level(String benefitName, int points, BirthdayCoupon... coupons) {
         LevelBirthday l = new LevelBirthday();
+        l.setBenefitName(benefitName);
         l.setPoints(points);
         for (BirthdayCoupon c : coupons) {
             l.getCoupons().add(c);

@@ -114,6 +114,7 @@ cozy:
     birthday:
       levels:
         black:
+          benefit-name: 生日：888 积分 + 免单券×2(全品类) + 甜品券
           points: 888
           coupons:
             - coupon-type: BIRTHDAY_BLACK_FREE
@@ -125,6 +126,7 @@ cozy:
               discount-amount: 40
               valid-days: 30
         diamond:
+          benefit-name: 生日：免单券×1(优选饮品) + 甜品 5 折券
           points: 0
           coupons:
             - coupon-type: BIRTHDAY_DIAMOND_FREE
@@ -136,6 +138,7 @@ cozy:
               discount-amount: 50
               valid-days: 30
         gold:
+          benefit-name: 生日：标准饮品免单券×1
           points: 0
           coupons:
             - coupon-type: BIRTHDAY_GOLD_FREE
@@ -143,6 +146,7 @@ cozy:
               discount-amount: 40
               valid-days: 30
         silver:
+          benefit-name: 生日：买一赠一券×1
           points: 0
           coupons:
             - coupon-type: BIRTHDAY_SILVER_BOGO
@@ -150,6 +154,7 @@ cozy:
               discount-amount: 40
               valid-days: 30
         basic:
+          benefit-name: 生日：单饮品 5 折券
           points: 0
           coupons:
             - coupon-type: BIRTHDAY_BASIC_DISCOUNT
