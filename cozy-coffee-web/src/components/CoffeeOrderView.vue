@@ -182,21 +182,29 @@ const handleAddToCart = (item) => {
   ElMessage.success('已加入购物车')
 }
 
+// 旧 localStorage 购物车兜底：extraPrices → 真实加料码（P2-4 后新购物车直接带 addons）
+function legacyAddonsFromExtras(item) {
+  const addons = []
+  if (item.extraPrices?.strength > 0) {
+    addons.push({ code: 'EXTRA_SHOT' })
+  }
+  const milkMap = { OAT: 'OAT_MILK', COCONUT: 'COCONUT_MILK', SOY: 'SOY_MILK', WHOLE: 'WHOLE_MILK' }
+  if (item.extraPrices?.milk > 0 && milkMap[item.milkType]) {
+    addons.push({ code: milkMap[item.milkType] })
+  }
+  return addons
+}
+
 const handleCheckout = async (orderData) => {
   try {
-    // v5.7.2: 正确构造 addonsJson 供后端解析
+    // V2 (P2-4): 直接使用购物车行携带的真实加料码；旧 localStorage 购物车兜底映射
     const payload = {
       ...orderData,
       items: orderData.items.map(item => {
-        // 构造 addonsJson 数组格式
-        const addons = []
-        if (item.extraPrices?.strength > 0) {
-          addons.push({ code: 'EXTRA_SHOT', name: '加浓', price: item.extraPrices.strength })
-        }
-        if (item.extraPrices?.milk > 0) {
-          addons.push({ code: 'SPECIAL_MILK', name: item.milkType || '特殊奶', price: item.extraPrices.milk })
-        }
-        
+        const addons = Array.isArray(item.addons) && item.addons.length > 0
+          ? item.addons
+          : legacyAddonsFromExtras(item)
+
         return {
           ...item,
           optionsJson: JSON.stringify({

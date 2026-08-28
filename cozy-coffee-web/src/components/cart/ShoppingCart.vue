@@ -218,7 +218,15 @@ const milkExtraTotal = computed(() => {
   }, 0)
 })
 
-const otherExtrasTotal = computed(() => cupExtraTotal.value + milkExtraTotal.value)
+const otherAddonTotal = computed(() => {
+  if (!props.cartItems || !Array.isArray(props.cartItems)) return 0
+  return props.cartItems.reduce((sum, item) => {
+    const other = item.extraPrices?.other || 0
+    return sum + other * item.quantity
+  }, 0)
+})
+
+const otherExtrasTotal = computed(() => cupExtraTotal.value + milkExtraTotal.value + otherAddonTotal.value)
 
 const subtotal = computed(() => baseSubtotal.value + strengthExtraTotal.value + otherExtrasTotal.value)
 
@@ -408,7 +416,7 @@ const mainCouponAddonDiscount = computed(() => mainCouponAddonDiscountDetails.va
 
 const finalTotal = computed(() => {
   const baseAmountForDiscount = baseSubtotal.value + cupExtraTotal.value
-  const addonsAmount = milkExtraTotal.value + strengthExtraTotal.value
+  const addonsAmount = milkExtraTotal.value + strengthExtraTotal.value + otherAddonTotal.value
   const totalAmount = baseAmountForDiscount + addonsAmount
 
   const afterMemberDiscount = Math.max(0, totalAmount - memberDiscount.value)

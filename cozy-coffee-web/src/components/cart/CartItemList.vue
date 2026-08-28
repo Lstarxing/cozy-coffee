@@ -4,12 +4,13 @@
       <img :src="getImageUrl(item.productImage)" :alt="item.productName" @error="handleImageError">
       <div class="item-details">
         <h4>{{ item.productName }}</h4>
-        <div v-if="item.category !== 'bakery' && (item.cupSize || item.sugarLevel || item.temperature || item.coffeeStrength || (item.milkType && item.milkType !== 'WHOLE'))" class="item-specs">
+        <div v-if="item.category !== 'bakery' && (item.cupSize || item.sugarLevel || item.temperature || item.coffeeStrength || (item.milkType && item.milkType !== 'WHOLE') || item.addonText)" class="item-specs">
           <span v-if="item.cupSize">{{ getCupSizeLabel(item.cupSize) }}</span>
           <span v-if="item.sugarLevel">{{ getSugarLabel(item.sugarLevel) }}</span>
           <span v-if="item.temperature">{{ getTempLabel(item.temperature) }}</span>
           <span v-if="item.coffeeStrength">{{ getStrengthLabel(item.coffeeStrength) }}</span>
           <span v-if="item.milkType && item.milkType !== 'WHOLE'">{{ getMilkLabel(item.milkType) }}</span>
+          <span v-if="item.addonText">{{ item.addonText }}</span>
         </div>
         <div class="item-price">
           <span v-if="item.discountAmount > 0" class="original-price">¥{{ item.unitPrice }}</span>
@@ -48,13 +49,14 @@ defineProps({
 defineEmits(['update-quantity', 'remove-item'])
 
 const getCupSizeLabel = (size) => {
-  const map = { 'STANDARD': '标准杯', 'LARGE': '大杯' }
+  const map = { 'STANDARD': '标准杯', 'MEDIUM': '中杯', 'LARGE': '大杯' }
   return map[size] || size
 }
 
 const getSugarLabel = (level) => {
   const map = {
     'NONE': '不加糖', 'none': '不加糖',
+    'NO_ADDED_SUGAR': '不另外加糖', 'no_added_sugar': '不另外加糖',
     'LESS': '少糖', 'less': '少糖',
     'HALF': '半糖', 'half': '半糖',
     'LIGHT': '微甜', 'light': '微甜',
@@ -78,7 +80,8 @@ const getMilkLabel = (milk) => {
   const map = {
     'WHOLE': '标准牛乳',
     'OAT': '换燕麦奶',
-    'COCONUT': '换椰奶'
+    'COCONUT': '换椰奶',
+    'SOY': '换豆奶'
   }
   return map[milk] || milk
 }

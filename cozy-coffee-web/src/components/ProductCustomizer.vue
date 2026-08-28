@@ -15,43 +15,32 @@
         </div>
 
         <div class="options-section">
-          <!-- 杯型 v6.1: 支持禁用状态 -->
+          <!-- 杯型 v6.2: 中/大杯价格来自接口 priceMedium/priceLarge，前端仅展示不推导 -->
           <div v-if="showCupSize" class="option-group">
             <label>杯型</label>
             <div class="option-buttons grid-layout">
               <button
-v-for="size in cupSizes" :key="size.value"
-                :class="{ 
-                  active: customization.cupSize === size.value,
-                  disabled: size.disabled 
-                }"
-                :disabled="size.disabled"
-                @click="!size.disabled && (customization.cupSize = size.value)">
+v-for="size in sizeOptions" :key="size.value"
+                :class="{ active: customization.cupSize === size.value }"
+                @click="customization.cupSize = size.value">
                 <span class="opt-label">{{ size.label }}</span>
-                <span v-if="size.extraPrice > 0 && !size.disabled" class="price-tag">+¥{{ size.extraPrice }}</span>
-                <span v-if="size.disabled" class="disabled-hint">不可选</span>
+                <span v-if="size.extra > 0" class="price-tag">+¥{{ size.extra }}</span>
               </button>
             </div>
-            <p v-if="sizeConfig.hint" class="option-hint">💡 {{ sizeConfig.hint }}</p>
+            <p v-if="sizeOptions.length === 1" class="option-hint">💡 本品仅限{{ sizeOptions[0].label }}</p>
           </div>
 
-          <!-- 糖度 (免费) v6.1: 支持禁用状态 -->
+          <!-- 糖度 v6.2: NO_SUGAR_ONLY 不显示糖度行；NO_ADDED_SUGAR = 不另外加糖 -->
           <div v-if="showSugar" class="option-group">
             <label>糖度</label>
             <div class="option-buttons grid-layout">
               <button
-v-for="sugar in sugarLevels" :key="sugar.value"
-                :class="{ 
-                  active: customization.sugarLevel === sugar.value,
-                  disabled: sugar.disabled 
-                }"
-                :disabled="sugar.disabled"
-                @click="!sugar.disabled && (customization.sugarLevel = sugar.value)">
+v-for="sugar in sugarOptions" :key="sugar.value"
+                :class="{ active: customization.sugarLevel === sugar.value }"
+                @click="customization.sugarLevel = sugar.value">
                 <span class="opt-label">{{ sugar.label }}</span>
-                <span v-if="sugar.disabled" class="disabled-hint">不可选</span>
               </button>
             </div>
-            <p v-if="sugarConfig.hint" class="option-hint">💡 {{ sugarConfig.hint }}</p>
           </div>
 
           <!-- 温度 (免费) v6.1: 支持禁用状态 -->
@@ -60,9 +49,9 @@ v-for="sugar in sugarLevels" :key="sugar.value"
             <div class="option-buttons grid-layout">
               <button
 v-for="temp in temperatures" :key="temp.value"
-                :class="{ 
+                :class="{
                   active: customization.temperature === temp.value,
-                  disabled: temp.disabled 
+                  disabled: temp.disabled
                 }"
                 :disabled="temp.disabled"
                 @click="!temp.disabled && (customization.temperature = temp.value)">
@@ -73,32 +62,17 @@ v-for="temp in temperatures" :key="temp.value"
             <p v-if="tempConfig.hint" class="option-hint">💡 {{ tempConfig.hint }}</p>
           </div>
 
-          <!-- 浓度 (含付费加浓) -->
-          <div v-if="showStrength" class="option-group">
-            <label>浓度</label>
-            <div class="option-buttons grid-layout-large"> <!-- 使用大按钮布局 -->
-              <button
-v-for="strength in coffeeStrengths" :key="strength.value"
-                :class="{ active: customization.coffeeStrength === strength.value }"
-                @click="customization.coffeeStrength = strength.value">
-                <span class="opt-label">{{ strength.label }}</span>
-                <span v-if="strength.extraPrice > 0" class="price-tag">+¥{{ strength.extraPrice }}</span>
-                <!-- v5.3: 免费券提示 -->
-                <span v-if="strength.value === 'STRONG' && userHasShotCoupon" class="coupon-badge">🎁 免费券</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- 基底/奶类 (含付费选项) -->
-          <div v-if="showMilk" class="option-group">
-            <label>基底</label>
+          <!-- V2 加料组 (P2-4): MILK/SHOT/SYRUP/OTHER，按 price_delta 展示，前端只提交 code -->
+          <div v-for="group in addonGroups" :key="group.category" class="option-group">
+            <label>{{ groupLabel(group.category) }}</label>
             <div class="option-buttons grid-layout">
               <button
-v-for="milk in milkOptions" :key="milk.value"
-                :class="{ active: customization.milkType === milk.value }"
-                @click="customization.milkType = milk.value">
-                <span class="opt-label">{{ milk.label }}</span>
-                <span v-if="milk.extraPrice > 0" class="price-tag">+¥{{ milk.extraPrice }}</span>
+v-for="item in group.items" :key="item.code"
+                :class="{ active: isGroupSelected(group, item.code) }"
+                @click="toggleGroup(group, item.code)">
+                <span class="opt-label">{{ item.name }}</span>
+                <span v-if="Number(item.priceDelta) > 0" class="price-tag">+¥{{ Number(item.priceDelta) }}</span>
+                <span v-if="group.category === 'SHOT' && item.code === 'EXTRA_SHOT' && userHasShotCoupon" class="coupon-badge">🎁 免费券</span>
               </button>
             </div>
           </div>
@@ -140,42 +114,87 @@ const emit = defineEmits(['close', 'add-to-cart'])
 
 const quantity = ref(1)
 const customization = reactive({
-  cupSize: 'STANDARD',
-  sugarLevel: 'STANDARD',
-  temperature: 'HOT',
-  coffeeStrength: 'NORMAL',
-  milkType: 'WHOLE'
+  cupSize: '',
+  sugarLevel: '',
+  temperature: 'HOT'
 })
 
 // v5.3: 检查是否持有加浓缩券
 const userHasShotCoupon = ref(false)
 
-// v5.3: 根据 SKU 配置初始化默认值
-watch(() => props.product, (product) => {
-  if (!product) return
-  
-  // 杯型默认值
-  const sizeType = product.sizeType || 'MEDIUM_LARGE'
-  if (sizeType === 'DEFAULT') {
-    customization.cupSize = 'STANDARD'
+// 分类判断 helper
+const isBakery = computed(() => props.product.category === 'bakery')
+
+// ==================== V2 加料组（P2-4）：消费 addonGroups ====================
+
+const addonGroups = computed(() => props.product.addonGroups || [])
+
+const GROUP_LABELS = { MILK: '基底', SHOT: '浓度', SYRUP: '风味', OTHER: '其他' }
+const groupLabel = (category) => GROUP_LABELS[category] || category
+
+// { category: code(SINGLE) | [codes](MULTI) }
+const selection = reactive({})
+
+function isGroupSelected(group, code) {
+  const sel = selection[group.category]
+  return group.selectionMode === 'MULTI'
+    ? (Array.isArray(sel) && sel.includes(code))
+    : sel === code
+}
+
+function toggleGroup(group, code) {
+  if (group.selectionMode === 'MULTI') {
+    const cur = selection[group.category] || []
+    selection[group.category] = cur.includes(code) ? cur.filter(c => c !== code) : [...cur, code]
+  } else {
+    selection[group.category] = selection[group.category] === code
+      ? (group.minSelect > 0 ? code : '')
+      : code
   }
-  
-  // 甜度默认值
-  const sugarType = product.sugarType || 'FREE_CHOICE'
-  if (sugarType === 'NO_SUGAR_ONLY') {
-    customization.sugarLevel = 'NONE'
-  } else if (sugarType === 'MIN_LESS_SWEET') {
-    customization.sugarLevel = 'STANDARD'
-  }
-  
-  // 温度默认值
-  const tempType = product.tempType || 'HOT_COLD'
-  if (tempType === 'COLD_ONLY') {
-    customization.temperature = 'COLD'
-  } else if (tempType === 'HOT_ONLY') {
-    customization.temperature = 'HOT'
-  }
-}, { immediate: true })
+}
+
+function resetAddons() {
+  Object.keys(selection).forEach(k => delete selection[k])
+  addonGroups.value.forEach(group => {
+    if (group.selectionMode === 'SINGLE' && group.minSelect > 0) {
+      const def = group.items.find(i => i.isDefault) || group.items[0]
+      selection[group.category] = def?.code || ''
+    }
+  })
+}
+
+const selectedAddons = computed(() => {
+  const items = []
+  addonGroups.value.forEach(group => {
+    const sel = selection[group.category]
+    const codes = group.selectionMode === 'MULTI'
+      ? (Array.isArray(sel) ? sel : [])
+      : (sel ? [sel] : [])
+    codes.forEach(code => {
+      const item = group.items.find(i => i.code === code)
+      if (item) items.push(item)
+    })
+  })
+  return items
+})
+
+const addonFee = computed(() => selectedAddons.value.reduce((sum, i) => sum + Number(i.priceDelta || 0), 0))
+const addons = computed(() => selectedAddons.value.map(i => ({ code: i.code })))
+
+// 除 MILK/SHOT 外的加料（SYRUP / OTHER 等）：购物车展示摘要 + 金额
+const extraAddons = computed(() => selectedAddons.value.filter(i => {
+  const group = addonGroups.value.find(g => g.items.some(it => it.code === i.code))
+  return group && group.category !== 'MILK' && group.category !== 'SHOT'
+}))
+const otherExtra = computed(() => extraAddons.value.reduce((sum, i) => sum + Number(i.priceDelta || 0), 0))
+const addonText = computed(() => extraAddons.value.map(i => i.name).join(' · '))
+
+// 向后兼容字段（购物车去重/展示/券逻辑）：从加料选择派生
+const coffeeStrength = computed(() => selection['SHOT'] === 'EXTRA_SHOT' ? 'STRONG' : 'NORMAL')
+const milkType = computed(() => {
+  const milk = selection['MILK']
+  return ({ WHOLE_MILK: 'WHOLE', OAT_MILK: 'OAT', COCONUT_MILK: 'COCONUT', SOY_MILK: 'SOY' })[milk] || 'WHOLE'
+})
 
 onMounted(async () => {
   try {
@@ -188,211 +207,108 @@ onMounted(async () => {
   }
 })
 
-// 分类判断 helper
-const isBakery = computed(() => props.product.category === 'bakery')
-const isEspresso = computed(() => props.product.category === 'espresso')
-const isSignature = computed(() => props.product.category === 'signature')
+// ==================== 规格配置（杯型/糖度/温度） ====================
 
-// ==================== v5.3: 基于后端 SKU 配置动态渲染 ====================
-
-// 杯型配置解析（v6.1: 改为禁用模式）
-const sizeConfig = computed(() => {
-  const sizeType = props.product.sizeType || 'MEDIUM_LARGE'
-  switch (sizeType) {
-    case 'DEFAULT':
-      // 固定标准杯：显示选项，但禁用其他杯型
-      return { 
-        show: true, 
-        options: [
-          { label: '标准杯', value: 'STANDARD', extraPrice: 0, disabled: false },
-          { label: '大杯', value: 'LARGE', extraPrice: 3, disabled: true }
-        ],
-        defaultValue: 'STANDARD',
-        hint: '本品仅限标准杯'
-      }
-    case 'MEDIUM_LARGE':
-      return { 
-        show: true, 
-        options: [
-          { label: '标准杯', value: 'STANDARD', extraPrice: 0, disabled: false },
-          { label: '大杯', value: 'LARGE', extraPrice: 3, disabled: false }
-        ],
-        defaultValue: 'STANDARD'
-      }
-    case 'ALL_SIZES':
-      return { 
-        show: true, 
-        options: [
-          { label: '中杯', value: 'MEDIUM', extraPrice: 0, disabled: false },
-          { label: '大杯', value: 'LARGE', extraPrice: 3, disabled: false },
-          { label: '超大杯', value: 'EXTRA_LARGE', extraPrice: 5, disabled: false }
-        ],
-        defaultValue: 'MEDIUM'
-      }
-    default:
-      return { 
-        show: true, 
-        options: [
-          { label: '标准杯', value: 'STANDARD', extraPrice: 0, disabled: false }
-        ], 
-        defaultValue: 'STANDARD' 
-      }
-  }
+// 杯型：中/大杯价来自接口 priceMedium/priceLarge，前端仅展示（V2 禁止硬编码 +3）
+const sizeOptions = computed(() => {
+  if (isBakery.value) return [{ value: 'STANDARD', label: '标准杯', base: Number(props.product.price || 0), extra: 0 }]
+  const type = props.product.sizeType || 'MEDIUM_LARGE'
+  if (type === 'DEFAULT') return [{ value: 'STANDARD', label: '标准杯', base: Number(props.product.price || 0), extra: 0 }]
+  const medium = Number(props.product.priceMedium || 0)
+  const large = Number(props.product.priceLarge || 0)
+  return [
+    { value: 'MEDIUM', label: '中杯', base: medium, extra: 0 },
+    { value: 'LARGE', label: '大杯', base: large, extra: large - medium }
+  ]
 })
 
-// 甜度配置解析（v6.1: 改为禁用模式）
-const sugarConfig = computed(() => {
-  const sugarType = props.product.sugarType || 'FREE_CHOICE'
-  switch (sugarType) {
-    case 'NO_SUGAR_ONLY':
-      // 固定无糖：显示选项，但禁用其他甜度
-      return { 
-        show: true, 
-        options: [
-          { label: '全糖', value: 'STANDARD', disabled: true },
-          { label: '少糖', value: 'LESS', disabled: true },
-          { label: '半糖', value: 'HALF', disabled: true },
-          { label: '无糖', value: 'NONE', disabled: false }
-        ],
-        defaultValue: 'NONE', 
-        hint: '本品不加糖' 
-      }
-    case 'MIN_LESS_SWEET':
-      // 最低少甜：显示选项，但禁用无糖
-      // v5.3.1: 规范化为 STANDARD/LESS/HALF
-      return { 
-        show: true, 
-        options: [
-          { label: '全糖', value: 'STANDARD', disabled: false },
-          { label: '少糖', value: 'LESS', disabled: false },
-          { label: '半糖', value: 'HALF', disabled: false },
-          { label: '无糖', value: 'NONE', disabled: true }
-        ],
-        defaultValue: 'STANDARD',
-        hint: '含糖浆/酱料，不可完全去糖'
-      }
-    case 'FREE_CHOICE':
-    default:
-      // v5.3.1: 规范化为 STANDARD/LESS/HALF/NONE (4个标准选项)
-      return { 
-        show: true, 
-        options: [
-          { label: '全糖', value: 'STANDARD', disabled: false },
-          { label: '少糖', value: 'LESS', disabled: false },
-          { label: '半糖', value: 'HALF', disabled: false },
-          { label: '无糖', value: 'NONE', disabled: false }
-        ],
-        defaultValue: 'STANDARD'
-      }
-  }
+const showCupSize = computed(() => !isBakery.value)
+
+// 糖度：NO_SUGAR_ONLY 无糖度行；NO_ADDED_SUGAR = 不另外加糖
+const sugarOptions = computed(() => {
+  if (isBakery.value) return []
+  const type = props.product.sugarType || 'FREE_CHOICE'
+  if (type === 'NO_SUGAR_ONLY') return []
+  const values = [
+    { value: 'STANDARD', label: '标准糖' },
+    { value: 'LESS', label: '少糖' },
+    { value: 'HALF', label: '半糖' }
+  ]
+  if (type !== 'MIN_LESS_SWEET') values.push({ value: 'NO_ADDED_SUGAR', label: '不另外加糖' })
+  return values
 })
 
-// 温度配置解析（v6.1: 改为禁用模式，保留选项但标记为不可选）
+const showSugar = computed(() => !isBakery.value && sugarOptions.value.length > 0)
+
+// 温度（P1D 已同步 HOT_COLD/COLD_ONLY/HOT_ONLY）
 const tempConfig = computed(() => {
   const tempType = props.product.tempType || 'HOT_COLD'
   switch (tempType) {
     case 'COLD_ONLY':
-      // 仅限冰：显示选项，但禁用热选项
-      return { 
-        show: true, 
-        options: [
-          { label: '冰', value: 'COLD', disabled: false },
-          { label: '热', value: 'HOT', disabled: true }
-        ],
-        defaultValue: 'COLD', 
-        hint: '本品仅供冰饮' 
-      }
-    case 'HOT_ONLY':
-      // 仅限热：显示选项，但禁用冰选项
       return {
         show: true,
-        options: [
-          { label: '冰', value: 'COLD', disabled: true },
-          { label: '热', value: 'HOT', disabled: false }
-        ],
+        options: [{ label: '冰', value: 'COLD', disabled: false }, { label: '热', value: 'HOT', disabled: true }],
+        defaultValue: 'COLD',
+        hint: '本品仅供冰饮'
+      }
+    case 'HOT_ONLY':
+      return {
+        show: true,
+        options: [{ label: '冰', value: 'COLD', disabled: true }, { label: '热', value: 'HOT', disabled: false }],
         defaultValue: 'HOT',
         hint: '本品仅供热饮'
       }
     case 'HOT_COLD':
     default:
-      return { 
-        show: true, 
-        options: [
-          { label: '冰', value: 'COLD', disabled: false },
-          { label: '热', value: 'HOT', disabled: false }
-        ],
+      return {
+        show: true,
+        options: [{ label: '冰', value: 'COLD', disabled: false }, { label: '热', value: 'HOT', disabled: false }],
         defaultValue: 'HOT'
       }
   }
 })
-
-// 选项可见性控制（基于 SKU 配置）
-const showCupSize = computed(() => {
-  if (isBakery.value) return false
-  return sizeConfig.value.show
-})
-const showSugar = computed(() => {
-  if (isBakery.value) return false
-  return sugarConfig.value.show
-})
-const showTemp = computed(() => {
-  if (isBakery.value) return false
-  if (props.product.category === 'addon') return false
-  return tempConfig.value.show
-})
-const showStrength = computed(() => isEspresso.value) // 只有意式咖啡显示浓度
-const showMilk = computed(() => {
-  if (!isEspresso.value) return false
-  // v5.3 修复：美式、特调、澳白、Dirty 等不支持换奶，或者已经有固定奶底的产品
-  const noMilkChange = ['美式', 'Americano', '卡布奇诺', '摩卡', '焦糖玛奇朵', '脏咖', 'Dirty', '澳白', 'Flat White', '生椰拿铁', '燕麦拿铁', 'SOE', '手冲']
-  return !noMilkChange.some(n => props.product.name.includes(n))
-})
-
-// 动态选项数据（基于 SKU 配置）
-const cupSizes = computed(() => sizeConfig.value.options)
-const sugarLevels = computed(() => sugarConfig.value.options)
+const showTemp = computed(() => !isBakery.value && props.product.category !== 'addon' && tempConfig.value.show)
 const temperatures = computed(() => tempConfig.value.options)
 
-const coffeeStrengths = [
-  { label: '标准', value: 'NORMAL', extraPrice: 0 },
-  { label: '加浓', value: 'STRONG', extraPrice: 5 }
-]
+// ==================== 初始化（每次打开重挂载） ====================
 
-const milkOptions = [
-  { label: '标准牛乳', value: 'WHOLE', extraPrice: 0 },
-  { label: '换燕麦奶', value: 'OAT', extraPrice: 4 },
-  { label: '换椰奶', value: 'COCONUT', extraPrice: 4 }
-]
+function resetForm() {
+  resetAddons()
+  customization.cupSize = sizeOptions.value[0]?.value || ''
+  customization.temperature = tempConfig.value.defaultValue || 'HOT'
+  const defSugar = props.product.defaultSugarLevel
+  customization.sugarLevel = sugarOptions.value.some(o => o.value === defSugar)
+    ? defSugar
+    : (sugarOptions.value[0]?.value || '')
+}
 
-// 动态计算总价
-const totalPrice = computed(() => {
-  if (!props.product || props.product.price == null) {
-    return 0
-  }
-  
-  if (isBakery.value) {
-    return props.product.price * quantity.value
-  }
+watch(() => props.product, (product) => {
+  if (!product) return
+  resetForm()
+}, { immediate: true })
 
-  let unit = Number(props.product.price) || 0
-  
-  if (showCupSize.value && cupSizes.value) {
-    const selectedSize = cupSizes.value.find(s => s.value === customization.cupSize)
-    if (selectedSize) unit += selectedSize.extraPrice || 0
-  }
+// ==================== 价格展示（前端仅估算，后端权威） ====================
 
-  if (showStrength.value) {
-    const selectedStrength = coffeeStrengths.find(s => s.value === customization.coffeeStrength)
-    if (selectedStrength) unit += selectedStrength.extraPrice || 0
-  }
-
-  if (showMilk.value) {
-    const selectedMilk = milkOptions.find(m => m.value === customization.milkType)
-    if (selectedMilk) unit += selectedMilk.extraPrice || 0
-  }
-
-  return unit * quantity.value
+const basePrice = computed(() => {
+  const opt = sizeOptions.value.find(o => o.value === customization.cupSize)
+  return opt ? opt.base : Number(props.product.price || 0)
 })
+
+const strengthExtra = computed(() => {
+  const shot = selectedAddons.value.find(i => i.code === 'EXTRA_SHOT')
+  return shot ? Number(shot.priceDelta || 0) : 0
+})
+
+const milkExtra = computed(() => {
+  const milk = selection['MILK']
+  if (!milk) return 0
+  const group = addonGroups.value.find(g => g.category === 'MILK')
+  const item = group?.items.find(i => i.code === milk)
+  return item ? Number(item.priceDelta || 0) : 0
+})
+
+const unitPrice = computed(() => Number((basePrice.value + addonFee.value).toFixed(2)))
+const totalPrice = computed(() => Number((unitPrice.value * quantity.value).toFixed(2)))
 
 const addToCart = () => {
   // 构建 payload
@@ -400,50 +316,30 @@ const addToCart = () => {
     productId: props.product.id,
     productName: props.product.name,
     productImage: props.product.imageUrl,
-    unitPrice: totalPrice.value / quantity.value,
-    basePrice: props.product.price,
+    unitPrice: unitPrice.value,
+    basePrice: basePrice.value,
     quantity: quantity.value,
     category: props.product.category, // 传递分类方便后续判断
     isNewProduct: props.product.isNewProduct || false, // v5.3.4: 新品标记，用于新品券验证
     extraPrices: {
-      cup: 0, strength: 0, milk: 0
+      cup: 0,
+      strength: strengthExtra.value,
+      milk: milkExtra.value,
+      other: otherExtra.value
     }
   }
 
-  // v5.3 修复：只传递实际可见的选项字段，避免甜品显示饮品参数、美式显示奶类
+  // 甜品不传递饮品参数，后端 SKU 验证已支持 null 值
   if (!isBakery.value) {
-    // 只传递可见选项的值
     if (showCupSize.value) payload.cupSize = customization.cupSize
     if (showSugar.value) payload.sugarLevel = customization.sugarLevel
     if (showTemp.value) payload.temperature = customization.temperature
-    if (showStrength.value) payload.coffeeStrength = customization.coffeeStrength
-    if (showMilk.value) payload.milkType = customization.milkType
-    
-    // 计算 extraPrices 用于展示
-    if (showCupSize.value && cupSizes.value) payload.extraPrices.cup = cupSizes.value.find(s => s.value === customization.cupSize)?.extraPrice || 0
-    if (showStrength.value) payload.extraPrices.strength = coffeeStrengths.find(s => s.value === customization.coffeeStrength)?.extraPrice || 0
-    if (showMilk.value) payload.extraPrices.milk = milkOptions.find(m => m.value === customization.milkType)?.extraPrice || 0
-    
-    // v5.3.2: 构建 addonsJson 用于后端计算加料费用
-    const addons = []
-    
-    // 加浓缩费用 (coffeeStrength: STRONG)
-    if (showStrength.value && customization.coffeeStrength === 'STRONG') {
-      const strengthOption = coffeeStrengths.find(s => s.value === 'STRONG')
-      if (strengthOption && strengthOption.extraPrice > 0) {
-        addons.push({
-          name: '加浓缩',
-          price: strengthOption.extraPrice
-        })
-      }
-    }
-    
-    // 如果有加料，序列化为 JSON 字符串
-    if (addons.length > 0) {
-      payload.addonsJson = JSON.stringify(addons)
-    }
+    payload.coffeeStrength = coffeeStrength.value
+    payload.milkType = milkType.value
+    // V2：真实加料码（不含默认项，后端 price_delta 权威定价 + 自动注入必选默认项）
+    payload.addons = addons.value
+    if (addonText.value) payload.addonText = addonText.value
   }
-  // v5.3: 甜品不传递饮品参数，后端 SKU 验证已支持 null 值
 
   emit('add-to-cart', payload)
   emit('close')
