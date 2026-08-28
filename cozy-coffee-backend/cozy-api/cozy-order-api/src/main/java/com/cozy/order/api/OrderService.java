@@ -2,9 +2,11 @@ package com.cozy.order.api;
 
 import com.cozy.order.dto.request.CartCheckRequest;
 import com.cozy.order.dto.request.CreateOrderRequest;
+import com.cozy.order.dto.request.AddonGroupRequest;
 import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.MonthlyStatsDTO;
+import com.cozy.order.dto.response.ProductAddonDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
 
 import java.util.List;
@@ -151,6 +153,16 @@ public interface OrderService {
      * 切换商品上下架状态
      */
     CoffeeProductDTO toggleProductStatus(Long productId);
+
+    /**
+     * 获取加料主数据目录（管理端，绑定加料组时选择）
+     */
+    List<ProductAddonDTO> listAddonCatalog();
+
+    /**
+     * 保存商品加料组（管理端，全量替换）
+     */
+    void saveAddonGroups(Long productId, List<AddonGroupRequest> groups);
 
     /**
      * 获取用户月度订单统计数据（v5.0 任务用）

@@ -4,9 +4,11 @@ import com.cozy.order.service.converter.OrderDtoEnricher;
 import com.cozy.order.api.OrderService;
 import com.cozy.order.dto.request.CartCheckRequest;
 import com.cozy.order.dto.request.CreateOrderRequest;
+import com.cozy.order.dto.request.AddonGroupRequest;
 import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.MonthlyStatsDTO;
+import com.cozy.order.dto.response.ProductAddonDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
 import com.cozy.order.service.order.OrderPreviewer;
 import com.cozy.order.service.order.OrderQueryService;
@@ -160,5 +162,15 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public CoffeeProductDTO toggleProductStatus(Long productId) {
         return productAdminService.toggleProductStatus(productId);
+    }
+
+    @Override
+    public List<ProductAddonDTO> listAddonCatalog() {
+        return productAdminService.listAddonCatalog();
+    }
+
+    @Override
+    public void saveAddonGroups(Long productId, List<AddonGroupRequest> groups) {
+        productAdminService.saveAddonGroups(productId, groups);
     }
 }

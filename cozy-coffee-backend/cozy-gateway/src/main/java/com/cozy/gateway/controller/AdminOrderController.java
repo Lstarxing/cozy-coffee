@@ -4,7 +4,9 @@ import com.cozy.common.result.Result;
 import com.cozy.gateway.service.AdminListService;
 import com.cozy.gateway.service.AdminOrderCommandService;
 import com.cozy.order.api.OrderService;
+import com.cozy.order.dto.request.AddonGroupRequest;
 import com.cozy.order.dto.response.CoffeeProductDTO;
+import com.cozy.order.dto.response.ProductAddonDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -76,4 +78,13 @@ public class AdminOrderController {
 
     @PutMapping("/products/coffee/{productId}/status")
     public Result<CoffeeProductDTO> toggleCoffeeProductStatus(@PathVariable Long productId) { return Result.success(orderService.toggleProductStatus(productId)); }
+
+    @GetMapping("/products/addon-catalog")
+    public Result<List<ProductAddonDTO>> listAddonCatalog() { return Result.success(orderService.listAddonCatalog()); }
+
+    @PostMapping("/products/coffee/{productId}/addon-groups")
+    public Result<Void> saveAddonGroups(@PathVariable Long productId, @RequestBody List<AddonGroupRequest> groups) {
+        orderService.saveAddonGroups(productId, groups);
+        return Result.success();
+    }
 }
