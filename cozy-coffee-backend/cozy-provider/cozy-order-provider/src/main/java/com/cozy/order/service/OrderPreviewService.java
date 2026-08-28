@@ -14,7 +14,7 @@ import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.dto.response.CheckoutPreviewDTO;
 import com.cozy.order.entity.CoffeeProduct;
 import com.cozy.order.mapper.CoffeeProductMapper;
-import com.cozy.order.service.impl.OrderRewardService;
+import com.cozy.order.service.OrderRewardService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

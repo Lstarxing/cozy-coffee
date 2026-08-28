@@ -1,4 +1,4 @@
-package com.cozy.order.service.impl;
+package com.cozy.order.service;
 
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.entity.CoffeeProduct;

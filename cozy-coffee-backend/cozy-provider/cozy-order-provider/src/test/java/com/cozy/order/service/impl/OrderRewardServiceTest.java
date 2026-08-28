@@ -3,6 +3,7 @@ package com.cozy.order.service.impl;
 import com.cozy.common.constant.MemberLevelConfig;
 import com.cozy.common.constant.PointsRateConfig;
 import com.cozy.member.dto.response.MemberDTO;
+import com.cozy.order.service.OrderRewardService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

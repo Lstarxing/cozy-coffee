@@ -1,4 +1,4 @@
-package com.cozy.order.service.impl;
+package com.cozy.order.service;
 
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.mq.MqTags;

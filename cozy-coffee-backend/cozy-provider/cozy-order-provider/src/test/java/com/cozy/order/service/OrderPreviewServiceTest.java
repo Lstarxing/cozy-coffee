@@ -10,7 +10,7 @@ import com.cozy.order.mapper.CoffeeProductAddonGroupMapper;
 import com.cozy.order.mapper.CoffeeProductAddonMapper;
 import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.mapper.ProductAddonMapper;
-import com.cozy.order.service.impl.OrderRewardService;
+import com.cozy.order.service.OrderRewardService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +39,7 @@ class OrderPreviewServiceTest {
                 mock(CoffeeProductAddonMapper.class),
                 mock(ProductAddonMapper.class),
                 new ObjectMapper());
-        ProductPricingService pricing = new ProductPricingService(new ProductSkuValidationService(), addonResolver);
+        ProductPricingService pricing = new ProductPricingService(new ProductRuleValidator(), addonResolver);
         service = new OrderPreviewService(productMapper, new ObjectMapper(), rewardService, pricing);
     }
 

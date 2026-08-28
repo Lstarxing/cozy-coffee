@@ -8,7 +8,6 @@ import com.cozy.order.entity.ShopOrder;
 import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.mapper.ShopOrderItemMapper;
 import com.cozy.order.mapper.ShopOrderMapper;
-import com.cozy.order.service.impl.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.support.TransactionTemplate;

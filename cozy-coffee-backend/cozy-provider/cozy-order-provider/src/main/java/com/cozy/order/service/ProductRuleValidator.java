@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
-public class ProductSkuValidationService {
+public class ProductRuleValidator {
 
     /**
      * 验证订单选项是否符合产品配置
@@ -24,7 +24,7 @@ public class ProductSkuValidationService {
      * @param tempChoice  用户选择的温度 (iced/hot)
      * @return 验证结果消息，null 表示通过
      */
-    public String validateSkuOptions(CoffeeProduct product, 
+    public String validateSpecs(CoffeeProduct product, 
                                     String sizeChoice, 
                                     String sugarChoice, 
                                     String tempChoice) {
@@ -175,8 +175,8 @@ public class ProductSkuValidationService {
      * @param product 产品实体
      * @return 允许的选项配置
      */
-    public SkuOptionsDTO getAllowedOptions(CoffeeProduct product) {
-        SkuOptionsDTO options = new SkuOptionsDTO();
+    public AllowedOptionsDTO getAllowedOptions(CoffeeProduct product) {
+        AllowedOptionsDTO options = new AllowedOptionsDTO();
         
         // 杯型选项
         String sizeTypeStr = product.getSizeType() != null ? product.getSizeType() : "MEDIUM_LARGE";
@@ -211,7 +211,7 @@ public class ProductSkuValidationService {
     /**
      * SKU 选项 DTO
      */
-    public static class SkuOptionsDTO {
+    public static class AllowedOptionsDTO {
         private String[] allowedSizes;
         private String[] allowedSugars;
         private String[] allowedTemps;

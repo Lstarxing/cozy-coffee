@@ -17,11 +17,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductPricingService {
 
-    private final ProductSkuValidationService skuValidationService;
+    private final ProductRuleValidator ruleValidator;
     private final ProductAddonResolver addonResolver;
 
     public PriceResult price(CoffeeProduct product, String size, String temp, String sugar, String addonsJson) {
-        String specError = skuValidationService.validateSkuOptions(product, size, sugar, temp);
+        String specError = ruleValidator.validateSpecs(product, size, sugar, temp);
         if (specError != null) {
             return PriceResult.invalid(specError);
         }

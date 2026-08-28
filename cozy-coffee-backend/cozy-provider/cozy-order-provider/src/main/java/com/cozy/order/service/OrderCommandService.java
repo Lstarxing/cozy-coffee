@@ -1,4 +1,4 @@
-package com.cozy.order.service.impl;
+package com.cozy.order.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;

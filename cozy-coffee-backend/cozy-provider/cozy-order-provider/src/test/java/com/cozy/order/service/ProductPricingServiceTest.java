@@ -80,7 +80,7 @@ class ProductPricingServiceTest {
         ProductAddonMapper addonMapper = mock(ProductAddonMapper.class);
         when(addonMapper.selectList(any())).thenReturn(addons);
         ProductAddonResolver resolver = new ProductAddonResolver(groupMapper, productAddonMapper, addonMapper, new ObjectMapper());
-        return new ProductPricingService(new ProductSkuValidationService(), resolver);
+        return new ProductPricingService(new ProductRuleValidator(), resolver);
     }
 
     // ── 经典拿铁：MILK 1/1 + SHOT 0/1 + SYRUP 0/1（互斥）+ OTHER 0/1 ──
