@@ -98,6 +98,9 @@
                   <text class="product-name">{{ product.name }}</text>
                   <text v-if="product.isNewProduct" class="product-tag">新品</text>
                 </view>
+                <view v-if="product.tags && product.tags.length" class="product-tags-row">
+                  <text v-for="t in product.tags" :key="t" class="product-tag-chip">{{ tagLabel(t) }}</text>
+                </view>
                 <text class="product-desc">{{ product.description || '门店现制' }}</text>
                 <text v-if="product.sold" class="product-extra">月售 {{ product.sold }} · 好评 {{ product.praise }}%</text>
                 <view class="product-foot">
@@ -348,6 +351,14 @@ function categoryName(code) {
     milk: '奶咖', specialty: '精品咖啡', non_coffee: '非咖啡'
   })[code] || code
 }
+
+const TAG_MAP = {
+  'NEW': '新品', 'TOP1': '招牌', 'LIMITED': '限量', 'SEASONAL': '季节',
+  'COLD': '冰饮', 'FRUITY': '果香', 'CITRUS': '柑橘', 'FLORAL': '花香',
+  'PLANT-BASED': '植物基', 'COCONUT': '椰香', 'SIGNATURE': '特调',
+  'EXPERIENCE': '体验', 'CLASSIC': '经典', 'STRONG': '加浓'
+}
+const tagLabel = (t) => TAG_MAP[t] || t
 function categoryEn(code) {
   return ({
     espresso: 'CLASSIC COFFEE', coffee: 'CLASSIC COFFEE', latte: 'LATTE', signature: 'SIGNATURE',
@@ -555,6 +566,8 @@ function closeOffShelf() {
 .product-title-row { display: flex; align-items: center; gap: 10rpx; }
 .product-name { font-family: $font-display; font-size: 30rpx; font-weight: 600; color: $cozy-ink; line-height: 1.3; }
 .product-tag { flex: none; padding: 4rpx 10rpx; border-radius: 6rpx; background: $cozy-surface; color: $cozy-ink; font-size: 18rpx; font-weight: 600; }
+.product-tags-row { display: flex; flex-wrap: wrap; gap: 8rpx; margin-top: 8rpx; }
+.product-tag-chip { padding: 3rpx 10rpx; border-radius: 6rpx; background: $cozy-primary-soft; color: $cozy-primary; font-size: 18rpx; font-weight: 600; }
 .product-desc { display: -webkit-box; overflow: hidden; margin-top: 6rpx; color: $cozy-muted; font-size: 21rpx; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
 .product-extra { margin-top: 6rpx; font-size: 19rpx; color: $cozy-placeholder; }
 .product-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }

@@ -29,6 +29,9 @@ public class CoffeeProductDTO implements Serializable {
     private String servingMode; // NULL=常规 / FIXED_COMBINATION=固定组合
     private String servingDesc; // 固定组合出杯说明（仅展示文案）
 
+    // V2：标签（展示用；NEW/COLD/FRUITY...，TOP1 数据驱动不静态录入）
+    private List<String> tags;
+
     // V2（P2）：加料组（菜单/详情渲染规格选项）
     private List<AddonGroupDTO> addonGroups;
 

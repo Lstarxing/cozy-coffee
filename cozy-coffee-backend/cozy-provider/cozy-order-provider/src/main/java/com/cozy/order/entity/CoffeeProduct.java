@@ -35,6 +35,7 @@ public class CoffeeProduct {
     private String servingMode; // 出杯模式：NULL=常规 / FIXED_COMBINATION=固定组合（一豆两喝·三喝）
     private String servingConfig; // 固定组合结构化构成 JSON：[{"type":"ESPRESSO","quantity":1},...]
     private String servingDesc; // 固定组合出杯说明（仅展示文案）
+    private String tags; // 标签 JSON 数组：["NEW","COLD"]（展示用；TOP1 数据驱动不静态录入）
     
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

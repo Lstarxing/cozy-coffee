@@ -51,3 +51,22 @@ export const SKU_TEMP_TYPE = {
   NO_TEMP: 'NO_TEMP',
   HOT_COLD: 'HOT_COLD'
 }
+
+// V2 商品标签词汇（3.1）：展示用；TOP1 数据驱动不静态录入
+export const PRODUCT_TAG_MAP = {
+  'NEW': { label: '新品', color: '#E65100' },
+  'TOP1': { label: '招牌', color: '#F5A623' },
+  'LIMITED': { label: '限量', color: '#8E24AA' },
+  'SEASONAL': { label: '季节', color: '#00838F' },
+  'COLD': { label: '冰饮', color: '#1E88E5' },
+  'FRUITY': { label: '果香', color: '#43A047' },
+  'CITRUS': { label: '柑橘', color: '#F9A825' },
+  'FLORAL': { label: '花香', color: '#D81B60' },
+  'PLANT-BASED': { label: '植物基', color: '#6D4C41' },
+  'COCONUT': { label: '椰香', color: '#C69C6D' },
+  'SIGNATURE': { label: '特调', color: '#8B5E3C' },
+  'EXPERIENCE': { label: '体验', color: '#5D4037' },
+  'CLASSIC': { label: '经典', color: '#757575' },
+  'STRONG': { label: '加浓', color: '#C62828' }
+}
+export const PRODUCT_TAG_OPTIONS = Object.entries(PRODUCT_TAG_MAP).map(([value, meta]) => ({ value, label: meta.label }))

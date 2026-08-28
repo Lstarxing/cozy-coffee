@@ -63,6 +63,7 @@ public class OrderDtoConverter {
         dto.setDefaultSugarLevel(entity.getDefaultSugarLevel());
         dto.setServingMode(entity.getServingMode());
         dto.setServingDesc(entity.getServingDesc());
+        dto.setTags(parseTags(entity.getTags()));
         dto.setBeanId(entity.getBeanId());
         dto.setBlendId(entity.getBlendId());
         dto.setAddonGroups(productAddonResolver.loadMenuGroups(entity.getId()));
@@ -110,6 +111,16 @@ public class OrderDtoConverter {
             return objectMapper.readValue(json, new TypeReference<List<BlendCompositionItem>>() {});
         } catch (Exception e) {
             log.warn("composition_json 解析失败: {}", json, e);
+            return List.of();
+        }
+    }
+
+    private List<String> parseTags(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            log.warn("tags 解析失败: {}", json, e);
             return List.of();
         }
     }

@@ -52,6 +52,9 @@
         
         <div class="product-info">
           <h4>{{ product.name }}</h4>
+          <div v-if="product.tags && product.tags.length" class="product-tags">
+            <span v-for="t in product.tags" :key="t" class="product-tag">{{ tagLabel(t) }}</span>
+          </div>
           <p class="product-desc">{{ product.description }}</p>
           <div class="product-footer">
             <span class="price">¥{{ product.price }}</span>
@@ -143,6 +146,15 @@ const categories = [
   { value: 'BAKERY', label: '烘焙轻食', icon: markRaw(Cake) }
 ]
 const activeCategory = ref('all')
+
+// V2 商品标签展示（3.1）
+const TAG_MAP = {
+  'NEW': '新品', 'TOP1': '招牌', 'LIMITED': '限量', 'SEASONAL': '季节',
+  'COLD': '冰饮', 'FRUITY': '果香', 'CITRUS': '柑橘', 'FLORAL': '花香',
+  'PLANT-BASED': '植物基', 'COCONUT': '椰香', 'SIGNATURE': '特调',
+  'EXPERIENCE': '体验', 'CLASSIC': '经典', 'STRONG': '加浓'
+}
+const tagLabel = (t) => TAG_MAP[t] || t
 
 // 筛选后的商品
 const filteredProducts = computed(() => {
@@ -502,6 +514,23 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.product-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.product-tag {
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: rgba(169, 113, 47, 0.12);
+  color: #8B5E3C;
+  font-weight: 600;
 }
 
 .product-desc {

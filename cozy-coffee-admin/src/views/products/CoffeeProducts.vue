@@ -73,6 +73,11 @@
                 >
                   <div class="product-desc-grey truncate">{{ row.description }}</div>
                 </el-tooltip>
+                <div v-if="row.tags && row.tags.length" class="product-tags">
+                  <span v-for="t in row.tags" :key="t" class="product-tag" :style="{ color: tagColor(t), background: tagBg(t) }">
+                    {{ tagLabel(t) }}
+                  </span>
+                </div>
               </div>
             </div>
           </template>
@@ -215,7 +220,7 @@ import ProductTable from './components/ProductTable.vue'
 import CoffeeProductForm from './components/CoffeeProductForm.vue'
 import AddonGroupEditorDialog from './components/AddonGroupEditorDialog.vue'
 import { getImageUrl } from '@/utils/image'
-import { PRODUCT_CATEGORY_MAP } from '@/constants/product'
+import { PRODUCT_CATEGORY_MAP, PRODUCT_TAG_MAP } from '@/constants/product'
 
 // State
 const loading = ref(false)
@@ -247,6 +252,11 @@ const getCategoryLabel = (cat) => {
   return PRODUCT_CATEGORY_MAP[cat]?.label || cat
 }
 
+// Tag helpers
+const tagLabel = (t) => PRODUCT_TAG_MAP[t]?.label || t
+const tagColor = (t) => PRODUCT_TAG_MAP[t]?.color || '#8B5E3C'
+const tagBg = (t) => `${tagColor(t)}18`
+
 const productForm = ref(createEmptyForm())
 
 function createEmptyForm() {
@@ -260,7 +270,8 @@ function createEmptyForm() {
     tempType: 'HOT_COLD',
     defaultSugarLevel: 'STANDARD',
     beanId: null,
-    blendId: null
+    blendId: null,
+    tags: []
   }
 }
 
@@ -331,7 +342,8 @@ const editProduct = (row) => {
     tempType: row.tempType || 'HOT_COLD',
     defaultSugarLevel: row.defaultSugarLevel || (row.sugarType && row.sugarType !== 'NO_SUGAR_ONLY' ? 'STANDARD' : null),
     beanId: row.beanId || null,
-    blendId: row.blendId || null
+    blendId: row.blendId || null,
+    tags: row.tags || []
   }
   dialogVisible.value = true
 }
@@ -356,7 +368,8 @@ const saveProduct = async () => {
       tempType: productForm.value.tempType || 'HOT_COLD',
       defaultSugarLevel: productForm.value.defaultSugarLevel || null,
       beanId: productForm.value.beanId || null,
-      blendId: productForm.value.blendId || null
+      blendId: productForm.value.blendId || null,
+      tags: productForm.value.tags || []
     }
 
     if (isEdit.value) await updateCoffeeProduct(editingId.value, data)
@@ -459,6 +472,20 @@ onMounted(() => {
   font-size: 12px;
   color: #999;
   line-height: 1.3;
+}
+
+.product-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.product-tag {
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 4px;
 }
 
 .truncate {

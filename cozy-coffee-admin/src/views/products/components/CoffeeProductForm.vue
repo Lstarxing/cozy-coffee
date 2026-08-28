@@ -103,6 +103,15 @@
           <div class="form-hint-inline">标记为"New"新品，显示在菜单顶部</div>
         </el-form-item>
       </el-col>
+
+      <el-col :span="24">
+        <el-form-item label="商品标签">
+          <el-select v-model="form.tags" multiple placeholder="选择标签" style="width: 100%">
+            <el-option v-for="t in tagOptions" :key="t.value" :value="t.value" :label="t.label" />
+          </el-select>
+          <div class="form-hint-inline">NEW/COLD/FRUITY 等展示标签；TOP1 由真实销售数据驱动，不手动录入</div>
+        </el-form-item>
+      </el-col>
     </el-row>
   </div>
 
@@ -217,6 +226,7 @@
 import { computed, watch } from 'vue'
 import { InfoFilled, Setting, Coffee } from '@element-plus/icons-vue'
 import ImageUploader from './ImageUploader.vue'
+import { PRODUCT_TAG_OPTIONS as tagOptions } from '@/constants/product'
 
 const props = defineProps({
   form: { type: Object, required: true },

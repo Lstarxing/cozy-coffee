@@ -93,6 +93,7 @@ public class ProductAdminService {
         product.setSugarType(dto.getSugarType() != null ? dto.getSugarType() : "FREE_CHOICE");
         product.setTempType(dto.getTempType() != null ? dto.getTempType() : "HOT_COLD");
         product.setDefaultSugarLevel(dto.getDefaultSugarLevel()); // NO_SUGAR_ONLY 商品为 NULL
+        product.setTags(writeTags(dto.getTags()));
 
         // 手动设置时间戳（修复 MetaObjectHandler 可能未扫码到的问题）
         LocalDateTime now = LocalDateTime.now();
@@ -142,6 +143,7 @@ public class ProductAdminService {
         if (dto.getTempType() != null)
             product.setTempType(dto.getTempType());
         product.setDefaultSugarLevel(dto.getDefaultSugarLevel()); // 表单始终下发；NO_SUGAR_ONLY 为 NULL
+        product.setTags(writeTags(dto.getTags()));
 
         if (dto.getImageUrl() != null)
             product.setImageUrl(dto.getImageUrl());
@@ -266,6 +268,15 @@ public class ProductAdminService {
         }
         if (("ESPRESSO".equals(category) || "SPECIALTY".equals(category)) && hasMilkGroup) {
             throw new BusinessException("黑咖/手冲/冷萃不得有 MILK 组");
+        }
+    }
+
+    private String writeTags(List<String> tags) {
+        if (tags == null || tags.isEmpty()) return null;
+        try {
+            return objectMapper.writeValueAsString(tags);
+        } catch (Exception e) {
+            throw new BusinessException("标签序列化失败");
         }
     }
 
