@@ -12,6 +12,9 @@
         </view>
       </view>
 
+      <!-- V2 豆档案（P2 收尾）：烘焙 · 风味 · 醇厚 · 酸度 -->
+      <BeanBlendProfile v-if="product?.beanProfile || product?.blendProfile" :product="product" />
+
       <!-- 规格选择 -->
       <view class="spec-section">
         <view v-if="sizeOptions.length > 1" class="spec-group">
@@ -75,6 +78,7 @@ import { computed, reactive, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useCartStore } from '@/stores/cart'
 import { useAddonSelection } from '@/composables/useAddonSelection'
+import BeanBlendProfile from '@/components/product/BeanBlendProfile.vue'
 
 const cartStore = useCartStore()
 

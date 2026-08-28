@@ -14,6 +14,9 @@
       </view>
 
       <scroll-view scroll-y class="sheet-scroll">
+        <!-- V2 豆档案（P2 收尾）：烘焙 · 风味 · 醇厚 · 酸度 -->
+        <BeanBlendProfile v-if="displayProduct.beanProfile || displayProduct.blendProfile" :product="displayProduct" />
+
         <view v-if="sizeOptions.length > 1" class="spec-section">
           <text class="spec-title">杯型</text>
           <view class="option-grid">
@@ -67,6 +70,7 @@
 <script setup>
 import { computed, reactive, watch } from 'vue'
 import { useAddonSelection } from '@/composables/useAddonSelection'
+import BeanBlendProfile from '@/components/product/BeanBlendProfile.vue'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
