@@ -19,7 +19,7 @@
           <view class="option-grid">
             <view v-for="option in sizeOptions" :key="option.value" class="option" :class="{ selected: form.cupSize === option.value }" @click="form.cupSize = option.value">
               <text>{{ option.label }}</text>
-              <text v-if="option.extra" class="option-extra">+¥{{ option.extra }}</text>
+              <text v-if="option.extra > 0" class="option-extra">+¥{{ option.extra }}</text>
             </view>
           </view>
         </view>
@@ -38,20 +38,15 @@
           </view>
         </view>
 
-        <view v-if="isCoffee" class="spec-section">
-          <text class="spec-title">咖啡浓度</text>
-          <view class="option-grid option-grid--two">
-            <view class="option" :class="{ selected: form.coffeeStrength === 'NORMAL' }" @click="form.coffeeStrength = 'NORMAL'">标准</view>
-            <view class="option" :class="{ selected: form.coffeeStrength === 'STRONG' }" @click="form.coffeeStrength = 'STRONG'">加浓 <text class="option-extra">+¥5</text></view>
-          </view>
-        </view>
-
-        <view v-if="supportsMilk" class="spec-section">
-          <text class="spec-title">奶类</text>
-          <view class="option-grid option-grid--two">
-            <view v-for="option in milkOptions" :key="option.value" class="option" :class="{ selected: form.milkType === option.value }" @click="form.milkType = option.value">
-              <text>{{ option.label }}</text>
-              <text v-if="option.extra" class="option-extra">+¥{{ option.extra }}</text>
+        <!-- V2 加料组（P2-3）：MILK / SHOT / SYRUP / OTHER，按 price_delta 展示，前端只提交 code -->
+        <view v-for="group in addonGroups" :key="group.category" class="spec-section">
+          <text class="spec-title">{{ groupLabel(group.category) }}</text>
+          <view class="option-grid">
+            <view v-for="item in group.items" :key="item.code" class="option"
+              :class="{ selected: isSelected(group, item.code) }"
+              @click="toggleAddon(group, item.code)">
+              <text>{{ item.name }}</text>
+              <text v-if="Number(item.priceDelta) > 0" class="option-extra">+¥{{ Number(item.priceDelta) }}</text>
             </view>
           </view>
         </view>
@@ -71,6 +66,7 @@
 
 <script setup>
 import { computed, reactive, watch } from 'vue'
+import { useAddonSelection } from '@/composables/useAddonSelection'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -84,8 +80,6 @@ const form = reactive({
   cupSize: 'STANDARD',
   temperature: 'HOT',
   sugarLevel: 'STANDARD',
-  milkType: 'WHOLE',
-  coffeeStrength: 'NORMAL',
   quantity: 1
 })
 
@@ -93,69 +87,67 @@ const editing = computed(() => Boolean(props.line?.lineKey))
 const displayProduct = computed(() => ({ ...props.product, ...props.line, image: props.product?.image || props.line?.image }))
 const category = computed(() => String(displayProduct.value.category || '').toLowerCase())
 const isFood = computed(() => ['bakery', 'dessert', 'food', 'addon'].includes(category.value))
-const isCoffee = computed(() => !isFood.value && ['coffee', 'espresso', 'signature', 'soe', 'latte', 'other'].includes(category.value || 'coffee'))
-const supportsMilk = computed(() => isCoffee.value && !['soe'].includes(category.value))
+
+// V2 加料组选择（P2-3）
+const addonGroups = computed(() => displayProduct.value.addonGroups || [])
+const { groupLabel, selection, isSelected, toggle, reset: resetAddons, addonFee, addons } = useAddonSelection(addonGroups)
 
 const sizeOptions = computed(() => {
-  if (isFood.value) return [{ value: 'STANDARD', label: '单份', extra: 0 }]
+  if (isFood.value) return [{ value: 'STANDARD', label: '单份', base: Number(displayProduct.value.price || 0), extra: 0 }]
   const type = displayProduct.value.sizeType || 'MEDIUM_LARGE'
-  if (type === 'DEFAULT') return [{ value: 'STANDARD', label: '标准杯', extra: 0 }]
-  if (type === 'ALL_SIZES') return [
-    { value: 'SMALL', label: '小杯', extra: 0 },
-    { value: 'MEDIUM', label: '中杯', extra: 0 },
-    { value: 'LARGE', label: '大杯', extra: 3 }
-  ]
+  if (type === 'DEFAULT') return [{ value: 'STANDARD', label: '标准杯', base: Number(displayProduct.value.price || 0), extra: 0 }]
+  // MEDIUM_LARGE：基础价按杯型读 price_medium / price_large（V2 禁止硬编码大杯 +3）
   return [
-    { value: 'MEDIUM', label: '中杯', extra: 0 },
-    { value: 'LARGE', label: '大杯', extra: 3 }
+    { value: 'MEDIUM', label: '中杯', base: Number(displayProduct.value.priceMedium || 0), extra: 0 },
+    { value: 'LARGE', label: '大杯', base: Number(displayProduct.value.priceLarge || 0), extra: Number(displayProduct.value.priceLarge || 0) - Number(displayProduct.value.priceMedium || 0) }
   ]
 })
 
 const sugarOptions = computed(() => {
-  if (isFood.value) return [{ value: '', label: '默认' }]
+  if (isFood.value) return []
   const type = displayProduct.value.sugarType || 'FREE_CHOICE'
-  if (type === 'NO_SUGAR_ONLY') return [{ value: 'NONE', label: '无糖' }]
+  if (type === 'NO_SUGAR_ONLY') return [] // 无糖度配置，UI 不显示糖度行
   const values = [
     { value: 'STANDARD', label: '标准糖' },
     { value: 'LESS', label: '少糖' },
     { value: 'HALF', label: '半糖' }
   ]
-  if (type !== 'MIN_LESS_SWEET') values.push({ value: 'NONE', label: '无糖' })
+  if (type !== 'MIN_LESS_SWEET') values.push({ value: 'NO_ADDED_SUGAR', label: '不另外加糖' })
   return values
 })
 
 const tempOptions = computed(() => {
-  if (isFood.value) return [{ value: '', label: '默认' }]
+  if (isFood.value) return []
   const type = displayProduct.value.tempType || 'HOT_COLD'
   if (type === 'COLD_ONLY') return [{ value: 'COLD', label: '冰' }]
   if (type === 'HOT_ONLY') return [{ value: 'HOT', label: '热' }]
   return [{ value: 'HOT', label: '热' }, { value: 'COLD', label: '冰' }]
 })
 
-const milkOptions = [
-  { value: 'WHOLE', label: '全脂奶', extra: 0 },
-  { value: 'OAT', label: '燕麦奶', extra: 4 },
-  { value: 'COCONUT', label: '椰奶', extra: 4 },
-  { value: 'SOY', label: '豆奶', extra: 4 }
-]
-
-const unitPrice = computed(() => {
-  const base = Number(displayProduct.value.basePrice ?? displayProduct.value.price ?? 0)
-  const size = form.cupSize === 'LARGE' ? 3 : 0
-  const strength = form.coffeeStrength === 'STRONG' ? 5 : 0
-  const milk = form.milkType && form.milkType !== 'WHOLE' ? 4 : 0
-  return Number((base + size + strength + milk).toFixed(2))
+const basePrice = computed(() => {
+  const opt = sizeOptions.value.find(o => o.value === form.cupSize)
+  return opt ? opt.base : Number(displayProduct.value.price || 0)
 })
-
+const unitPrice = computed(() => Number((basePrice.value + addonFee.value).toFixed(2)))
 const totalPrice = computed(() => (unitPrice.value * form.quantity).toFixed(2))
+
+// 向后兼容字段（购物车/重购旧逻辑）：从加料选择派生
+const coffeeStrength = computed(() => selection['SHOT'] === 'EXTRA_SHOT' ? 'STRONG' : 'NORMAL')
+const milkType = computed(() => {
+  const milk = selection['MILK']
+  return ({ WHOLE_MILK: 'WHOLE', OAT_MILK: 'OAT', COCONUT_MILK: 'COCONUT', SOY_MILK: 'SOY' })[milk] || 'WHOLE'
+})
 
 function resetForm() {
   const source = props.line || {}
-  form.cupSize = source.cupSize || sizeOptions.value[0]?.value || ''
-  form.temperature = source.temperature || tempOptions.value[0]?.value || ''
-  form.sugarLevel = source.sugarLevel || sugarOptions.value[0]?.value || ''
-  form.milkType = source.milkType || 'WHOLE'
-  form.coffeeStrength = source.coffeeStrength || 'NORMAL'
+  resetAddons()
+  form.cupSize = sizeOptions.value.some(o => o.value === source.cupSize) ? source.cupSize : sizeOptions.value[0]?.value || ''
+  form.temperature = tempOptions.value.some(o => o.value === source.temperature) ? source.temperature : tempOptions.value[0]?.value || ''
+  form.sugarLevel = sugarOptions.value.some(o => o.value === source.sugarLevel)
+    ? source.sugarLevel
+    : (displayProduct.value.defaultSugarLevel && sugarOptions.value.some(o => o.value === displayProduct.value.defaultSugarLevel)
+      ? displayProduct.value.defaultSugarLevel
+      : sugarOptions.value[0]?.value || 'NO_ADDED_SUGAR')
   form.quantity = Number(source.quantity || 1)
 }
 
@@ -167,26 +159,26 @@ function changeQuantity(delta) {
   form.quantity = Math.max(1, Math.min(10, form.quantity + delta))
 }
 
+function toggleAddon(group, code) {
+  toggle(group, code)
+}
+
 function confirm() {
   const product = displayProduct.value
-  const addons = []
-  if (form.coffeeStrength === 'STRONG') addons.push({ code: 'EXTRA_SHOT', name: '加浓', price: 5 })
-  if (form.milkType && form.milkType !== 'WHOLE') addons.push({ code: 'SPECIAL_MILK', name: form.milkType, price: 4 })
-
   emit('confirm', {
     ...product,
     productId: String(product.productId || product.id),
     id: product.id,
     name: product.name,
     image: product.image,
-    basePrice: Number(product.basePrice ?? product.price ?? 0),
+    basePrice: basePrice.value,
     price: unitPrice.value,
     cupSize: form.cupSize,
     temperature: form.temperature,
     sugarLevel: form.sugarLevel,
-    milkType: supportsMilk.value ? form.milkType : '',
-    coffeeStrength: isCoffee.value ? form.coffeeStrength : '',
-    addons,
+    milkType: milkType.value,
+    coffeeStrength: coffeeStrength.value,
+    addons: addons.value,
     quantity: form.quantity
   })
 }
@@ -237,7 +229,6 @@ function confirm() {
 .option.selected { border-color: $cozy-primary; background: #f6ece7; color: $cozy-primary; font-weight: 650; }
 .option-extra { color: $cozy-muted; font-size: 20rpx; }
 .option.selected .option-extra { color: $cozy-primary; }
-.option-grid--two .option { width: calc(50% - 7rpx); }
 .sheet-footer { display: flex; align-items: center; gap: 24rpx; padding: 20rpx 32rpx max(20rpx, env(safe-area-inset-bottom)); border-top: 1rpx solid $cozy-border; background: #fff; }
 .quantity-control { height: 88rpx; display: flex; align-items: center; border: 1rpx solid $cozy-border; border-radius: $cozy-radius-md; }
 .quantity-button { width: 76rpx; height: 88rpx; display: flex; align-items: center; justify-content: center; color: $cozy-ink; font-size: 38rpx; }

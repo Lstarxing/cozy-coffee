@@ -12,7 +12,7 @@
         <text class="product-description">{{ product.description || '门店现制，按所选规格制作。' }}</text>
         <view class="price-row">
           <text class="price-label">基础价</text>
-          <text class="product-price">¥{{ money(product.price) }}</text>
+          <text class="product-price">¥{{ money(displayPrice) }}</text>
         </view>
       </view>
 
@@ -68,6 +68,15 @@ const categoryLabel = computed(() => ({
   espresso: '意式咖啡', coffee: '经典咖啡', latte: '拿铁系列', signature: '季节特调',
   soe: '手冲精品', bakery: '烘焙甜点', dessert: '甜品', addon: '加料', other: '门店现制'
 })[String(product.value?.category || 'other').toLowerCase()] || '门店现制')
+
+// V2 价格互斥：MEDIUM_LARGE 商品 price 为 NULL，按杯型读 price_medium / price_large 展示
+const displayPrice = computed(() => {
+  if (!product.value) return 0
+  if (String(product.value?.sizeType || '').toUpperCase() === 'MEDIUM_LARGE') {
+    return Number(product.value.priceMedium || product.value.priceLarge || 0)
+  }
+  return Number(product.value.price || 0)
+})
 
 onLoad(options => {
   productId.value = String(options?.id || options?.productId || '')

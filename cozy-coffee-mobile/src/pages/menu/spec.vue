@@ -19,7 +19,7 @@
           <view class="spec-options">
             <view v-for="option in sizeOptions" :key="option.value" class="spec-option" :class="{ active: form.cupSize === option.value }" @click="form.cupSize = option.value">
               <text>{{ option.label }}</text>
-              <text v-if="option.extra" class="spec-extra">+¥{{ option.extra }}</text>
+              <text v-if="option.extra > 0" class="spec-extra">+¥{{ option.extra }}</text>
             </view>
           </view>
         </view>
@@ -35,19 +35,15 @@
             <view v-for="option in sugarOptions" :key="option.value" class="spec-option" :class="{ active: form.sugarLevel === option.value }" @click="form.sugarLevel = option.value">{{ option.label }}</view>
           </view>
         </view>
-        <view v-if="isEspresso" class="spec-group">
-          <text class="spec-title">咖啡浓度</text>
+        <!-- V2 加料组（P2-3）：MILK / SHOT / SYRUP / OTHER，按 price_delta 展示，前端只提交 code -->
+        <view v-for="group in addonGroups" :key="group.category" class="spec-group">
+          <text class="spec-title">{{ groupLabel(group.category) }}</text>
           <view class="spec-options">
-            <view class="spec-option" :class="{ active: form.coffeeStrength === 'NORMAL' }" @click="form.coffeeStrength = 'NORMAL'">标准</view>
-            <view class="spec-option" :class="{ active: form.coffeeStrength === 'STRONG' }" @click="form.coffeeStrength = 'STRONG'">加浓 <text class="spec-extra">+¥5</text></view>
-          </view>
-        </view>
-        <view v-if="supportsMilk" class="spec-group">
-          <text class="spec-title">基底奶</text>
-          <view class="spec-options">
-            <view v-for="option in milkOptions" :key="option.value" class="spec-option" :class="{ active: form.milkType === option.value }" @click="form.milkType = option.value">
-              <text>{{ option.label }}</text>
-              <text v-if="option.extra" class="spec-extra">+¥{{ option.extra }}</text>
+            <view v-for="item in group.items" :key="item.code" class="spec-option"
+              :class="{ active: isSelected(group, item.code) }"
+              @click="toggleAddon(group, item.code)">
+              <text>{{ item.name }}</text>
+              <text v-if="Number(item.priceDelta) > 0" class="spec-extra">+¥{{ Number(item.priceDelta) }}</text>
             </view>
           </view>
         </view>
@@ -78,12 +74,13 @@
 import { computed, reactive, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useCartStore } from '@/stores/cart'
+import { useAddonSelection } from '@/composables/useAddonSelection'
 
 const cartStore = useCartStore()
 
 const product = ref({})
 const line = ref(null)
-const form = reactive({ cupSize: 'STANDARD', temperature: 'HOT', sugarLevel: 'STANDARD', milkType: 'WHOLE', coffeeStrength: 'NORMAL', quantity: 1 })
+const form = reactive({ cupSize: 'STANDARD', temperature: 'HOT', sugarLevel: 'STANDARD', quantity: 1 })
 
 const editing = computed(() => Boolean(line.value?.lineKey))
 
@@ -93,74 +90,69 @@ onLoad(() => {
   product.value = data?.product || {}
   line.value = data?.line || null
   const source = line.value || {}
-  form.cupSize = source.cupSize || sizeOptions.value[0]?.value || 'STANDARD'
-  form.temperature = source.temperature || tempOptions.value[0]?.value || 'HOT'
-  form.sugarLevel = source.sugarLevel || sugarOptions.value[0]?.value || 'STANDARD'
-  form.milkType = source.milkType || 'WHOLE'
-  form.coffeeStrength = source.coffeeStrength || 'NORMAL'
+  resetAddons()
+  form.cupSize = sizeOptions.value.some(o => o.value === source.cupSize) ? source.cupSize : sizeOptions.value[0]?.value || 'STANDARD'
+  form.temperature = tempOptions.value.some(o => o.value === source.temperature) ? source.temperature : tempOptions.value[0]?.value || 'HOT'
+  form.sugarLevel = sugarOptions.value.some(o => o.value === source.sugarLevel)
+    ? source.sugarLevel
+    : (product.value.defaultSugarLevel && sugarOptions.value.some(o => o.value === product.value.defaultSugarLevel)
+      ? product.value.defaultSugarLevel
+      : sugarOptions.value[0]?.value || 'NO_ADDED_SUGAR')
   form.quantity = Number(source.quantity || 1)
 })
 
 const isFood = computed(() => ['bakery', 'dessert', 'food', 'addon'].includes(String(product.value?.category || '').toLowerCase()))
-const isEspresso = computed(() => String(product.value?.category || '').toLowerCase() === 'espresso')
+
+// V2 加料组选择（P2-3）
+const addonGroups = computed(() => product.value.addonGroups || [])
+const { groupLabel, selection, isSelected, toggle, reset: resetAddons, addonFee, addons, selectedText } = useAddonSelection(addonGroups)
 
 const sizeOptions = computed(() => {
-  if (isFood.value) return [{ value: 'STANDARD', label: '单份', extra: 0 }]
+  if (isFood.value) return [{ value: 'STANDARD', label: '单份', base: Number(product.value?.price || 0), extra: 0 }]
   const type = String(product.value?.sizeType || 'MEDIUM_LARGE').toUpperCase()
-  if (type === 'DEFAULT') return [{ value: 'STANDARD', label: '标准杯', extra: 0 }]
-  if (type === 'ALL_SIZES') return [
-    { value: 'MEDIUM', label: '中杯', extra: 0 },
-    { value: 'LARGE', label: '大杯', extra: 3 },
-    { value: 'EXTRA_LARGE', label: '超大杯', extra: 5 }
-  ]
+  if (type === 'DEFAULT') return [{ value: 'STANDARD', label: '标准杯', base: Number(product.value?.price || 0), extra: 0 }]
+  // MEDIUM_LARGE：基础价按杯型读 price_medium / price_large（V2 禁止硬编码大杯 +3）
   return [
-    { value: 'STANDARD', label: '标准杯', extra: 0 },
-    { value: 'LARGE', label: '大杯', extra: 3 }
+    { value: 'MEDIUM', label: '中杯', base: Number(product.value?.priceMedium || 0), extra: 0 },
+    { value: 'LARGE', label: '大杯', base: Number(product.value?.priceLarge || 0), extra: Number(product.value?.priceLarge || 0) - Number(product.value?.priceMedium || 0) }
   ]
 })
 const sugarOptions = computed(() => {
-  if (isFood.value) return [{ value: '', label: '默认' }]
+  if (isFood.value) return []
   const type = String(product.value?.sugarType || 'FREE_CHOICE').toUpperCase()
-  if (type === 'NO_SUGAR_ONLY') return [{ value: 'NONE', label: '无糖' }]
+  if (type === 'NO_SUGAR_ONLY') return [] // 无糖度配置，UI 不显示糖度行
   const values = [{ value: 'STANDARD', label: '标准糖' }, { value: 'LESS', label: '少糖' }, { value: 'HALF', label: '半糖' }]
-  if (type !== 'MIN_LESS_SWEET') values.push({ value: 'NONE', label: '无糖' })
+  if (type !== 'MIN_LESS_SWEET') values.push({ value: 'NO_ADDED_SUGAR', label: '不另外加糖' })
   return values
 })
 const tempOptions = computed(() => {
-  if (isFood.value) return [{ value: '', label: '默认' }]
+  if (isFood.value) return []
   const type = String(product.value?.tempType || 'HOT_COLD').toUpperCase()
   if (type === 'COLD_ONLY') return [{ value: 'COLD', label: '冰' }]
   if (type === 'HOT_ONLY') return [{ value: 'HOT', label: '热' }]
   return [{ value: 'HOT', label: '热' }, { value: 'COLD', label: '冰' }]
 })
 
-// 与 web 端 ProductCustomizer 一致：仅意式咖啡且非固定奶底/无奶商品可选基底奶
-const NO_MILK_CHANGE = ['美式', 'Americano', '卡布奇诺', '摩卡', '焦糖玛奇朵', '脏咖', 'Dirty', '澳白', 'Flat White', '生椰拿铁', '燕麦拿铁', 'SOE', '手冲']
-const supportsMilk = computed(() => {
-  if (!isEspresso.value) return false
-  return !NO_MILK_CHANGE.some(n => String(product.value?.name || '').includes(n))
+const basePrice = computed(() => {
+  const opt = sizeOptions.value.find(o => o.value === form.cupSize)
+  return opt ? opt.base : Number(product.value?.price || 0)
 })
-const milkOptions = [
-  { value: 'WHOLE', label: '标准牛乳', extra: 0 },
-  { value: 'OAT', label: '换燕麦奶', extra: 4 },
-  { value: 'COCONUT', label: '换椰奶', extra: 4 }
-]
-
-const unitPrice = computed(() => {
-  const base = Number(product.value?.basePrice ?? product.value?.price ?? 0)
-  const size = ({ STANDARD: 0, MEDIUM: 0, LARGE: 3, EXTRA_LARGE: 5 })[form.cupSize] || 0
-  const strength = form.coffeeStrength === 'STRONG' ? 5 : 0
-  const milk = supportsMilk.value && form.milkType && form.milkType !== 'WHOLE' ? 4 : 0
-  return Number((base + size + strength + milk).toFixed(2))
-})
+const unitPrice = computed(() => Number((basePrice.value + addonFee.value).toFixed(2)))
 const totalPrice = computed(() => (unitPrice.value * form.quantity).toFixed(2))
+
+// 向后兼容字段（购物车/重购旧逻辑）：从加料选择派生
+const coffeeStrength = computed(() => selection['SHOT'] === 'EXTRA_SHOT' ? 'STRONG' : 'NORMAL')
+const milkType = computed(() => {
+  const milk = selection['MILK']
+  return ({ WHOLE_MILK: 'WHOLE', OAT_MILK: 'OAT', COCONUT_MILK: 'COCONUT', SOY_MILK: 'SOY' })[milk] || 'WHOLE'
+})
+
 const selectedSpecsText = computed(() => {
   const parts = []
   if (sizeOptions.value.length > 1) parts.push({ STANDARD: '标准杯', MEDIUM: '中杯', LARGE: '大杯', EXTRA_LARGE: '超大杯' }[form.cupSize] || form.cupSize)
-  if (tempOptions.value.length > 1) parts.push({ HOT: '热', COLD: '冰', WARM: '温' }[form.temperature] || form.temperature)
-  if (sugarOptions.value.length > 1) parts.push(form.sugarLevel === 'NONE' ? '无糖' : (form.sugarLevel === 'HALF' ? '半糖' : (form.sugarLevel === 'LESS' ? '少糖' : '标准糖')))
-  if (supportsMilk.value) parts.push({ WHOLE: '标准牛乳', OAT: '换燕麦奶', COCONUT: '换椰奶' }[form.milkType] || form.milkType)
-  if (isEspresso.value) parts.push(form.coffeeStrength === 'STRONG' ? '加浓' : '标准')
+  if (tempOptions.value.length > 1) parts.push({ HOT: '热', COLD: '冰' }[form.temperature] || form.temperature)
+  if (sugarOptions.value.length > 1) parts.push({ STANDARD: '标准糖', LESS: '少糖', HALF: '半糖', NO_ADDED_SUGAR: '不另外加糖' }[form.sugarLevel] || form.sugarLevel)
+  if (selectedText.value) parts.push(selectedText.value)
   return parts.length ? parts.join(' · ') : '默认规格'
 })
 const detailTag = computed(() => product.value?.tag || (product.value?.isNewProduct ? '新品' : ''))
@@ -178,18 +170,19 @@ function changeQty(delta) {
   form.quantity = Math.max(1, Math.min(10, form.quantity + delta))
 }
 
+function toggleAddon(group, code) {
+  toggle(group, code)
+}
+
 function buildSelection() {
-  const addons = []
-  if (form.coffeeStrength === 'STRONG') addons.push({ code: 'EXTRA_SHOT', name: '加浓', price: 5 })
-  if (supportsMilk.value && form.milkType && form.milkType !== 'WHOLE') addons.push({ code: 'SPECIAL_MILK', name: form.milkType, price: 4 })
   return {
     price: unitPrice.value,
     cupSize: form.cupSize,
     temperature: form.temperature,
     sugarLevel: isFood.value ? '' : form.sugarLevel,
-    milkType: supportsMilk.value ? form.milkType : '',
-    coffeeStrength: isEspresso.value ? form.coffeeStrength : '',
-    addons,
+    milkType: milkType.value,
+    coffeeStrength: coffeeStrength.value,
+    addons: addons.value,
     quantity: form.quantity
   }
 }
@@ -200,7 +193,6 @@ function addToCart() {
   const selection = buildSelection()
 
   if (editing.value && line.value?.lineKey) {
-    // 从购物车进入编辑：更新当前行（新规格与已有其他行一致时自动合并），而非新增
     cartStore.updateOptions(line.value.lineKey, selection)
   } else {
     cartStore.addItem({
@@ -209,7 +201,7 @@ function addToCart() {
       id: p.id,
       name: p.name,
       image: p.image,
-      basePrice: Number(p.basePrice ?? p.price ?? 0),
+      basePrice: basePrice.value,
       ...selection
     }, form.quantity)
   }
@@ -241,11 +233,6 @@ function addToCart() {
 .spec-extra { color: $cozy-muted; font-size: 18rpx; }
 .spec-option.active .spec-extra { color: $cozy-ink; }
 
-.spec-card { border-top: 1rpx solid $cozy-border; margin-top: 40rpx; padding: 36rpx 40rpx 4rpx; }
-.spec-card-title { display: block; margin-bottom: 20rpx; font-family: $font-display; font-size: 32rpx; font-weight: 600; color: $cozy-ink; }
-.spec-row { display: flex; align-items: flex-start; gap: 32rpx; padding: 16rpx 0; }
-.spec-row-label { flex: none; width: 104rpx; font-size: 22rpx; font-weight: 700; letter-spacing: .1em; color: $cozy-muted; }
-.spec-row-value { flex: 1; font-size: 26rpx; line-height: 1.6; color: $cozy-ink; }
 .spec-disclaimer { border-top: 1rpx solid $cozy-border; margin-top: 40rpx; padding: 28rpx 40rpx 48rpx; font-size: 22rpx; line-height: 1.7; color: $cozy-placeholder; }
 
 .spec-bottom { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid $cozy-border; }

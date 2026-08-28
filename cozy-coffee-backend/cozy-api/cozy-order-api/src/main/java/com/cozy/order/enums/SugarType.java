@@ -17,7 +17,7 @@ public enum SugarType {
      * 
      * v5.3: 兼容历史数据中的多种命名格式
      */
-    FREE_CHOICE("自由选择", new String[]{"STANDARD", "standard", "full", "LESS", "less", "HALF", "half", "NONE", "none", "LIGHT", "light"}),
+    FREE_CHOICE("自由选择", new String[]{"STANDARD", "standard", "full", "LESS", "less", "HALF", "half", "NONE", "none", "NO_ADDED_SUGAR", "no_added_sugar", "LIGHT", "light"}),
     
     /**
      * 锁定无糖 - 仅允许无糖选项
