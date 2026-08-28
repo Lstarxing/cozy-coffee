@@ -15,6 +15,10 @@
 -- ── 1) 新建 V2 商品行 ─────────────────────────────────
 -- 价格互斥：DEFAULT → price；MEDIUM_LARGE → price_medium + price_large（price NULL）
 -- temp_type：热/冰→ALL_OK（P1D 转 HOT_COLD）；default_sugar_level：NO_SUGAR_ONLY 商品为 NULL
+
+-- 基表 price 原为 NOT NULL，与「MEDIUM_LARGE 商品 price=NULL」互斥语义冲突，先放宽为可空（DEFAULT 商品仍要求非空，由应用层 2.8 校验）
+ALTER TABLE `coffee_products` MODIFY COLUMN `price` DECIMAL(10,2) NULL COMMENT '基础价（DEFAULT 商品用；MEDIUM_LARGE 商品为 NULL）';
+
 INSERT INTO `coffee_products`
   (`name`,`description`,`price`,`price_medium`,`price_large`,`image_url`,`category`,`status`,`sort_order`,`size_type`,`sugar_type`,`temp_type`,`default_sugar_level`,`serving_mode`,`serving_config`,`serving_desc`)
 VALUES
