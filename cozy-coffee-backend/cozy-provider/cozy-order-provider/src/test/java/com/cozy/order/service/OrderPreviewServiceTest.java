@@ -6,7 +6,10 @@ import com.cozy.order.dto.request.CartCheckRequest;
 import com.cozy.order.dto.request.OrderItemRequest;
 import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.entity.CoffeeProduct;
+import com.cozy.order.mapper.CoffeeProductAddonGroupMapper;
+import com.cozy.order.mapper.CoffeeProductAddonMapper;
 import com.cozy.order.mapper.CoffeeProductMapper;
+import com.cozy.order.mapper.ProductAddonMapper;
 import com.cozy.order.service.impl.OrderRewardService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +34,13 @@ class OrderPreviewServiceTest {
     void setUp() {
         productMapper = mock(CoffeeProductMapper.class);
         rewardService = mock(OrderRewardService.class);
-        service = new OrderPreviewService(productMapper, new ProductSkuValidationService(), new ObjectMapper(), rewardService);
+        ProductAddonResolver addonResolver = new ProductAddonResolver(
+                mock(CoffeeProductAddonGroupMapper.class),
+                mock(CoffeeProductAddonMapper.class),
+                mock(ProductAddonMapper.class),
+                new ObjectMapper());
+        ProductPricingService pricing = new ProductPricingService(new ProductSkuValidationService(), addonResolver);
+        service = new OrderPreviewService(productMapper, new ObjectMapper(), rewardService, pricing);
     }
 
     @Test
@@ -124,6 +133,8 @@ class OrderPreviewServiceTest {
         product.setName("Coffee " + id);
         product.setStatus(status);
         product.setPrice(new BigDecimal(price));
+        product.setPriceMedium(new BigDecimal(price));
+        product.setPriceLarge(new BigDecimal(price).add(new BigDecimal("3")));
         product.setCategory("coffee");
         product.setSizeType("MEDIUM_LARGE");
         product.setSugarType("FREE_CHOICE");

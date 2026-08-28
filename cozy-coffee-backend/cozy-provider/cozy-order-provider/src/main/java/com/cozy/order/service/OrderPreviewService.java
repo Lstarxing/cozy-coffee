@@ -15,7 +15,6 @@ import com.cozy.order.dto.response.CheckoutPreviewDTO;
 import com.cozy.order.entity.CoffeeProduct;
 import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.service.impl.OrderRewardService;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,9 +41,9 @@ public class OrderPreviewService {
     private static final Long FIXED_STORE_ID = 1L;
 
     private final CoffeeProductMapper productMapper;
-    private final ProductSkuValidationService skuValidationService;
     private final ObjectMapper objectMapper;
     private final OrderRewardService orderRewardService;
+    private final ProductPricingService productPricingService;
 
     @DubboReference(check = false)
     private PointsMallService pointsMallService;
@@ -87,20 +86,18 @@ public class OrderPreviewService {
                 invalidItems.add(item.getProductId());
                 continue;
             }
-            String skuError = skuValidationService.validateSkuOptions(product, item.getCupSize(),
-                    item.getSugarLevel(), item.getTemperature());
-            if (skuError != null) {
+            // V2 统一定价核心（P1E）：规格校验 + 基础价（按 size_type）+ 加料权威价 + 成交快照
+            ProductPricingService.PriceResult priceResult = productPricingService.price(
+                    product, item.getCupSize(), item.getTemperature(),
+                    item.getSugarLevel(), item.getAddonsJson());
+            if (!priceResult.valid()) {
                 invalidItems.add(item.getProductId());
                 continue;
             }
-
-            BigDecimal unitPrice = product.getPrice();
-            if ("LARGE".equalsIgnoreCase(normalize(item.getCupSize()))) {
-                unitPrice = unitPrice.add(new BigDecimal("3.00"));
-            }
+            BigDecimal unitPrice = priceResult.basePrice();
             BigDecimal lineBase = unitPrice.multiply(BigDecimal.valueOf(quantity));
-            BigDecimal lineAddons = parseAddonsFee(item.getAddonsJson()).multiply(BigDecimal.valueOf(quantity));
-            addonPrices.addAll(collectAddonPrices(item.getAddonsJson()));
+            BigDecimal lineAddons = priceResult.addonFee().multiply(BigDecimal.valueOf(quantity));
+            addonPrices.addAll(priceResult.addonPrices());
             BigDecimal lineTotal = lineBase.add(lineAddons);
             subtotal = subtotal.add(lineTotal);
             baseSubtotal = baseSubtotal.add(lineBase);
@@ -114,7 +111,8 @@ public class OrderPreviewService {
             itemChecks.add(new ItemCheckDTO(product.getId(), unitPrice, product.getCategory(), quantity,
                     buildModifiersJson(item), defaultString(item.getCupSize(), "STANDARD"),
                     Boolean.TRUE.equals(product.getIsNewProduct())));
-            canonicalLines.add(new CanonicalLine(product, item, quantity, unitPrice, lineAddons));
+            canonicalLines.add(new CanonicalLine(product, item, quantity, unitPrice, lineAddons,
+                    priceResult.normalizedAddonsJson()));
         }
 
         BigDecimal discount = memberDiscount;
@@ -246,42 +244,6 @@ public class OrderPreviewService {
         return codes;
     }
 
-    private List<BigDecimal> collectAddonPrices(String json) {
-        List<BigDecimal> prices = new ArrayList<>();
-        if (json == null || json.isBlank()) {
-            return prices;
-        }
-        try {
-            JsonNode addons = objectMapper.readTree(json);
-            if (addons.isArray()) {
-                for (JsonNode addon : addons) {
-                    if (addon.has("price")) {
-                        prices.add(addon.get("price").decimalValue());
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-            // Invalid addon JSON contributes no price, matching the existing creation path.
-        }
-        return prices;
-    }
-
-    private BigDecimal parseAddonsFee(String json) {
-        if (json == null || json.isBlank()) return BigDecimal.ZERO;
-        try {
-            JsonNode addons = objectMapper.readTree(json);
-            BigDecimal total = BigDecimal.ZERO;
-            if (addons.isArray()) {
-                for (JsonNode addon : addons) {
-                    if (addon.has("price")) total = total.add(addon.get("price").decimalValue());
-                }
-            }
-            return total;
-        } catch (Exception e) {
-            return BigDecimal.ZERO;
-        }
-    }
-
     private String buildToken(String memberLevel, CartCheckRequest request, List<CanonicalLine> lines) {
         lines.sort(Comparator.comparing(CanonicalLine::canonical));
         StringBuilder canonical = new StringBuilder(PRICING_RULE_VERSION)
@@ -321,12 +283,12 @@ public class OrderPreviewService {
     }
 
     private record CanonicalLine(CoffeeProduct product, OrderItemRequest item, int quantity,
-            BigDecimal unitPrice, BigDecimal addonAmount) {
+            BigDecimal unitPrice, BigDecimal addonAmount, String normalizedAddonsJson) {
         String canonical() {
             return product.getId() + ":" + product.getUpdatedAt() + ":" + unitPrice + ":" + quantity + ":"
                     + clean(item.getCupSize()) + ":" + clean(item.getSugarLevel()) + ":"
                     + clean(item.getTemperature()) + ":" + clean(item.getCoffeeStrength()) + ":"
-                    + clean(item.getOptionsJson()) + ":" + clean(item.getAddonsJson()) + ":" + addonAmount;
+                    + clean(item.getOptionsJson()) + ":" + normalizedAddonsJson + ":" + addonAmount;
         }
 
         private static String clean(String value) {

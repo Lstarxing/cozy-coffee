@@ -19,8 +19,7 @@ import com.cozy.order.mapper.ShopOrderMapper;
 import com.cozy.order.mapper.ShopOrderItemMapper;
 import com.cozy.order.service.PickupCodeService;
 import com.cozy.order.service.OrderPreviewService;
-import com.cozy.order.service.ProductSkuValidationService;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.cozy.order.service.ProductPricingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,7 +49,6 @@ public class OrderCreationService {
     private final ShopOrderMapper orderMapper;
     private final ShopOrderItemMapper orderItemMapper;
     private final PickupCodeService pickupCodeService;
-    private final ProductSkuValidationService skuValidationService;
     private final ObjectMapper objectMapper;
     private final OrderDtoConverter dtoConverter;
     private final OrderRewardService rewardService;
@@ -58,6 +56,7 @@ public class OrderCreationService {
     private final OrderInfraService orderInfraService;
     private final TransactionTemplate transactionTemplate;
     private final OrderPreviewService orderPreviewService;
+    private final ProductPricingService productPricingService;
 
     private final ConcurrentMap<String, Object> idempotencyLocks = new ConcurrentHashMap<>();
 
@@ -149,53 +148,21 @@ public class OrderCreationService {
                 throw new BusinessException("商品已下架: " + product.getName());
             }
 
-            // v5.3: SKU 配置验证 - 检查杯型/甜度/温度选择是否符合产品规则
-            String skuError = skuValidationService.validateSkuOptions(
-                    product,
-                    itemReq.getCupSize(),
-                    itemReq.getSugarLevel(),
-                    itemReq.getTemperature());
-            if (skuError != null) {
-                throw new BusinessException(skuError);
+            // V2 统一定价核心（P1E）：规格校验 + 基础价（按 size_type，无硬编码大杯加价）+ 加料权威价 + 成交快照
+            ProductPricingService.PriceResult pr = productPricingService.price(
+                    product, itemReq.getCupSize(), itemReq.getTemperature(),
+                    itemReq.getSugarLevel(), itemReq.getAddonsJson());
+            if (!pr.valid()) {
+                throw new BusinessException(pr.error());
             }
-
-            // v5.3.2: 计算商品金额（基础价格 + 杯型加价），加料费用单独计算
-            BigDecimal basePrice = product.getPrice(); // 中杯基础价格
-
-            // 1. 杯型加价（LARGE大杯 +3元）
-            if ("LARGE".equals(itemReq.getCupSize())) {
-                basePrice = basePrice.add(new BigDecimal("3"));
-                log.info("大杯加价: productId={}, originalPrice={}, finalPrice={}",
-                        product.getId(), product.getPrice(), basePrice);
-            }
+            BigDecimal basePrice = pr.basePrice();
 
             BigDecimal itemBaseAmount = basePrice.multiply(BigDecimal.valueOf(qty));
-            BigDecimal itemAddonsAmount = BigDecimal.ZERO;
-
-            // 2. 加料费用（如加浓缩 +5元）- 单独计算，不参与主券折扣
-            if (itemReq.getAddonsJson() != null && !itemReq.getAddonsJson().trim().isEmpty()) {
-                try {
-                    JsonNode addons = objectMapper.readTree(itemReq.getAddonsJson());
-
-                    BigDecimal addonsFee = BigDecimal.ZERO;
-                    if (addons.isArray()) {
-                        for (JsonNode addon : addons) {
-                            if (addon.has("price")) {
-                                BigDecimal addonPrice = addon.get("price").decimalValue();
-                                addonsFee = addonsFee.add(addonPrice);
-                                addonPrices.add(addonPrice);
-                            }
-                        }
-                    }
-
-                    if (addonsFee.compareTo(BigDecimal.ZERO) > 0) {
-                        itemAddonsAmount = addonsFee.multiply(BigDecimal.valueOf(qty));
-                        log.debug("商品加料费用: productId={}, addonsFee={}, quantity={}, addonsTotal={}",
-                                product.getId(), addonsFee, qty, itemAddonsAmount);
-                    }
-                } catch (Exception e) {
-                    log.warn("解析加料信息失败: {}", e.getMessage());
-                }
+            BigDecimal itemAddonsAmount = pr.addonFee().multiply(BigDecimal.valueOf(qty));
+            addonPrices.addAll(pr.addonPrices());
+            if (itemAddonsAmount.compareTo(BigDecimal.ZERO) > 0) {
+                log.debug("商品加料费用: productId={}, addonsFee={}, quantity={}, addonsTotal={}",
+                        product.getId(), pr.addonFee(), qty, itemAddonsAmount);
             }
 
             BigDecimal itemAmount = itemBaseAmount.add(itemAddonsAmount);
@@ -208,7 +175,7 @@ public class OrderCreationService {
             ShopOrderItem item = new ShopOrderItem();
             item.setProductId(product.getId());
             item.setProductName(product.getName());
-            item.setUnitPrice(product.getPrice());
+            item.setUnitPrice(pr.basePrice()); // 规格价快照（DEFAULT→price / MEDIUM_LARGE→medium·large）
             item.setQuantity(qty);
             item.setItemAmount(itemAmount);
             item.setCupSize(itemReq.getCupSize());
@@ -216,7 +183,7 @@ public class OrderCreationService {
             item.setTemperature(itemReq.getTemperature());
             item.setCoffeeStrength(itemReq.getCoffeeStrength());
             item.setOptionsJson(itemReq.getOptionsJson());
-            item.setAddonsJson(itemReq.getAddonsJson()); // v5.3: 加料信息
+            item.setAddonsJson(pr.normalizedAddonsJson()); // 规范化成交快照（含默认项，price=price_delta 实际价）
             item.setCreatedAt(LocalDateTime.now());
             orderItems.add(item);
 

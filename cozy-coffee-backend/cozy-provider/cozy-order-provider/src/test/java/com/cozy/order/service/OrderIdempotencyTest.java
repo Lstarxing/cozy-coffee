@@ -51,8 +51,9 @@ class OrderIdempotencyTest {
     private OrderCreationService service(ShopOrderMapper orderMapper, OrderDtoEnricher enricher) {
         return new OrderCreationService(
                 mock(CoffeeProductMapper.class), orderMapper, mock(ShopOrderItemMapper.class),
-                mock(PickupCodeService.class), mock(ProductSkuValidationService.class), new ObjectMapper(),
+                mock(PickupCodeService.class), new ObjectMapper(),
                 mock(OrderDtoConverter.class), mock(OrderRewardService.class), enricher,
-                mock(OrderInfraService.class), mock(TransactionTemplate.class), mock(OrderPreviewService.class));
+                mock(OrderInfraService.class), mock(TransactionTemplate.class), mock(OrderPreviewService.class),
+                mock(ProductPricingService.class));
     }
 }
