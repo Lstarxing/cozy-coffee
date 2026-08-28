@@ -36,6 +36,7 @@
             <span>商品管理</span>
           </template>
           <el-menu-item index="/products/coffee">咖啡菜单</el-menu-item>
+          <el-menu-item index="/products/archives">内容档案</el-menu-item>
           <el-menu-item index="/products/points">积分商品</el-menu-item>
         </el-sub-menu>
         

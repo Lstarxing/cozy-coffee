@@ -37,8 +37,8 @@
         </el-form-item>
       </el-col>
 
-      <!-- Espresso: medium + large -->
-      <template v-if="form.category === 'espresso'">
+      <!-- MEDIUM_LARGE: medium + large -->
+      <template v-if="form.sizeType === 'MEDIUM_LARGE'">
         <el-col :span="12">
           <el-form-item label="中杯价格(元)" required>
             <el-input-number
@@ -53,7 +53,7 @@
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="大杯价格(元)">
+          <el-form-item label="大杯价格(元)" required>
             <el-input-number
               v-model="form.priceLarge"
               :min="0"
@@ -61,18 +61,18 @@
               :step="0.5"
               controls-position="right"
               style="width: 100%"
-              placeholder="大杯（选填）"
+              placeholder="大杯价格"
             />
           </el-form-item>
         </el-col>
       </template>
 
-      <!-- Non-espresso: standard price only -->
+      <!-- DEFAULT: standard price only -->
       <template v-else>
         <el-col :span="12">
           <el-form-item label="标准价格(元)" required>
             <el-input-number
-              v-model="form.priceMedium"
+              v-model="form.price"
               :min="0"
               :precision="2"
               :step="0.5"
@@ -80,7 +80,6 @@
               style="width: 100%"
               placeholder="请输入价格"
             />
-            <div v-if="form.category === 'addon'" class="form-hint-inline">如：额外浓缩 5元</div>
           </el-form-item>
         </el-col>
       </template>
@@ -88,12 +87,12 @@
       <el-col :span="12">
         <el-form-item label="分类" required>
           <el-select v-model="form.category" placeholder="选择分类" style="width: 100%">
-            <el-option label="☕ 意式咖啡" value="espresso" />
-            <el-option label="⭐ 季节限定" value="signature" />
-            <el-option label="✨ 精品手冲" value="soe" />
-            <el-option label="🍰 烘焙甜品" value="bakery" />
-            <el-option label="➕ 加料/配料" value="addon" />
-            <el-option label="📦 其他" value="other" />
+            <el-option label="01 经典咖啡" value="ESPRESSO" />
+            <el-option label="02 奶咖" value="MILK" />
+            <el-option label="03 招牌特调" value="SIGNATURE" />
+            <el-option label="04 精品咖啡" value="SPECIALTY" />
+            <el-option label="05 非咖啡" value="NON_COFFEE" />
+            <el-option label="06 烘焙轻食" value="BAKERY" />
           </el-select>
         </el-form-item>
       </el-col>
@@ -158,14 +157,75 @@
       </el-col>
     </el-row>
   </div>
+
+  <!-- 豆/拼配挂接（V2：咖啡类必选，bean_id / blend_id 二选一） -->
+  <div v-if="isCoffeeCategory" class="form-section">
+    <div class="section-title">
+      <el-icon><Coffee /></el-icon>
+      <span>豆/拼配</span>
+    </div>
+
+    <el-alert
+      type="info"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 16px"
+    >
+      <template #title>咖啡类商品必须挂单品豆或拼配豆（二选一），移动端豆档案由此渲染</template>
+    </el-alert>
+
+    <el-form-item label="豆/拼配">
+      <el-select
+        v-model="beanBlendValue"
+        placeholder="选择单品豆或拼配豆"
+        filterable
+        clearable
+        style="width: 100%"
+      >
+        <el-option-group label="单品豆">
+          <el-option v-for="b in activeBeans" :key="'bean-' + b.id" :value="'bean:' + b.id" :label="`${b.name}（${b.code}）`" />
+        </el-option-group>
+        <el-option-group label="拼配豆">
+          <el-option v-for="bl in activeBlends" :key="'blend-' + bl.id" :value="'blend:' + bl.id" :label="`${bl.name}（${bl.code}）`" />
+        </el-option-group>
+      </el-select>
+      <div class="form-hint-inline">单品豆/拼配豆二选一；非咖啡/烘焙无需选择</div>
+    </el-form-item>
+  </div>
 </template>
 
 <script setup>
-import { InfoFilled, Setting } from '@element-plus/icons-vue'
+import { computed } from 'vue'
+import { InfoFilled, Setting, Coffee } from '@element-plus/icons-vue'
 import ImageUploader from './ImageUploader.vue'
 
-defineProps({
-  form: { type: Object, required: true }
+const props = defineProps({
+  form: { type: Object, required: true },
+  beans: { type: Array, default: () => [] },
+  blends: { type: Array, default: () => [] }
+})
+
+// V2 咖啡系列分类：需挂 bean_id / blend_id（二选一）
+const COFFEE_CATEGORIES = ['ESPRESSO', 'MILK', 'SIGNATURE', 'SPECIALTY']
+const isCoffeeCategory = computed(() => COFFEE_CATEGORIES.includes(props.form.category))
+
+const activeBeans = computed(() => props.beans.filter(b => b.status === 'active'))
+const activeBlends = computed(() => props.blends.filter(b => b.status === 'active'))
+
+// bean_id / blend_id 二选一：'bean:1' | 'blend:2' | ''
+const beanBlendValue = computed({
+  get: () => {
+    const f = props.form
+    if (f.beanId) return 'bean:' + f.beanId
+    if (f.blendId) return 'blend:' + f.blendId
+    return ''
+  },
+  set: (v) => {
+    const f = props.form
+    if (v && v.startsWith('bean:')) { f.beanId = Number(v.slice(5)); f.blendId = null }
+    else if (v && v.startsWith('blend:')) { f.blendId = Number(v.slice(6)); f.beanId = null }
+    else { f.beanId = null; f.blendId = null }
+  }
 })
 </script>
 

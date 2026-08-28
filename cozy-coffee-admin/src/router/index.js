@@ -57,6 +57,12 @@ const routes = [
                 meta: { title: '积分商品', roles: ['admin', 'super_admin'] }
             },
             {
+                path: 'products/archives',
+                name: 'Archives',
+                component: () => import('../views/products/Archives.vue'),
+                meta: { title: '内容档案', roles: ['admin', 'super_admin'] }
+            },
+            {
                 path: 'orders',
                 name: 'Orders',
                 component: () => import('../views/Orders.vue'),

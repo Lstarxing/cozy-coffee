@@ -23,12 +23,12 @@
       </el-form-item>
       <el-form-item label="分类">
         <el-select v-model="filters.category" placeholder="全部" clearable style="width: 140px">
-          <el-option label="意式咖啡" value="espresso" />
-          <el-option label="季节限定" value="signature" />
-          <el-option label="精品手冲" value="soe" />
-          <el-option label="烘焙甜品" value="bakery" />
-          <el-option label="加料/配料" value="addon" />
-          <el-option label="其他" value="other" />
+          <el-option label="01 经典咖啡" value="ESPRESSO" />
+          <el-option label="02 奶咖" value="MILK" />
+          <el-option label="03 招牌特调" value="SIGNATURE" />
+          <el-option label="04 精品咖啡" value="SPECIALTY" />
+          <el-option label="05 非咖啡" value="NON_COFFEE" />
+          <el-option label="06 烘焙轻食" value="BAKERY" />
         </el-select>
       </el-form-item>
       <el-form-item label="状态">
@@ -83,7 +83,7 @@
         <el-table-column label="价格" width="150" align="center">
           <template #default="{ row }">
             <div class="price-stack">
-              <template v-if="row.category === 'espresso' && row.priceLarge">
+              <template v-if="row.sizeType === 'MEDIUM_LARGE' && row.priceLarge">
                 <div class="price-row">
                   <span class="price-num">¥{{ row.priceMedium || row.price }}</span>
                   <span class="price-label">(中)</span>
@@ -176,7 +176,7 @@
       :close-on-click-modal="false"
     >
       <el-form :model="productForm" label-width="120px" label-position="left">
-        <CoffeeProductForm :form="productForm" />
+        <CoffeeProductForm :form="productForm" :beans="beans" :blends="blends" />
       </el-form>
 
       <template #footer>
@@ -205,7 +205,8 @@ import { Plus, Picture, Check, Edit, Delete, Setting } from '@element-plus/icons
 import dayjs from 'dayjs'
 import {
   getCoffeeProducts, addCoffeeProduct, updateCoffeeProduct,
-  deleteCoffeeProduct, toggleCoffeeProductStatus
+  deleteCoffeeProduct, toggleCoffeeProductStatus,
+  getBeans, getBlends
 } from '@/api'
 
 import AdminPageHeader from '@/components/ui/AdminPageHeader.vue'
@@ -225,6 +226,8 @@ const isEdit = ref(false)
 const editingId = ref(null)
 const addonDialogVisible = ref(false)
 const addonEditingProduct = ref(null)
+const beans = ref([])
+const blends = ref([])
 
 const filters = reactive({
   keyword: '',
@@ -249,12 +252,14 @@ const productForm = ref(createEmptyForm())
 function createEmptyForm() {
   return {
     name: '', description: '', imageUrl: '',
-    price: 0, priceMedium: null, priceLarge: null,
-    category: 'espresso',
+    price: null, priceMedium: null, priceLarge: null,
+    category: 'ESPRESSO',
     isNewProduct: false,
     sizeType: 'MEDIUM_LARGE',
     sugarType: 'FREE_CHOICE',
-    tempType: 'HOT_COLD'
+    tempType: 'HOT_COLD',
+    beanId: null,
+    blendId: null
   }
 }
 
@@ -304,10 +309,7 @@ const resetFilters = () => {
 const showAddModal = () => {
   isEdit.value = false
   editingId.value = null
-  productForm.value = {
-    ...createEmptyForm(),
-    category: 'espresso'
-  }
+  productForm.value = createEmptyForm()
   dialogVisible.value = true
 }
 
@@ -325,7 +327,9 @@ const editProduct = (row) => {
     isNewProduct: row.isNewProduct || false,
     sizeType: row.sizeType || 'MEDIUM_LARGE',
     sugarType: row.sugarType || 'FREE_CHOICE',
-    tempType: row.tempType || 'HOT_COLD'
+    tempType: row.tempType || 'HOT_COLD',
+    beanId: row.beanId || null,
+    blendId: row.blendId || null
   }
   dialogVisible.value = true
 }
@@ -334,18 +338,22 @@ const saveProduct = async () => {
   if (!productForm.value.name) return ElMessage.warning('请输入名称')
 
   try {
+    // V2 价格互斥：MEDIUM_LARGE → medium+large（price NULL）；DEFAULT → price
+    const isMediumLarge = productForm.value.sizeType === 'MEDIUM_LARGE'
     const data = {
       name: productForm.value.name,
       description: productForm.value.description,
       imageUrl: productForm.value.imageUrl,
       category: productForm.value.category,
-      price: productForm.value.priceMedium || productForm.value.price || 0,
-      priceMedium: productForm.value.priceMedium || null,
-      priceLarge: productForm.value.priceLarge || null,
+      price: isMediumLarge ? null : (productForm.value.price ?? 0),
+      priceMedium: isMediumLarge ? (productForm.value.priceMedium || null) : null,
+      priceLarge: isMediumLarge ? (productForm.value.priceLarge || null) : null,
       isNewProduct: productForm.value.isNewProduct || false,
       sizeType: productForm.value.sizeType || 'MEDIUM_LARGE',
       sugarType: productForm.value.sugarType || 'FREE_CHOICE',
-      tempType: productForm.value.tempType || 'HOT_COLD'
+      tempType: productForm.value.tempType || 'HOT_COLD',
+      beanId: productForm.value.beanId || null,
+      blendId: productForm.value.blendId || null
     }
 
     if (isEdit.value) await updateCoffeeProduct(editingId.value, data)
@@ -385,8 +393,19 @@ const deleteProduct = async (row) => {
   }
 }
 
+const loadBeansAndBlends = async () => {
+  try {
+    const [beanRes, blendRes] = await Promise.all([getBeans(), getBlends()])
+    beans.value = beanRes.data || []
+    blends.value = blendRes.data || []
+  } catch (e) {
+    console.warn('加载豆/拼配列表失败', e)
+  }
+}
+
 onMounted(() => {
   loadData()
+  loadBeansAndBlends()
 })
 </script>
 

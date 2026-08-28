@@ -25,7 +25,14 @@ export const PRODUCT_CATEGORY_MAP = {
   [PRODUCT_CATEGORY.SOE]: { label: '精品手冲', color: '#5D4037' },
   [PRODUCT_CATEGORY.BAKERY]: { label: '烘焙甜品', color: '#D84315' },
   [PRODUCT_CATEGORY.MERCHANDISE]: { label: '积分商品', color: '#8D6E63' },
-  [PRODUCT_CATEGORY.ADDON]: { label: '配料/加料', color: '#9CA3AF' }
+  [PRODUCT_CATEGORY.ADDON]: { label: '配料/加料', color: '#9CA3AF' },
+  // V2 分类（大写，023 迁移后商品实际值）
+  'ESPRESSO': { label: '经典咖啡', color: '#6F4E37' },
+  'MILK': { label: '奶咖', color: '#8B5E3C' },
+  'SIGNATURE': { label: '招牌特调', color: '#5D4037' },
+  'SPECIALTY': { label: '精品咖啡', color: '#D84315' },
+  'NON_COFFEE': { label: '非咖啡', color: '#8D6E63' },
+  'BAKERY': { label: '烘焙轻食', color: '#9CA3AF' }
 }
 
 export const SKU_SIZE_TYPE = {

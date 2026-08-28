@@ -100,6 +100,17 @@ export const toggleCoffeeProductStatus = (productId) => api.put(`/admin/products
 export const getAddonCatalog = () => api.get('/admin/products/addon-catalog')
 export const saveAddonGroups = (productId, groups) => api.post(`/admin/products/coffee/${productId}/addon-groups`, groups)
 
+// 内容档案（产区/单品豆/拼配豆）
+export const getOrigins = () => api.get('/admin/content/origins')
+export const saveOrigin = (origin) => api.post('/admin/content/origins', origin)
+export const deleteOrigin = (id) => api.delete(`/admin/content/origins/${id}`)
+export const getBeans = () => api.get('/admin/content/beans')
+export const saveBean = (bean) => api.post('/admin/content/beans', bean)
+export const deleteBean = (id) => api.delete(`/admin/content/beans/${id}`)
+export const getBlends = () => api.get('/admin/content/blends')
+export const saveBlend = (blend) => api.post('/admin/content/blends', blend)
+export const deleteBlend = (id) => api.delete(`/admin/content/blends/${id}`)
+
 // 咖啡订单管理
 export const getOrderCounts = () => api.get('/admin/orders/counts')
 export const getOrders = (params) => api.get('/admin/orders', { params })
