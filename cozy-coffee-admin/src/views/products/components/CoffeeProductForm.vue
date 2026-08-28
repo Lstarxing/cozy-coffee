@@ -149,10 +149,9 @@
       <el-col :span="8">
         <el-form-item label="温度选项">
           <el-select v-model="form.tempType" placeholder="选择规格" style="width: 100%">
-            <el-option label="冷热皆可" value="ALL_OK" />
+            <el-option label="热/冰" value="HOT_COLD" />
             <el-option label="仅冰" value="COLD_ONLY" />
             <el-option label="仅热" value="HOT_ONLY" />
-            <el-option label="不可热饮" value="NO_HOT" />
           </el-select>
           <div class="form-hint-inline">Dirty类推荐COLD_ONLY</div>
         </el-form-item>

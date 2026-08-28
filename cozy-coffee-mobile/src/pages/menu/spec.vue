@@ -128,10 +128,9 @@ const sugarOptions = computed(() => {
 })
 const tempOptions = computed(() => {
   if (isFood.value) return [{ value: '', label: '默认' }]
-  const type = String(product.value?.tempType || 'ALL_OK').toUpperCase()
+  const type = String(product.value?.tempType || 'HOT_COLD').toUpperCase()
   if (type === 'COLD_ONLY') return [{ value: 'COLD', label: '冰' }]
   if (type === 'HOT_ONLY') return [{ value: 'HOT', label: '热' }]
-  if (type === 'NO_HOT') return [{ value: 'COLD', label: '冰' }, { value: 'WARM', label: '温' }]
   return [{ value: 'HOT', label: '热' }, { value: 'COLD', label: '冰' }]
 })
 

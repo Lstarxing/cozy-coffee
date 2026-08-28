@@ -74,7 +74,7 @@ describe('ReorderService', () => {
   it('maps legacy web option names and removes milk from products that no longer support it', () => {
     const restored = createReorderCartLine(
       { temperature: 'iced', sugarLevel: 'full', optionsJson: JSON.stringify({ milkType: 'OAT' }) },
-      { id: 4, name: '手冲', price: 28, category: 'soe', tempType: 'ALL_OK' }
+      { id: 4, name: '手冲', price: 28, category: 'soe', tempType: 'HOT_COLD' }
     )
 
     expect(restored.line.temperature).toBe('COLD')

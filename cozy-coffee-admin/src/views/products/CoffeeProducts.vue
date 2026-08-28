@@ -239,7 +239,7 @@ function createEmptyForm() {
     isNewProduct: false,
     sizeType: 'MEDIUM_LARGE',
     sugarType: 'FREE_CHOICE',
-    tempType: 'ALL_OK'
+    tempType: 'HOT_COLD'
   }
 }
 
@@ -310,7 +310,7 @@ const editProduct = (row) => {
     isNewProduct: row.isNewProduct || false,
     sizeType: row.sizeType || 'MEDIUM_LARGE',
     sugarType: row.sugarType || 'FREE_CHOICE',
-    tempType: row.tempType || 'ALL_OK'
+    tempType: row.tempType || 'HOT_COLD'
   }
   dialogVisible.value = true
 }
@@ -330,7 +330,7 @@ const saveProduct = async () => {
       isNewProduct: productForm.value.isNewProduct || false,
       sizeType: productForm.value.sizeType || 'MEDIUM_LARGE',
       sugarType: productForm.value.sugarType || 'FREE_CHOICE',
-      tempType: productForm.value.tempType || 'ALL_OK'
+      tempType: productForm.value.tempType || 'HOT_COLD'
     }
 
     if (isEdit.value) await updateCoffeeProduct(editingId.value, data)

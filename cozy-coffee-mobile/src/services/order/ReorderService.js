@@ -32,11 +32,10 @@ function allowedSizes(product) {
 
 function allowedTemperatures(product) {
   if (isFood(product)) return ['']
-  const type = String(product?.tempType || 'ALL_OK').toUpperCase()
+  const type = String(product?.tempType || 'HOT_COLD').toUpperCase()
   if (type === 'COLD_ONLY') return ['COLD']
   if (type === 'HOT_ONLY') return ['HOT']
-  if (type === 'NO_HOT') return ['COLD', 'WARM']
-  return ['HOT', 'COLD', 'WARM']
+  return ['HOT', 'COLD']
 }
 
 function allowedSugarLevels(product) {

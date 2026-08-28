@@ -57,7 +57,7 @@ public class ProductAdminService {
         // v5.2: SKU 配置字段
         product.setSizeType(dto.getSizeType() != null ? dto.getSizeType() : "MEDIUM_LARGE");
         product.setSugarType(dto.getSugarType() != null ? dto.getSugarType() : "FREE_CHOICE");
-        product.setTempType(dto.getTempType() != null ? dto.getTempType() : "ALL_OK");
+        product.setTempType(dto.getTempType() != null ? dto.getTempType() : "HOT_COLD");
 
         // 手动设置时间戳（修复 MetaObjectHandler 可能未扫码到的问题）
         LocalDateTime now = LocalDateTime.now();

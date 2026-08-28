@@ -169,13 +169,11 @@ watch(() => props.product, (product) => {
   }
   
   // 温度默认值
-  const tempType = product.tempType || 'ALL_OK'
+  const tempType = product.tempType || 'HOT_COLD'
   if (tempType === 'COLD_ONLY') {
     customization.temperature = 'COLD'
   } else if (tempType === 'HOT_ONLY') {
     customization.temperature = 'HOT'
-  } else if (tempType === 'NO_HOT') {
-    customization.temperature = 'COLD'
   }
 }, { immediate: true })
 
@@ -291,7 +289,7 @@ const sugarConfig = computed(() => {
 
 // 温度配置解析（v6.1: 改为禁用模式，保留选项但标记为不可选）
 const tempConfig = computed(() => {
-  const tempType = props.product.tempType || 'ALL_OK'
+  const tempType = props.product.tempType || 'HOT_COLD'
   switch (tempType) {
     case 'COLD_ONLY':
       // 仅限冰：显示选项，但禁用热选项
@@ -306,28 +304,16 @@ const tempConfig = computed(() => {
       }
     case 'HOT_ONLY':
       // 仅限热：显示选项，但禁用冰选项
-      return { 
-        show: true, 
+      return {
+        show: true,
         options: [
           { label: '冰', value: 'COLD', disabled: true },
           { label: '热', value: 'HOT', disabled: false }
         ],
-        defaultValue: 'HOT', 
-        hint: '本品仅供热饮' 
+        defaultValue: 'HOT',
+        hint: '本品仅供热饮'
       }
-    case 'NO_HOT':
-      // 不可热（冰/温）：显示选项，热选项禁用
-      return { 
-        show: true, 
-        options: [
-          { label: '冰', value: 'COLD', disabled: false },
-          { label: '温', value: 'WARM', disabled: false },
-          { label: '热', value: 'HOT', disabled: true }
-        ],
-        defaultValue: 'COLD',
-        hint: '本品不可做热'
-      }
-    case 'ALL_OK':
+    case 'HOT_COLD':
     default:
       return { 
         show: true, 

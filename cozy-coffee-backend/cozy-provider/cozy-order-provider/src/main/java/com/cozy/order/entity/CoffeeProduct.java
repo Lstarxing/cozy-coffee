@@ -26,7 +26,7 @@ public class CoffeeProduct {
     // v5.2: SKU 配置字段（已启用）
     private String sizeType;    // 杯型配置：DEFAULT/MEDIUM_LARGE/ALL_SIZES
     private String sugarType;   // 甜度配置：FREE_CHOICE/NO_SUGAR_ONLY/MIN_LESS_SWEET
-    private String tempType;    // 温度配置：ALL_OK/COLD_ONLY/HOT_ONLY/NO_HOT
+    private String tempType;    // 温度配置：HOT_COLD/COLD_ONLY/HOT_ONLY（v2 砍温）
 
     // v2 内容层（Phase 0A）：bean/blend 挂接 + 默认糖度 + 固定组合出杯
     private Long beanId; // 单品豆：coffee_bean.id（与 blendId 互斥）

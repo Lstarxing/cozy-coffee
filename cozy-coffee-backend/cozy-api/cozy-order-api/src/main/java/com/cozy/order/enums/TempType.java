@@ -2,32 +2,23 @@ package com.cozy.order.enums;
 
 /**
  * 温度配置类型
- * 定义产品的温度选项限制
+ * 定义产品的温度选项限制（v2：砍"温"，新单禁止产生 WARM，历史订单快照保留）
  */
 public enum TempType {
     /**
-     * 冰/热/温全选 - 大部分饮品
-     * v5.3: 兼容前端大写命名 COLD/HOT/WARM 和旧命名 iced/hot/warm
+     * 热/冰 - 大部分饮品（原 ALL_OK，砍温：去掉 WARM）
      */
-    ALL_OK("全温度", new String[]{"iced", "COLD", "cold", "hot", "HOT", "warm", "WARM"}),
-    
+    HOT_COLD("热/冰", new String[]{"iced", "COLD", "cold", "hot", "HOT"}),
+
     /**
-     * 仅限冰 - 用于 Dirty、冰摇系列
-     * v5.3: 兼容 COLD/cold/iced
+     * 仅限冰 - Dirty、冰摇、生椰等；原 NO_HOT（冰/温）并入：不可热即冰
      */
     COLD_ONLY("仅限冰", new String[]{"iced", "COLD", "cold"}),
-    
+
     /**
-     * 仅限热 - 用于澳白等奶泡工艺饮品
-     * v5.3: 兼容 HOT/hot
+     * 仅限热 - 澳白等奶泡工艺饮品
      */
-    HOT_ONLY("仅限热", new String[]{"hot", "HOT"}),
-    
-    /**
-     * 冰/温，不可烫 - 用于生椰拿铁（椰乳高温易分层）
-     * v5.3: 兼容前端大写命名
-     */
-    NO_HOT("冰/温", new String[]{"iced", "COLD", "cold", "warm", "WARM"});
+    HOT_ONLY("仅限热", new String[]{"hot", "HOT"});
 
     private final String description;
     private final String[] allowedValues;
@@ -46,8 +37,7 @@ public enum TempType {
     }
 
     /**
-     * 检查给定的温度是否被允许
-     * v5.3: 兼容大小写和不同命名（HOT/hot, COLD/cold/iced）
+     * 检查给定的温度是否被允许（v2：已砍温，WARM 不在任何 allowedValues 中）
      */
     public boolean isAllowed(String temp) {
         if (temp == null) return false;

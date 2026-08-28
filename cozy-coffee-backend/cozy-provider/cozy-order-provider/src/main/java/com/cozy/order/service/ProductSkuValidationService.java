@@ -21,7 +21,7 @@ public class ProductSkuValidationService {
      * @param product     产品实体
      * @param sizeChoice  用户选择的杯型 (medium/large/standard)
      * @param sugarChoice 用户选择的甜度 (full/half/less/none)
-     * @param tempChoice  用户选择的温度 (iced/hot/warm)
+     * @param tempChoice  用户选择的温度 (iced/hot)
      * @return 验证结果消息，null 表示通过
      */
     public String validateSkuOptions(CoffeeProduct product, 
@@ -141,23 +141,21 @@ public class ProductSkuValidationService {
         
         String tempTypeStr = product.getTempType();
         if (tempTypeStr == null || tempTypeStr.isEmpty()) {
-            // 未配置则默认全温度
-            tempTypeStr = "ALL_OK";
+            // 未配置则默认热/冰
+            tempTypeStr = "HOT_COLD";
         }
 
         try {
             TempType tempType = TempType.valueOf(tempTypeStr);
-            
+
             if (!tempType.isAllowed(tempChoice)) {
                 String hint = "";
                 if (tempType == TempType.HOT_ONLY) {
                     hint = "（奶泡工艺需要热饮）";
                 } else if (tempType == TempType.COLD_ONLY) {
                     hint = "（产品工艺限定冰饮）";
-                } else if (tempType == TempType.NO_HOT) {
-                    hint = "（植物奶高温易分层）";
                 }
-                
+
                 return String.format("产品 [%s] 不支持该温度选择 %s。允许的选项：%s", 
                     product.getName(), 
                     hint,
@@ -199,12 +197,12 @@ public class ProductSkuValidationService {
         }
 
         // 温度选项
-        String tempTypeStr = product.getTempType() != null ? product.getTempType() : "ALL_OK";
+        String tempTypeStr = product.getTempType() != null ? product.getTempType() : "HOT_COLD";
         try {
             TempType tempType = TempType.valueOf(tempTypeStr);
             options.setAllowedTemps(tempType.getAllowedValues());
         } catch (IllegalArgumentException e) {
-            options.setAllowedTemps(new String[]{"iced", "hot", "warm"});
+            options.setAllowedTemps(new String[]{"iced", "hot"});
         }
 
         return options;

@@ -127,7 +127,7 @@ class OrderPreviewServiceTest {
         product.setCategory("coffee");
         product.setSizeType("MEDIUM_LARGE");
         product.setSugarType("FREE_CHOICE");
-        product.setTempType("ALL_OK");
+        product.setTempType("HOT_COLD");
         product.setUpdatedAt(LocalDateTime.of(2026, 7, 14, 12, 0));
         return product;
     }

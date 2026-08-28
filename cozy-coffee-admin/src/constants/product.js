@@ -42,5 +42,5 @@ export const SKU_SUGAR_TYPE = {
 
 export const SKU_TEMP_TYPE = {
   NO_TEMP: 'NO_TEMP',
-  ALL_OK: 'ALL_OK'
+  HOT_COLD: 'HOT_COLD'
 }

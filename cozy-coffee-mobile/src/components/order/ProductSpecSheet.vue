@@ -126,11 +126,10 @@ const sugarOptions = computed(() => {
 
 const tempOptions = computed(() => {
   if (isFood.value) return [{ value: '', label: '默认' }]
-  const type = displayProduct.value.tempType || 'ALL_OK'
+  const type = displayProduct.value.tempType || 'HOT_COLD'
   if (type === 'COLD_ONLY') return [{ value: 'COLD', label: '冰' }]
   if (type === 'HOT_ONLY') return [{ value: 'HOT', label: '热' }]
-  if (type === 'NO_HOT') return [{ value: 'COLD', label: '冰' }, { value: 'WARM', label: '温' }]
-  return [{ value: 'HOT', label: '热' }, { value: 'COLD', label: '冰' }, { value: 'WARM', label: '温' }]
+  return [{ value: 'HOT', label: '热' }, { value: 'COLD', label: '冰' }]
 })
 
 const milkOptions = [
