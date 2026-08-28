@@ -1,4 +1,5 @@
 package com.cozy.order.job;
+import com.cozy.order.service.order.OrderCommandService;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;

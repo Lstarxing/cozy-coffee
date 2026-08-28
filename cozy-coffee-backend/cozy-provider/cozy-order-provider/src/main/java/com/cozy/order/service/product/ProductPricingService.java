@@ -1,4 +1,4 @@
-package com.cozy.order.service;
+package com.cozy.order.service.product;
 
 import com.cozy.order.entity.CoffeeProduct;
 import lombok.RequiredArgsConstructor;

@@ -1,4 +1,11 @@
 package com.cozy.order.service;
+import com.cozy.order.service.product.ProductPricingService;
+import com.cozy.order.service.order.OrderPreviewer;
+import com.cozy.order.service.converter.OrderDtoConverter;
+import com.cozy.order.service.order.OrderRewardService;
+import com.cozy.order.service.order.PickupCodeService;
+import com.cozy.order.service.converter.OrderDtoEnricher;
+import com.cozy.order.service.order.OrderCreator;
 
 import com.cozy.common.exception.BusinessErrorCode;
 import com.cozy.common.exception.BusinessException;
@@ -8,6 +15,8 @@ import com.cozy.order.entity.ShopOrder;
 import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.mapper.ShopOrderItemMapper;
 import com.cozy.order.mapper.ShopOrderMapper;
+import com.cozy.order.service.infra.OrderCancelledEventPublisher;
+import com.cozy.order.service.infra.OrderTimeoutIndexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -52,7 +61,8 @@ class OrderIdempotencyTest {
                 mock(CoffeeProductMapper.class), orderMapper, mock(ShopOrderItemMapper.class),
                 mock(PickupCodeService.class), new ObjectMapper(),
                 mock(OrderDtoConverter.class), mock(OrderRewardService.class), enricher,
-                mock(OrderInfraService.class), mock(TransactionTemplate.class), mock(OrderPreviewer.class),
+                mock(OrderTimeoutIndexer.class), mock(OrderCancelledEventPublisher.class),
+                mock(TransactionTemplate.class), mock(OrderPreviewer.class),
                 mock(ProductPricingService.class));
     }
 }

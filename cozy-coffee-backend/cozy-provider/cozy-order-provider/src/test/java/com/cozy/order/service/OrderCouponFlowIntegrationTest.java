@@ -1,4 +1,5 @@
 package com.cozy.order.service;
+import com.cozy.order.service.order.OrderPreviewer;
 
 import com.cozy.mall.api.PointsMallService;
 import com.cozy.mall.dto.response.CouponCombinationResult;
@@ -10,7 +11,7 @@ import com.cozy.order.dto.request.CreateOrderRequest;
 import com.cozy.order.dto.request.OrderItemRequest;
 import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
-import com.cozy.order.service.OrderCreator;
+import com.cozy.order.service.order.OrderCreator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

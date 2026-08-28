@@ -1,4 +1,4 @@
-package com.cozy.order.service;
+package com.cozy.order.service.order;
 
 import com.cozy.order.entity.PickupCodeCounter;
 import com.cozy.order.mapper.PickupCodeCounterMapper;

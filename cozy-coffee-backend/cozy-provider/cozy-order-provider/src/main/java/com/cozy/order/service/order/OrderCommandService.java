@@ -1,4 +1,5 @@
-package com.cozy.order.service;
+package com.cozy.order.service.order;
+import com.cozy.order.service.converter.OrderDtoEnricher;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -15,7 +16,9 @@ import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.mapper.ShopOrderMapper;
 import com.cozy.order.mapper.ShopOrderItemMapper;
 import com.cozy.order.mq.OrderCompletedEventPublisher;
-import com.cozy.order.service.PickupCodeService;
+import com.cozy.order.service.order.PickupCodeService;
+import com.cozy.order.service.infra.OrderCancelledEventPublisher;
+import com.cozy.order.service.infra.OrderTimeoutIndexer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -46,7 +49,8 @@ public class OrderCommandService {
     private final PickupCodeService pickupCodeService;
     private final OrderRewardService rewardService;
     private final OrderDtoEnricher orderDtoEnricher;
-    private final OrderInfraService orderInfraService;
+    private final OrderTimeoutIndexer orderTimeoutIndexer;
+    private final OrderCancelledEventPublisher orderCancelledEventPublisher;
     private final TransactionTemplate transactionTemplate;
     private final OrderCompletedEventPublisher orderCompletedEventPublisher;
 
@@ -66,7 +70,7 @@ public class OrderCommandService {
         }
         order.setStatus(status);
         orderMapper.updateById(order);
-        orderInfraService.syncPendingTimeoutIndex(order);
+        orderTimeoutIndexer.syncPendingTimeoutIndex(order);
         return orderDtoEnricher.toOrderDTO(order, null);
     }
 
@@ -95,7 +99,7 @@ public class OrderCommandService {
 
         order.setStatus(OrderStateMachine.PREPARING.value());
         orderMapper.updateById(order);
-        orderInfraService.syncPendingTimeoutIndex(order);
+        orderTimeoutIndexer.syncPendingTimeoutIndex(order);
         log.info("订单接单: orderId={}, orderNo={}", orderId, order.getOrderNo());
         confirmOrderCoupon(order);
         return orderDtoEnricher.toOrderDTO(order, null);
@@ -134,7 +138,7 @@ public class OrderCommandService {
 
         order.setStatus(OrderStateMachine.PREPARING.value());
         orderMapper.updateById(order);
-        orderInfraService.syncPendingTimeoutIndex(order);
+        orderTimeoutIndexer.syncPendingTimeoutIndex(order);
         log.info("订单支付后自动接单: orderId={}, orderNo={}", orderId, order.getOrderNo());
         confirmOrderCoupon(order);
         return orderDtoEnricher.toOrderDTO(order, null);
@@ -171,7 +175,7 @@ public class OrderCommandService {
             current.assertCanTransition(OrderStateMachine.DELIVERING);
             order.setStatus(OrderStateMachine.DELIVERING.value());
             orderMapper.updateById(order);
-            orderInfraService.syncPendingTimeoutIndex(order);
+            orderTimeoutIndexer.syncPendingTimeoutIndex(order);
             log.info("外送出餐: orderId={}, orderNo={}, 进入配送中", orderId, order.getOrderNo());
             return orderDtoEnricher.toOrderDTO(order, null);
         }
@@ -181,7 +185,7 @@ public class OrderCommandService {
         order.setStatus(OrderStateMachine.COMPLETED.value());
         order.setCompletedAt(LocalDateTime.now());
         orderMapper.updateById(order);
-        orderInfraService.syncPendingTimeoutIndex(order);
+        orderTimeoutIndexer.syncPendingTimeoutIndex(order);
         log.info("自提出餐: orderId={}, orderNo={}, 已完成待确认取餐", orderId, order.getOrderNo());
         return orderDtoEnricher.toOrderDTO(order, null);
     }
@@ -340,10 +344,10 @@ public class OrderCommandService {
         current.assertCanTransition(OrderStateMachine.CANCELLED);
         order.setStatus(OrderStateMachine.CANCELLED.value());
         orderMapper.updateById(order);
-        orderInfraService.syncPendingTimeoutIndex(order);
+        orderTimeoutIndexer.syncPendingTimeoutIndex(order);
 
         // v6.3: 券回滚走 Outbox 模式异步投递，跨库最终一致
-        orderInfraService.publishCouponRollbackEvent(order);
+        orderCancelledEventPublisher.publishCouponRollbackEvent(order);
 
         log.info("订单取消: orderId={}, orderNo={}", orderId, order.getOrderNo());
         return orderDtoEnricher.toOrderDTO(order, null);
@@ -368,10 +372,10 @@ public class OrderCommandService {
         current.assertCanTransition(OrderStateMachine.CANCELLED);
         order.setStatus(OrderStateMachine.CANCELLED.value());
         orderMapper.updateById(order);
-        orderInfraService.syncPendingTimeoutIndex(order);
+        orderTimeoutIndexer.syncPendingTimeoutIndex(order);
 
         // v6.3: 券回滚走 Outbox 模式异步投递
-        orderInfraService.publishCouponRollbackEvent(order);
+        orderCancelledEventPublisher.publishCouponRollbackEvent(order);
 
         return orderDtoEnricher.toOrderDTO(order, null);
     }

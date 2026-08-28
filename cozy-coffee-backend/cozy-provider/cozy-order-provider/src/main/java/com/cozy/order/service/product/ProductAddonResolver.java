@@ -1,4 +1,4 @@
-package com.cozy.order.service;
+package com.cozy.order.service.product;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.order.entity.CoffeeProductAddon;

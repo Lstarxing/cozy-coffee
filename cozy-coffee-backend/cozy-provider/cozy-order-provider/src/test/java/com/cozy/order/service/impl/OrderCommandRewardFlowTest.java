@@ -8,11 +8,12 @@ import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.mapper.ShopOrderItemMapper;
 import com.cozy.order.mapper.ShopOrderMapper;
 import com.cozy.order.mq.OrderCompletedEventPublisher;
-import com.cozy.order.service.OrderCommandService;
-import com.cozy.order.service.OrderDtoEnricher;
-import com.cozy.order.service.OrderInfraService;
-import com.cozy.order.service.OrderRewardService;
-import com.cozy.order.service.PickupCodeService;
+import com.cozy.order.service.order.OrderCommandService;
+import com.cozy.order.service.converter.OrderDtoEnricher;
+import com.cozy.order.service.order.OrderRewardService;
+import com.cozy.order.service.order.PickupCodeService;
+import com.cozy.order.service.infra.OrderCancelledEventPublisher;
+import com.cozy.order.service.infra.OrderTimeoutIndexer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -37,7 +38,8 @@ class OrderCommandRewardFlowTest {
     private ShopOrderItemMapper orderItemMapper;
     private OrderRewardService rewardService;
     private OrderDtoEnricher enricher;
-    private OrderInfraService infraService;
+    private OrderTimeoutIndexer timeoutIndexer;
+    private OrderCancelledEventPublisher eventPublisher;
     private TransactionTemplate transactionTemplate;
     private OrderCompletedEventPublisher publisher;
     private OrderCommandService commandService;
@@ -48,12 +50,14 @@ class OrderCommandRewardFlowTest {
         orderItemMapper = mock(ShopOrderItemMapper.class);
         rewardService = mock(OrderRewardService.class);
         enricher = mock(OrderDtoEnricher.class);
-        infraService = mock(OrderInfraService.class);
+        timeoutIndexer = mock(OrderTimeoutIndexer.class);
+        eventPublisher = mock(OrderCancelledEventPublisher.class);
         transactionTemplate = mock(TransactionTemplate.class);
         publisher = mock(OrderCompletedEventPublisher.class);
         commandService = new OrderCommandService(
                 orderMapper, orderItemMapper, mock(CoffeeProductMapper.class),
-                mock(PickupCodeService.class), rewardService, enricher, infraService,
+                mock(PickupCodeService.class), rewardService, enricher,
+                timeoutIndexer, eventPublisher,
                 transactionTemplate, publisher);
 
         // 事务模板：直接执行 lambda 并返回其结果

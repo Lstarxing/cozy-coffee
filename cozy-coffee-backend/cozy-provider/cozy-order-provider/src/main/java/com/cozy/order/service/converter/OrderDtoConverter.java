@@ -1,4 +1,4 @@
-package com.cozy.order.service;
+package com.cozy.order.service.converter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.cozy.order.dto.response.CoffeeProductDTO;

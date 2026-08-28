@@ -1,4 +1,8 @@
 package com.cozy.order.service;
+import com.cozy.order.service.product.ProductPricingService;
+import com.cozy.order.service.order.OrderPreviewer;
+import com.cozy.order.service.product.ProductAddonResolver;
+import com.cozy.order.service.product.ProductRuleValidator;
 
 import com.cozy.member.api.MemberService;
 import com.cozy.member.dto.response.MemberDTO;
@@ -10,7 +14,7 @@ import com.cozy.order.mapper.CoffeeProductAddonGroupMapper;
 import com.cozy.order.mapper.CoffeeProductAddonMapper;
 import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.mapper.ProductAddonMapper;
-import com.cozy.order.service.OrderRewardService;
+import com.cozy.order.service.order.OrderRewardService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

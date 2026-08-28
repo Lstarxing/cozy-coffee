@@ -1,4 +1,6 @@
-package com.cozy.order.service;
+package com.cozy.order.service.order;
+import com.cozy.order.service.converter.OrderDtoConverter;
+import com.cozy.order.service.converter.OrderDtoEnricher;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.member.api.MemberService;
@@ -17,9 +19,11 @@ import com.cozy.order.entity.ShopOrderItem;
 import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.mapper.ShopOrderMapper;
 import com.cozy.order.mapper.ShopOrderItemMapper;
-import com.cozy.order.service.PickupCodeService;
-import com.cozy.order.service.OrderPreviewer;
-import com.cozy.order.service.ProductPricingService;
+import com.cozy.order.service.order.PickupCodeService;
+import com.cozy.order.service.order.OrderPreviewer;
+import com.cozy.order.service.product.ProductPricingService;
+import com.cozy.order.service.infra.OrderCancelledEventPublisher;
+import com.cozy.order.service.infra.OrderTimeoutIndexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,7 +57,8 @@ public class OrderCreator {
     private final OrderDtoConverter dtoConverter;
     private final OrderRewardService rewardService;
     private final OrderDtoEnricher orderDtoEnricher;
-    private final OrderInfraService orderInfraService;
+    private final OrderTimeoutIndexer orderTimeoutIndexer;
+    private final OrderCancelledEventPublisher orderCancelledEventPublisher;
     private final TransactionTemplate transactionTemplate;
     private final OrderPreviewer orderPreviewer;
     private final ProductPricingService productPricingService;
@@ -434,7 +439,7 @@ public class OrderCreator {
             if (appliedCouponId != null || !addonCouponIds.isEmpty()) {
                 log.error("订单落库失败，触发券回滚: orderNo={}, couponId={}, addonIds={}",
                         order.getOrderNo(), appliedCouponId, addonCouponIds);
-                orderInfraService.publishCouponRollbackEvent(order);
+                orderCancelledEventPublisher.publishCouponRollbackEvent(order);
             }
             log.error("订单落库失败: orderNo={}, error={}", order.getOrderNo(), e.getMessage(), e);
             throw new BusinessException(BusinessErrorCode.ORDER_CREATE_FAILED,
@@ -450,7 +455,7 @@ public class OrderCreator {
     private void doCreateOrderInTx(ShopOrder order, List<ShopOrderItem> orderItems) {
         transactionTemplate.executeWithoutResult(status -> {
             orderMapper.insert(order);
-            orderInfraService.syncPendingTimeoutIndex(order);
+            orderTimeoutIndexer.syncPendingTimeoutIndex(order);
             for (ShopOrderItem item : orderItems) {
                 item.setOrderId(order.getId());
                 orderItemMapper.insert(item);

@@ -1,4 +1,7 @@
 package com.cozy.order.service;
+import com.cozy.order.service.product.ProductPricingService;
+import com.cozy.order.service.product.ProductAddonResolver;
+import com.cozy.order.service.product.ProductRuleValidator;
 
 import com.cozy.order.entity.CoffeeProduct;
 import com.cozy.order.entity.CoffeeProductAddon;

@@ -1,4 +1,4 @@
-package com.cozy.order.service;
+package com.cozy.order.service.order;
 
 import com.cozy.common.constant.MemberLevelConfig;
 import com.cozy.common.constant.PointsRateConfig;
