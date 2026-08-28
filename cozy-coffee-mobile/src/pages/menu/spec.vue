@@ -13,7 +13,9 @@
       </view>
 
       <!-- V2 豆档案（P2 收尾）：烘焙 · 风味 · 醇厚 · 酸度 -->
-      <BeanBlendProfile v-if="product?.beanProfile || product?.blendProfile" :product="product" />
+      <view class="bean-profile-wrap">
+        <BeanBlendProfile v-if="product?.beanProfile || product?.blendProfile" :product="product" />
+      </view>
 
       <!-- 固定组合出杯说明（一豆两喝/三喝） -->
       <view v-if="product?.servingDesc" class="serving-desc">{{ product.servingDesc }}</view>
@@ -242,6 +244,7 @@ function addToCart() {
 
 .spec-disclaimer { border-top: 1rpx solid $cozy-border; margin-top: 40rpx; padding: 28rpx 40rpx 48rpx; font-size: 22rpx; line-height: 1.7; color: $cozy-placeholder; }
 .serving-desc { padding: 20rpx 40rpx 4rpx; color: $cozy-muted; font-size: $font-size-sm; line-height: 1.6; }
+.bean-profile-wrap { padding: 0 40rpx; }
 .spec-bottom { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid $cozy-border; }
 .spec-bottom-top { display: flex; align-items: center; gap: 24rpx; margin-bottom: 20rpx; }
 .spec-price-col { flex: 1; min-width: 0; }
