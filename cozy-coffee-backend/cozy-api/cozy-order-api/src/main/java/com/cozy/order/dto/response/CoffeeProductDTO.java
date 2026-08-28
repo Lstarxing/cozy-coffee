@@ -26,4 +26,10 @@ public class CoffeeProductDTO implements Serializable {
 
     // V2（P2）：加料组（菜单/详情渲染规格选项）
     private List<AddonGroupDTO> addonGroups;
+
+    // V2（P2 收尾）：豆/拼配档案（菜单/详情读侧；bean_id / blend_id 二选一）
+    private Long beanId;
+    private Long blendId;
+    private BeanProfileDTO beanProfile;
+    private BlendProfileDTO blendProfile;
 }

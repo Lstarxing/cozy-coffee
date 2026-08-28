@@ -6,10 +6,14 @@ import com.cozy.order.dto.request.AddonGroupRequest;
 import com.cozy.order.dto.request.AddonItemRequest;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.ProductAddonDTO;
+import com.cozy.order.entity.CoffeeBean;
+import com.cozy.order.entity.CoffeeBlend;
 import com.cozy.order.entity.CoffeeProduct;
 import com.cozy.order.entity.CoffeeProductAddon;
 import com.cozy.order.entity.CoffeeProductAddonGroup;
 import com.cozy.order.entity.ProductAddon;
+import com.cozy.order.mapper.CoffeeBeanMapper;
+import com.cozy.order.mapper.CoffeeBlendMapper;
 import com.cozy.order.mapper.CoffeeProductAddonGroupMapper;
 import com.cozy.order.mapper.CoffeeProductAddonMapper;
 import com.cozy.order.mapper.CoffeeProductMapper;
@@ -25,6 +29,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -44,6 +49,11 @@ public class ProductAdminService {
     private final CoffeeProductAddonGroupMapper addonGroupMapper;
     private final CoffeeProductAddonMapper productAddonMapper;
     private final ProductAddonMapper addonMapper;
+    private final CoffeeBeanMapper beanMapper;
+    private final CoffeeBlendMapper blendMapper;
+
+    /** V2 咖啡系列分类：必须挂 bean_id / blend_id 二选一 */
+    private static final Set<String> COFFEE_CATEGORIES = Set.of("ESPRESSO", "MILK", "SIGNATURE", "SPECIALTY");
 
     @Transactional
     public CoffeeProductDTO addProduct(CoffeeProductDTO dto) {
@@ -68,6 +78,9 @@ public class ProductAdminService {
         product.setPriceLarge(dto.getPriceLarge()); // v5.0
         product.setImageUrl(dto.getImageUrl());
         product.setCategory(dto.getCategory().trim());
+        product.setBeanId(dto.getBeanId());
+        product.setBlendId(dto.getBlendId());
+        validateBeanBlend(product.getCategory(), null, dto.getBeanId(), dto.getBlendId());
         product.setStatus("active");
         product.setSortOrder(0);
         product.setIsNewProduct(dto.getIsNewProduct() != null ? dto.getIsNewProduct() : false); // v5.0
@@ -133,12 +146,48 @@ public class ProductAdminService {
             product.setCategory(dto.getCategory().trim());
         }
 
+        // 豆/拼配挂接（允许清除为 null；按最终分类 + serving 校验）
+        product.setBeanId(dto.getBeanId());
+        product.setBlendId(dto.getBlendId());
+        validateBeanBlend(product.getCategory(), product.getServingMode(), dto.getBeanId(), dto.getBlendId());
+
         // 手动更新时间戳
         product.setUpdatedAt(LocalDateTime.now());
 
         productMapper.updateById(product);
         menuCacheService.invalidate();
         return dtoConverter.toProductDTO(product);
+    }
+
+    /**
+     * 豆/拼配挂接校验（2.8）：咖啡系列二选一、非咖啡/烘焙 NULL、体验商品 bean 必填、bean/blend 存在且 active。
+     */
+    private void validateBeanBlend(String category, String servingMode, Long beanId, Long blendId) {
+        if (beanId != null && blendId != null) {
+            throw new BusinessException("bean_id 与 blend_id 只允许二选一");
+        }
+        boolean coffee = COFFEE_CATEGORIES.contains(category);
+        if (coffee) {
+            if ("FIXED_COMBINATION".equals(servingMode)) {
+                if (beanId == null) throw new BusinessException("体验商品必须挂单品豆（bean_id）");
+            } else if (beanId == null && blendId == null) {
+                throw new BusinessException("咖啡商品必须挂单品豆或拼配豆");
+            }
+        } else {
+            if (beanId != null || blendId != null) {
+                throw new BusinessException("非咖啡/烘焙商品不能挂豆/拼配");
+            }
+        }
+        if (beanId != null) {
+            CoffeeBean bean = beanMapper.selectById(beanId);
+            if (bean == null) throw new BusinessException("单品豆不存在: " + beanId);
+            if (!"active".equals(bean.getStatus())) throw new BusinessException("inactive 豆禁止挂接: " + bean.getCode());
+        }
+        if (blendId != null) {
+            CoffeeBlend blend = blendMapper.selectById(blendId);
+            if (blend == null) throw new BusinessException("拼配豆不存在: " + blendId);
+            if (!"active".equals(blend.getStatus())) throw new BusinessException("inactive 拼配禁止挂接: " + blend.getCode());
+        }
     }
 
     @Transactional

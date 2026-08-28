@@ -1,10 +1,18 @@
 package com.cozy.order.service.converter;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.cozy.order.dto.response.BeanProfileDTO;
+import com.cozy.order.dto.response.BlendCompositionItem;
+import com.cozy.order.dto.response.BlendProfileDTO;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.ShopOrderItemDTO;
+import com.cozy.order.entity.CoffeeBean;
+import com.cozy.order.entity.CoffeeBlend;
 import com.cozy.order.entity.CoffeeProduct;
 import com.cozy.order.entity.ShopOrderItem;
+import com.cozy.order.mapper.CoffeeBeanMapper;
+import com.cozy.order.mapper.CoffeeBlendMapper;
 import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.service.product.ProductAddonResolver;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +39,8 @@ public class OrderDtoConverter {
     private final ObjectMapper objectMapper;
     private final CoffeeProductMapper productMapper;
     private final ProductAddonResolver productAddonResolver;
+    private final CoffeeBeanMapper beanMapper;
+    private final CoffeeBlendMapper blendMapper;
 
     /**
      * CoffeeProduct entity -> DTO
@@ -50,8 +60,55 @@ public class OrderDtoConverter {
         dto.setSizeType(entity.getSizeType());
         dto.setSugarType(entity.getSugarType());
         dto.setTempType(entity.getTempType());
+        dto.setBeanId(entity.getBeanId());
+        dto.setBlendId(entity.getBlendId());
         dto.setAddonGroups(productAddonResolver.loadMenuGroups(entity.getId()));
+        if (entity.getBeanId() != null) {
+            CoffeeBean bean = beanMapper.selectById(entity.getBeanId());
+            if (bean != null) dto.setBeanProfile(toBeanProfile(bean));
+        }
+        if (entity.getBlendId() != null) {
+            CoffeeBlend blend = blendMapper.selectById(entity.getBlendId());
+            if (blend != null) dto.setBlendProfile(toBlendProfile(blend));
+        }
         return dto;
+    }
+
+    private BeanProfileDTO toBeanProfile(CoffeeBean bean) {
+        BeanProfileDTO p = new BeanProfileDTO();
+        p.setId(bean.getId());
+        p.setCode(bean.getCode());
+        p.setName(bean.getName());
+        p.setNameEn(bean.getNameEn());
+        p.setRoast(bean.getRoast());
+        p.setFlavorNotes(bean.getFlavorNotes());
+        p.setBody(bean.getBody());
+        p.setAcidity(bean.getAcidity());
+        return p;
+    }
+
+    private BlendProfileDTO toBlendProfile(CoffeeBlend blend) {
+        BlendProfileDTO p = new BlendProfileDTO();
+        p.setId(blend.getId());
+        p.setCode(blend.getCode());
+        p.setName(blend.getName());
+        p.setNameEn(blend.getNameEn());
+        p.setRoast(blend.getRoast());
+        p.setFlavorNotes(blend.getFlavorNotes());
+        p.setBody(blend.getBody());
+        p.setAcidity(blend.getAcidity());
+        p.setComposition(parseComposition(blend.getCompositionJson()));
+        return p;
+    }
+
+    private List<BlendCompositionItem> parseComposition(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<BlendCompositionItem>>() {});
+        } catch (Exception e) {
+            log.warn("composition_json 解析失败: {}", json, e);
+            return List.of();
+        }
     }
 
     /**

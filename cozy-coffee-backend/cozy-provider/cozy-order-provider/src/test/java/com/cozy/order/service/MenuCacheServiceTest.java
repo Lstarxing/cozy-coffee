@@ -3,6 +3,8 @@ package com.cozy.order.service;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.entity.CoffeeProduct;
+import com.cozy.order.mapper.CoffeeBeanMapper;
+import com.cozy.order.mapper.CoffeeBlendMapper;
 import com.cozy.order.mapper.CoffeeProductAddonGroupMapper;
 import com.cozy.order.mapper.CoffeeProductAddonMapper;
 import com.cozy.order.mapper.CoffeeProductMapper;
@@ -43,7 +45,8 @@ class MenuCacheServiceTest {
                 mock(CoffeeProductAddonMapper.class),
                 mock(ProductAddonMapper.class),
                 new ObjectMapper());
-        OrderDtoConverter dtoConverter = new OrderDtoConverter(new ObjectMapper(), productMapper, addonResolver);
+        OrderDtoConverter dtoConverter = new OrderDtoConverter(new ObjectMapper(), productMapper, addonResolver,
+                mock(CoffeeBeanMapper.class), mock(CoffeeBlendMapper.class));
 
         ValueOperations<String, Object> valueOps = mock(ValueOperations.class);
         ValueOperations<String, String> stringValueOps = mock(ValueOperations.class);

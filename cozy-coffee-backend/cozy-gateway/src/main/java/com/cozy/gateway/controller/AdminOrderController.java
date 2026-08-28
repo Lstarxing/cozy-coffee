@@ -5,6 +5,9 @@ import com.cozy.gateway.service.AdminListService;
 import com.cozy.gateway.service.AdminOrderCommandService;
 import com.cozy.order.api.OrderService;
 import com.cozy.order.dto.request.AddonGroupRequest;
+import com.cozy.order.dto.response.CoffeeBeanDTO;
+import com.cozy.order.dto.response.CoffeeBlendDTO;
+import com.cozy.order.dto.response.CoffeeOriginDTO;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.ProductAddonDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
@@ -87,4 +90,33 @@ public class AdminOrderController {
         orderService.saveAddonGroups(productId, groups);
         return Result.success();
     }
+
+    // ==================== 内容档案（产区/单品豆/拼配豆） ====================
+
+    @GetMapping("/content/origins")
+    public Result<List<CoffeeOriginDTO>> listOrigins() { return Result.success(orderService.listOrigins()); }
+
+    @PostMapping("/content/origins")
+    public Result<CoffeeOriginDTO> saveOrigin(@RequestBody CoffeeOriginDTO origin) { return Result.success(orderService.saveOrigin(origin)); }
+
+    @DeleteMapping("/content/origins/{id}")
+    public Result<Void> deleteOrigin(@PathVariable Long id) { orderService.deleteOrigin(id); return Result.success(null); }
+
+    @GetMapping("/content/beans")
+    public Result<List<CoffeeBeanDTO>> listBeans() { return Result.success(orderService.listBeans()); }
+
+    @PostMapping("/content/beans")
+    public Result<CoffeeBeanDTO> saveBean(@RequestBody CoffeeBeanDTO bean) { return Result.success(orderService.saveBean(bean)); }
+
+    @DeleteMapping("/content/beans/{id}")
+    public Result<Void> deleteBean(@PathVariable Long id) { orderService.deleteBean(id); return Result.success(null); }
+
+    @GetMapping("/content/blends")
+    public Result<List<CoffeeBlendDTO>> listBlends() { return Result.success(orderService.listBlends()); }
+
+    @PostMapping("/content/blends")
+    public Result<CoffeeBlendDTO> saveBlend(@RequestBody CoffeeBlendDTO blend) { return Result.success(orderService.saveBlend(blend)); }
+
+    @DeleteMapping("/content/blends/{id}")
+    public Result<Void> deleteBlend(@PathVariable Long id) { orderService.deleteBlend(id); return Result.success(null); }
 }

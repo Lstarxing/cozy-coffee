@@ -6,6 +6,9 @@ import com.cozy.order.dto.request.CartCheckRequest;
 import com.cozy.order.dto.request.CreateOrderRequest;
 import com.cozy.order.dto.request.AddonGroupRequest;
 import com.cozy.order.dto.response.CartCheckResultDTO;
+import com.cozy.order.dto.response.CoffeeBeanDTO;
+import com.cozy.order.dto.response.CoffeeBlendDTO;
+import com.cozy.order.dto.response.CoffeeOriginDTO;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.MonthlyStatsDTO;
 import com.cozy.order.dto.response.ProductAddonDTO;
@@ -14,6 +17,7 @@ import com.cozy.order.service.order.OrderPreviewer;
 import com.cozy.order.service.order.OrderQueryService;
 import com.cozy.order.service.order.OrderCreator;
 import com.cozy.order.service.order.OrderCommandService;
+import com.cozy.order.service.product.CoffeeContentAdminService;
 import com.cozy.order.service.product.ProductAdminService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,9 +28,9 @@ import java.util.Map;
 
 /**
  * 订单服务 Dubbo 入口 - thin delegator。
- * 全部业务逻辑委托给 6 个子 Service：
+ * 全部业务逻辑委托给子 Service：
  * OrderQueryService / OrderCreator / OrderCommandService / ProductAdminService
- * OrderDtoEnricher / OrderInfraService
+ * CoffeeContentAdminService / OrderPreviewer
  */
 @Slf4j
 @DubboService
@@ -37,6 +41,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderCreator creator;
     private final OrderCommandService commandService;
     private final ProductAdminService productAdminService;
+    private final CoffeeContentAdminService contentAdminService;
     private final OrderPreviewer previewer;
 
     // ==================== 商品查询 ====================
@@ -172,5 +177,52 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void saveAddonGroups(Long productId, List<AddonGroupRequest> groups) {
         productAdminService.saveAddonGroups(productId, groups);
+    }
+
+    // ==================== 内容档案（管理端：产区/单品豆/拼配豆） ====================
+
+    @Override
+    public List<CoffeeOriginDTO> listOrigins() {
+        return contentAdminService.listOrigins();
+    }
+
+    @Override
+    public CoffeeOriginDTO saveOrigin(CoffeeOriginDTO origin) {
+        return contentAdminService.saveOrigin(origin);
+    }
+
+    @Override
+    public void deleteOrigin(Long id) {
+        contentAdminService.deleteOrigin(id);
+    }
+
+    @Override
+    public List<CoffeeBeanDTO> listBeans() {
+        return contentAdminService.listBeans();
+    }
+
+    @Override
+    public CoffeeBeanDTO saveBean(CoffeeBeanDTO bean) {
+        return contentAdminService.saveBean(bean);
+    }
+
+    @Override
+    public void deleteBean(Long id) {
+        contentAdminService.deleteBean(id);
+    }
+
+    @Override
+    public List<CoffeeBlendDTO> listBlends() {
+        return contentAdminService.listBlends();
+    }
+
+    @Override
+    public CoffeeBlendDTO saveBlend(CoffeeBlendDTO blend) {
+        return contentAdminService.saveBlend(blend);
+    }
+
+    @Override
+    public void deleteBlend(Long id) {
+        contentAdminService.deleteBlend(id);
     }
 }
