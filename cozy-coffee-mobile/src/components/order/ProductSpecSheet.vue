@@ -17,6 +17,9 @@
         <!-- V2 豆档案（P2 收尾）：烘焙 · 风味 · 醇厚 · 酸度 -->
         <BeanBlendProfile v-if="displayProduct.beanProfile || displayProduct.blendProfile" :product="displayProduct" />
 
+        <!-- 固定组合出杯说明（一豆两喝/三喝） -->
+        <view v-if="displayProduct.servingDesc" class="serving-desc">{{ displayProduct.servingDesc }}</view>
+
         <view v-if="sizeOptions.length > 1" class="spec-section">
           <text class="spec-title">杯型</text>
           <view class="option-grid">
@@ -214,6 +217,7 @@ function confirm() {
 .sheet-scroll { max-height: 54vh; padding: 0 32rpx; box-sizing: border-box; }
 .spec-section { padding: 26rpx 0 6rpx; }
 .spec-title { display: block; margin-bottom: 16rpx; color: $cozy-ink; font-size: 27rpx; font-weight: 650; }
+.serving-desc { padding: 8rpx 0 4rpx; color: $cozy-muted; font-size: 22rpx; line-height: 1.6; }
 .option-grid { display: flex; flex-wrap: wrap; gap: 14rpx; }
 .option {
   min-width: 148rpx;

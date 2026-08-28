@@ -258,6 +258,7 @@ function createEmptyForm() {
     sizeType: 'MEDIUM_LARGE',
     sugarType: 'FREE_CHOICE',
     tempType: 'HOT_COLD',
+    defaultSugarLevel: 'STANDARD',
     beanId: null,
     blendId: null
   }
@@ -328,6 +329,7 @@ const editProduct = (row) => {
     sizeType: row.sizeType || 'MEDIUM_LARGE',
     sugarType: row.sugarType || 'FREE_CHOICE',
     tempType: row.tempType || 'HOT_COLD',
+    defaultSugarLevel: row.defaultSugarLevel || (row.sugarType && row.sugarType !== 'NO_SUGAR_ONLY' ? 'STANDARD' : null),
     beanId: row.beanId || null,
     blendId: row.blendId || null
   }
@@ -352,6 +354,7 @@ const saveProduct = async () => {
       sizeType: productForm.value.sizeType || 'MEDIUM_LARGE',
       sugarType: productForm.value.sugarType || 'FREE_CHOICE',
       tempType: productForm.value.tempType || 'HOT_COLD',
+      defaultSugarLevel: productForm.value.defaultSugarLevel || null,
       beanId: productForm.value.beanId || null,
       blendId: productForm.value.blendId || null
     }

@@ -343,14 +343,16 @@ async function loadMenu() {
 
 function categoryName(code) {
   return ({
-    espresso: '意式咖啡', coffee: '经典咖啡', latte: '拿铁系列', signature: '季节特调',
-    soe: '手冲精品', bakery: '烘焙甜点', dessert: '甜品', addon: '加料', other: '其他'
+    espresso: '经典咖啡', coffee: '经典咖啡', latte: '拿铁系列', signature: '招牌特调',
+    soe: '手冲精品', bakery: '烘焙轻食', dessert: '甜品', addon: '加料', other: '其他',
+    milk: '奶咖', specialty: '精品咖啡', non_coffee: '非咖啡'
   })[code] || code
 }
 function categoryEn(code) {
   return ({
-    espresso: 'ESPRESSO', coffee: 'CLASSIC COFFEE', latte: 'LATTE', signature: 'SIGNATURE',
-    soe: 'HAND BREW', bakery: 'BAKERY', dessert: 'DESSERT', addon: 'ADD-ON', other: 'MORE'
+    espresso: 'CLASSIC COFFEE', coffee: 'CLASSIC COFFEE', latte: 'LATTE', signature: 'SIGNATURE',
+    soe: 'HAND BREW', bakery: 'BAKERY', dessert: 'DESSERT', addon: 'ADD-ON', other: 'MORE',
+    milk: 'MILK', specialty: 'SPECIALTY', non_coffee: 'NON-COFFEE'
   })[code] || 'COZY'
 }
 

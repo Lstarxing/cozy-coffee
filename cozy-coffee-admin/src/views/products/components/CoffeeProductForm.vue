@@ -156,6 +156,25 @@
         </el-form-item>
       </el-col>
     </el-row>
+
+    <el-row :gutter="20">
+      <el-col :span="12">
+        <el-form-item label="默认甜度">
+          <el-select
+            v-model="form.defaultSugarLevel"
+            placeholder="默认额外加糖等级"
+            style="width: 100%"
+            :disabled="form.sugarType === 'NO_SUGAR_ONLY'"
+          >
+            <el-option label="标准糖" value="STANDARD" />
+            <el-option label="少糖" value="LESS" />
+            <el-option label="半糖" value="HALF" />
+            <el-option label="不另外加糖" value="NO_ADDED_SUGAR" />
+          </el-select>
+          <div class="form-hint-inline">澳白/美式默认「不另外加糖」；NO_SUGAR_ONLY 商品留空</div>
+        </el-form-item>
+      </el-col>
+    </el-row>
   </div>
 
   <!-- 豆/拼配挂接（V2：咖啡类必选，bean_id / blend_id 二选一） -->
@@ -195,7 +214,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { InfoFilled, Setting, Coffee } from '@element-plus/icons-vue'
 import ImageUploader from './ImageUploader.vue'
 
@@ -226,6 +245,11 @@ const beanBlendValue = computed({
     else if (v && v.startsWith('blend:')) { f.blendId = Number(v.slice(6)); f.beanId = null }
     else { f.beanId = null; f.blendId = null }
   }
+})
+
+// NO_SUGAR_ONLY 商品无糖度配置 → default_sugar_level 必须 NULL
+watch(() => props.form.sugarType, (v) => {
+  if (v === 'NO_SUGAR_ONLY') props.form.defaultSugarLevel = null
 })
 </script>
 

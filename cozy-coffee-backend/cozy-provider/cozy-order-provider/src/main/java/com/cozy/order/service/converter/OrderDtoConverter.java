@@ -60,6 +60,9 @@ public class OrderDtoConverter {
         dto.setSizeType(entity.getSizeType());
         dto.setSugarType(entity.getSugarType());
         dto.setTempType(entity.getTempType());
+        dto.setDefaultSugarLevel(entity.getDefaultSugarLevel());
+        dto.setServingMode(entity.getServingMode());
+        dto.setServingDesc(entity.getServingDesc());
         dto.setBeanId(entity.getBeanId());
         dto.setBlendId(entity.getBlendId());
         dto.setAddonGroups(productAddonResolver.loadMenuGroups(entity.getId()));

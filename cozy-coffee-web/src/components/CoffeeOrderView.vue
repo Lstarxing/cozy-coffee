@@ -132,21 +132,23 @@ const updateCart = (newCart) => {
   cartItems.value = newCart
 }
 
-// 分类标签 - 使用 Lucide 图标
+// 分类标签（V2 6 系列大写） - 使用 Lucide 图标
 const categories = [
   { value: 'all', label: '全部', icon: markRaw(Tag) },
-  { value: 'espresso', label: '意式咖啡', icon: markRaw(Coffee) },
-  { value: 'signature', label: '季节限定', icon: markRaw(Star) },
-  { value: 'soe', label: '精品手冲', icon: markRaw(Coffee) },
-  { value: 'bakery', label: '烘焙甜品', icon: markRaw(Cake) }
+  { value: 'ESPRESSO', label: '经典咖啡', icon: markRaw(Coffee) },
+  { value: 'MILK', label: '奶咖', icon: markRaw(Coffee) },
+  { value: 'SIGNATURE', label: '招牌特调', icon: markRaw(Star) },
+  { value: 'SPECIALTY', label: '精品咖啡', icon: markRaw(Sparkles) },
+  { value: 'NON_COFFEE', label: '非咖啡', icon: markRaw(Coffee) },
+  { value: 'BAKERY', label: '烘焙轻食', icon: markRaw(Cake) }
 ]
 const activeCategory = ref('all')
 
 // 筛选后的商品
 const filteredProducts = computed(() => {
-  // 始终过滤掉 addon 类型的商品（因为它们已经在规格里了）
-  let displayProducts = products.value.filter(p => p.category !== 'addon' && p.name !== '额外浓缩')
-  
+  // 始终过滤掉加料商品（它们在规格里已作为加料组出现）
+  let displayProducts = products.value.filter(p => p.category !== 'addon')
+
   if (activeCategory.value === 'all') {
     return displayProducts
   }

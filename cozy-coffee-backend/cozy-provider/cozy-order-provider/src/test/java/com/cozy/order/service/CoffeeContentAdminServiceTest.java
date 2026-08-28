@@ -1,6 +1,7 @@
 package com.cozy.order.service;
 
 import com.cozy.common.exception.BusinessException;
+import com.cozy.order.dto.request.AddonGroupRequest;
 import com.cozy.order.dto.response.BlendCompositionItem;
 import com.cozy.order.dto.response.CoffeeBeanDTO;
 import com.cozy.order.dto.response.CoffeeBlendDTO;
@@ -209,7 +210,8 @@ class CoffeeContentAdminServiceTest {
     private static ProductAdminService productService(CoffeeBeanMapper beanMapper, CoffeeBlendMapper blendMapper) {
         return new ProductAdminService(mock(CoffeeProductMapper.class), mock(OrderDtoConverter.class),
                 mock(MenuCacheService.class), mock(CoffeeProductAddonGroupMapper.class),
-                mock(CoffeeProductAddonMapper.class), mock(ProductAddonMapper.class), beanMapper, blendMapper);
+                mock(CoffeeProductAddonMapper.class), mock(ProductAddonMapper.class), beanMapper, blendMapper,
+                new ObjectMapper());
     }
 
     private static CoffeeProductDTO productDTO(String category, Long beanId, Long blendId) {
@@ -269,7 +271,76 @@ class CoffeeContentAdminServiceTest {
         });
         ProductAdminService svc = new ProductAdminService(mock(CoffeeProductMapper.class), converter,
                 mock(MenuCacheService.class), mock(CoffeeProductAddonGroupMapper.class),
-                mock(CoffeeProductAddonMapper.class), mock(ProductAddonMapper.class), beanMapper, mock(CoffeeBlendMapper.class));
-        assertEquals("P", svc.addProduct(productDTO("SPECIALTY", 1L, null)).getName());
+                mock(CoffeeProductAddonMapper.class), mock(ProductAddonMapper.class), beanMapper, mock(CoffeeBlendMapper.class),
+                new ObjectMapper());
+        CoffeeProductDTO dto = productDTO("SPECIALTY", 1L, null);
+        dto.setSizeType("DEFAULT"); // DEFAULT 基础价 price=20 合法
+        dto.setDefaultSugarLevel("STANDARD"); // addProduct 默认 FREE_CHOICE → default_sugar_level 必填
+        assertEquals("P", svc.addProduct(dto).getName());
+    }
+
+    // ── 2.8 完整性校验（价格互斥 / 甜度 / MILK 组规则） ──────
+
+    @Test
+    void addProduct_rejectsMediumLargeWithPrice() {
+        CoffeeBeanMapper beanMapper = mock(CoffeeBeanMapper.class);
+        when(beanMapper.selectById(1L)).thenReturn(bean(1L, "A", "active"));
+        CoffeeProductDTO dto = productDTO("MILK", 1L, null);
+        dto.setSizeType("MEDIUM_LARGE");
+        dto.setPrice(new BigDecimal("20"));
+        dto.setPriceMedium(new BigDecimal("20"));
+        dto.setPriceLarge(new BigDecimal("24"));
+        ProductAdminService svc = productService(beanMapper, mock(CoffeeBlendMapper.class));
+        BusinessException ex = assertThrows(BusinessException.class, () -> svc.addProduct(dto));
+        assertTrue(ex.getMessage().contains("price 必须为 NULL"));
+    }
+
+    @Test
+    void addProduct_rejectsNoSugarOnlyWithDefaultSugar() {
+        CoffeeBeanMapper beanMapper = mock(CoffeeBeanMapper.class);
+        when(beanMapper.selectById(1L)).thenReturn(bean(1L, "A", "active"));
+        CoffeeProductDTO dto = productDTO("SPECIALTY", 1L, null);
+        dto.setSugarType("NO_SUGAR_ONLY");
+        dto.setDefaultSugarLevel("STANDARD");
+        ProductAdminService svc = productService(beanMapper, mock(CoffeeBlendMapper.class));
+        BusinessException ex = assertThrows(BusinessException.class, () -> svc.addProduct(dto));
+        assertTrue(ex.getMessage().contains("必须为 NULL"));
+    }
+
+    @Test
+    void saveAddonGroups_milkCategoryRequiresMilkGroup() {
+        CoffeeProduct product = new CoffeeProduct();
+        product.setId(1L);
+        product.setCategory("MILK");
+        CoffeeProductMapper productMapper = mock(CoffeeProductMapper.class);
+        when(productMapper.selectById(1L)).thenReturn(product);
+        ProductAdminService svc = new ProductAdminService(productMapper, mock(OrderDtoConverter.class),
+                mock(MenuCacheService.class), mock(CoffeeProductAddonGroupMapper.class),
+                mock(CoffeeProductAddonMapper.class), mock(ProductAddonMapper.class),
+                mock(CoffeeBeanMapper.class), mock(CoffeeBlendMapper.class), new ObjectMapper());
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> svc.saveAddonGroups(1L, List.of()));
+        assertTrue(ex.getMessage().contains("必须有 MILK 组"));
+    }
+
+    @Test
+    void saveAddonGroups_espressoRejectsMilkGroup() {
+        CoffeeProduct product = new CoffeeProduct();
+        product.setId(1L);
+        product.setCategory("ESPRESSO");
+        CoffeeProductMapper productMapper = mock(CoffeeProductMapper.class);
+        when(productMapper.selectById(1L)).thenReturn(product);
+        ProductAdminService svc = new ProductAdminService(productMapper, mock(OrderDtoConverter.class),
+                mock(MenuCacheService.class), mock(CoffeeProductAddonGroupMapper.class),
+                mock(CoffeeProductAddonMapper.class), mock(ProductAddonMapper.class),
+                mock(CoffeeBeanMapper.class), mock(CoffeeBlendMapper.class), new ObjectMapper());
+        AddonGroupRequest milkGroup = new AddonGroupRequest();
+        milkGroup.setCategory("MILK");
+        milkGroup.setSelectionMode("SINGLE");
+        milkGroup.setMinSelect(1);
+        milkGroup.setMaxSelect(1);
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> svc.saveAddonGroups(1L, List.of(milkGroup)));
+        assertTrue(ex.getMessage().contains("不得有 MILK 组"));
     }
 }

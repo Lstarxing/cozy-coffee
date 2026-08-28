@@ -19,6 +19,8 @@ import com.cozy.order.mapper.CoffeeProductAddonMapper;
 import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.mapper.ProductAddonMapper;
 import com.cozy.common.exception.BusinessException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -51,6 +53,7 @@ public class ProductAdminService {
     private final ProductAddonMapper addonMapper;
     private final CoffeeBeanMapper beanMapper;
     private final CoffeeBlendMapper blendMapper;
+    private final ObjectMapper objectMapper;
 
     /** V2 咖啡系列分类：必须挂 bean_id / blend_id 二选一 */
     private static final Set<String> COFFEE_CATEGORIES = Set.of("ESPRESSO", "MILK", "SIGNATURE", "SPECIALTY");
@@ -89,12 +92,14 @@ public class ProductAdminService {
         product.setSizeType(dto.getSizeType() != null ? dto.getSizeType() : "MEDIUM_LARGE");
         product.setSugarType(dto.getSugarType() != null ? dto.getSugarType() : "FREE_CHOICE");
         product.setTempType(dto.getTempType() != null ? dto.getTempType() : "HOT_COLD");
+        product.setDefaultSugarLevel(dto.getDefaultSugarLevel()); // NO_SUGAR_ONLY 商品为 NULL
 
         // 手动设置时间戳（修复 MetaObjectHandler 可能未扫码到的问题）
         LocalDateTime now = LocalDateTime.now();
         product.setCreatedAt(now);
         product.setUpdatedAt(now);
 
+        validateIntegrity(product);
         productMapper.insert(product);
         menuCacheService.invalidate();
         return dtoConverter.toProductDTO(product);
@@ -136,6 +141,7 @@ public class ProductAdminService {
             product.setSugarType(dto.getSugarType());
         if (dto.getTempType() != null)
             product.setTempType(dto.getTempType());
+        product.setDefaultSugarLevel(dto.getDefaultSugarLevel()); // 表单始终下发；NO_SUGAR_ONLY 为 NULL
 
         if (dto.getImageUrl() != null)
             product.setImageUrl(dto.getImageUrl());
@@ -154,6 +160,7 @@ public class ProductAdminService {
         // 手动更新时间戳
         product.setUpdatedAt(LocalDateTime.now());
 
+        validateIntegrity(product);
         productMapper.updateById(product);
         menuCacheService.invalidate();
         return dtoConverter.toProductDTO(product);
@@ -187,6 +194,78 @@ public class ProductAdminService {
             CoffeeBlend blend = blendMapper.selectById(blendId);
             if (blend == null) throw new BusinessException("拼配豆不存在: " + blendId);
             if (!"active".equals(blend.getStatus())) throw new BusinessException("inactive 拼配禁止挂接: " + blend.getCode());
+        }
+    }
+
+    /**
+     * 2.8 完整性校验（Admin 保存时）：
+     * 价格互斥（size_type ↔ price/medium/large）、sugar_type ↔ default_sugar_level、serving_mode 双向。
+     */
+    private void validateIntegrity(CoffeeProduct product) {
+        boolean mediumLarge = "MEDIUM_LARGE".equals(product.getSizeType());
+        if (mediumLarge) {
+            if (product.getPrice() != null) throw new BusinessException("MEDIUM_LARGE 商品 price 必须为 NULL");
+            if (product.getPriceMedium() == null || product.getPriceLarge() == null) {
+                throw new BusinessException("MEDIUM_LARGE 商品中/大杯价必填");
+            }
+        } else {
+            if (product.getPrice() == null) throw new BusinessException("DEFAULT 商品基础价必填");
+            if (product.getPriceMedium() != null || product.getPriceLarge() != null) {
+                throw new BusinessException("DEFAULT 商品中/大杯价必须为 NULL");
+            }
+        }
+
+        if ("NO_SUGAR_ONLY".equals(product.getSugarType())) {
+            if (product.getDefaultSugarLevel() != null) {
+                throw new BusinessException("NO_SUGAR_ONLY 商品 default_sugar_level 必须为 NULL");
+            }
+        } else if (product.getSugarType() != null) {
+            if (product.getDefaultSugarLevel() == null) {
+                throw new BusinessException("FREE_CHOICE/MIN_LESS_SWEET 商品 default_sugar_level 必填");
+            }
+        }
+
+        if ("FIXED_COMBINATION".equals(product.getServingMode())) {
+            if (product.getServingConfig() == null || product.getServingDesc() == null || product.getServingDesc().isBlank()) {
+                throw new BusinessException("FIXED_COMBINATION 商品 serving_config/serving_desc 必填");
+            }
+            validateServingConfig(product.getServingConfig());
+        } else if (product.getServingMode() != null) {
+            if (product.getServingConfig() != null) {
+                throw new BusinessException("非固定组合 serving_config 必须为 NULL");
+            }
+        }
+    }
+
+    private void validateServingConfig(String json) {
+        try {
+            List<Map<String, Object>> config = objectMapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
+            if (config == null || config.isEmpty()) throw new BusinessException("serving_config 不能为空");
+            for (Map<String, Object> item : config) {
+                String type = String.valueOf(item.get("type"));
+                Object qty = item.get("quantity");
+                if (!Set.of("ESPRESSO", "POUR_OVER", "MILK_COFFEE").contains(type)) {
+                    throw new BusinessException("serving type 非法: " + type);
+                }
+                if (!(qty instanceof Number) || ((Number) qty).intValue() <= 0) {
+                    throw new BusinessException("serving quantity 必须 > 0");
+                }
+            }
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException("serving_config 格式非法");
+        }
+    }
+
+    /** 2.8：奶咖必须有 MILK 组；黑咖/手冲/冷萃不得有 MILK 组 */
+    private void validateMilkGroupRule(String category, List<AddonGroupRequest> groups) {
+        boolean hasMilkGroup = groups != null && groups.stream().anyMatch(g -> "MILK".equals(g.getCategory()));
+        if ("MILK".equals(category) && !hasMilkGroup) {
+            throw new BusinessException("奶咖必须有 MILK 组");
+        }
+        if (("ESPRESSO".equals(category) || "SPECIALTY".equals(category)) && hasMilkGroup) {
+            throw new BusinessException("黑咖/手冲/冷萃不得有 MILK 组");
         }
     }
 
@@ -237,6 +316,7 @@ public class ProductAdminService {
         if (product == null) {
             throw new BusinessException("商品不存在");
         }
+        validateMilkGroupRule(product.getCategory(), groups);
 
         Map<Long, ProductAddon> addonById = new HashMap<>();
         if (groups != null && !groups.isEmpty()) {

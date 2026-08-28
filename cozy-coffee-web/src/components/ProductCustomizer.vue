@@ -12,6 +12,7 @@
         <div class="product-header">
           <h3>{{ product.name }}</h3>
           <p v-if="product.description" class="product-desc-text">{{ product.description }}</p>
+          <p v-if="product.servingDesc" class="serving-desc-text">出杯：{{ product.servingDesc }}</p>
         </div>
 
         <div class="options-section">
@@ -441,6 +442,16 @@ const addToCart = () => {
   font-size: 13px;
   color: #8D6E63;
   line-height: 1.5;
+}
+
+.serving-desc-text {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #A9712F;
+  line-height: 1.5;
+  background: rgba(169, 113, 47, 0.08);
+  padding: 6px 10px;
+  border-radius: 8px;
 }
 
 .options-section {
