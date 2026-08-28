@@ -329,7 +329,11 @@ async function loadMenu() {
         })
       })
 
-    categories.value = Array.from(categoryMap.values())
+    categories.value = Array.from(categoryMap.values()).sort((a, b) => {
+      const ia = CATEGORY_ORDER.indexOf(a.id)
+      const ib = CATEGORY_ORDER.indexOf(b.id)
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
+    })
     if (pendingCategory) {
       const idx = categories.value.findIndex(c => c.id === pendingCategory)
       currentCategoryIndex.value = idx >= 0 ? idx : 0
@@ -359,6 +363,9 @@ const TAG_MAP = {
   'EXPERIENCE': '体验', 'CLASSIC': '经典', 'STRONG': '加浓'
 }
 const tagLabel = (t) => TAG_MAP[t] || t
+
+// 6 系列展示顺序（设计文档 3.1）：01经典 → 02奶咖 → 03特调 → 04精品 → 05非咖啡 → 06烘焙
+const CATEGORY_ORDER = ['espresso', 'milk', 'signature', 'specialty', 'non_coffee', 'bakery']
 function categoryEn(code) {
   return ({
     espresso: 'CLASSIC COFFEE', coffee: 'CLASSIC COFFEE', latte: 'LATTE', signature: 'SIGNATURE',
