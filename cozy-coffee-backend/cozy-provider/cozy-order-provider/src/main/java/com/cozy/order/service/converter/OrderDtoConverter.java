@@ -6,6 +6,7 @@ import com.cozy.order.dto.response.ShopOrderItemDTO;
 import com.cozy.order.entity.CoffeeProduct;
 import com.cozy.order.entity.ShopOrderItem;
 import com.cozy.order.mapper.CoffeeProductMapper;
+import com.cozy.order.service.product.ProductAddonResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,6 +30,7 @@ public class OrderDtoConverter {
 
     private final ObjectMapper objectMapper;
     private final CoffeeProductMapper productMapper;
+    private final ProductAddonResolver productAddonResolver;
 
     /**
      * CoffeeProduct entity -> DTO
@@ -48,6 +50,7 @@ public class OrderDtoConverter {
         dto.setSizeType(entity.getSizeType());
         dto.setSugarType(entity.getSugarType());
         dto.setTempType(entity.getTempType());
+        dto.setAddonGroups(productAddonResolver.loadMenuGroups(entity.getId()));
         return dto;
     }
 

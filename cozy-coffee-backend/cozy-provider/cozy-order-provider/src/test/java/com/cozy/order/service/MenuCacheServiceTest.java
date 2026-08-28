@@ -3,8 +3,12 @@ package com.cozy.order.service;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.entity.CoffeeProduct;
+import com.cozy.order.mapper.CoffeeProductAddonGroupMapper;
+import com.cozy.order.mapper.CoffeeProductAddonMapper;
 import com.cozy.order.mapper.CoffeeProductMapper;
+import com.cozy.order.mapper.ProductAddonMapper;
 import com.cozy.order.service.product.MenuCacheService;
+import com.cozy.order.service.product.ProductAddonResolver;
 import com.cozy.order.service.converter.OrderDtoConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +38,12 @@ class MenuCacheServiceTest {
         RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
         StringRedisTemplate stringRedisTemplate = mock(StringRedisTemplate.class);
         CoffeeProductMapper productMapper = mock(CoffeeProductMapper.class);
-        OrderDtoConverter dtoConverter = new OrderDtoConverter(new ObjectMapper(), productMapper);
+        ProductAddonResolver addonResolver = new ProductAddonResolver(
+                mock(CoffeeProductAddonGroupMapper.class),
+                mock(CoffeeProductAddonMapper.class),
+                mock(ProductAddonMapper.class),
+                new ObjectMapper());
+        OrderDtoConverter dtoConverter = new OrderDtoConverter(new ObjectMapper(), productMapper, addonResolver);
 
         ValueOperations<String, Object> valueOps = mock(ValueOperations.class);
         ValueOperations<String, String> stringValueOps = mock(ValueOperations.class);

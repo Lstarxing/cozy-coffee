@@ -3,6 +3,7 @@ import com.cozy.order.service.product.ProductPricingService;
 import com.cozy.order.service.product.ProductAddonResolver;
 import com.cozy.order.service.product.ProductRuleValidator;
 
+import com.cozy.order.dto.response.AddonGroupDTO;
 import com.cozy.order.entity.CoffeeProduct;
 import com.cozy.order.entity.CoffeeProductAddon;
 import com.cozy.order.entity.CoffeeProductAddonGroup;
@@ -63,6 +64,7 @@ class ProductPricingServiceTest {
         b.setAddonId(addonId);
         b.setIsDefault(isDefault);
         b.setPriceDelta(new BigDecimal(delta));
+        b.setSortOrder(1);
         return b;
     }
 
@@ -74,7 +76,7 @@ class ProductPricingServiceTest {
         return a;
     }
 
-    private static ProductPricingService pricing(List<CoffeeProductAddonGroup> groups,
+    private static ProductAddonResolver resolver(List<CoffeeProductAddonGroup> groups,
             List<CoffeeProductAddon> bindings, List<ProductAddon> addons) {
         CoffeeProductAddonGroupMapper groupMapper = mock(CoffeeProductAddonGroupMapper.class);
         when(groupMapper.selectList(any())).thenReturn(groups);
@@ -82,8 +84,12 @@ class ProductPricingServiceTest {
         when(productAddonMapper.selectList(any())).thenReturn(bindings);
         ProductAddonMapper addonMapper = mock(ProductAddonMapper.class);
         when(addonMapper.selectList(any())).thenReturn(addons);
-        ProductAddonResolver resolver = new ProductAddonResolver(groupMapper, productAddonMapper, addonMapper, new ObjectMapper());
-        return new ProductPricingService(new ProductRuleValidator(), resolver);
+        return new ProductAddonResolver(groupMapper, productAddonMapper, addonMapper, new ObjectMapper());
+    }
+
+    private static ProductPricingService pricing(List<CoffeeProductAddonGroup> groups,
+            List<CoffeeProductAddon> bindings, List<ProductAddon> addons) {
+        return new ProductPricingService(new ProductRuleValidator(), resolver(groups, bindings, addons));
     }
 
     // ── 经典拿铁：MILK 1/1 + SHOT 0/1 + SYRUP 0/1（互斥）+ OTHER 0/1 ──
@@ -278,5 +284,26 @@ class ProductPricingServiceTest {
         assertFalse(r2.valid()); // MIN_LESS_SWEET 不可不另外加糖
         var r3 = s.price(p, "MEDIUM", "HOT", "STANDARD", "[{\"code\":\"VANILLA_SYRUP\"}]");
         assertFalse(r3.valid()); // 摩卡无 SYRUP 组
+    }
+
+    // ── 菜单 / 详情 addonGroups 形状（P2-1）──────────────────
+    @Test
+    void menuGroups_returnGroupStructureWithPriceDelta() {
+        var r = resolver(latteGroups(), latteBindings(), latteAddons());
+        var groups = r.loadMenuGroups(1L);
+        assertEquals(4, groups.size()); // MILK / SHOT / SYRUP / OTHER
+        AddonGroupDTO milk = groups.get(0);
+        assertEquals("MILK", milk.getCategory());
+        assertEquals(1, milk.getMinSelect());
+        assertEquals(1, milk.getMaxSelect());
+        assertEquals(2, milk.getItems().size());
+        var oat = milk.getItems().stream()
+                .filter(i -> "OAT_MILK".equals(i.getCode())).findFirst().orElseThrow();
+        assertEquals(new BigDecimal("3"), oat.getPriceDelta());
+        assertFalse(oat.getIsDefault());
+        // 摩卡 / 玛奇朵无 SYRUP 组：MILK + SHOT 两组
+        var mochaGroups = resolver(mochaGroups(), mochaBindings(), mochaAddons()).loadMenuGroups(4L);
+        assertEquals(2, mochaGroups.size());
+        assertTrue(mochaGroups.stream().noneMatch(g -> "SYRUP".equals(g.getCategory())));
     }
 }

@@ -3,6 +3,7 @@ package com.cozy.order.dto.response;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class CoffeeProductDTO implements Serializable {
@@ -22,4 +23,7 @@ public class CoffeeProductDTO implements Serializable {
     private String sizeType;    // 杯型配置：DEFAULT/MEDIUM_LARGE/ALL_SIZES
     private String sugarType;   // 甜度配置：FREE_CHOICE/NO_SUGAR_ONLY/MIN_LESS_SWEET
     private String tempType;    // 温度配置：HOT_COLD/COLD_ONLY/HOT_ONLY（v2 砍温）
+
+    // V2（P2）：加料组（菜单/详情渲染规格选项）
+    private List<AddonGroupDTO> addonGroups;
 }

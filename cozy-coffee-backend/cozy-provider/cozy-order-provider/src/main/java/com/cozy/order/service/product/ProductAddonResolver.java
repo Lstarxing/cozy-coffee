@@ -1,6 +1,8 @@
 package com.cozy.order.service.product;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.cozy.order.dto.response.AddonGroupDTO;
+import com.cozy.order.dto.response.AddonItemDTO;
 import com.cozy.order.entity.CoffeeProductAddon;
 import com.cozy.order.entity.CoffeeProductAddonGroup;
 import com.cozy.order.entity.ProductAddon;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -140,6 +143,43 @@ public class ProductAddonResolver {
         }
     }
 
+    /**
+     * 菜单 / 详情展示用：读取商品加料组（组约束 + 组内项 + price_delta 权威价）。
+     */
+    public List<AddonGroupDTO> loadMenuGroups(Long productId) {
+        List<CoffeeProductAddonGroup> groups = loadGroups(productId);
+        if (groups.isEmpty()) {
+            return List.of();
+        }
+        Map<String, ResolvedAddon> byCode = loadResolvedAddons(groups);
+        List<AddonGroupDTO> result = new ArrayList<>();
+        for (CoffeeProductAddonGroup g : groups) {
+            AddonGroupDTO groupDto = new AddonGroupDTO();
+            groupDto.setCategory(g.getCategory());
+            groupDto.setSelectionMode(g.getSelectionMode());
+            groupDto.setMinSelect(g.getMinSelect());
+            groupDto.setMaxSelect(g.getMaxSelect());
+            groupDto.setSortOrder(g.getSortOrder());
+            List<AddonItemDTO> items = byCode.values().stream()
+                    .filter(a -> a.category().equals(g.getCategory()))
+                    .sorted(Comparator.comparingInt(ResolvedAddon::sortOrder))
+                    .map(a -> {
+                        AddonItemDTO item = new AddonItemDTO();
+                        item.setAddonId(a.addonId());
+                        item.setCode(a.code());
+                        item.setName(a.name());
+                        item.setPriceDelta(a.priceDelta());
+                        item.setIsDefault(a.isDefault());
+                        item.setSortOrder(a.sortOrder());
+                        return item;
+                    })
+                    .toList();
+            groupDto.setItems(items);
+            result.add(groupDto);
+        }
+        return result;
+    }
+
     private List<CoffeeProductAddonGroup> loadGroups(Long productId) {
         return groupMapper.selectList(new LambdaQueryWrapper<CoffeeProductAddonGroup>()
                 .eq(CoffeeProductAddonGroup::getProductId, productId)
@@ -176,7 +216,7 @@ public class ProductAddonResolver {
             byCode.put(addon.getCode(), new ResolvedAddon(
                     group.getCategory(), group.getMinSelect(), group.getMaxSelect(),
                     addon.getId(), addon.getCode(), addon.getName(),
-                    b.getPriceDelta(), Boolean.TRUE.equals(b.getIsDefault())));
+                    b.getPriceDelta(), Boolean.TRUE.equals(b.getIsDefault()), b.getSortOrder()));
         }
         return byCode;
     }
@@ -233,6 +273,6 @@ public class ProductAddonResolver {
     }
 
     private record ResolvedAddon(String category, int minSelect, int maxSelect,
-            Long addonId, String code, String name, BigDecimal priceDelta, boolean isDefault) {
+            Long addonId, String code, String name, BigDecimal priceDelta, boolean isDefault, int sortOrder) {
     }
 }
