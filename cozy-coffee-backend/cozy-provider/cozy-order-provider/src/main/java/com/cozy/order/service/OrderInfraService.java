@@ -24,7 +24,7 @@ import java.util.List;
  * 从 OrderServiceImpl 抽出，统一承担订单相关的 Redis ZSet 超时索引维护
  * 和 Outbox 券回滚事件投递。
  *
- * 被 OrderCreationService / OrderCommandService 共享调用。
+ * 被 OrderCreator / OrderCommandService 共享调用。
  */
 @Slf4j
 @Service

@@ -7,9 +7,9 @@ import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.MonthlyStatsDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
-import com.cozy.order.service.OrderPreviewService;
+import com.cozy.order.service.OrderPreviewer;
 import com.cozy.order.service.OrderQueryService;
-import com.cozy.order.service.OrderCreationService;
+import com.cozy.order.service.OrderCreator;
 import com.cozy.order.service.OrderCommandService;
 import com.cozy.order.service.ProductAdminService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ import java.util.Map;
 /**
  * 订单服务 Dubbo 入口 - thin delegator。
  * 全部业务逻辑委托给 6 个子 Service：
- * OrderQueryService / OrderCreationService / OrderCommandService / ProductAdminService
+ * OrderQueryService / OrderCreator / OrderCommandService / ProductAdminService
  * OrderDtoEnricher / OrderInfraService
  */
 @Slf4j
@@ -31,10 +31,10 @@ import java.util.Map;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderQueryService queryService;
-    private final OrderCreationService creationService;
+    private final OrderCreator creator;
     private final OrderCommandService commandService;
     private final ProductAdminService productAdminService;
-    private final OrderPreviewService previewService;
+    private final OrderPreviewer previewer;
 
     // ==================== 商品查询 ====================
 
@@ -89,12 +89,12 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public CartCheckResultDTO checkCart(Long userId, String memberLevel, CartCheckRequest request) {
-        return previewService.preview(userId, memberLevel, request);
+        return previewer.preview(userId, memberLevel, request);
     }
 
     @Override
     public ShopOrderDTO createOrder(Long userId, String memberLevel, String idempotencyKey, CreateOrderRequest request) {
-        return creationService.createOrder(userId, memberLevel, idempotencyKey, request);
+        return creator.createOrder(userId, memberLevel, idempotencyKey, request);
     }
 
     // ==================== 订单状态变更 ====================

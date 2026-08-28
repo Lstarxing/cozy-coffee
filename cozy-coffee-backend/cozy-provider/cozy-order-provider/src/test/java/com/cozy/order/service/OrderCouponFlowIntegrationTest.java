@@ -10,7 +10,7 @@ import com.cozy.order.dto.request.CreateOrderRequest;
 import com.cozy.order.dto.request.OrderItemRequest;
 import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
-import com.cozy.order.service.OrderCreationService;
+import com.cozy.order.service.OrderCreator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,10 +45,10 @@ public class OrderCouponFlowIntegrationTest {
     private OrderService orderService;
 
     @Autowired
-    private OrderPreviewService previewService;
+    private OrderPreviewer previewService;
 
     @Autowired
-    private OrderCreationService creationService;
+    private OrderCreator creationService;
 
     @MockBean
     private PointsMallService pointsMallService;

@@ -24,11 +24,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-class OrderPreviewServiceTest {
+class OrderPreviewerTest {
 
     private CoffeeProductMapper productMapper;
     private OrderRewardService rewardService;
-    private OrderPreviewService service;
+    private OrderPreviewer service;
 
     @BeforeEach
     void setUp() {
@@ -40,7 +40,7 @@ class OrderPreviewServiceTest {
                 mock(ProductAddonMapper.class),
                 new ObjectMapper());
         ProductPricingService pricing = new ProductPricingService(new ProductRuleValidator(), addonResolver);
-        service = new OrderPreviewService(productMapper, new ObjectMapper(), rewardService, pricing);
+        service = new OrderPreviewer(productMapper, new ObjectMapper(), rewardService, pricing);
     }
 
     @Test
@@ -86,7 +86,7 @@ class OrderPreviewServiceTest {
         member.setMemberLevel("gold");
         member.setExpTotal(1600);
         when(memberService.getMemberByUserId(7L)).thenReturn(member);
-        Field field = OrderPreviewService.class.getDeclaredField("memberService");
+        Field field = OrderPreviewer.class.getDeclaredField("memberService");
         field.setAccessible(true);
         field.set(service, memberService);
 

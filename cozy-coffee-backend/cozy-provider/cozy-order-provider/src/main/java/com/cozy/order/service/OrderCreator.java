@@ -18,7 +18,7 @@ import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.mapper.ShopOrderMapper;
 import com.cozy.order.mapper.ShopOrderItemMapper;
 import com.cozy.order.service.PickupCodeService;
-import com.cozy.order.service.OrderPreviewService;
+import com.cozy.order.service.OrderPreviewer;
 import com.cozy.order.service.ProductPricingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +43,7 @@ import java.util.concurrent.ConcurrentMap;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OrderCreationService {
+public class OrderCreator {
 
     private final CoffeeProductMapper productMapper;
     private final ShopOrderMapper orderMapper;
@@ -55,7 +55,7 @@ public class OrderCreationService {
     private final OrderDtoEnricher orderDtoEnricher;
     private final OrderInfraService orderInfraService;
     private final TransactionTemplate transactionTemplate;
-    private final OrderPreviewService orderPreviewService;
+    private final OrderPreviewer orderPreviewer;
     private final ProductPricingService productPricingService;
 
     private final ConcurrentMap<String, Object> idempotencyLocks = new ConcurrentHashMap<>();
@@ -112,7 +112,7 @@ public class OrderCreationService {
             return replay;
         }
 
-        orderPreviewService.validateForCreate(userId, memberLevel, request);
+        orderPreviewer.validateForCreate(userId, memberLevel, request);
 
         // 构建订单项列表
         List<OrderItemRequest> itemRequests = request.getItems();

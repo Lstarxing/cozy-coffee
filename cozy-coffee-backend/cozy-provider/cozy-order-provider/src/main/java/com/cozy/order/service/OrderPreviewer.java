@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OrderPreviewService {
+public class OrderPreviewer {
 
     private static final String PRICING_RULE_VERSION = "v1";
     private static final Long FIXED_STORE_ID = 1L;

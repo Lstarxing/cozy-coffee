@@ -12,7 +12,16 @@
 ## 命名
 
 - `XxxController` / `XxxService` / `XxxServiceImpl` / `XxxMapper` / `XxxDTO` / `XxxRequest` / `XxxResponse`
-- Service 名与职责匹配：`XxxResolver`（解析配置）、`XxxValidator`（规则校验）、`XxxCalculator`（纯计算）、`XxxAssembler`（DTO 转换）
+- **核心原则：RPC Service 接口化；Provider 内部组件职责化。**
+  - 跨 RPC（Dubbo）：`XxxService`（接口，cozy-api）→ `XxxServiceImpl`（provider）
+  - 内部业务组件：**不用接口**，按真实职责命名——`XxxService` 仅在确实是 use-case service 时使用
+  - "Service" 不是万能后缀：不是所有业务类都叫 `XxxService`
+- 职责后缀表：
+  - 规则类：`XxxValidator` / `XxxResolver` / `XxxCalculator` / `XxxParser` / `XxxAssembler` / `XxxFactory` / `XxxPolicy`
+  - 用例类：`XxxService`（如 `ProductPricingService`、`OrderQueryService`）或 `Xxxer`（如 `OrderPreviewer`、`OrderCreator`）
+  - 数据访问：`XxxMapper` / `XxxRepository`
+  - 数据对象：`XxxEntity` / `XxxRequest` / `XxxResponse` / `XxxVO`
+- Spring `@Service` 是容器注册语义，与类名 `Validator/Resolver` 职责语义不冲突
 - 避免 `XxxManager` / `XxxHelper` / `XxxUtil` 承担业务职责
 - boolean 方法用 is/has/can/should 语义；`getXxx()` 不执行计算/副作用
 

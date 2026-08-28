@@ -32,7 +32,7 @@ class OrderIdempotencyTest {
         when(enricher.getOrderItemsByOrderId(99L)).thenReturn(List.of());
         when(enricher.toOrderDTO(existing, List.of())).thenReturn(dto);
 
-        OrderCreationService service = service(orderMapper, enricher);
+        OrderCreator service = service(orderMapper, enricher);
         ShopOrderDTO result = service.createOrder(7L, "basic", "key-1", new CreateOrderRequest());
 
         assertEquals(99L, result.getId());
@@ -47,12 +47,12 @@ class OrderIdempotencyTest {
         assertEquals(BusinessErrorCode.IDEMPOTENCY_KEY_INVALID, error.getCode());
     }
 
-    private OrderCreationService service(ShopOrderMapper orderMapper, OrderDtoEnricher enricher) {
-        return new OrderCreationService(
+    private OrderCreator service(ShopOrderMapper orderMapper, OrderDtoEnricher enricher) {
+        return new OrderCreator(
                 mock(CoffeeProductMapper.class), orderMapper, mock(ShopOrderItemMapper.class),
                 mock(PickupCodeService.class), new ObjectMapper(),
                 mock(OrderDtoConverter.class), mock(OrderRewardService.class), enricher,
-                mock(OrderInfraService.class), mock(TransactionTemplate.class), mock(OrderPreviewService.class),
+                mock(OrderInfraService.class), mock(TransactionTemplate.class), mock(OrderPreviewer.class),
                 mock(ProductPricingService.class));
     }
 }

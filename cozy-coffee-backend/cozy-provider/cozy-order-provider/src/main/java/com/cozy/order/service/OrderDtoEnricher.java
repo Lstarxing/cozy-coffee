@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  * 从 OrderServiceImpl 抽出，统一承担 ShopOrder entity -> ShopOrderDTO 的完整装配
  * （含会员信息查询、商品明细加载、过期信息填充）。
  *
- * 被 OrderQueryService / OrderCreationService / OrderCommandService 共享调用。
+ * 被 OrderQueryService / OrderCreator / OrderCommandService 共享调用。
  */
 @Slf4j
 @Service
