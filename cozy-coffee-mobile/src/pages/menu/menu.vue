@@ -325,7 +325,7 @@ async function loadMenu() {
           ...p,
           productId: String(p.id),
           image: resolveImageUrl(p.imageUrl) || resolveImageUrl(p.image) || '/static/images/default-product.png',
-          price: Number(p.price || 0)
+          price: Number(p.priceMedium ?? p.price ?? 0)
         })
       })
 

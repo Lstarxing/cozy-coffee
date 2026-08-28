@@ -57,7 +57,7 @@
           </div>
           <p class="product-desc">{{ product.description }}</p>
           <div class="product-footer">
-            <span class="price">¥{{ product.price }}</span>
+            <span class="price">¥{{ product.priceMedium || product.price }}</span>
             <button class="add-btn" @click="openCustomizer(product)">选规格</button>
           </div>
         </div>
