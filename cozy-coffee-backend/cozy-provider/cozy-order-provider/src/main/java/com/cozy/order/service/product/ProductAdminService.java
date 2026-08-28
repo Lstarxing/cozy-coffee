@@ -274,6 +274,9 @@ public class ProductAdminService {
                 if (!"active".equals(addon.getStatus())) {
                     throw new BusinessException("inactive 加料禁止绑定: " + addon.getCode());
                 }
+                if (!group.getCategory().equals(addon.getCategory())) {
+                    throw new BusinessException("加料类别与组不匹配: " + group.getCategory() + " vs " + addon.getCategory() + " (" + addon.getCode() + ")");
+                }
                 if (item.getPriceDelta() == null || item.getPriceDelta().signum() < 0) {
                     throw new BusinessException("price_delta 禁止负值");
                 }

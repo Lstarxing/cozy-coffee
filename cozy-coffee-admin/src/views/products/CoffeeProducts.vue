@@ -136,9 +136,15 @@
       </template>
 
       <template #actions>
-        <el-table-column label="操作" width="140" fixed="right" align="center">
+        <el-table-column label="操作" width="200" fixed="right" align="center">
           <template #default="{ row }">
             <div class="action-icons">
+              <el-tooltip content="加料组" placement="top">
+                <el-button link type="primary" class="icon-btn green" @click="openAddonEditor(row)">
+                  <el-icon :size="18"><Setting /></el-icon>
+                </el-button>
+              </el-tooltip>
+
               <el-tooltip content="编辑" placement="top">
                 <el-button link type="primary" class="icon-btn blue" @click="editProduct(row)">
                   <el-icon :size="18"><Edit /></el-icon>
@@ -183,13 +189,19 @@
         </div>
       </template>
     </el-dialog>
+
+    <AddonGroupEditorDialog
+      v-model:visible="addonDialogVisible"
+      :product="addonEditingProduct"
+      @saved="loadData"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, Picture, Check, Edit, Delete } from '@element-plus/icons-vue'
+import { Plus, Picture, Check, Edit, Delete, Setting } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import {
   getCoffeeProducts, addCoffeeProduct, updateCoffeeProduct,
@@ -200,6 +212,7 @@ import AdminPageHeader from '@/components/ui/AdminPageHeader.vue'
 import AdminFilterBar from '@/components/ui/AdminFilterBar.vue'
 import ProductTable from './components/ProductTable.vue'
 import CoffeeProductForm from './components/CoffeeProductForm.vue'
+import AddonGroupEditorDialog from './components/AddonGroupEditorDialog.vue'
 import { getImageUrl } from '@/utils/image'
 import { PRODUCT_CATEGORY_MAP } from '@/constants/product'
 
@@ -210,6 +223,8 @@ const lastUpdated = ref('')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const editingId = ref(null)
+const addonDialogVisible = ref(false)
+const addonEditingProduct = ref(null)
 
 const filters = reactive({
   keyword: '',
@@ -344,6 +359,11 @@ const saveProduct = async () => {
   }
 }
 
+const openAddonEditor = (row) => {
+  addonEditingProduct.value = row
+  addonDialogVisible.value = true
+}
+
 const toggleStatus = async (row) => {
   try {
     const res = await toggleCoffeeProductStatus(row.id)
@@ -452,6 +472,13 @@ onMounted(() => {
 }
 .icon-btn.blue:hover {
   background: #ecf5ff;
+}
+
+.icon-btn.green {
+  color: #67C23A;
+}
+.icon-btn.green:hover {
+  background: #f0f9eb;
 }
 
 .icon-btn.red {

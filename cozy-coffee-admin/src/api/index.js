@@ -97,6 +97,8 @@ export const addCoffeeProduct = (product) => api.post('/admin/products/coffee', 
 export const updateCoffeeProduct = (productId, product) => api.put(`/admin/products/coffee/${productId}`, product)
 export const deleteCoffeeProduct = (productId) => api.delete(`/admin/products/coffee/${productId}`)
 export const toggleCoffeeProductStatus = (productId) => api.put(`/admin/products/coffee/${productId}/status`)
+export const getAddonCatalog = () => api.get('/admin/products/addon-catalog')
+export const saveAddonGroups = (productId, groups) => api.post(`/admin/products/coffee/${productId}/addon-groups`, groups)
 
 // 咖啡订单管理
 export const getOrderCounts = () => api.get('/admin/orders/counts')
