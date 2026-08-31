@@ -271,7 +271,9 @@ function createEmptyForm() {
     defaultSugarLevel: 'STANDARD',
     beanId: null,
     blendId: null,
-    tags: []
+    tags: [],
+    brewMethod: '',
+    coldBrewPrice: null
   }
 }
 
@@ -343,7 +345,9 @@ const editProduct = (row) => {
     defaultSugarLevel: row.defaultSugarLevel || (row.sugarType && row.sugarType !== 'NO_SUGAR_ONLY' ? 'STANDARD' : null),
     beanId: row.beanId || null,
     blendId: row.blendId || null,
-    tags: row.tags || []
+    tags: row.tags || [],
+    brewMethod: row.brewMethod || '',
+    coldBrewPrice: row.coldBrewPrice || null
   }
   dialogVisible.value = true
 }
@@ -369,7 +373,9 @@ const saveProduct = async () => {
       defaultSugarLevel: productForm.value.defaultSugarLevel || null,
       beanId: productForm.value.beanId || null,
       blendId: productForm.value.blendId || null,
-      tags: productForm.value.tags || []
+      tags: productForm.value.tags || [],
+      brewMethod: productForm.value.brewMethod || null,
+      coldBrewPrice: productForm.value.coldBrewPrice || null
     }
 
     if (isEdit.value) await updateCoffeeProduct(editingId.value, data)

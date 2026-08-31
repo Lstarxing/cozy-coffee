@@ -22,6 +22,17 @@
 
       <!-- 规格选择 -->
       <view class="spec-section">
+        <!-- V2 出品方式（精品 Bean 必选）：手冲 / 冷萃 -->
+        <view v-if="showBrewMethod" class="spec-group">
+          <text class="spec-title">出品方式</text>
+          <view class="spec-options">
+            <view v-for="option in brewMethodOptions" :key="option.value" class="spec-option" :class="{ active: form.brewMethod === option.value }" @click="form.brewMethod = option.value">
+              <text>{{ option.label }}</text>
+              <text class="spec-extra">{{ option.value === 'COLD_BREW' ? `¥${product?.coldBrewPrice || ''}` : `¥${product?.price || ''}` }}</text>
+            </view>
+          </view>
+        </view>
+
         <view v-if="sizeOptions.length > 1" class="spec-group">
           <text class="spec-title">杯型</text>
           <view class="spec-options">
@@ -89,9 +100,16 @@ const cartStore = useCartStore()
 
 const product = ref({})
 const line = ref(null)
-const form = reactive({ cupSize: 'STANDARD', temperature: 'HOT', sugarLevel: 'STANDARD', quantity: 1 })
+const form = reactive({ cupSize: 'STANDARD', temperature: 'HOT', sugarLevel: 'STANDARD', brewMethod: 'POUR_OVER', quantity: 1 })
 
 const editing = computed(() => Boolean(line.value?.lineKey))
+
+// V2 出品方式（精品 Bean 必选）：POUR_OVER 手冲 / COLD_BREW 冷萃
+const showBrewMethod = computed(() => Boolean(product.value?.brewMethod))
+const brewMethodOptions = computed(() => [
+  { value: 'POUR_OVER', label: '手冲' },
+  { value: 'COLD_BREW', label: '冷萃' }
+])
 
 onLoad(() => {
   const data = uni.getStorageSync('cozy_spec')
@@ -107,6 +125,7 @@ onLoad(() => {
     : (product.value.defaultSugarLevel && sugarOptions.value.some(o => o.value === product.value.defaultSugarLevel)
       ? product.value.defaultSugarLevel
       : sugarOptions.value[0]?.value || 'NO_ADDED_SUGAR')
+  form.brewMethod = source.brewMethod || 'POUR_OVER'
   form.quantity = Number(source.quantity || 1)
 })
 
@@ -136,6 +155,8 @@ const sugarOptions = computed(() => {
 })
 const tempOptions = computed(() => {
   if (isFood.value) return []
+  // 精品 Bean：冷萃固定冰饮
+  if (showBrewMethod.value && form.brewMethod === 'COLD_BREW') return [{ value: 'COLD', label: '冰' }]
   const type = String(product.value?.tempType || 'HOT_COLD').toUpperCase()
   if (type === 'COLD_ONLY') return [{ value: 'COLD', label: '冰' }]
   if (type === 'HOT_ONLY') return [{ value: 'HOT', label: '热' }]
@@ -143,6 +164,12 @@ const tempOptions = computed(() => {
 })
 
 const basePrice = computed(() => {
+  // 精品 Bean：POUR_OVER 用 price / COLD_BREW 用 cold_brew_price
+  if (showBrewMethod.value) {
+    return form.brewMethod === 'COLD_BREW'
+      ? Number(product.value?.coldBrewPrice || 0)
+      : Number(product.value?.price || 0)
+  }
   const opt = sizeOptions.value.find(o => o.value === form.cupSize)
   return opt ? opt.base : Number(product.value?.price || 0)
 })
@@ -158,6 +185,7 @@ const milkType = computed(() => {
 
 const selectedSpecsText = computed(() => {
   const parts = []
+  if (showBrewMethod.value) parts.push({ POUR_OVER: '手冲', COLD_BREW: '冷萃' }[form.brewMethod] || form.brewMethod)
   if (sizeOptions.value.length > 1) parts.push({ STANDARD: '标准杯', MEDIUM: '中杯', LARGE: '大杯', EXTRA_LARGE: '超大杯' }[form.cupSize] || form.cupSize)
   if (tempOptions.value.length > 1) parts.push({ HOT: '热', COLD: '冰' }[form.temperature] || form.temperature)
   if (sugarOptions.value.length > 1) parts.push({ STANDARD: '标准糖', LESS: '少糖', HALF: '半糖', NO_ADDED_SUGAR: '不另外加糖' }[form.sugarLevel] || form.sugarLevel)
@@ -189,6 +217,7 @@ function buildSelection() {
     cupSize: form.cupSize,
     temperature: form.temperature,
     sugarLevel: isFood.value ? '' : form.sugarLevel,
+    brewMethod: showBrewMethod.value ? form.brewMethod : '',
     milkType: milkType.value,
     coffeeStrength: coffeeStrength.value,
     addons: addons.value,

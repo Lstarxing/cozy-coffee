@@ -16,6 +16,20 @@
         </div>
 
         <div class="options-section">
+          <!-- V2 出品方式（精品 Bean 必选）：手冲 / 冷萃 -->
+          <div v-if="showBrewMethod" class="option-group">
+            <label>出品方式</label>
+            <div class="option-buttons grid-layout">
+              <button
+v-for="option in brewMethodOptions" :key="option.value"
+                :class="{ active: customization.brewMethod === option.value }"
+                @click="customization.brewMethod = option.value">
+                <span class="opt-label">{{ option.label }}</span>
+                <span class="price-tag">{{ option.value === 'COLD_BREW' ? `¥${product.coldBrewPrice || ''}` : `¥${product.price || ''}` }}</span>
+              </button>
+            </div>
+          </div>
+
           <!-- 杯型 v6.2: 中/大杯价格来自接口 priceMedium/priceLarge，前端仅展示不推导 -->
           <div v-if="showCupSize" class="option-group">
             <label>杯型</label>
@@ -117,8 +131,16 @@ const quantity = ref(1)
 const customization = reactive({
   cupSize: '',
   sugarLevel: '',
-  temperature: 'HOT'
+  temperature: 'HOT',
+  brewMethod: 'POUR_OVER'
 })
+
+// V2 出品方式（精品 Bean 必选）：POUR_OVER 手冲 / COLD_BREW 冷萃
+const showBrewMethod = computed(() => Boolean(props.product.brewMethod))
+const brewMethodOptions = computed(() => [
+  { value: 'POUR_OVER', label: '手冲' },
+  { value: 'COLD_BREW', label: '冷萃' }
+])
 
 // v5.3: 检查是否持有加浓缩券
 const userHasShotCoupon = ref(false)
@@ -243,6 +265,15 @@ const showSugar = computed(() => !isBakery.value && sugarOptions.value.length > 
 
 // 温度（P1D 已同步 HOT_COLD/COLD_ONLY/HOT_ONLY）
 const tempConfig = computed(() => {
+  // 精品 Bean 冷萃固定冰饮
+  if (showBrewMethod.value && customization.brewMethod === 'COLD_BREW') {
+    return {
+      show: true,
+      options: [{ label: '冰', value: 'COLD', disabled: false }, { label: '热', value: 'HOT', disabled: true }],
+      defaultValue: 'COLD',
+      hint: '冷萃仅限冰饮'
+    }
+  }
   const tempType = props.product.tempType || 'HOT_COLD'
   switch (tempType) {
     case 'COLD_ONLY':
@@ -275,6 +306,7 @@ const temperatures = computed(() => tempConfig.value.options)
 
 function resetForm() {
   resetAddons()
+  customization.brewMethod = 'POUR_OVER'
   customization.cupSize = sizeOptions.value[0]?.value || ''
   customization.temperature = tempConfig.value.defaultValue || 'HOT'
   const defSugar = props.product.defaultSugarLevel
@@ -282,6 +314,11 @@ function resetForm() {
     ? defSugar
     : (sugarOptions.value[0]?.value || '')
 }
+
+// 冷萃固定冰饮
+watch(() => customization.brewMethod, (v) => {
+  if (v === 'COLD_BREW') customization.temperature = 'COLD'
+})
 
 watch(() => props.product, (product) => {
   if (!product) return
@@ -291,6 +328,12 @@ watch(() => props.product, (product) => {
 // ==================== 价格展示（前端仅估算，后端权威） ====================
 
 const basePrice = computed(() => {
+  // 精品 Bean：POUR_OVER 用 price / COLD_BREW 用 cold_brew_price
+  if (showBrewMethod.value) {
+    return customization.brewMethod === 'COLD_BREW'
+      ? Number(props.product.coldBrewPrice || 0)
+      : Number(props.product.price || 0)
+  }
   const opt = sizeOptions.value.find(o => o.value === customization.cupSize)
   return opt ? opt.base : Number(props.product.price || 0)
 })
@@ -335,6 +378,7 @@ const addToCart = () => {
     if (showCupSize.value) payload.cupSize = customization.cupSize
     if (showSugar.value) payload.sugarLevel = customization.sugarLevel
     if (showTemp.value) payload.temperature = customization.temperature
+    if (showBrewMethod.value) payload.brewMethod = customization.brewMethod
     payload.coffeeStrength = coffeeStrength.value
     payload.milkType = milkType.value
     // V2：真实加料码（不含默认项，后端 price_delta 权威定价 + 自动注入必选默认项）

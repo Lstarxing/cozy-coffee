@@ -112,6 +112,22 @@
           <div class="form-hint-inline">NEW/COLD/FRUITY 等展示标签；TOP1 由真实销售数据驱动，不手动录入</div>
         </el-form-item>
       </el-col>
+
+      <el-col :span="12">
+        <el-form-item label="出品方式">
+          <el-select v-model="form.brewMethod" style="width: 100%">
+            <el-option label="无（非 Bean 商品）" value="" />
+            <el-option label="精品 Bean（手冲/冷萃可选）" value="POUR_OVER" />
+          </el-select>
+          <div class="form-hint-inline">精品 Bean 商品用户可选手冲或冷萃</div>
+        </el-form-item>
+      </el-col>
+      <el-col v-if="form.brewMethod" :span="12">
+        <el-form-item label="冷萃价(元)">
+          <el-input-number v-model="form.coldBrewPrice" :min="0" :precision="2" controls-position="right" style="width: 100%" />
+          <div class="form-hint-inline">冷萃出品价；手冲用基础价</div>
+        </el-form-item>
+      </el-col>
     </el-row>
   </div>
 

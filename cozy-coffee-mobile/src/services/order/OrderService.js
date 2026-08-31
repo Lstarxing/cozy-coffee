@@ -7,6 +7,7 @@ export function toOrderItems(lines = []) {
     cupSize: line.cupSize || 'STANDARD',
     sugarLevel: line.sugarLevel || 'STANDARD',
     temperature: line.temperature || 'HOT',
+    brewMethod: line.brewMethod || undefined,
     coffeeStrength: line.coffeeStrength || 'NORMAL',
     optionsJson: JSON.stringify({
       skuId: line.skuId || null,
