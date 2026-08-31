@@ -208,44 +208,10 @@ public class OrderCreator {
         }
 
         // ============================================================
-        // v5.8: 黑金会员 SOE 8.5折优惠（15% off）
-        // 说明：黑金会员购买 soe 类产品（手冲精品）时自动享受 8.5折
-        // 应用时机：在优惠券折扣之前，先对商品原价进行会员折扣
+        // TODO: 黑金会员 SOE 8.5折权益（原 v5.8）已删除——旧逻辑查 'soe' 分类，
+        //       对 V2 精品咖啡（SPECIALTY + brew_method 模型）不生效；需按新模型重新设计后再实现。
         // ============================================================
         BigDecimal memberDiscount = BigDecimal.ZERO;
-        boolean hasBlackGoldSoeDiscount = false;
-
-        if ("black".equals(memberLevel)) {
-            for (ShopOrderItem item : orderItems) {
-                CoffeeProduct product = productMapper.selectById(item.getProductId());
-                // 判断是否为 soe 类产品（手冲精品）
-                if (product != null && "soe".equals(product.getCategory())) {
-                    // 黑金会员享受 8.5折，即 15% 折扣
-                    // 折扣只应用于商品基础价格（含杯型加价），不包含加料费用
-                    BigDecimal itemBasePrice = item.getUnitPrice();
-                    if ("LARGE".equals(item.getCupSize())) {
-                        itemBasePrice = itemBasePrice.add(new BigDecimal("3"));
-                    }
-                    BigDecimal itemBaseAmount = itemBasePrice.multiply(BigDecimal.valueOf(item.getQuantity()));
-                    BigDecimal itemDiscount = itemBaseAmount.multiply(new BigDecimal("0.15"))
-                            .setScale(2, RoundingMode.HALF_UP);
-
-                    memberDiscount = memberDiscount.add(itemDiscount);
-                    hasBlackGoldSoeDiscount = true;
-
-                    log.info("黑金会员SOE折扣: productId={}, productName={}, baseAmount={}, discount={}",
-                            item.getProductId(), item.getProductName(), itemBaseAmount, itemDiscount);
-                }
-            }
-
-            if (hasBlackGoldSoeDiscount) {
-                // 从基础商品金额中扣除会员折扣
-                baseTotalAmount = baseTotalAmount.subtract(memberDiscount);
-                totalAmount = totalAmount.subtract(memberDiscount);
-                log.info("黑金会员SOE总折扣: memberDiscount={}, 折后baseTotalAmount={}, 折后totalAmount={}",
-                        memberDiscount, baseTotalAmount, totalAmount);
-            }
-        }
 
         // 券核销（组合引擎统一：主券/辅券分类、组合校验、金额计算、整组冻结）
         BigDecimal discountAmount = BigDecimal.ZERO;

@@ -46,7 +46,7 @@
         <template v-else>距离您 1.2km</template>
       </view>
       <view class="store-foot">
-        <text class="store-status"><text class="status-icon">☼</text> 精品咖啡每日新鲜烘焙</text>
+        <text class="store-status"><text class="status-icon">☼</text> {{ todayBeansText || '精品咖啡每日新鲜烘焙' }}</text>
         <text class="store-more" @click="openStoreDetail">详情 ›</text>
       </view>
     </view>
@@ -267,6 +267,13 @@ const offShelfTitle = ref('')
 const offShelfLines = ref([])
 
 const currentCategory = computed(() => categories.value[currentCategoryIndex.value] || { id: '', name: '', en: '', products: [] })
+
+// 今日豆单：当前 active 的精品 Bean 商品（brewMethod 非空 = 手冲/冷萃 Bean）
+const todayBeansText = computed(() => {
+  const beans = categories.value.flatMap(c => c.products).filter(p => p.brewMethod)
+  if (!beans.length) return ''
+  return '今日豆单 · ' + beans.map(b => b.name).join(' / ')
+})
 
 onLoad((options) => {
   pendingCategory = (options && options.category) ? String(options.category).toLowerCase() : ''

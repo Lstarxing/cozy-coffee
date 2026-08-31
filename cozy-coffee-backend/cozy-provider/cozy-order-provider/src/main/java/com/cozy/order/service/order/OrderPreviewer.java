@@ -104,10 +104,8 @@ public class OrderPreviewer {
             baseSubtotal = baseSubtotal.add(lineBase);
             addonsTotal = addonsTotal.add(lineAddons);
 
-            if ("black".equalsIgnoreCase(memberLevel) && "soe".equals(product.getCategory())) {
-                memberDiscount = memberDiscount.add(lineBase.multiply(new BigDecimal("0.15"))
-                        .setScale(2, RoundingMode.HALF_UP));
-            }
+            // TODO: 黑金会员 SOE 8.5折权益（原查 'soe' 分类）已删除——V2 精品咖啡为 SPECIALTY + brew_method，待按新模型重设计
+            // 原逻辑：if ("black".equalsIgnoreCase(memberLevel) && "soe".equals(product.getCategory())) { memberDiscount += ... }
 
             itemChecks.add(new ItemCheckDTO(product.getId(), unitPrice, product.getCategory(), quantity,
                     buildModifiersJson(item), defaultString(item.getCupSize(), "STANDARD"),
