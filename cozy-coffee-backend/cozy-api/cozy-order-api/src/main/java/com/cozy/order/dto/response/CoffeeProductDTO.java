@@ -32,6 +32,10 @@ public class CoffeeProductDTO implements Serializable {
     // V2：标签（展示用；NEW/COLD/FRUITY...，TOP1 数据驱动不静态录入）
     private List<String> tags;
 
+    // V2：出品方式（精品 Bean 必选规格）：POUR_OVER/COLD_BREW；NULL=非 Bean 商品
+    private String brewMethod;
+    private BigDecimal coldBrewPrice;
+
     // V2（P2）：加料组（菜单/详情渲染规格选项）
     private List<AddonGroupDTO> addonGroups;
 

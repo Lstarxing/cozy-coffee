@@ -36,6 +36,8 @@ public class CoffeeProduct {
     private String servingConfig; // 固定组合结构化构成 JSON：[{"type":"ESPRESSO","quantity":1},...]
     private String servingDesc; // 固定组合出杯说明（仅展示文案）
     private String tags; // 标签 JSON 数组：["NEW","COLD"]（展示用；TOP1 数据驱动不静态录入）
+    private String brewMethod; // 出品方式（精品 Bean 必选规格）：POUR_OVER/COLD_BREW；NULL=非 Bean 商品
+    private BigDecimal coldBrewPrice; // 冷萃出品价（COLD_BREW 用；手冲用 price）
     
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

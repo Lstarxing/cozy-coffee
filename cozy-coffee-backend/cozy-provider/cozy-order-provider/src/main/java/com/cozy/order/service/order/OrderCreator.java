@@ -153,10 +153,10 @@ public class OrderCreator {
                 throw new BusinessException("商品已下架: " + product.getName());
             }
 
-            // V2 统一定价核心（P1E）：规格校验 + 基础价（按 size_type，无硬编码大杯加价）+ 加料权威价 + 成交快照
+            // V2 统一定价核心（P1E）：规格校验 + 基础价（按 size_type / brew_method）+ 加料权威价 + 成交快照
             ProductPricingService.PriceResult pr = productPricingService.price(
                     product, itemReq.getCupSize(), itemReq.getTemperature(),
-                    itemReq.getSugarLevel(), itemReq.getAddonsJson());
+                    itemReq.getSugarLevel(), itemReq.getBrewMethod(), itemReq.getAddonsJson());
             if (!pr.valid()) {
                 throw new BusinessException(pr.error());
             }
@@ -186,6 +186,7 @@ public class OrderCreator {
             item.setCupSize(itemReq.getCupSize());
             item.setSugarLevel(itemReq.getSugarLevel());
             item.setTemperature(itemReq.getTemperature());
+            item.setBrewMethod(itemReq.getBrewMethod());
             item.setCoffeeStrength(itemReq.getCoffeeStrength());
             item.setOptionsJson(itemReq.getOptionsJson());
             item.setAddonsJson(pr.normalizedAddonsJson()); // 规范化成交快照（含默认项，price=price_delta 实际价）

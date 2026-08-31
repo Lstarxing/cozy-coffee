@@ -87,10 +87,10 @@ public class OrderPreviewer {
                 invalidItems.add(item.getProductId());
                 continue;
             }
-            // V2 统一定价核心（P1E）：规格校验 + 基础价（按 size_type）+ 加料权威价 + 成交快照
+            // V2 统一定价核心（P1E）：规格校验 + 基础价（按 size_type / brew_method）+ 加料权威价 + 成交快照
             ProductPricingService.PriceResult priceResult = productPricingService.price(
                     product, item.getCupSize(), item.getTemperature(),
-                    item.getSugarLevel(), item.getAddonsJson());
+                    item.getSugarLevel(), item.getBrewMethod(), item.getAddonsJson());
             if (!priceResult.valid()) {
                 invalidItems.add(item.getProductId());
                 continue;

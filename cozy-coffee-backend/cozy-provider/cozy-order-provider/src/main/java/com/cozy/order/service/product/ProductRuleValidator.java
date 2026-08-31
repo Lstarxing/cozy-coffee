@@ -24,10 +24,11 @@ public class ProductRuleValidator {
      * @param tempChoice  用户选择的温度 (iced/hot)
      * @return 验证结果消息，null 表示通过
      */
-    public String validateSpecs(CoffeeProduct product, 
-                                    String sizeChoice, 
-                                    String sugarChoice, 
-                                    String tempChoice) {
+    public String validateSpecs(CoffeeProduct product,
+                                    String sizeChoice,
+                                    String sugarChoice,
+                                    String tempChoice,
+                                    String brewMethod) {
         if (product == null) {
             return "产品不存在";
         }
@@ -50,7 +51,35 @@ public class ProductRuleValidator {
             return tempError;
         }
 
+        // 验证出品方式（精品 Bean）
+        String brewError = validateBrewMethod(product, brewMethod, tempChoice);
+        if (brewError != null) {
+            return brewError;
+        }
+
         return null; // 验证通过
+    }
+
+    /**
+     * 验证出品方式（精品 Bean 商品必选）：POUR_OVER / COLD_BREW；Cold Brew 固定冰饮。
+     */
+    private String validateBrewMethod(CoffeeProduct product, String brewMethod, String tempChoice) {
+        if (product.getBrewMethod() == null) {
+            if (brewMethod != null && !brewMethod.isEmpty()) {
+                return "该商品不支持出品方式选择";
+            }
+            return null;
+        }
+        if (brewMethod == null || brewMethod.isEmpty()) {
+            return "请选择出品方式（手冲 / 冷萃）";
+        }
+        if (!"POUR_OVER".equals(brewMethod) && !"COLD_BREW".equals(brewMethod)) {
+            return "出品方式非法: " + brewMethod;
+        }
+        if ("COLD_BREW".equals(brewMethod) && tempChoice != null && !"COLD".equalsIgnoreCase(tempChoice)) {
+            return "冷萃仅限冰饮";
+        }
+        return null;
     }
 
     /**

@@ -94,6 +94,8 @@ public class ProductAdminService {
         product.setTempType(dto.getTempType() != null ? dto.getTempType() : "HOT_COLD");
         product.setDefaultSugarLevel(dto.getDefaultSugarLevel()); // NO_SUGAR_ONLY 商品为 NULL
         product.setTags(writeTags(dto.getTags()));
+        product.setBrewMethod(dto.getBrewMethod());
+        product.setColdBrewPrice(dto.getColdBrewPrice());
 
         // 手动设置时间戳（修复 MetaObjectHandler 可能未扫码到的问题）
         LocalDateTime now = LocalDateTime.now();
@@ -144,6 +146,8 @@ public class ProductAdminService {
             product.setTempType(dto.getTempType());
         product.setDefaultSugarLevel(dto.getDefaultSugarLevel()); // 表单始终下发；NO_SUGAR_ONLY 为 NULL
         product.setTags(writeTags(dto.getTags()));
+        product.setBrewMethod(dto.getBrewMethod());
+        product.setColdBrewPrice(dto.getColdBrewPrice());
 
         if (dto.getImageUrl() != null)
             product.setImageUrl(dto.getImageUrl());

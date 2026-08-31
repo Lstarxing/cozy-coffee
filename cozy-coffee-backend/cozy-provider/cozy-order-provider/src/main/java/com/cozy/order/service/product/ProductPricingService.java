@@ -20,12 +20,13 @@ public class ProductPricingService {
     private final ProductRuleValidator ruleValidator;
     private final ProductAddonResolver addonResolver;
 
-    public PriceResult price(CoffeeProduct product, String size, String temp, String sugar, String addonsJson) {
-        String specError = ruleValidator.validateSpecs(product, size, sugar, temp);
+    public PriceResult price(CoffeeProduct product, String size, String temp, String sugar,
+            String brewMethod, String addonsJson) {
+        String specError = ruleValidator.validateSpecs(product, size, sugar, temp, brewMethod);
         if (specError != null) {
             return PriceResult.invalid(specError);
         }
-        BigDecimal base = resolveBasePrice(product, size);
+        BigDecimal base = resolveBasePrice(product, size, brewMethod);
         ProductAddonResolver.AddonResolution addon = addonResolver.resolve(product.getId(), addonsJson);
         if (!addon.valid()) {
             return PriceResult.invalid(addon.error());
@@ -34,7 +35,11 @@ public class ProductPricingService {
                 addon.normalizedJson(), addon.addonPrices());
     }
 
-    private BigDecimal resolveBasePrice(CoffeeProduct product, String size) {
+    private BigDecimal resolveBasePrice(CoffeeProduct product, String size, String brewMethod) {
+        // 精品 Bean：POUR_OVER 用 price / COLD_BREW 用 cold_brew_price（标准杯）
+        if (product.getBrewMethod() != null) {
+            return "COLD_BREW".equals(brewMethod) ? product.getColdBrewPrice() : product.getPrice();
+        }
         if ("MEDIUM_LARGE".equals(product.getSizeType())) {
             return "LARGE".equalsIgnoreCase(size) ? product.getPriceLarge() : product.getPriceMedium();
         }

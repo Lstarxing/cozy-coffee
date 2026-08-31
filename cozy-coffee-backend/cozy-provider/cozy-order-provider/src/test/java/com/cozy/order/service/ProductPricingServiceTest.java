@@ -177,7 +177,7 @@ class ProductPricingServiceTest {
     void latteMediumOat() {
         var s = pricing(latteGroups(), latteBindings(), latteAddons());
         var p = product(1L, "MEDIUM_LARGE", "HOT_COLD", "FREE_CHOICE", "28", "32");
-        var r = s.price(p, "MEDIUM", "HOT", "STANDARD", "[{\"code\":\"OAT_MILK\"}]");
+        var r = s.price(p, "MEDIUM", "HOT", "STANDARD", null, "[{\"code\":\"OAT_MILK\"}]");
         assertTrue(r.valid(), r.error());
         assertEquals(new BigDecimal("28"), r.basePrice());
         assertEquals(new BigDecimal("3"), r.addonFee());
@@ -189,7 +189,7 @@ class ProductPricingServiceTest {
     void latteLargeOatShot() {
         var s = pricing(latteGroups(), latteBindings(), latteAddons());
         var p = product(1L, "MEDIUM_LARGE", "HOT_COLD", "FREE_CHOICE", "28", "32");
-        var r = s.price(p, "LARGE", "HOT", "STANDARD", "[{\"code\":\"OAT_MILK\"},{\"code\":\"EXTRA_SHOT\"}]");
+        var r = s.price(p, "LARGE", "HOT", "STANDARD", null, "[{\"code\":\"OAT_MILK\"},{\"code\":\"EXTRA_SHOT\"}]");
         assertTrue(r.valid(), r.error());
         assertEquals(new BigDecimal("32"), r.basePrice()); // 大杯 32，非 28+3
         assertEquals(new BigDecimal("8"), r.addonFee());   // OAT 3 + SHOT 5
@@ -200,7 +200,7 @@ class ProductPricingServiceTest {
     void latteNoAddonInjectsDefaultMilk() {
         var s = pricing(latteGroups(), latteBindings(), latteAddons());
         var p = product(1L, "MEDIUM_LARGE", "HOT_COLD", "FREE_CHOICE", "28", "32");
-        var r = s.price(p, "MEDIUM", "HOT", "STANDARD", "[]");
+        var r = s.price(p, "MEDIUM", "HOT", "STANDARD", null, "[]");
         assertTrue(r.valid(), r.error());
         assertEquals(new BigDecimal("28"), r.finalPrice());
         assertTrue(r.normalizedAddonsJson().contains("WHOLE_MILK")); // 默认全脂注入
@@ -212,7 +212,7 @@ class ProductPricingServiceTest {
         var s = pricing(latteGroups(), latteBindings(), latteAddons());
         var p = product(1L, "MEDIUM_LARGE", "HOT_COLD", "FREE_CHOICE", "28", "32");
         var r = s.price(p, "MEDIUM", "HOT", "STANDARD",
-                "[{\"code\":\"VANILLA_SYRUP\"},{\"code\":\"CARAMEL_SYRUP\"}]");
+                null, "[{\"code\":\"VANILLA_SYRUP\"},{\"code\":\"CARAMEL_SYRUP\"}]");
         assertFalse(r.valid());
     }
 
@@ -221,7 +221,7 @@ class ProductPricingServiceTest {
         var s = pricing(latteGroups(), latteBindings(), latteAddons());
         var p = product(1L, "MEDIUM_LARGE", "HOT_COLD", "FREE_CHOICE", "28", "32");
         var r = s.price(p, "MEDIUM", "HOT", "STANDARD",
-                "[{\"code\":\"OAT_MILK\"},{\"code\":\"OAT_MILK\"}]");
+                null, "[{\"code\":\"OAT_MILK\"},{\"code\":\"OAT_MILK\"}]");
         assertFalse(r.valid());
     }
 
@@ -229,7 +229,7 @@ class ProductPricingServiceTest {
     void latteUnboundAddonRejectedNoFallback() {
         var s = pricing(latteGroups(), latteBindings(), latteAddons());
         var p = product(1L, "MEDIUM_LARGE", "HOT_COLD", "FREE_CHOICE", "28", "32");
-        var r = s.price(p, "MEDIUM", "HOT", "STANDARD", "[{\"code\":\"SOY_MILK\"}]");
+        var r = s.price(p, "MEDIUM", "HOT", "STANDARD", null, "[{\"code\":\"SOY_MILK\"}]");
         assertFalse(r.valid()); // 未绑定 → 拒绝，不回退 product_addons.price
     }
 
@@ -238,7 +238,7 @@ class ProductPricingServiceTest {
         var s = pricing(latteGroups(), latteBindings(), latteAddons());
         var p = product(1L, "MEDIUM_LARGE", "HOT_COLD", "FREE_CHOICE", "28", "32");
         var r = s.price(p, "MEDIUM", "HOT", "STANDARD",
-                "[{\"code\":\"SPECIAL_MILK\",\"name\":\"OAT\",\"price\":999}]");
+                null, "[{\"code\":\"SPECIAL_MILK\",\"name\":\"OAT\",\"price\":999}]");
         assertTrue(r.valid(), r.error());
         assertEquals(new BigDecimal("3"), r.addonFee()); // price 999 不可信，取 price_delta 3
         assertEquals(new BigDecimal("31"), r.finalPrice());
@@ -249,10 +249,10 @@ class ProductPricingServiceTest {
     void oatLatteDefaultAndWholeMilkFree() {
         var s = pricing(oatGroups(), oatBindings(), oatAddons());
         var p = product(2L, "MEDIUM_LARGE", "HOT_COLD", "FREE_CHOICE", "32", "35");
-        var r1 = s.price(p, "MEDIUM", "HOT", "STANDARD", "[]");
+        var r1 = s.price(p, "MEDIUM", "HOT", "STANDARD", null, "[]");
         assertTrue(r1.valid(), r1.error());
         assertEquals(new BigDecimal("32"), r1.finalPrice()); // 默认燕麦 +0
-        var r2 = s.price(p, "MEDIUM", "HOT", "STANDARD", "[{\"code\":\"WHOLE_MILK\"}]");
+        var r2 = s.price(p, "MEDIUM", "HOT", "STANDARD", null, "[{\"code\":\"WHOLE_MILK\"}]");
         assertTrue(r2.valid(), r2.error());
         assertEquals(new BigDecimal("32"), r2.finalPrice()); // 切全脂 +0 不降价
     }
@@ -262,13 +262,13 @@ class ProductPricingServiceTest {
     void coconutLatteColdOnlyAndPrice() {
         var s = pricing(coconutGroups(), coconutBindings(), coconutAddons());
         var p = product(3L, "MEDIUM_LARGE", "COLD_ONLY", "FREE_CHOICE", "32", "35");
-        var r1 = s.price(p, "MEDIUM", "COLD", "STANDARD", "[]");
+        var r1 = s.price(p, "MEDIUM", "COLD", "STANDARD", null, "[]");
         assertTrue(r1.valid(), r1.error());
         assertEquals(new BigDecimal("32"), r1.finalPrice()); // 椰奶默认 +0
-        var r2 = s.price(p, "MEDIUM", "COLD", "STANDARD", "[{\"code\":\"OAT_MILK\"}]");
+        var r2 = s.price(p, "MEDIUM", "COLD", "STANDARD", null, "[{\"code\":\"OAT_MILK\"}]");
         assertTrue(r2.valid(), r2.error());
         assertEquals(new BigDecimal("35"), r2.finalPrice()); // +燕麦 3
-        var r3 = s.price(p, "MEDIUM", "HOT", "STANDARD", "[]");
+        var r3 = s.price(p, "MEDIUM", "HOT", "STANDARD", null, "[]");
         assertFalse(r3.valid()); // 生椰不可热
     }
 
@@ -277,12 +277,12 @@ class ProductPricingServiceTest {
     void mochaPriceAndNoSugarRemovalNoSyrup() {
         var s = pricing(mochaGroups(), mochaBindings(), mochaAddons());
         var p = product(4L, "MEDIUM_LARGE", "HOT_COLD", "MIN_LESS_SWEET", "32", "36");
-        var r1 = s.price(p, "MEDIUM", "HOT", "STANDARD", "[{\"code\":\"OAT_MILK\"},{\"code\":\"EXTRA_SHOT\"}]");
+        var r1 = s.price(p, "MEDIUM", "HOT", "STANDARD", null, "[{\"code\":\"OAT_MILK\"},{\"code\":\"EXTRA_SHOT\"}]");
         assertTrue(r1.valid(), r1.error());
         assertEquals(new BigDecimal("40"), r1.finalPrice()); // 32 + OAT 3 + SHOT 5
-        var r2 = s.price(p, "MEDIUM", "HOT", "NO_ADDED_SUGAR", "[]");
+        var r2 = s.price(p, "MEDIUM", "HOT", "NO_ADDED_SUGAR", null, "[]");
         assertFalse(r2.valid()); // MIN_LESS_SWEET 不可不另外加糖
-        var r3 = s.price(p, "MEDIUM", "HOT", "STANDARD", "[{\"code\":\"VANILLA_SYRUP\"}]");
+        var r3 = s.price(p, "MEDIUM", "HOT", "STANDARD", null, "[{\"code\":\"VANILLA_SYRUP\"}]");
         assertFalse(r3.valid()); // 摩卡无 SYRUP 组
     }
 
@@ -305,5 +305,61 @@ class ProductPricingServiceTest {
         var mochaGroups = resolver(mochaGroups(), mochaBindings(), mochaAddons()).loadMenuGroups(4L);
         assertEquals(2, mochaGroups.size());
         assertTrue(mochaGroups.stream().noneMatch(g -> "SYRUP".equals(g.getCategory())));
+    }
+
+    // ── brew_method 出品方式（精品 Bean，注 8）────────────────
+    private static CoffeeProduct brewableProduct(String price, String coldBrew) {
+        CoffeeProduct p = new CoffeeProduct();
+        p.setId(99L);
+        p.setName("Bean");
+        p.setStatus("active");
+        p.setSizeType("DEFAULT");
+        p.setTempType("HOT_COLD");
+        p.setSugarType("NO_SUGAR_ONLY");
+        p.setBrewMethod("POUR_OVER");
+        p.setPrice(new BigDecimal(price));
+        p.setColdBrewPrice(new BigDecimal(coldBrew));
+        return p;
+    }
+
+    @Test
+    void brewablePourOverUsesPrice() {
+        var s = pricing(List.of(), List.of(), List.of());
+        var r = s.price(brewableProduct("50", "38"), null, "HOT", null, "POUR_OVER", "[]");
+        assertTrue(r.valid(), r.error());
+        assertEquals(new BigDecimal("50"), r.basePrice());
+    }
+
+    @Test
+    void brewableColdBrewUsesColdBrewPrice() {
+        var s = pricing(List.of(), List.of(), List.of());
+        var r = s.price(brewableProduct("50", "38"), null, "COLD", null, "COLD_BREW", "[]");
+        assertTrue(r.valid(), r.error());
+        assertEquals(new BigDecimal("38"), r.basePrice());
+    }
+
+    @Test
+    void brewableRequiresBrewMethod() {
+        var s = pricing(List.of(), List.of(), List.of());
+        var r = s.price(brewableProduct("50", "38"), null, "HOT", null, null, "[]");
+        assertFalse(r.valid());
+        assertTrue(r.error().contains("出品方式"));
+    }
+
+    @Test
+    void brewableColdBrewHotRejected() {
+        var s = pricing(List.of(), List.of(), List.of());
+        var r = s.price(brewableProduct("50", "38"), null, "HOT", null, "COLD_BREW", "[]");
+        assertFalse(r.valid());
+        assertTrue(r.error().contains("冷萃仅限冰饮"));
+    }
+
+    @Test
+    void nonBrewableRejectsBrewMethod() {
+        var s = pricing(latteGroups(), latteBindings(), latteAddons());
+        var p = product(1L, "MEDIUM_LARGE", "HOT_COLD", "FREE_CHOICE", "28", "32");
+        var r = s.price(p, "MEDIUM", "HOT", "STANDARD", "POUR_OVER", "[]");
+        assertFalse(r.valid());
+        assertTrue(r.error().contains("不支持出品方式"));
     }
 }

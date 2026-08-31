@@ -26,6 +26,7 @@ public class ShopOrderItemDTO implements Serializable {
     private String cupSize;
     private String sugarLevel;
     private String temperature;
+    private String brewMethod; // 出品方式：POUR_OVER/COLD_BREW（精品 Bean）
     private String coffeeStrength;
     private String optionsJson;
 

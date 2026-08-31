@@ -64,6 +64,8 @@ public class OrderDtoConverter {
         dto.setServingMode(entity.getServingMode());
         dto.setServingDesc(entity.getServingDesc());
         dto.setTags(parseTags(entity.getTags()));
+        dto.setBrewMethod(entity.getBrewMethod());
+        dto.setColdBrewPrice(entity.getColdBrewPrice());
         dto.setBeanId(entity.getBeanId());
         dto.setBlendId(entity.getBlendId());
         dto.setAddonGroups(productAddonResolver.loadMenuGroups(entity.getId()));
@@ -141,6 +143,7 @@ public class OrderDtoConverter {
         dto.setCupSize(entity.getCupSize());
         dto.setSugarLevel(entity.getSugarLevel());
         dto.setTemperature(entity.getTemperature());
+        dto.setBrewMethod(entity.getBrewMethod());
         dto.setCoffeeStrength(entity.getCoffeeStrength());
         dto.setOptionsJson(entity.getOptionsJson());
 

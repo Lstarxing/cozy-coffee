@@ -23,6 +23,7 @@ public class OrderItemRequest implements Serializable {
     private String cupSize;
     private String sugarLevel;
     private String temperature;
+    private String brewMethod; // 出品方式：POUR_OVER/COLD_BREW（精品 Bean 必选）
     private String coffeeStrength;
     private String optionsJson;
 
