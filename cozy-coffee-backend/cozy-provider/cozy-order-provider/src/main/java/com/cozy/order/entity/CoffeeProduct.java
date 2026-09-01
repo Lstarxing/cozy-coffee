@@ -11,6 +11,7 @@ public class CoffeeProduct {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String name;
+    private String productCode; // 商品短码（3.5 资产命名，身份标识）：01-espresso 等
     private String description;
     private String shortDescription; // 列表凝练描述（3.4 风味句，列表不截断）；选规格/详情用 description
     private BigDecimal price; // 默认价格（中杯）

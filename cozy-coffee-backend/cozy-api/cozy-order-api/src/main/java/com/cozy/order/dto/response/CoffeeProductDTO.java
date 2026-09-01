@@ -11,6 +11,7 @@ public class CoffeeProductDTO implements Serializable {
     private static final long serialVersionUID = 1L;
     private Long id;
     private String name;
+    private String productCode; // 商品短码（3.5 资产命名，身份标识）
     private String description;
     @Size(max = 40, message = "列表简短描述最多 40 个字符")
     private String shortDescription; // 菜单列表凝练一句（≤40 字，完整展示不省略）；选规格/详情用 description

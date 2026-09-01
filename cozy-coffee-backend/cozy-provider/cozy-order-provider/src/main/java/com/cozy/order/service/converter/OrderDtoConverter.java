@@ -49,6 +49,7 @@ public class OrderDtoConverter {
         CoffeeProductDTO dto = new CoffeeProductDTO();
         dto.setId(entity.getId());
         dto.setName(entity.getName());
+        dto.setProductCode(entity.getProductCode());
         dto.setDescription(entity.getDescription());
         dto.setShortDescription(entity.getShortDescription());
         dto.setPrice(entity.getPrice());

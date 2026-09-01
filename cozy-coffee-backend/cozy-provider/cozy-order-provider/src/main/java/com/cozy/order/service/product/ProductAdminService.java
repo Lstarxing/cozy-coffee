@@ -75,6 +75,7 @@ public class ProductAdminService {
 
         CoffeeProduct product = new CoffeeProduct();
         product.setName(dto.getName().trim());
+        product.setProductCode(dto.getProductCode());
         product.setDescription(dto.getDescription());
         product.setShortDescription(dto.getShortDescription());
         product.setPrice(dto.getPrice());
@@ -124,6 +125,7 @@ public class ProductAdminService {
             }
             product.setName(dto.getName().trim());
         }
+        product.setProductCode(dto.getProductCode()); // 商品短码（身份标识，表单始终下发）
         if (dto.getDescription() != null)
             product.setDescription(dto.getDescription());
         product.setShortDescription(dto.getShortDescription()); // 列表凝练描述（表单始终下发）

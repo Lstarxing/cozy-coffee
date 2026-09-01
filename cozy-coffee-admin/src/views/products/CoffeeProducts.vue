@@ -291,7 +291,7 @@ const productForm = ref(createEmptyForm())
 
 function createEmptyForm() {
   return {
-    name: '', description: '', shortDescription: '', imageUrl: '',
+    name: '', description: '', shortDescription: '', imageUrl: '', productCode: '',
     price: null, priceMedium: null, priceLarge: null,
     category: 'ESPRESSO',
     isNewProduct: false,
@@ -362,6 +362,7 @@ const editProduct = (row) => {
   editingId.value = row.id
   productForm.value = {
     name: row.name,
+    productCode: row.productCode || '',
     description: row.description,
     shortDescription: row.shortDescription || '',
     imageUrl: row.imageUrl,
@@ -391,6 +392,7 @@ const saveProduct = async () => {
     const isMediumLarge = productForm.value.sizeType === 'MEDIUM_LARGE'
     const data = {
       name: productForm.value.name,
+      productCode: productForm.value.productCode || null,
       description: productForm.value.description,
       shortDescription: productForm.value.shortDescription || null,
       imageUrl: productForm.value.imageUrl,

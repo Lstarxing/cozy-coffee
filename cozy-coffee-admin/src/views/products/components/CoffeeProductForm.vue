@@ -19,6 +19,13 @@
       </el-col>
 
       <el-col :span="24">
+        <el-form-item label="商品短码">
+          <el-input v-model="form.productCode" placeholder="如 02-caffe-latte" maxlength="64" />
+          <div class="form-hint-inline">商品身份标识（3.5 资产命名），用于迁移/图片定位；勿随意改动</div>
+        </el-form-item>
+      </el-col>
+
+      <el-col :span="24">
         <el-form-item label="列表描述">
           <el-input
             v-model="form.shortDescription"
