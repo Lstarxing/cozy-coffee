@@ -203,8 +203,8 @@ const detailNotes = computed(() => product.value?.notes || product.value?.descri
 
 function categoryEn(code) {
   return ({
-    espresso: 'ESPRESSO', coffee: 'CLASSIC COFFEE', latte: 'LATTE', signature: 'SIGNATURE',
-    soe: 'HAND BREW', bakery: 'BAKERY', dessert: 'DESSERT', addon: 'ADD-ON', other: 'COZY'
+    espresso: 'ESPRESSO', signature: 'SIGNATURE',
+    bakery: 'BAKERY', addon: 'ADD-ON', other: 'COZY'
   })[code] || 'COZY'
 }
 

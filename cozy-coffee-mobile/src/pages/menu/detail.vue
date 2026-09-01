@@ -65,8 +65,8 @@ const errorMessage = ref('')
 const specVisible = ref(false)
 
 const categoryLabel = computed(() => ({
-  espresso: '意式咖啡', coffee: '经典咖啡', latte: '拿铁系列', signature: '季节特调',
-  soe: '手冲精品', bakery: '烘焙甜点', dessert: '甜品', addon: '加料', other: '门店现制'
+  espresso: '经典咖啡', signature: '季节特调',
+  bakery: '烘焙甜点', addon: '加料', other: '门店现制'
 })[String(product.value?.category || 'other').toLowerCase()] || '门店现制')
 
 // V2 价格互斥：MEDIUM_LARGE 商品 price 为 NULL，按杯型读 price_medium / price_large 展示

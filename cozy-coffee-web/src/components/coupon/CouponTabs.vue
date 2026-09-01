@@ -131,9 +131,10 @@ const useCoupon = (coupon) => {
   if (activeTab.value !== 'ISSUED') return
   const filter = []
   const r = getRules(coupon)
+  const bl = r.categoryBlocklist || []
   if (r.skuLimit === 'STANDARD_ONLY') filter.push('standard_only')
-  if (r.categoryBlocklist?.includes('signature')) filter.push('exclude_signature')
-  if (r.categoryBlocklist?.includes('soe')) filter.push('exclude_soe')
+  if (bl.some(b => b.toLowerCase() === 'signature')) filter.push('exclude_signature')
+  if (bl.some(b => ['specialty', 'soe', 'pour-over'].includes(b.toLowerCase()))) filter.push('exclude_soe')
   emit('use-coupon', {
     couponId: coupon.id,
     couponCode: coupon.couponCode,

@@ -11,10 +11,6 @@
           <span v-if="isBlackGoldMember" class="free-delivery">¥0 <small>(黑金免运费)</small></span>
           <span v-else>¥{{ deliveryFee.toFixed(2) }}</span>
         </div>
-        <div v-if="memberDiscount > 0" class="summary-row discount">
-          <span>黑金会员 SOE 8.5折</span>
-          <span>-¥{{ memberDiscount.toFixed(2) }}</span>
-        </div>
         <div v-if="discount > 0" class="summary-row discount">
           <span>优惠</span>
           <span>-¥{{ discount.toFixed(2) }}</span>
@@ -56,7 +52,6 @@ defineProps({
   diningMethod: { type: String, default: 'TAKEOUT' },
   isBlackGoldMember: { type: Boolean, default: false },
   deliveryFee: { type: Number, default: 3 },
-  memberDiscount: { type: Number, default: 0 },
   discount: { type: Number, default: 0 },
   addonDiscount: { type: Number, default: 0 },
   finalTotal: { type: Number, default: 0 },

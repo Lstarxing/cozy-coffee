@@ -10,22 +10,7 @@ export const PRODUCT_STATUS_MAP = {
   [PRODUCT_STATUS.SOLD_OUT]: { label: '售罄', tagType: 'warning' }
 }
 
-export const PRODUCT_CATEGORY = {
-  ESPRESSO: 'espresso',
-  SIGNATURE: 'signature',
-  SOE: 'soe',
-  BAKERY: 'bakery',
-  MERCHANDISE: 'merchandise',
-  ADDON: 'addon'
-}
-
 export const PRODUCT_CATEGORY_MAP = {
-  [PRODUCT_CATEGORY.ESPRESSO]: { label: '意式咖啡', color: '#6F4E37' },
-  [PRODUCT_CATEGORY.SIGNATURE]: { label: '季节限定', color: '#8B5E3C' },
-  [PRODUCT_CATEGORY.SOE]: { label: '精品手冲', color: '#5D4037' },
-  [PRODUCT_CATEGORY.BAKERY]: { label: '烘焙甜品', color: '#D84315' },
-  [PRODUCT_CATEGORY.MERCHANDISE]: { label: '积分商品', color: '#8D6E63' },
-  [PRODUCT_CATEGORY.ADDON]: { label: '配料/加料', color: '#9CA3AF' },
   // V2 分类（大写，023 迁移后商品实际值）
   'ESPRESSO': { label: '经典咖啡', color: '#6F4E37' },
   'MILK': { label: '奶咖', color: '#8B5E3C' },

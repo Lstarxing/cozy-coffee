@@ -122,14 +122,12 @@ public class ExchangeCouponCalculator implements CouponCalculator {
 
             if (item.getCategory() != null) {
                 String cat = item.getCategory().toLowerCase();
-                if (blockSoe) {
-                    boolean isSoe = cat.contains("soe") || cat.contains("手冲") || cat.contains("pour-over") || cat.contains("pour_over");
-                    if (isSoe) {
-                        log.info("免单券排除SOE/手冲品类: category={}", cat);
-                        continue;
-                    }
+                // V2 分类枚举驱动（不靠名字嗅探）：精品咖啡=SPECIALTY、特调=SIGNATURE
+                if (blockSoe && "specialty".equals(cat)) {
+                    log.info("免单券排除精品咖啡品类: category={}", cat);
+                    continue;
                 }
-                if (blockSignature && (cat.contains("signature") || cat.contains("特调") || cat.contains("季节限定"))) {
+                if (blockSignature && "signature".equals(cat)) {
                     log.info("免单券排除特调品类: category={}", cat);
                     continue;
                 }

@@ -87,9 +87,10 @@ const handleUse = () => {
   if (couponExpired.value) return
   const filter = []
   const r = rules.value
+  const bl = r.categoryBlocklist || []
   if (r.skuLimit === 'STANDARD_ONLY') filter.push('standard_only')
-  if (r.categoryBlocklist?.includes('signature')) filter.push('exclude_signature')
-  if (r.categoryBlocklist?.includes('soe')) filter.push('exclude_soe')
+  if (bl.some(b => b.toLowerCase() === 'signature')) filter.push('exclude_signature')
+  if (bl.some(b => ['specialty', 'soe', 'pour-over'].includes(b.toLowerCase()))) filter.push('exclude_soe')
   router.push({
     path: '/',
     query: {

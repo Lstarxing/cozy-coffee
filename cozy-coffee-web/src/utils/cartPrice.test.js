@@ -7,7 +7,6 @@ import {
   computeSubtotal,
   detectHasExtraShot,
   computeExtraShotCount,
-  computeMemberDiscount,
   computeDeliveryFeeDiscount,
   computeShotDiscount,
   computeFinalTotal,
@@ -60,28 +59,6 @@ describe('extra shot detection', () => {
     ]
     expect(computeExtraShotCount(items)).toBe(2)
     expect(computeExtraShotCount([])).toBe(0)
-  })
-})
-
-describe('computeMemberDiscount', () => {
-  it('returns 0 for non-black levels', () => {
-    expect(computeMemberDiscount([{ category: 'soe', unitPrice: 20, quantity: 1 }], 'basic')).toBe(0)
-    expect(computeMemberDiscount([{ category: 'soe', unitPrice: 20, quantity: 1 }], 'gold')).toBe(0)
-  })
-
-  it('discounts only SOE category items at 15%', () => {
-    const items = [
-      { category: 'soe', unitPrice: 20, quantity: 2, cupSize: 'STANDARD' },
-      { category: 'espresso', unitPrice: 20, quantity: 1 }
-    ]
-    // 20 * 2 * 0.15 = 6
-    expect(computeMemberDiscount(items, 'black')).toBeCloseTo(6, 5)
-  })
-
-  it('adds ¥3 for LARGE cups before discounting', () => {
-    const items = [{ category: 'soe', unitPrice: 20, quantity: 2, cupSize: 'LARGE' }]
-    // (20 + 3) * 2 * 0.15 = 6.9
-    expect(computeMemberDiscount(items, 'black')).toBeCloseTo(6.9, 5)
   })
 })
 

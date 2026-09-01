@@ -101,32 +101,6 @@ export function computeExtraShotCount(items) {
 }
 
 /**
- * Black-gold member discount: SOE category items get a 15% discount
- * (LARGE cups add ¥3 to the base price first).
- *
- * @param {Array} items
- * @param {string} userLevel - member level (e.g. 'basic' | 'black')
- * @returns {number}
- */
-export function computeMemberDiscount(items, userLevel) {
-  const level = userLevel || 'basic'
-  if (level !== 'black') return 0
-  if (!items || !Array.isArray(items)) return 0
-
-  let totalDiscount = 0
-  items.forEach(item => {
-    if (item.category === 'soe') {
-      let itemBasePrice = item.basePrice || item.unitPrice
-      if (item.cupSize === 'LARGE') itemBasePrice += 3
-      const itemBaseAmount = itemBasePrice * item.quantity
-      const itemDiscount = itemBaseAmount * 0.15
-      totalDiscount += itemDiscount
-    }
-  })
-  return totalDiscount
-}
-
-/**
  * Delivery fee discount from black-gold membership or a DELIVERY_FEE coupon.
  *
  * @param {Object} ctx
@@ -187,7 +161,7 @@ export function computeFinalTotal({
   milkExtraTotal,
   strengthExtraTotal,
   otherAddonTotal = 0,
-  memberDiscount,
+  memberDiscount = 0,
   mainDiscount,
   shotDiscount,
   diningMethod,

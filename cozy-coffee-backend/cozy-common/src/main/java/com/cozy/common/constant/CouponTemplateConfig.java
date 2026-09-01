@@ -86,16 +86,16 @@ public class CouponTemplateConfig {
         list.add(t("CAKE_HALF", "DISCOUNT", 50, null, null, null, null, "CAKE_ONLY", null, null, null, null, false, "烘培甜品5折券", "限烘焙甜品"));
         list.add(t("UPGRADE_SILVER_DISCOUNT", "DISCOUNT", 50, null, null, null, 20, "DRINK_ONLY", null, "SINGLE_ITEM", null, null, false, "晋升白银5折券", "限饮品 | 封顶¥20"));
         list.add(t("UPGRADE_GOLD_BOGO", "BOGO", null, null, true, null, null, "DRINK_ONLY", null, null, null, null, false, "晋升黄金买一赠一券", "封顶¥{discountAmount}"));
-        list.add(t("UPGRADE_DIAMOND_STANDARD_FREE", "EXCHANGE", null, null, true, null, null, null, "STANDARD_ONLY", null, Arrays.asList("soe", "pour-over"), null, false, "晋升钻石优选饮品免单券", "限标准杯 | 封顶¥{discountAmount}"));
-        list.add(t("UPGRADE_BLACK_PREMIUM", "EXCHANGE", null, null, null, null, null, null, "ALL", null, null, true, false, "黑金尊享通兑券", "不限杯型 | 含SOE | 无封顶"));
-        list.add(t("MONTHLY_BLACK_FREE", "EXCHANGE", null, 40, null, null, null, null, "ALL", null, Arrays.asList("soe", "pour-over"), null, false, "黑金月度全通兑免单券", "不限杯型 | 封顶¥40"));
-        list.add(t("MONTHLY_DIAMOND_FREE", "EXCHANGE", null, 40, null, null, null, null, "STANDARD_ONLY", null, Arrays.asList("soe", "pour-over"), null, false, "钻石月度优选饮品免单券", "限标准杯 | 封顶¥40"));
-        list.add(t("BIRTHDAY_BLACK_FREE", "EXCHANGE", null, 40, null, null, null, null, "ALL", null, Arrays.asList("soe", "pour-over"), null, false, "🎂黑金生日全通兑免单券", "不限杯型 | 封顶¥40"));
-        list.add(t("BIRTHDAY_DIAMOND_FREE", "EXCHANGE", null, null, true, null, null, null, "STANDARD_ONLY", null, Arrays.asList("soe", "pour-over"), null, false, "🎂钻石生日优选饮品免单券", "限标准杯 | 封顶¥{discountAmount}"));
-        list.add(t("BIRTHDAY_GOLD_FREE", "EXCHANGE", null, null, true, null, null, null, "STANDARD_ONLY", null, Arrays.asList("signature", "soe", "pour-over"), null, false, "🎂黄金生日标准饮品免单券", "限标准杯/不含特调、SOE"));
+        list.add(t("UPGRADE_DIAMOND_STANDARD_FREE", "EXCHANGE", null, null, true, null, null, null, "STANDARD_ONLY", null, Arrays.asList("SPECIALTY"), null, false, "晋升钻石优选饮品免单券", "限标准杯 | 封顶¥{discountAmount}"));
+        list.add(t("UPGRADE_BLACK_PREMIUM", "EXCHANGE", null, null, null, null, null, null, "ALL", null, null, true, false, "黑金尊享通兑券", "不限杯型 | 含精品咖啡 | 无封顶"));
+        list.add(t("MONTHLY_BLACK_FREE", "EXCHANGE", null, 40, null, null, null, null, "ALL", null, Arrays.asList("SPECIALTY"), null, false, "黑金月度全通兑免单券", "不限杯型 | 封顶¥40"));
+        list.add(t("MONTHLY_DIAMOND_FREE", "EXCHANGE", null, 40, null, null, null, null, "STANDARD_ONLY", null, Arrays.asList("SPECIALTY"), null, false, "钻石月度优选饮品免单券", "限标准杯 | 封顶¥40"));
+        list.add(t("BIRTHDAY_BLACK_FREE", "EXCHANGE", null, 40, null, null, null, null, "ALL", null, Arrays.asList("SPECIALTY"), null, false, "🎂黑金生日全通兑免单券", "不限杯型 | 封顶¥40"));
+        list.add(t("BIRTHDAY_DIAMOND_FREE", "EXCHANGE", null, null, true, null, null, null, "STANDARD_ONLY", null, Arrays.asList("SPECIALTY"), null, false, "🎂钻石生日优选饮品免单券", "限标准杯 | 封顶¥{discountAmount}"));
+        list.add(t("BIRTHDAY_GOLD_FREE", "EXCHANGE", null, null, true, null, null, null, "STANDARD_ONLY", null, Arrays.asList("SIGNATURE", "SPECIALTY"), null, false, "🎂黄金生日标准饮品免单券", "限标准杯/不含特调、精品"));
         list.add(t("BIRTHDAY_SILVER_BOGO", "BOGO", null, 40, null, null, null, "DRINK_ONLY", null, null, null, null, false, "🎂白银生日买一赠一券", "封顶¥40"));
         list.add(t("BIRTHDAY_BASIC_DISCOUNT", "DISCOUNT", null, null, null, 0.5, 20, "DRINK_ONLY", "STANDARD_ONLY", "SINGLE_ITEM", null, null, false, "🎂基础会员生日5折券", "限标准杯 | 封顶¥20"));
-        list.add(t("STANDARD_FREE", "EXCHANGE", null, null, true, null, null, null, "STANDARD_ONLY", null, Arrays.asList("soe", "pour-over"), null, false, "标准饮品免单券", "封顶¥{discountAmount}"));
+        list.add(t("STANDARD_FREE", "EXCHANGE", null, null, true, null, null, null, "STANDARD_ONLY", null, Arrays.asList("SPECIALTY"), null, false, "标准饮品免单券", "封顶¥{discountAmount}"));
         // 通用折扣券（catch-all，rate 计算与折数标题由代码动态生成）
         list.add(t("HALF_PRICE", "DISCOUNT", null, null, null, null, null, null, null, null, null, null, false, null, null));
         list.add(t("DISCOUNT", "DISCOUNT", null, null, null, null, null, null, null, null, null, null, false, null, null));

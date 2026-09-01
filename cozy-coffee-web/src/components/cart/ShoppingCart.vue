@@ -84,7 +84,6 @@
       :dining-method="diningMethod"
       :is-black-gold-member="isBlackGoldMember"
       :delivery-fee="deliveryFee"
-      :member-discount="memberDiscount"
       :discount="discount"
       :addon-discount="addonDiscount"
       :final-total="finalTotal"
@@ -140,7 +139,6 @@ import {
   computeSubtotal,
   detectHasExtraShot,
   computeExtraShotCount,
-  computeMemberDiscount,
   computeDeliveryFeeDiscount,
   computeShotDiscount,
   computeFinalTotal,
@@ -303,8 +301,6 @@ const couponGetTip = (coupon) => {
 //  Discount calculations
 // ───────────────────────────────
 
-const memberDiscount = computed(() => computeMemberDiscount(props.cartItems, userStore.userLevel || 'basic'))
-
 const discount = computed(() => {
   if (!couponCode.value) return 0
   const coupon = availableCoupons.value.find(c => c.couponCode === couponCode.value)
@@ -375,7 +371,6 @@ const finalTotal = computed(() => computeFinalTotal({
   milkExtraTotal: milkExtraTotal.value,
   strengthExtraTotal: strengthExtraTotal.value,
   otherAddonTotal: otherAddonTotal.value,
-  memberDiscount: memberDiscount.value,
   mainDiscount: discount.value,
   shotDiscount: shotDiscount.value,
   diningMethod: diningMethod.value,

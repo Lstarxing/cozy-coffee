@@ -357,8 +357,8 @@ async function loadMenu() {
 
 function categoryName(code) {
   return ({
-    espresso: '经典咖啡', coffee: '经典咖啡', latte: '拿铁系列', signature: '招牌特调',
-    soe: '手冲精品', bakery: '烘焙轻食', dessert: '甜品', addon: '加料', other: '其他',
+    espresso: '经典咖啡', signature: '招牌特调',
+    bakery: '烘焙轻食', addon: '加料', other: '其他',
     milk: '奶咖', specialty: '精品咖啡', non_coffee: '非咖啡'
   })[code] || code
 }
@@ -375,8 +375,8 @@ const tagLabel = (t) => TAG_MAP[t] || t
 const CATEGORY_ORDER = ['espresso', 'milk', 'signature', 'specialty', 'non_coffee', 'bakery']
 function categoryEn(code) {
   return ({
-    espresso: 'CLASSIC COFFEE', coffee: 'CLASSIC COFFEE', latte: 'LATTE', signature: 'SIGNATURE',
-    soe: 'HAND BREW', bakery: 'BAKERY', dessert: 'DESSERT', addon: 'ADD-ON', other: 'MORE',
+    espresso: 'CLASSIC COFFEE', signature: 'SIGNATURE',
+    bakery: 'BAKERY', addon: 'ADD-ON', other: 'MORE',
     milk: 'MILK', specialty: 'SPECIALTY', non_coffee: 'NON-COFFEE'
   })[code] || 'COZY'
 }

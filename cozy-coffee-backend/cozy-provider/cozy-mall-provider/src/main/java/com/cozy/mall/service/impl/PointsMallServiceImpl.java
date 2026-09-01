@@ -1905,9 +1905,9 @@ public class PointsMallServiceImpl implements PointsMallService {
         } else if ("EXCHANGE".equals(type) && couponType.contains("FREE_DRINK")) {
             boolean birthday = couponType.contains("BIRTHDAY");
             coupon.setDisplayTitle(birthday ? "生日免单券" : "全场饮品通兑券");
-            coupon.setDisplaySubTitle((birthday ? "排除SOE | " : "任选饮品 | ") + "封顶¥" + (int) discountAmount);
+            coupon.setDisplaySubTitle((birthday ? "排除精品咖啡 | " : "任选饮品 | ") + "封顶¥" + (int) discountAmount);
             if (birthday) {
-                rule.put("categoryBlocklist", List.of("soe", "pour-over"));
+                rule.put("categoryBlocklist", List.of("SPECIALTY"));
             }
         } else if ("DISCOUNT".equals(type) && t.getDiscountRate() == null && t.getValue() == null
                 && coupon.getDisplayTitle() == null) {

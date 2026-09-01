@@ -189,10 +189,12 @@ export function getRestrictionTags(coupon) {
   else if (r.skuLimit === 'ALL') tags.push({ icon: '✅', text: '不限杯型', type: 'check' })
 
   const blocklist = r.categoryBlocklist || []
-  if (blocklist.length === 0 && r.skuLimit === 'ALL') tags.push({ icon: '✅', text: '含SOE手冲', type: 'check' })
-  else if (blocklist.includes('signature')) tags.push({ icon: '🚫', text: '排除特调', type: 'ban' })
-  else if (!blocklist.includes('signature') && r.skuLimit) tags.push({ icon: '✅', text: '含特调', type: 'check' })
-  if (blocklist.includes('soe')) tags.push({ icon: '🚫', text: '不含SOE', type: 'ban' })
+  const blockSignature = blocklist.some(b => b.toLowerCase() === 'signature')
+  const blockSpecialty = blocklist.some(b => ['specialty', 'soe', 'pour-over'].includes(b.toLowerCase()))
+  if (blocklist.length === 0 && r.skuLimit === 'ALL') tags.push({ icon: '✅', text: '含精品咖啡', type: 'check' })
+  else if (blockSignature) tags.push({ icon: '🚫', text: '排除特调', type: 'ban' })
+  else if (!blockSignature && r.skuLimit) tags.push({ icon: '✅', text: '含特调', type: 'check' })
+  if (blockSpecialty) tags.push({ icon: '🚫', text: '不含精品', type: 'ban' })
 
   if (r.freeAddon) tags.push({ icon: '✅', text: '免1份加料', type: 'check' })
   if (r.limit === 'SINGLE_ITEM') tags.push({ icon: '🔒', text: '限单饮品', type: 'lock' })
