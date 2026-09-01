@@ -16,6 +16,7 @@ import com.cozy.member.api.MemberService;
 import com.cozy.order.api.OrderService;
 import com.cozy.user.api.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Map;
 
@@ -50,6 +52,15 @@ class PointsMallServiceImplTest {
     @Mock private UserService userService;
 
     @InjectMocks private PointsMallServiceImpl pointsMallService;
+
+    @BeforeEach
+    void injectDubboRefs() {
+        // @DubboReference 字段不在 @RequiredArgsConstructor 构造里，@InjectMocks 不会注入
+        ReflectionTestUtils.setField(pointsMallService, "memberService", memberService);
+        ReflectionTestUtils.setField(pointsMallService, "addressService", addressService);
+        ReflectionTestUtils.setField(pointsMallService, "orderService", orderService);
+        ReflectionTestUtils.setField(pointsMallService, "userService", userService);
+    }
 
     private PointsProduct product(Long id, int stock, int pointsPrice) {
         PointsProduct p = new PointsProduct();
@@ -84,5 +95,54 @@ class PointsMallServiceImplTest {
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> pointsMallService.redeem(1L, req));
         assertTrue(ex.getMessage().contains("兑换数量不合法"));
+    }
+
+    @Test
+    void cancelOrder_winner_restoresStockAndRefundsOnce() {
+        com.cozy.mall.entity.PointsOrder order = new com.cozy.mall.entity.PointsOrder();
+        order.setId(500L);
+        order.setUserId(1L);
+        order.setProductId(100L);
+        order.setQuantity(2);
+        order.setPointsCost(100);
+        order.setStatus("pending");
+        order.setProductName("测试商品");
+
+        when(orderMapper.selectById(500L)).thenReturn(order);
+        when(orderMapper.cancelOrderIfPending(org.mockito.ArgumentMatchers.eq(500L),
+                org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any())).thenReturn(1);
+        when(productMapper.addStock(100L, 2)).thenReturn(1); // 原子恢复，不再读后覆盖
+
+        pointsMallService.cancelOrder(500L, 1L);
+
+        org.mockito.Mockito.verify(memberService).refundPointsByConsumption(
+                org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.eq(100),
+                org.mockito.ArgumentMatchers.eq("redeem"),
+                org.mockito.ArgumentMatchers.eq(500L),
+                org.mockito.ArgumentMatchers.anyString());
+        org.mockito.Mockito.verify(productMapper).addStock(100L, 2);
+    }
+
+    @Test
+    void cancelOrder_alreadyCancelled_returnsWithoutDoubleRestore() {
+        com.cozy.mall.entity.PointsOrder order = new com.cozy.mall.entity.PointsOrder();
+        order.setId(500L);
+        order.setUserId(1L);
+        order.setStatus("cancelled");
+        when(orderMapper.selectById(500L)).thenReturn(order);
+        when(orderMapper.cancelOrderIfPending(org.mockito.ArgumentMatchers.eq(500L),
+                org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any())).thenReturn(0);
+
+        pointsMallService.cancelOrder(500L, 1L);
+
+        org.mockito.Mockito.verify(memberService, org.mockito.Mockito.never())
+                .refundPointsByConsumption(org.mockito.ArgumentMatchers.anyLong(),
+                        org.mockito.ArgumentMatchers.anyInt(),
+                        org.mockito.ArgumentMatchers.anyString(),
+                        org.mockito.ArgumentMatchers.anyLong(),
+                        org.mockito.ArgumentMatchers.anyString());
+        org.mockito.Mockito.verify(productMapper, org.mockito.Mockito.never()).addStock(
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyInt());
     }
 }

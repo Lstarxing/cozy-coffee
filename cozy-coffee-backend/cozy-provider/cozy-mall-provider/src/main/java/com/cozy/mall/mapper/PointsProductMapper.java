@@ -13,4 +13,8 @@ public interface PointsProductMapper extends BaseMapper<PointsProduct> {
     @Update("UPDATE points_products SET stock = stock - #{qty} " +
             "WHERE id = #{id} AND stock >= #{qty}")
     int deductStock(@Param("id") Long id, @Param("qty") int qty);
+
+    /** 原子恢复库存：与 deductStock 同为单语句 UPDATE，DB 行锁串行，无丢失更新 */
+    @Update("UPDATE points_products SET stock = stock + #{qty} WHERE id = #{id}")
+    int addStock(@Param("id") Long id, @Param("qty") int qty);
 }

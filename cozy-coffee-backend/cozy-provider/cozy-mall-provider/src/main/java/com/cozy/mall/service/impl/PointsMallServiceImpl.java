@@ -537,30 +537,19 @@ public class PointsMallServiceImpl implements PointsMallService {
     /**
      * 恢复商品库存（加分布式锁防止并发取消导致库存错乱）
      */
+    /**
+     * 恢复商品库存：原子自增（与兑换侧 deductStock 同为单语句 UPDATE，DB 行锁串行，无丢失更新）
+     */
     private void restoreProductStock(Long productId, int quantity) {
         if (productId == null || quantity <= 0) {
             return;
         }
-        String lockKey = "cozy:lock:mall_stock:" + productId;
-        String lockToken = UUID.randomUUID().toString();
-        boolean locked = false;
-        try {
-            locked = tryAcquireRebuildLock(lockKey, lockToken, 10);
-            if (!locked) {
-                log.warn("获取库存恢复锁失败: productId={}", productId);
-                throw new BusinessException("系统繁忙，请稍后重试");
-            }
-            PointsProduct product = productMapper.selectById(productId);
-            if (product != null) {
-                product.setStock(product.getStock() + quantity);
-                productMapper.updateById(product);
-                invalidateMallProductsCache();
-            }
-        } finally {
-            if (locked) {
-                releaseLockSafely(lockKey, lockToken);
-            }
+        int affected = productMapper.addStock(productId, quantity);
+        if (affected == 0) {
+            log.warn("恢复库存失败（商品不存在）: productId={}", productId);
+            return;
         }
+        invalidateMallProductsCacheAfterCommit();
     }
 
     private void invalidateMallProductsCache() {
@@ -639,19 +628,25 @@ public class PointsMallServiceImpl implements PointsMallService {
         if (!order.getUserId().equals(userId)) {
             throw new BusinessException("无权操作此订单");
         }
-        if (!"pending".equals(order.getStatus()) && !"processing".equals(order.getStatus())) {
+
+        // 状态 CAS：并发取消只有一个请求 affected==1，其余幂等返回，不重复恢复库存/退款
+        LocalDateTime now = LocalDateTime.now();
+        int affected = orderMapper.cancelOrderIfPending(orderId, userId, now);
+        if (affected == 0) {
+            PointsOrder current = orderMapper.selectById(orderId);
+            if (current != null && "cancelled".equals(current.getStatus())) {
+                return toOrderDTO(current); // 幂等：已被取消，直接返回
+            }
             throw new BusinessException("订单状态不允许取消");
         }
 
-        // 更新订单状态
         order.setStatus("cancelled");
-        order.setUpdatedAt(LocalDateTime.now());
-        orderMapper.updateById(order);
+        order.setUpdatedAt(now);
 
-        // 恢复库存（加分布式锁，防止并发取消导致库存错乱）
+        // 原子恢复库存（与兑换侧原子扣减一致，不会丢失并发更新）
         restoreProductStock(order.getProductId(), order.getQuantity());
 
-        // 跨服务调用：按消费明细回补原批次退还积分（保持原到期时间，FIFO 语义；幂等：refund 流水唯一）
+        // 跨服务调用：按消费明细回补原批次退还积分（幂等：refund 流水唯一）
         memberService.refundPointsByConsumption(userId, order.getPointsCost(), "redeem", order.getId(),
                 "订单取消退还: " + order.getProductName() + " x" + order.getQuantity());
 
