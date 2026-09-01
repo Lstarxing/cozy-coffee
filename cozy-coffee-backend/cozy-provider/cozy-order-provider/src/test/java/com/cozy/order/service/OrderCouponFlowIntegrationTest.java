@@ -175,7 +175,7 @@ public class OrderCouponFlowIntegrationTest {
 
     private CreateOrderRequest orderRequest(String couponCode) {
         OrderItemRequest item = new OrderItemRequest();
-        item.setProductId(19L); // espresso, price 22, sizeType MEDIUM_LARGE
+        item.setProductId(36L); // Cozy 美式, ESPRESSO, MEDIUM_LARGE, medium price 22
         item.setQuantity(1);
         item.setCupSize("MEDIUM");
 

@@ -50,22 +50,22 @@ public class OrderFlowBaselineTest {
     private JdbcTemplate jdbcTemplate;
 
     private static final String BOGO_COUPON_CODE = "6M9E9JJE";
+    private static final long TEST_USER_ID = 43L;
 
     @BeforeTransaction
     public void resetCouponState() {
         // The Dubbo RPC to mall-provider commits independently of the test's
         // @Transactional rollback, so reset the coupon before each run.
-        // Also bump expires_at to a future date: coupon 6M9E9JJE was issued
-        // 2026-01-10 with 7-day validity, so by Phase 0 (2026-07) it is
-        // date-expired even though status='ISSUED'. This is test-fixture setup
-        // (analogous to the brief's allowed "insert test BOGO coupon" step),
-        // not a production code change.
+        // 该 BOGO 测试券可能已被种子数据漂移移除：缺失则插入，存在则重置为 ISSUED。
+        // 这是 test-fixture setup（brief 允许 insert test BOGO coupon），不是生产代码改动。
         jdbcTemplate.update(
-                "UPDATE cozy_mall.user_coupons "
-                        + "SET status='ISSUED', used_at=NULL, used_shop_order_id=NULL, "
-                        + "    expires_at=DATE_ADD(NOW(), INTERVAL 365 DAY) "
-                        + "WHERE coupon_code=?",
-                BOGO_COUPON_CODE);
+                "INSERT INTO cozy_mall.user_coupons "
+                        + "(user_id, coupon_code, coupon_type, rule_json, status, issued_at, expires_at, created_at) "
+                        + "VALUES (?, ?, 'BOGO', '{}', 'ISSUED', NOW(), DATE_ADD(NOW(), INTERVAL 365 DAY), NOW()) "
+                        + "ON DUPLICATE KEY UPDATE "
+                        + "status='ISSUED', used_at=NULL, used_shop_order_id=NULL, "
+                        + "    expires_at=DATE_ADD(NOW(), INTERVAL 365 DAY)",
+                TEST_USER_ID, BOGO_COUPON_CODE);
     }
 
     @Test
@@ -96,7 +96,7 @@ public class OrderFlowBaselineTest {
 
         // Create order without coupon
         OrderItemRequest item = new OrderItemRequest();
-        item.setProductId(19L);
+        item.setProductId(36L);
         item.setQuantity(1);
         item.setCupSize("MEDIUM");
 
@@ -119,7 +119,7 @@ public class OrderFlowBaselineTest {
         String memberLevel = "diamond";
 
         OrderItemRequest item = new OrderItemRequest();
-        item.setProductId(19L);
+        item.setProductId(36L);
         item.setQuantity(1);
         item.setCupSize("MEDIUM");
 
@@ -140,12 +140,12 @@ public class OrderFlowBaselineTest {
     }
 
     private CreateOrderRequest buildBogoOrderRequest() {
-        // Product 19: status=active, size_type=MEDIUM_LARGE, category=espresso, price=22.00
+        // Product 36 (Cozy 美式): status=active, size_type=MEDIUM_LARGE, category=ESPRESSO, medium price=22.00
         // cupSize "MEDIUM" is allowed for MEDIUM_LARGE (case-insensitive match on "medium").
         // quantity=2: BOGO coupon rule (PointsMallServiceImpl.calculateCouponDiscount BOGO branch)
         // requires drinkPrices.size() >= 2 -- buy-one-get-one needs 2 cups in the cart.
         OrderItemRequest item = new OrderItemRequest();
-        item.setProductId(19L);
+        item.setProductId(36L);
         item.setQuantity(2);
         item.setCupSize("MEDIUM");
 
