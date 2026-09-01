@@ -16,9 +16,20 @@ function specToCn(field, value) {
   return SPEC_CN[field][String(value).toUpperCase()] || String(value)
 }
 
+// V2：奶型以 addons_json 成交快照为准（后端规范化）；无 addons_json（购物车行）时回退 options.milkType
+function milkFromAddons(item) {
+  if (!item?.addonsJson) return null
+  try {
+    const addons = JSON.parse(item.addonsJson)
+    const map = { OAT_MILK: 'OAT', COCONUT_MILK: 'COCONUT' }
+    const m = (Array.isArray(addons) ? addons : []).find(a => map[a.code])
+    return m ? map[m.code] : null
+  } catch (_) { return null }
+}
+
 export function formatCoffeeSpec(item) {
   const options = parseOptions(item?.optionsJson)
-  const milk = options.milkType || item?.milkType
+  const milk = milkFromAddons(item) || options.milkType || item?.milkType
   const parts = []
   if (item?.cupSize) parts.push(specToCn('cupSize', item.cupSize))
   if (item?.temperature) parts.push(specToCn('temperature', item.temperature))

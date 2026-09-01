@@ -29,6 +29,7 @@ public class ShopOrderItemDTO implements Serializable {
     private String brewMethod; // 出品方式：POUR_OVER/COLD_BREW（精品 Bean）
     private String coffeeStrength;
     private String optionsJson;
+    private String addonsJson; // 规范化成交加料快照（含默认项，price=price_delta 实际增量）；奶型以这里为准
 
     // 商品图片
     private String productImage;

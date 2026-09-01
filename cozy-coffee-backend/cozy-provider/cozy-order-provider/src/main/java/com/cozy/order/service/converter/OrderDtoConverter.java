@@ -148,6 +148,7 @@ public class OrderDtoConverter {
         dto.setBrewMethod(entity.getBrewMethod());
         dto.setCoffeeStrength(entity.getCoffeeStrength());
         dto.setOptionsJson(entity.getOptionsJson());
+        dto.setAddonsJson(entity.getAddonsJson());
 
         CoffeeProduct product = productMap != null ? productMap.get(entity.getProductId()) : null;
         if (product == null) {

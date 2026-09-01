@@ -24,10 +24,9 @@ function isFood(product) {
 function allowedSizes(product) {
   if (isFood(product)) return ['STANDARD']
   const type = String(product?.sizeType || 'MEDIUM_LARGE').toUpperCase()
-  // 与选规格页 spec.vue 的 sizeOptions 对齐
   if (type === 'DEFAULT') return ['STANDARD']
   if (type === 'ALL_SIZES') return ['MEDIUM', 'LARGE', 'EXTRA_LARGE']
-  return ['STANDARD', 'LARGE']
+  return ['MEDIUM', 'LARGE'] // MEDIUM_LARGE：中/大杯（V2，原漏了 MEDIUM）
 }
 
 function allowedTemperatures(product) {
@@ -41,9 +40,9 @@ function allowedTemperatures(product) {
 function allowedSugarLevels(product) {
   if (isFood(product)) return ['']
   const type = String(product?.sugarType || 'FREE_CHOICE').toUpperCase()
-  if (type === 'NO_SUGAR_ONLY') return ['NONE']
+  if (type === 'NO_SUGAR_ONLY') return [''] // 无糖度配置，不显示糖度行
   if (type === 'MIN_LESS_SWEET') return ['STANDARD', 'LESS', 'HALF']
-  return ['STANDARD', 'LESS', 'HALF', 'NONE']
+  return ['STANDARD', 'LESS', 'HALF', 'NO_ADDED_SUGAR']
 }
 
 function restoreAllowedOption(value, allowed, aliases = {}) {
@@ -53,32 +52,84 @@ function restoreAllowedOption(value, allowed, aliases = {}) {
   return { value: allowed[0] || '', adjusted: Boolean(original) }
 }
 
-function currentUnitPrice(product, line) {
-  const base = Number(product?.price ?? 0)
-  const sizeExtra = line.cupSize === 'LARGE' ? 3 : 0
-  const strengthExtra = line.coffeeStrength === 'STRONG' ? 5 : 0
-  const milkExtra = line.milkType && line.milkType !== 'WHOLE' ? 4 : 0
-  return Number((base + sizeExtra + strengthExtra + milkExtra).toFixed(2))
+// V2：奶型以 addons_json 成交快照为准（后端规范化，WHOLE_MILK=全脂/OAT_MILK/COCONUT_MILK）
+function milkCodeFromAddons(item) {
+  if (!item?.addonsJson) return ''
+  try {
+    const addons = JSON.parse(item.addonsJson)
+    const map = { OAT_MILK: 'OAT', COCONUT_MILK: 'COCONUT', WHOLE_MILK: 'WHOLE' }
+    const m = (Array.isArray(addons) ? addons : []).find(a => map[a.code])
+    return m ? map[m.code] : ''
+  } catch (_) { return '' }
+}
+
+function parseAddonsList(value) {
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : []
+  } catch (_) { return [] }
+}
+
+function productHasMilkGroup(product) {
+  const groups = Array.isArray(product?.addonGroups) ? product.addonGroups : []
+  return groups.some(g => g.category === 'MILK')
+}
+
+function currentUnitPrice(product, line, addons) {
+  let base = 0
+  const sizeType = String(product?.sizeType || 'MEDIUM_LARGE').toUpperCase()
+  if (isFood(product) || sizeType === 'DEFAULT') {
+    base = Number(product?.price || 0)
+  } else {
+    const medium = Number(product?.priceMedium)
+    const large = Number(product?.priceLarge)
+    if (medium || large) {
+      base = line.cupSize === 'LARGE' ? large : medium
+    } else {
+      // 旧商品无中/大杯价：基础价 + 大杯 +3 兜底
+      base = Number(product?.price || 0) + (line.cupSize === 'LARGE' ? 3 : 0)
+    }
+  }
+  const addonFee = addons.reduce((s, a) => s + Number(a.price || 0), 0)
+  return Number((base + addonFee).toFixed(2))
 }
 
 export function createReorderCartLine(item, product) {
   const options = parseJsonObject(item?.optionsJson)
   const size = restoreAllowedOption(item?.cupSize, allowedSizes(product), { DEFAULT: 'STANDARD' })
   const temperature = restoreAllowedOption(item?.temperature, allowedTemperatures(product), { ICE: 'COLD', ICED: 'COLD' })
-  const sugar = restoreAllowedOption(item?.sugarLevel, allowedSugarLevels(product), { FULL: 'STANDARD', NORMAL: 'STANDARD' })
+  const sugar = restoreAllowedOption(item?.sugarLevel, allowedSugarLevels(product), { FULL: 'STANDARD', NORMAL: 'STANDARD', NONE: 'NO_ADDED_SUGAR' })
   const food = isFood(product)
   const category = String(product?.category || '').toLowerCase()
   const originalStrength = normalizeOption(item?.coffeeStrength)
   const coffeeStrength = food ? '' : (['NORMAL', 'STRONG'].includes(originalStrength) ? originalStrength : 'NORMAL')
-  const originalMilkType = normalizeOption(options.milkType ?? item?.milkType)
-  const supportsMilk = !food && category !== 'soe'
-  const milkType = supportsMilk ? (originalMilkType || 'WHOLE') : ''
-  const modifierAdjusted = (!food && Boolean(originalStrength) && !['NORMAL', 'STRONG'].includes(originalStrength)) ||
-    (!supportsMilk && Boolean(originalMilkType))
-  const addons = []
 
-  if (coffeeStrength === 'STRONG') addons.push({ code: 'EXTRA_SHOT', name: '加浓', price: 5 })
-  if (milkType && milkType !== 'WHOLE') addons.push({ code: 'SPECIAL_MILK', name: milkType, price: 4 })
+  // 奶型：addons_json 权威；旧订单回退 options_json.milkType；商品无 MILK 组（黑咖）→ 无奶
+  const milkFromAddons = milkCodeFromAddons(item)
+  const legacyMilk = normalizeOption(options.milkType ?? item?.milkType)
+  const supportsMilk = !food && (
+    productHasMilkGroup(product) ||
+    (!Array.isArray(product?.addonGroups) && category !== 'soe') // 旧商品无加料组：按旧分类判断
+  )
+  const milkType = milkFromAddons || (supportsMilk ? (legacyMilk || 'WHOLE') : '')
+  const modifierAdjusted =
+    (!food && Boolean(originalStrength) && !['NORMAL', 'STRONG'].includes(originalStrength)) ||
+    (Boolean(legacyMilk) && !milkFromAddons && !supportsMilk)
+
+  // 加料：addons_json 还原（剔除默认全脂奶 WHOLE_MILK——后端自动注入必选默认项）
+  const addons = []
+  const parsedAddons = parseAddonsList(item?.addonsJson)
+  if (parsedAddons.length) {
+    parsedAddons.forEach(a => {
+      if (!a || !a.code || a.code === 'WHOLE_MILK') return
+      addons.push({ code: a.code, name: a.name, price: Number(a.price || 0) })
+    })
+  } else {
+    // 旧订单兜底（无 addons_json）：coffeeStrength / options.milkType → 真实加料码
+    if (coffeeStrength === 'STRONG') addons.push({ code: 'EXTRA_SHOT', name: '加浓', price: 5 })
+    const legacyMilkCode = milkType === 'OAT' ? 'OAT_MILK' : milkType === 'COCONUT' ? 'COCONUT_MILK' : ''
+    if (legacyMilkCode) addons.push({ code: legacyMilkCode, name: milkType === 'OAT' ? '燕麦奶' : '椰奶', price: 3 })
+  }
 
   const line = {
     ...product,
@@ -98,7 +149,7 @@ export function createReorderCartLine(item, product) {
     quantity: Math.max(1, Math.min(10, Number.parseInt(item?.quantity, 10) || 1))
   }
 
-  line.price = currentUnitPrice(product, line)
+  line.price = currentUnitPrice(product, line, addons)
   return {
     line,
     adjusted: size.adjusted || temperature.adjusted || sugar.adjusted || modifierAdjusted

@@ -347,14 +347,13 @@ const getSpecTags = (item) => {
     tags.push(STRENGTH_MAP[item.coffeeStrength])
   }
 
-  const milkMap = { OAT: '燕麦奶', SOY: '豆奶', COCONUT: '椰奶', WHOLE: '全脂奶', SKIM: '脱脂奶' }
-  if (item.milkType && item.milkType !== 'WHOLE') {
-    tags.push(milkMap[item.milkType] || item.milkType)
-  } else if (item.optionsJson) {
+  // V2：奶型以 addons_json 成交快照为准——黑咖无奶组→无奶项不显示；WHOLE_MILK 默认不显示
+  const milkMap = { OAT_MILK: '燕麦奶', COCONUT_MILK: '椰奶', OAT: '燕麦奶', COCONUT: '椰奶' }
+  if (item.addonsJson) {
     try {
-      const opts = JSON.parse(item.optionsJson)
-      const m = opts.milkType || opts.milk
-      if (m && m !== 'WHOLE') tags.push(milkMap[m] || m)
+      const addons = JSON.parse(item.addonsJson)
+      const milk = (Array.isArray(addons) ? addons : []).find(a => milkMap[a.code])
+      if (milk) tags.push(milkMap[milk.code])
     } catch (e) { /* ignore parse error */ }
   }
 

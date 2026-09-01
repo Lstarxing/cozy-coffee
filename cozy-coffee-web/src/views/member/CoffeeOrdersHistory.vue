@@ -222,10 +222,14 @@ function formatSpecs(item) {
   if (item.coffeeStrength && item.coffeeStrength === 'STRONG') {
     parts.push(map[item.coffeeStrength] || item.coffeeStrength)
   }
-  if (item.milkType && item.milkType !== 'WHOLE') {
-    const milkMap = { 'OAT': '燕麦奶', 'COCONUT': '椰奶', 'SOY': '豆奶' }
-    const m = milkMap[item.milkType]
-    if (m) parts.push(m)
+  // V2：奶型以 addons_json 成交快照为准——黑咖无奶组→无奶项不显示；WHOLE_MILK 默认不显示
+  if (item.addonsJson) {
+    try {
+      const addons = JSON.parse(item.addonsJson)
+      const milkMap = { 'OAT_MILK': '燕麦奶', 'COCONUT_MILK': '椰奶', 'OAT': '燕麦奶', 'COCONUT': '椰奶' }
+      const m = (Array.isArray(addons) ? addons : []).find(a => milkMap[a.code])
+      if (m) parts.push(milkMap[m.code])
+    } catch (_) { /* ignore parse error */ }
   }
   return parts.length > 0 ? parts.join(' / ') : ''
 }

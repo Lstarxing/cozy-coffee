@@ -213,14 +213,13 @@ const getItemSpecsText = (item) => {
   if (item.coffeeStrength) specs.push(mapStrength[item.coffeeStrength] || item.coffeeStrength)
   
   // 换基底 (解析 optionsJson)
-  if (item.optionsJson) {
+  // 换基底（以 addons_json 成交快照为准；黑咖无奶组→无奶项；WHOLE_MILK 默认不显示）
+  if (item.addonsJson) {
       try {
-          const opts = JSON.parse(item.optionsJson)
-          if (opts.milkType) {
-              const mapMilk = { 'WHOLE': '', 'OAT': '换燕麦奶', 'COCONUT': '换椰奶' }
-              const milkText = mapMilk[opts.milkType]
-              if (milkText) specs.push(milkText)
-          }
+          const addons = JSON.parse(item.addonsJson)
+          const milkMap = { 'OAT_MILK': '换燕麦奶', 'COCONUT_MILK': '换椰奶', 'OAT': '换燕麦奶', 'COCONUT': '换椰奶' }
+          const milk = (Array.isArray(addons) ? addons : []).find(a => milkMap[a.code])
+          if (milk) specs.push(milkMap[milk.code])
       } catch (e) {
           // ignore parse error
       }

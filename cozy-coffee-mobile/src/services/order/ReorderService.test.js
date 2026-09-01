@@ -33,7 +33,7 @@ describe('ReorderService', () => {
       sugarLevel: 'LESS',
       coffeeStrength: 'STRONG',
       milkType: 'OAT',
-      price: 32,
+      price: 31,
       quantity: 2
     }), 2)
   })
@@ -57,7 +57,7 @@ describe('ReorderService', () => {
     expect(cartStore.addItem).toHaveBeenCalledWith(expect.objectContaining({
       cupSize: 'STANDARD',
       temperature: 'COLD',
-      sugarLevel: 'NONE'
+      sugarLevel: ''
     }), 1)
   })
 
