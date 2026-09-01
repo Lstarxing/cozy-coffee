@@ -3,6 +3,7 @@ import com.cozy.order.service.converter.OrderDtoConverter;
 import com.cozy.order.service.converter.OrderDtoEnricher;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.cozy.member.api.MemberService;
 import com.cozy.mall.api.PointsMallService;
 import com.cozy.mall.dto.request.ItemCheckDTO;
@@ -223,6 +224,10 @@ public class OrderCreator {
         String couponDetailsJson = null; // 每张券抵扣明细快照（订单详情页逐条展示）
         List<String> couponCodes = collectCouponCodes(request);
 
+        // 券冻结前预生成非空回滚聚合键：订单 insert / 唯一键冲突失败时用作 outbox aggregate_id（保持 NOT NULL）。
+        // 用 MyBatis-Plus IdWorker（雪花）保证跨实例唯一
+        Long rollbackOperationId = couponCodes.isEmpty() ? null : IdWorker.getId();
+
         if (!couponCodes.isEmpty()) {
             try {
                 CouponCombinationResult combo = pointsMallService.useCouponCombination(userId, couponCodes,
@@ -391,6 +396,8 @@ public class OrderCreator {
         try {
             doCreateOrderInTx(order, orderItems);
         } catch (DuplicateKeyException e) {
+            // 并发幂等/唯一键冲突：本次请求已冻结的券必须回滚，再返回已有订单或抛错（依赖 A3 CAS 冻结已生效）
+            publishCouponRollbackIfUsed(appliedCouponId, addonCouponIds, order, rollbackOperationId);
             ShopOrder duplicate = idempotencyKey != null
                     ? orderMapper.selectByUserAndIdempotencyKey(userId, idempotencyKey)
                     : null;
@@ -403,11 +410,7 @@ public class OrderCreator {
             }
             throw new BusinessException(BusinessErrorCode.ORDER_CREATE_FAILED, "订单创建冲突，请稍后重试");
         } catch (Exception e) {
-            if (appliedCouponId != null || !addonCouponIds.isEmpty()) {
-                log.error("订单落库失败，触发券回滚: orderNo={}, couponId={}, addonIds={}",
-                        order.getOrderNo(), appliedCouponId, addonCouponIds);
-                orderCancelledEventPublisher.publishCouponRollbackEvent(order);
-            }
+            publishCouponRollbackIfUsed(appliedCouponId, addonCouponIds, order, rollbackOperationId);
             log.error("订单落库失败: orderNo={}, error={}", order.getOrderNo(), e.getMessage(), e);
             throw new BusinessException(BusinessErrorCode.ORDER_CREATE_FAILED,
                     "订单创建失败: " + extractMessage(e));
@@ -428,6 +431,16 @@ public class OrderCreator {
                 orderItemMapper.insert(item);
             }
         });
+    }
+
+    /** 本次请求已冻结券时发布异步券回滚（回滚事件以非空 operationId 为 outbox 聚合键） */
+    private void publishCouponRollbackIfUsed(Long appliedCouponId, List<Long> addonCouponIds,
+            ShopOrder order, Long rollbackOperationId) {
+        if (appliedCouponId != null || (addonCouponIds != null && !addonCouponIds.isEmpty())) {
+            log.error("订单落库失败，触发券回滚: orderNo={}, couponId={}, addonIds={}",
+                    order.getOrderNo(), appliedCouponId, addonCouponIds);
+            orderCancelledEventPublisher.publishCouponRollbackEvent(order, rollbackOperationId);
+        }
     }
 
     // ==================== 订单查询 ====================

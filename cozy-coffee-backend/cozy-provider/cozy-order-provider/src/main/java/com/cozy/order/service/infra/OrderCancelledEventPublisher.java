@@ -26,15 +26,23 @@ public class OrderCancelledEventPublisher {
     private final OutboxService outboxService;
     private final ObjectMapper objectMapper;
 
-    /**
-     * 统一构造 OrderCancelledEvent 写入 outbox 表（券回滚），与订单状态变更同一事务原子提交。
-     */
+    /** 正常取消：order.getId() 非空，无需 fallback */
     public void publishCouponRollbackEvent(ShopOrder order) {
+        publishCouponRollbackEvent(order, null);
+    }
+
+    /** 订单落库失败（order.id 为 null）时用 fallbackAggregateId 作为非空聚合键，保证 outbox 行能写入 */
+    public void publishCouponRollbackEvent(ShopOrder order, Long fallbackAggregateId) {
         Long mainCouponId = order.getAppliedCouponId();
         List<Long> addonCouponIds = parseAddonCouponIds(order);
 
         if (mainCouponId == null && addonCouponIds.isEmpty()) {
             log.info("订单未使用优惠券，无需回滚: orderId={}", order.getId());
+            return;
+        }
+        Long aggregateId = order.getId() != null ? order.getId() : fallbackAggregateId;
+        if (aggregateId == null) {
+            log.error("券回滚缺少聚合键，跳过写入: orderNo={}, couponId={}", order.getOrderNo(), mainCouponId);
             return;
         }
 
@@ -50,10 +58,10 @@ public class OrderCancelledEventPublisher {
                 MqTopics.ORDER_EVENTS,
                 MqTags.ORDER_CANCELLED,
                 "coupon_rollback",
-                order.getId(),
+                aggregateId,
                 event);
-        log.info("OrderCancelledEvent 已写入 outbox: orderId={}, mainCoupon={}, addonCount={}",
-                order.getId(), mainCouponId, addonCouponIds.size());
+        log.info("OrderCancelledEvent 已写入 outbox: aggregateId={}, mainCoupon={}, addonCount={}",
+                aggregateId, mainCouponId, addonCouponIds.size());
     }
 
     private List<Long> parseAddonCouponIds(ShopOrder order) {
