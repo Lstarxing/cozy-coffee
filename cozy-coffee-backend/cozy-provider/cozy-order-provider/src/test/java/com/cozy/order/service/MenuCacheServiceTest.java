@@ -22,7 +22,9 @@ import org.springframework.data.redis.core.ValueOperations;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -33,13 +35,14 @@ import static org.mockito.Mockito.when;
 class MenuCacheServiceTest {
 
     private MenuCacheService cacheService;
+    private CoffeeProductMapper productMapper;
 
     @BeforeEach
     @SuppressWarnings("unchecked")
     void setUp() {
         RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
         StringRedisTemplate stringRedisTemplate = mock(StringRedisTemplate.class);
-        CoffeeProductMapper productMapper = mock(CoffeeProductMapper.class);
+        productMapper = mock(CoffeeProductMapper.class);
         ProductAddonResolver addonResolver = new ProductAddonResolver(
                 mock(CoffeeProductAddonGroupMapper.class),
                 mock(CoffeeProductAddonMapper.class),
@@ -73,12 +76,43 @@ class MenuCacheServiceTest {
         }
     }
 
+    @Test
+    void ordersMenuByCategoryThenSortOrderWithSpecialtyComboLast() {
+        // 回归：分类展示顺序（01经典→06烘焙）> 精品固定组合置尾 > 分类内 sortOrder。
+        // 打乱输入顺序，验证菜单仍按展示顺序输出（sort_order 是分类内计数器，不能跨分类全局排序）。
+        List<CoffeeProduct> shuffled = List.of(
+                product("BAKERY", "06-oat-cookie", 1, null),
+                product("MILK", "02-caffe-latte", 3, null),
+                product("ESPRESSO", "01-espresso", 2, null),
+                product("SPECIALTY", "04-origin-ethiopia", 4, null),
+                product("SPECIALTY", "04-one-bean-two", 2, "FIXED_COMBINATION"),
+                product("SPECIALTY", "04-one-bean-three", 3, "FIXED_COMBINATION"),
+                product("ESPRESSO", "01-americano", 1, null));
+        when(productMapper.selectList(any())).thenReturn(shuffled);
+
+        List<String> codes = cacheService.getMenu().stream()
+                .map(CoffeeProductDTO::getProductCode)
+                .collect(Collectors.toList());
+
+        assertEquals(List.of(
+                "01-americano", "01-espresso",
+                "02-caffe-latte",
+                "04-origin-ethiopia", "04-one-bean-two", "04-one-bean-three",
+                "06-oat-cookie"), codes);
+    }
+
     private CoffeeProduct product() {
+        return product("espresso", "测试咖啡", 1, null);
+    }
+
+    private CoffeeProduct product(String category, String code, Integer sortOrder, String servingMode) {
         CoffeeProduct p = new CoffeeProduct();
-        p.setId(1L);
-        p.setName("测试咖啡");
+        p.setName(code);
+        p.setProductCode(code);
         p.setStatus("active");
-        p.setCategory("espresso");
+        p.setCategory(category);
+        p.setSortOrder(sortOrder);
+        p.setServingMode(servingMode);
         p.setPrice(new BigDecimal("20.00"));
         return p;
     }

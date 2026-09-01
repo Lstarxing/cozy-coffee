@@ -15,7 +15,9 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
@@ -42,6 +44,32 @@ public class MenuCacheService {
     private static final LongAdder MENU_DEGRADE_FAST_FAIL = new LongAdder();
     private static final AtomicLong MENU_METRIC_SEQ = new AtomicLong();
     private static final long L1_TTL_MS = TimeUnit.MINUTES.toMillis(10);
+
+    /** 分类展示顺序（设计文档 3.1）：01经典 → 02奶咖 → 03特调 → 04精品 → 05非咖啡 → 06烘焙 */
+    private static final Map<String, Integer> CATEGORY_RANK = Map.of(
+            "ESPRESSO", 1, "MILK", 2, "SIGNATURE", 3,
+            "SPECIALTY", 4, "NON_COFFEE", 5, "BAKERY", 6);
+
+    /**
+     * 菜单排序：分类展示顺序 > 精品固定组合置尾 > sortOrder > id。
+     * sort_order 是分类内计数器（每分类从 1 起），不能跨分类全局排序；
+     * 一豆两喝/三喝为固定组合体验商品，置于精品 Bean 之后。
+     */
+    private static final Comparator<CoffeeProduct> MENU_ORDER =
+            Comparator.comparingInt(MenuCacheService::categoryRank)
+                    .thenComparingInt(MenuCacheService::specialtyTier)
+                    .thenComparing(CoffeeProduct::getSortOrder,
+                            Comparator.nullsLast(Comparator.<Integer>naturalOrder()))
+                    .thenComparing(CoffeeProduct::getId);
+
+    private static int categoryRank(CoffeeProduct p) {
+        String category = p.getCategory();
+        return CATEGORY_RANK.getOrDefault(category == null ? "" : category.toUpperCase(), 99);
+    }
+
+    private static int specialtyTier(CoffeeProduct p) {
+        return "FIXED_COMBINATION".equalsIgnoreCase(p.getServingMode()) ? 1 : 0;
+    }
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
@@ -135,9 +163,9 @@ public class MenuCacheService {
                     return this.cachedMenu;
 
                 LambdaQueryWrapper<CoffeeProduct> wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(CoffeeProduct::getStatus, "active")
-                        .orderByAsc(CoffeeProduct::getSortOrder);
+                wrapper.eq(CoffeeProduct::getStatus, "active");
                 List<CoffeeProductDTO> result = productMapper.selectList(wrapper).stream()
+                        .sorted(MENU_ORDER)
                         .map(dtoConverter::toProductDTO)
                         .collect(Collectors.toList());
 
