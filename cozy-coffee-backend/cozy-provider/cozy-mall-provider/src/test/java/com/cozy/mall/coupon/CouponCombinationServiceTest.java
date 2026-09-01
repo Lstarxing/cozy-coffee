@@ -224,6 +224,7 @@ class CouponCombinationServiceTest {
                 coupon(2L, "S1", "SHOT", "{\"value\":5}"),
                 coupon(1L, "D1", "DISCOUNT", "{\"value\":50,\"scope\":\"DRINK_ONLY\"}"),
                 coupon(2L, "S1", "SHOT", "{\"value\":5}"));
+        when(userCouponMapper.freezeIfIssued(any(), any())).thenReturn(1);
         List<ItemCheckDTO> items = new ArrayList<>();
         items.add(item(1L, new BigDecimal("30"), "drink", 1, true));
         items.add(item(2L, new BigDecimal("20"), "drink", 1, false));
@@ -236,11 +237,17 @@ class CouponCombinationServiceTest {
         assertEquals(0, p.getMainDiscount().compareTo(u.getMainDiscount()));
         assertEquals(0, p.getAddonDiscount().compareTo(u.getAddonDiscount()));
 
-        ArgumentCaptor<UserCoupon> captor = ArgumentCaptor.forClass(UserCoupon.class);
-        verify(userCouponMapper, times(2)).updateById(captor.capture());
-        for (UserCoupon c : captor.getAllValues()) {
-            assertEquals("FROZEN", c.getStatus());
-        }
+        verify(userCouponMapper, times(2)).freezeIfIssued(any(), any());
+    }
+
+    @Test
+    void use_whenCouponAlreadyFrozen_throws() {
+        stubCoupons(coupon(1L, "D1", "DISCOUNT", "{\"value\":50,\"scope\":\"DRINK_ONLY\"}"));
+        when(userCouponMapper.freezeIfIssued(any(), any())).thenReturn(0); // CAS 失败：券已被占用
+
+        assertThrows(BusinessException.class, () ->
+                service.use(1L, List.of("D1"), new BigDecimal("60"), BigDecimal.ZERO, List.of(),
+                        drinks(30, 30)));
     }
 
     // ==================== 工具 ====================

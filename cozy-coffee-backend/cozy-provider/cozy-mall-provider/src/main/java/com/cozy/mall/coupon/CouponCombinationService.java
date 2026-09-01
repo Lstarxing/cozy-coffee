@@ -63,9 +63,13 @@ public class CouponCombinationService {
         if (consume) {
             LocalDateTime now = LocalDateTime.now();
             for (UserCoupon coupon : coupons) {
+                int frozen = userCouponMapper.freezeIfIssued(coupon.getId(), now);
+                if (frozen == 0) {
+                    // CAS 失败：券已被其他并发订单占用/使用
+                    throw new BusinessException("优惠券已被使用: " + coupon.getCouponCode());
+                }
                 coupon.setStatus("FROZEN");
                 coupon.setUsedAt(now);
-                userCouponMapper.updateById(coupon);
             }
             log.info("整组券冻结: userId={}, count={}", userId, coupons.size());
         }
