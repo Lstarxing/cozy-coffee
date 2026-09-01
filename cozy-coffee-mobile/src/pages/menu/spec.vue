@@ -3,7 +3,9 @@
     <view class="spec-content">
       <!-- 商品图（位于原生导航栏下方） -->
       <view class="spec-hero">
-        <image :src="product?.image" class="spec-image" mode="aspectFill" />
+        <view class="spec-image-wrap" :class="{ 'spec-image-wide': isWideImage }">
+          <image :src="product?.image" class="spec-image" mode="aspectFit" />
+        </view>
         <view class="spec-hero-info">
           <text v-if="detailTag" class="spec-tag">{{ detailTag }}</text>
           <text class="spec-eyebrow">{{ detailEyebrow }}</text>
@@ -103,6 +105,9 @@ const line = ref(null)
 const form = reactive({ cupSize: 'STANDARD', temperature: 'HOT', sugarLevel: 'STANDARD', brewMethod: 'POUR_OVER', quantity: 1 })
 
 const editing = computed(() => Boolean(line.value?.lineKey))
+
+// 一豆两喝/三喝：体验商品图单独放大（短码 04-one-bean-two/three）
+const isWideImage = computed(() => ['04-one-bean-two', '04-one-bean-three'].includes(product.value?.productCode))
 
 // V2 出品方式（精品 Bean 必选）：POUR_OVER 手冲 / COLD_BREW 冷萃
 const showBrewMethod = computed(() => Boolean(product.value?.brewMethod))
@@ -251,11 +256,23 @@ function addToCart() {
 
 <style lang="scss" scoped>
 .spec-page { min-height: 100vh; background: $cozy-bg; }
-.spec-content { padding-bottom: 220rpx; }
+.spec-content { padding-bottom: 300rpx; }
 
-.spec-hero { position: relative; }
-.spec-image { width: 100%; height: 520rpx; display: block; background: linear-gradient(135deg,#E8DDD2,#D8C8B4); }
-.spec-hero-info { padding: 40rpx 40rpx 12rpx; }
+.spec-hero { padding: 48rpx 0 0; background: #fff; }
+.spec-image-wrap {
+  width: 560rpx;
+  height: 460rpx;
+  margin: 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: #fff;
+}
+.spec-image { width: 460rpx; height: 460rpx; display: block; }
+.spec-image-wrap.spec-image-wide { height: 560rpx; }
+.spec-image-wrap.spec-image-wide .spec-image { width: 560rpx; height: 560rpx; }
+.spec-hero-info { padding: 40rpx 40rpx 0; }
 .spec-tag { display: inline-block; margin-bottom: 18rpx; padding: 6rpx 18rpx; border-radius: 8rpx; background: $cozy-ink; color: #fff; font-size: 22rpx; font-weight: 700; letter-spacing: .06em; }
 .spec-eyebrow { display: block; font-size: 20rpx; font-weight: 700; letter-spacing: .24em; color: $cozy-muted; }
 .spec-name { display: block; margin-top: 14rpx; font-family: $font-display; font-size: 44rpx; font-weight: 600; color: $cozy-ink; line-height: 1.2; }
@@ -283,5 +300,5 @@ function addToCart() {
 .qty-btn { width: 48rpx; height: 48rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; color: $cozy-ink; }
 .qty-value { min-width: 36rpx; text-align: center; font-size: 28rpx; font-weight: 600; color: $cozy-ink; }
 .spec-add { width: 100%; height: 92rpx; display: flex; align-items: center; justify-content: center; border-radius: 12rpx; background: $cozy-ink; color: #fff; font-size: 30rpx; font-weight: 650; }
-.spec-add:active { background: darken($cozy-ink, 8%); }
+.spec-add:active { background: mix(#000, $cozy-ink, 92%); }
 </style>

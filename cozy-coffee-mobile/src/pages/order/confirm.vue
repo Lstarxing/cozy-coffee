@@ -57,14 +57,17 @@
         <view class="form-divider" />
         <view class="form-input-row">
           <text class="form-label">预留电话</text>
-          <input
-            v-model="checkoutStore.phone"
-            type="number"
-            maxlength="11"
-            placeholder="选填，方便门店联系您"
-            placeholder-class="form-placeholder"
-            class="form-input"
-          />
+          <view class="form-input-wrap">
+            <input
+              v-model="checkoutStore.phone"
+              type="number"
+              maxlength="11"
+              placeholder="选填，方便门店联系您"
+              placeholder-class="form-placeholder"
+              class="form-input"
+            />
+            <text class="form-pencil">✎</text>
+          </view>
         </view>
       </view>
 
@@ -389,7 +392,7 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 .form-row { min-height: 88rpx; display: flex; align-items: center; justify-content: space-between; gap: 24rpx; }
 .form-label { flex: none; color: $cozy-ink; font-size: 27rpx; font-weight: 650; }
 .form-value-wrap { min-width: 0; flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 12rpx; }
-.form-value { overflow: hidden; color: $cozy-placeholder; font-size: 24rpx; white-space: nowrap; text-overflow: ellipsis; }
+.form-value { overflow: hidden; color: $cozy-placeholder; font-size: 28rpx; white-space: nowrap; text-overflow: ellipsis; }
 .form-value.filled { color: $cozy-ink; }
 .form-value.accent { color: $cozy-primary; }
 .chevron { color: $cozy-placeholder; font-size: 42rpx; font-weight: 300; }
@@ -399,9 +402,19 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 .mock-tip-copy { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 21rpx; line-height: 1.5; }
 .bottom-spacer { height: 180rpx; }
 
-/* ── 预留电话（直接输入，对齐地址页） ── */
+/* ── 预留电话（下划线风格 + 铅笔，去掉灰底） ── */
 .form-input-row { display: flex; align-items: center; gap: 16rpx; padding: 24rpx 0; }
 .form-input-row .form-label { flex: none; }
-.form-input { flex: 1; min-width: 0; height: 72rpx; padding: 0 24rpx; border-radius: $cozy-radius-md; background: $cozy-surface; color: $cozy-ink; font-size: 28rpx; }
+.form-input-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding-bottom: 8rpx;
+  border-bottom: 1rpx solid $cozy-border;
+}
+.form-input { flex: 1; min-width: 0; height: 64rpx; padding: 0; border-radius: 0; background: transparent; color: $cozy-ink; font-size: 28rpx; }
+.form-pencil { flex: none; color: $cozy-placeholder; font-size: 30rpx; }
 .form-placeholder { color: $cozy-placeholder; }
 </style>

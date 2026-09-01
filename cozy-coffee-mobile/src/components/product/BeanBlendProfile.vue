@@ -38,7 +38,7 @@ const rows = computed(() => {
 
 <style lang="scss" scoped>
 .bean-profile {
-  padding: 28rpx 0 8rpx;
+  padding: 28rpx 0 28rpx;
 }
 .profile-head {
   display: flex;

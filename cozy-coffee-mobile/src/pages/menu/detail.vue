@@ -4,7 +4,7 @@
     <RetryState v-else-if="errorMessage" :description="errorMessage" @retry="loadProduct" />
 
     <view v-else-if="product" class="detail-content">
-      <image :src="product.image" class="product-hero" mode="aspectFill" />
+      <image :src="product.image" class="product-hero" mode="aspectFit" />
 
       <view class="product-info">
         <text class="product-category">{{ categoryLabel }}</text>
@@ -130,7 +130,7 @@ function goToMenu() {
 <style lang="scss" scoped>
 .detail-page { min-height: 100vh; background: $cozy-surface; }
 .detail-content { padding-bottom: 28rpx; }
-.product-hero { width: 100%; height: 620rpx; display: block; background: $cozy-surface-alt; }
+.product-hero { width: 100%; height: 520rpx; display: block; background: #fff; }
 .product-info { margin: -34rpx 24rpx 0; padding: 34rpx 30rpx 30rpx; position: relative; border-radius: $cozy-radius-lg; background: #fff; }
 .product-category { display: block; color: $cozy-primary; font-size: 20rpx; font-weight: 750; letter-spacing: .08em; }
 .product-name { display: block; margin-top: 12rpx; color: $cozy-ink; font-size: 44rpx; }
