@@ -30,6 +30,9 @@
           <view class="empty-mark"><CozyIcon name="coupon" :size="36" color="#753A22" /></view>
           <text class="empty-text">暂无可用主券</text>
           <text class="empty-hint">去积分商城兑换更多优惠券</text>
+          <view class="empty-none-hint" @click="pickNone">
+            <text>不使用优惠券，按商品原价结算</text>
+          </view>
         </view>
       </template>
 
@@ -413,5 +416,18 @@ function useCoupon(coupon) {
   margin-top: 20rpx;
   font-size: 26rpx;
   color: $cozy-muted;
+}
+.empty-none-hint {
+  margin-top: 48rpx;
+  width: 100%;
+  padding: 22rpx 24rpx;
+  box-sizing: border-box;
+  border-radius: 16rpx;
+  background: $cozy-surface;
+  color: $cozy-muted;
+  font-size: 24rpx;
+  text-align: center;
+
+  &:active { opacity: .8; }
 }
 </style>

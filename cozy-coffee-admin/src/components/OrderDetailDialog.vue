@@ -115,11 +115,6 @@
         <el-button :loading="refreshing" :icon="Refresh" @click="handleRefresh">刷新</el-button>
         <el-button @click="handleClose">关闭</el-button>
 
-        <template v-if="order?.status === 'pending'">
-          <el-divider direction="vertical" />
-          <el-button type="primary" @click="handleAccept">接单</el-button>
-        </template>
-
         <template v-if="order?.status === 'preparing'">
           <el-divider direction="vertical" />
           <el-button type="success" @click="handleComplete">完成</el-button>
@@ -134,7 +129,7 @@ import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowRight, Refresh } from '@element-plus/icons-vue'
-import { getOrderDetail, acceptOrder, completeOrder } from '../api'
+import { getOrderDetail, completeOrder } from '../api'
 import StatusTag from './ui/StatusTag.vue'
 import CopyText from './ui/CopyText.vue'
 import dayjs from 'dayjs'
@@ -249,17 +244,6 @@ const goToUserDetail = () => {
 
 const handleRefresh = loadOrderDetail
 const handleClose = () => { visible.value = false }
-
-const handleAccept = async () => {
-  try {
-    const res = await acceptOrder(order.value.id)
-    ElMessage.success(`已接单，取餐码: ${res.data.pickupCode}`)
-    emit('refresh')
-    loadOrderDetail()
-  } catch (e) {
-    ElMessage.error(e.message)
-  }
-}
 
 const handleComplete = async () => {
   try {

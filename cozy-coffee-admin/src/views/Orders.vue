@@ -214,9 +214,8 @@
               <!-- Detail -->
               <el-button link type="primary" @click="viewDetail(row)">详情</el-button>
 
-              <!-- Pending: Accept & Cancel -->
+              <!-- Pending: Cancel（待支付不显示接单，支付后移动端自动接单） -->
               <template v-if="getDisplayStatus(row) === 'pending'">
-                <el-button link type="success" @click="handleAccept(row)">接单</el-button>
                 <el-button link type="danger" @click="handleCancel(row)">取消</el-button>
               </template>
 
@@ -252,7 +251,7 @@
 import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Printer, Loading } from '@element-plus/icons-vue'
-import { acceptOrder, completeOrder, cancelOrder } from '@/api'
+import { completeOrder, cancelOrder } from '@/api'
 import { ORDER_STATUS_MAP, DINING_METHOD_MAP, ORDER_SPEC } from '@/constants/order'
 import { useOrderList } from '@/composables/useOrderList'
 import AdminPageHeader from '@/components/ui/AdminPageHeader.vue'
@@ -295,16 +294,6 @@ const viewDetail = (row) => {
 
 const handlePrint = (row) => {
   ElMessage.success('已发送至打印机: ' + row.pickupCode)
-}
-
-const handleAccept = async (row) => {
-  try {
-    await acceptOrder(row.id)
-    loadOrders()
-    ElMessage.success('已接单')
-  } catch (e) {
-    ElMessage.error('接单失败: ' + e.message)
-  }
 }
 
 const handleComplete = async (row) => {
@@ -365,7 +354,7 @@ const getSpecTags = (item) => {
     try {
       const opts = JSON.parse(item.optionsJson)
       const m = opts.milkType || opts.milk
-      if (m) tags.push(milkMap[m] || m)
+      if (m && m !== 'WHOLE') tags.push(milkMap[m] || m)
     } catch (e) { /* ignore parse error */ }
   }
 
