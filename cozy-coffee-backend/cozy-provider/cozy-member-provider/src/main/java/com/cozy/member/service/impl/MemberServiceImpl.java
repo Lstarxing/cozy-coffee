@@ -594,10 +594,30 @@ public class MemberServiceImpl implements MemberService {
         if (userId == null || points <= 0) {
             return false;
         }
+        if (consumeType == null || consumeId == null) {
+            throw new BusinessException("缺少消费类型或关联ID，无法幂等扣分");
+        }
 
+        // 先取会员行锁，再查幂等：并发同 (consumeType, consumeId) 请求在此串行化
         MemberInfo member = memberInfoMapper.selectByUserIdForUpdate(userId);
         if (member == null) {
             throw new BusinessException("会员信息不存在");
+        }
+
+        // 幂等依据：最终流水 points_transactions（uk_reward 唯一键为并发兜底）
+        PointsTransaction existing = transactionMapper.selectOne(new LambdaQueryWrapper<PointsTransaction>()
+                .eq(PointsTransaction::getUserId, userId)
+                .eq(PointsTransaction::getSourceType, consumeType)
+                .eq(PointsTransaction::getSourceId, consumeId)
+                .last("LIMIT 1"));
+        if (existing != null) {
+            int alreadyConsumed = -existing.getChangeAmount(); // 消费流水 change_amount 为负
+            if (alreadyConsumed == points) {
+                log.info("消费操作已处理过，幂等返回成功: userId={}, consumeType={}, consumeId={}",
+                        userId, consumeType, consumeId);
+                return true;
+            }
+            throw new BusinessException("消费请求与历史记录不一致: consumeId=" + consumeId);
         }
 
         if (member.getCurrentPoints() < points) {
@@ -724,8 +744,8 @@ public class MemberServiceImpl implements MemberService {
         member.setCurrentPoints(member.getCurrentPoints() - points);
         memberInfoMapper.updateById(member);
 
-        // 3. 记录积分流水
-        recordTransaction(userId, -points, member.getCurrentPoints(), consumeType, null, description);
+        // 3. 记录积分流水（sourceId=consumeId，uk_reward 唯一约束防重）
+        recordTransaction(userId, -points, member.getCurrentPoints(), consumeType, consumeId, description);
         evictMemberProfileCache(userId);
 
         log.info("FIFO 积分扣减成功: userId={}, points={}", userId, points);

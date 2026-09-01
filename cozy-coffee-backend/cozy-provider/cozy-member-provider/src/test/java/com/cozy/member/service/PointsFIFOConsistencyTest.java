@@ -99,7 +99,7 @@ public class PointsFIFOConsistencyTest {
         // 执行扣减：扣300分
         // 预期：批次A扣光100分，批次B扣200分
         // =============================================
-        boolean result = memberService.consumePointsFIFO(TEST_USER_ID, 300, "test_deduct", null);
+        boolean result = memberService.consumePointsFIFO(TEST_USER_ID, 300, "test_deduct", 1L);
         assertTrue(result, "扣减应成功");
 
         // =============================================
@@ -169,7 +169,7 @@ public class PointsFIFOConsistencyTest {
         Long lotBId = lotB.getId();
 
         // 执行扣减：只扣50分，应只扣批次A
-        boolean result = memberService.consumePointsFIFO(TEST_USER_ID, 50, "test_deduct", null);
+        boolean result = memberService.consumePointsFIFO(TEST_USER_ID, 50, "test_deduct", 2L);
         assertTrue(result);
 
         // 验证
