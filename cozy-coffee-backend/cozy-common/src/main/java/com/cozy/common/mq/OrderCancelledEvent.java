@@ -22,6 +22,9 @@ public class OrderCancelledEvent implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    /** 回滚事件幂等键：order:{orderId} 或 operation:{operationId} */
+    private String rollbackEventId;
+
     private Long orderId;
     private Long userId;
 
