@@ -27,8 +27,8 @@ export const DINING_METHOD_MAP = {
 export const ORDER_SPEC = {
   TEMP: { HOT: 'HOT', COLD: 'COLD', WARM: 'WARM' },
   TEMP_MAP: { HOT: '热', COLD: '冰', WARM: '温', iced: '冰', hot: '热', warm: '温' },
-  SUGAR: { NONE: 'NONE', LIGHT: 'LIGHT', STANDARD: 'STANDARD', MEDIUM: 'MEDIUM', LESS: 'LESS', HALF: 'HALF', FULL: 'FULL' },
-  SUGAR_MAP: { NONE: '无糖', LIGHT: '微甜', STANDARD: '标准甜', MEDIUM: '少甜', LESS: '少糖', HALF: '半糖', none: '无糖', light: '微甜', standard: '标准甜', less: '少甜', half: '半糖', full: '标准甜' },
+  SUGAR: { NONE: 'NONE', LIGHT: 'LIGHT', STANDARD: 'STANDARD', MEDIUM: 'MEDIUM', LESS: 'LESS', HALF: 'HALF', FULL: 'FULL', NO_ADDED_SUGAR: 'NO_ADDED_SUGAR' },
+  SUGAR_MAP: { NONE: '无糖', LIGHT: '微甜', STANDARD: '标准甜', MEDIUM: '少甜', LESS: '少糖', HALF: '半糖', NO_ADDED_SUGAR: '不另外加糖', none: '无糖', light: '微甜', standard: '标准甜', less: '少甜', half: '半糖', full: '标准甜', no_added_sugar: '不另外加糖' },
   SIZE: { STANDARD: 'STANDARD', LARGE: 'LARGE', MEDIUM: 'MEDIUM' },
   SIZE_MAP: { STANDARD: '标准杯', LARGE: '大杯', MEDIUM: '中杯', standard: '标准杯', large: '大杯', medium: '中杯' },
   STRENGTH: { STRONG: 'STRONG', NORMAL: 'NORMAL' },

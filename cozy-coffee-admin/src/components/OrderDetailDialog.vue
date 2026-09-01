@@ -201,9 +201,9 @@ const getItemSpecsText = (item) => {
   const specs = []
   
   // 翻译映射 (与后端 Enum 对应)
-  const mapSize = { 'STANDARD': '标准杯', 'LARGE': '大杯' }
+  const mapSize = { 'STANDARD': '标准杯', 'LARGE': '大杯', 'MEDIUM': '中杯' }
   const mapTemp = { 'HOT': '热饮', 'COLD': '冰饮', 'WARM': '温饮' }
-  const mapSugar = { 'NONE': '无糖', 'LIGHT': '微甜', 'STANDARD': '标准甜', 'MEDIUM': '少甜' }
+  const mapSugar = { 'NONE': '无糖', 'LIGHT': '微甜', 'STANDARD': '标准甜', 'MEDIUM': '少甜', 'LESS': '少糖', 'HALF': '半糖', 'NO_ADDED_SUGAR': '不另外加糖' }
   const mapStrength = { 'NORMAL': '标准浓度', 'STRONG': '加浓' }
 
   if (item.cupSize) specs.push(mapSize[item.cupSize] || item.cupSize)

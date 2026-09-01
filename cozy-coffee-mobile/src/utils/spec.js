@@ -2,7 +2,7 @@
 const SPEC_CN = {
   cupSize: { STANDARD: '标准杯', MEDIUM: '中杯', LARGE: '大杯', SMALL: '小杯' },
   temperature: { HOT: '热', COLD: '冰', ICED: '冰', WARM: '温' },
-  sugarLevel: { NONE: '无糖', LESS: '少糖', HALF: '半糖', LIGHT: '微甜', MEDIUM: '少甜', STANDARD: '标准甜', FULL: '标准甜' },
+  sugarLevel: { NONE: '无糖', LESS: '少糖', HALF: '半糖', LIGHT: '微甜', MEDIUM: '少甜', STANDARD: '标准甜', FULL: '标准甜', NO_ADDED_SUGAR: '不另外加糖' },
   milkType: { OAT: '燕麦奶', COCONUT: '椰奶', SOY: '豆奶' },
   coffeeStrength: { NORMAL: '标准浓度', STRONG: '加浓' }
 }

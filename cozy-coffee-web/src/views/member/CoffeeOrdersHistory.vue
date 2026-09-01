@@ -209,7 +209,7 @@ function formatSpecs(item) {
     'STANDARD': '标准杯', 'standard': '标准杯', 'LARGE': '大杯', 'large': '大杯', 'MEDIUM': '中杯', 'medium': '中杯',
     'HOT': '热', 'hot': '热', 'COLD': '冰', 'cold': '冰', 'iced': '冰', 'WARM': '温', 'warm': '温',
     'NONE': '无糖', 'none': '无糖', 'LESS': '少糖', 'less': '少糖', 'HALF': '半糖', 'half': '半糖',
-    'LIGHT': '微甜', 'light': '微甜', 'full': '标准甜', 'STANDARD_SUGAR': '标准甜',
+    'LIGHT': '微甜', 'light': '微甜', 'full': '标准甜', 'STANDARD_SUGAR': '标准甜', 'NO_ADDED_SUGAR': '不另外加糖', 'no_added_sugar': '不另外加糖',
     'NORMAL': '标准浓度', 'STRONG': '加浓'
   }
   if (item.cupSize) parts.push(map[item.cupSize] || item.cupSize)
