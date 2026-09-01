@@ -54,7 +54,6 @@
             <text class="chevron">›</text>
           </view>
         </view>
-        <view class="form-divider" />
         <view class="form-input-row">
           <text class="form-label">预留电话</text>
           <view class="form-input-wrap">
@@ -63,10 +62,11 @@
               type="number"
               maxlength="11"
               placeholder="选填，方便门店联系您"
+              placeholder-style="text-align: right;"
               placeholder-class="form-placeholder"
               class="form-input"
             />
-            <text class="form-pencil">✎</text>
+            <CozyIcon name="pencil" :size="22" color="#756A63" />
           </view>
         </view>
       </view>
@@ -118,6 +118,7 @@ import LoadingState from '@/components/states/LoadingState.vue'
 import EmptyState from '@/components/states/EmptyState.vue'
 import RetryState from '@/components/states/RetryState.vue'
 import OfflineState from '@/components/states/OfflineState.vue'
+import CozyIcon from '@/components/CozyIcon.vue'
 
 const cartStore = useCartStore()
 const checkoutStore = useCheckoutStore()
@@ -396,7 +397,6 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
 .form-value.filled { color: $cozy-ink; }
 .form-value.accent { color: $cozy-primary; }
 .chevron { color: $cozy-placeholder; font-size: 42rpx; font-weight: 300; }
-.form-divider { height: 1rpx; background: $cozy-border; }
 .mock-tip { margin-top: 24rpx; padding: 24rpx 28rpx; border-radius: 16rpx; background: $cozy-surface; }
 .mock-tip-title { display: block; color: $cozy-muted; font-size: 25rpx; font-weight: 700; }
 .mock-tip-copy { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 21rpx; line-height: 1.5; }
@@ -411,10 +411,7 @@ function goToMenu() { uni.switchTab({ url: '/pages/menu/menu' }) }
   display: flex;
   align-items: center;
   gap: 12rpx;
-  padding-bottom: 8rpx;
-  border-bottom: 1rpx solid $cozy-border;
 }
-.form-input { flex: 1; min-width: 0; height: 64rpx; padding: 0; border-radius: 0; background: transparent; color: $cozy-ink; font-size: 28rpx; }
-.form-pencil { flex: none; color: $cozy-placeholder; font-size: 30rpx; }
+.form-input { flex: 1; min-width: 0; height: 64rpx; padding: 0; border-radius: 0; background: transparent; color: $cozy-ink; font-size: 28rpx; text-align: right; }
 .form-placeholder { color: $cozy-placeholder; }
 </style>

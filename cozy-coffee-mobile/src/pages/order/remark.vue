@@ -34,7 +34,7 @@
 
     <!-- 底部提交 -->
     <view class="submit-bar safe-area-bottom">
-      <view class="submit-btn" :class="{ disabled: !remark.trim() }" @click="save">保存备注</view>
+      <view class="submit-btn" @click="save">保存备注</view>
     </view>
   </view>
 </template>
@@ -155,7 +155,5 @@ function save() {
   color: #fff;
   font-size: 30rpx;
   font-weight: 600;
-
-  &.disabled { opacity: .4; }
 }
 </style>
