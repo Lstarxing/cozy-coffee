@@ -20,12 +20,7 @@ public class PointsRefundOutbox {
     private String description;
     private String status;
     private Integer retryCount;
-    private Integer manualRetryCount;
     private LocalDateTime nextRetryAt;
-    private LocalDateTime lockedAt;
-    private String lastError;
-    private LocalDateTime lastManualRetryAt;
-    private Long lastManualRetryBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

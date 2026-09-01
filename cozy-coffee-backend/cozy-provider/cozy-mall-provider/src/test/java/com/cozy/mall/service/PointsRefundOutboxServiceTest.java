@@ -20,8 +20,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class PointsRefundOutboxServiceTest {
@@ -36,17 +34,9 @@ class PointsRefundOutboxServiceTest {
     }
 
     @Test
-    void relay_claimedMessage_refundsAndMarksSent() {
-        PointsRefundOutbox msg = new PointsRefundOutbox();
-        msg.setId(1L);
-        msg.setOrderId(500L);
-        msg.setUserId(7L);
-        msg.setPoints(100);
-        msg.setConsumeType("redeem");
-        msg.setDescription("取消退款");
-        msg.setRetryCount(0);
-        when(mapper.selectRelayCandidates(any(), any(), anyInt())).thenReturn(List.of(msg));
-        when(mapper.claim(eq(1L), any(), any())).thenReturn(1);
+    void relay_pendingMessage_refundsAndMarksSent() {
+        PointsRefundOutbox msg = pendingMsg(1L, 500L, 7L, 100, 0);
+        when(mapper.selectPendingDue(any(), anyInt())).thenReturn(List.of(msg));
 
         service.relayPendingRefunds();
 
@@ -55,60 +45,29 @@ class PointsRefundOutboxServiceTest {
     }
 
     @Test
-    void relay_refundFails_releasesLeaseAndSchedulesRetry() {
-        PointsRefundOutbox msg = new PointsRefundOutbox();
-        msg.setId(2L);
-        msg.setOrderId(501L);
-        msg.setUserId(7L);
-        msg.setPoints(80);
-        msg.setConsumeType("redeem");
-        msg.setDescription("取消退款");
-        msg.setRetryCount(0);
-        when(mapper.selectRelayCandidates(any(), any(), anyInt())).thenReturn(List.of(msg));
-        when(mapper.claim(eq(2L), any(), any())).thenReturn(1);
+    void relay_refundFails_schedulesRetry() {
+        PointsRefundOutbox msg = pendingMsg(2L, 501L, 7L, 80, 0);
+        when(mapper.selectPendingDue(any(), anyInt())).thenReturn(List.of(msg));
         doThrow(new RuntimeException("member unavailable")).when(memberService)
                 .refundPointsByConsumption(7L, 80, "redeem", 501L, "取消退款");
 
         service.relayPendingRefunds();
 
         verify(mapper).markFailed(eq(2L), eq("PENDING"), eq(1),
-                any(LocalDateTime.class), eq("member unavailable"), any(LocalDateTime.class));
+                any(LocalDateTime.class), any(LocalDateTime.class));
     }
 
-    @Test
-    void listDeadRefunds_clampsLimitAndMapsAuditFields() {
-        PointsRefundOutbox msg = new PointsRefundOutbox();
-        msg.setId(2L);
-        msg.setOrderId(501L);
-        msg.setUserId(7L);
-        msg.setPoints(80);
-        msg.setStatus("DEAD");
-        msg.setRetryCount(10);
-        msg.setManualRetryCount(1);
-        msg.setLastError("member unavailable");
-        when(mapper.selectDeadBatch(200)).thenReturn(List.of(msg));
-
-        var result = service.listDeadRefunds(999);
-
-        assertEquals(1, result.size());
-        assertEquals(501L, result.get(0).getOrderId());
-        assertEquals(1, result.get(0).getManualRetryCount());
-    }
-
-    @Test
-    void retryDeadRefund_usesCasAndRecordsOperator() {
-        when(mapper.retryDead(any(), any(), any())).thenReturn(1);
-
-        service.retryDeadRefund(2L, 9L);
-
-        verify(mapper).retryDead(eq(2L), eq(9L), any(LocalDateTime.class));
-    }
-
-    @Test
-    void retryDeadRefund_nonDead_rejects() {
-        when(mapper.retryDead(any(), any(), any())).thenReturn(0);
-
-        assertThrows(com.cozy.common.exception.BusinessException.class,
-                () -> service.retryDeadRefund(2L, 9L));
+    private PointsRefundOutbox pendingMsg(Long id, Long orderId, Long userId, int points, int retryCount) {
+        PointsRefundOutbox m = new PointsRefundOutbox();
+        m.setId(id);
+        m.setOrderId(orderId);
+        m.setUserId(userId);
+        m.setPoints(points);
+        m.setConsumeType("redeem");
+        m.setDescription("取消退款");
+        m.setRetryCount(retryCount);
+        m.setStatus("PENDING");
+        m.setNextRetryAt(LocalDateTime.now().minusSeconds(1));
+        return m;
     }
 }

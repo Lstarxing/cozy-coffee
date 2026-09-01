@@ -5,7 +5,7 @@ import com.cozy.mall.dto.request.RedeemRequest;
 import com.cozy.mall.dto.response.CouponCombinationResult;
 import com.cozy.mall.dto.response.CouponUsageResult;
 import com.cozy.mall.dto.response.PointsOrderDTO;
-import com.cozy.mall.dto.response.PointsRefundDeadLetterDTO;
+import com.cozy.mall.dto.response.PointsOrderDTO;
 import com.cozy.mall.dto.response.PointsProductDTO;
 import com.cozy.mall.dto.response.UserCouponDTO;
 import java.math.BigDecimal;
@@ -168,15 +168,6 @@ public interface PointsMallService {
          * 删除兑换订单（管理端，用于清理脏数据）
          */
         void deleteOrder(Long orderId);
-
-        /** 查询积分退款 DEAD outbox（管理端运维）。 */
-        List<PointsRefundDeadLetterDTO> listDeadPointRefunds(Integer limit);
-
-        /** DEAD → PENDING 的 CAS 人工重试；记录操作人和重试次数。 */
-        void retryDeadPointRefund(Long id, Long operatorId);
-
-        /** 当前积分退款 DEAD outbox 数量。 */
-        long countDeadPointRefunds();
 
         /**
          * 回滚/归还优惠券（取消订单时调用）

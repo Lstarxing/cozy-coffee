@@ -31,7 +31,6 @@ import com.cozy.member.dto.response.AddressDTO;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.mall.dto.response.CouponCombinationResult;
 import com.cozy.mall.dto.response.PointsOrderDTO;
-import com.cozy.mall.dto.response.PointsRefundDeadLetterDTO;
 import com.cozy.mall.dto.response.PointsProductDTO;
 import com.cozy.order.api.OrderService;
 import com.cozy.order.dto.response.CoffeeProductDTO;
@@ -1752,21 +1751,6 @@ public class PointsMallServiceImpl implements PointsMallService {
         // 删除履约子表
         fulfillmentMapper.deleteById(orderId);
         log.info("订单及其履约记录已删除: id={}", orderId);
-    }
-
-    @Override
-    public List<PointsRefundDeadLetterDTO> listDeadPointRefunds(Integer limit) {
-        return pointsRefundOutboxService.listDeadRefunds(limit);
-    }
-
-    @Override
-    public void retryDeadPointRefund(Long id, Long operatorId) {
-        pointsRefundOutboxService.retryDeadRefund(id, operatorId);
-    }
-
-    @Override
-    public long countDeadPointRefunds() {
-        return pointsRefundOutboxService.countDeadRefunds();
     }
 
     @Override

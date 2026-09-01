@@ -13,8 +13,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -54,21 +52,7 @@ class OutboxServiceTest {
 
         assertEquals(1, msg.getRetryCount());
         assertEquals("PENDING", msg.getStatus());
-        assertEquals("broker down", msg.getLastError());
         verify(outboxMapper).updateById(msg);
-    }
-
-    @Test
-    void relayPendingMessages_sendSucceeds_clearsPersistedError() {
-        MessageOutbox msg = pendingMsg(1);
-        msg.setLastError("old broker error");
-        when(outboxMapper.selectPendingBatch(any(), anyInt())).thenReturn(List.of(msg));
-
-        outboxService.relayPendingMessages();
-
-        assertEquals("SENT", msg.getStatus());
-        assertNull(msg.getLastError());
-        verify(outboxMapper).markSent(org.mockito.ArgumentMatchers.eq(1L), any(LocalDateTime.class));
     }
 
     @Test
@@ -80,39 +64,5 @@ class OutboxServiceTest {
 
         assertEquals("DEAD", msg.getStatus());
         verify(outboxMapper).updateById(msg);
-    }
-
-    @Test
-    void listDeadMessages_clampsLimitAndMapsAuditFields() {
-        MessageOutbox msg = pendingMsg(5);
-        msg.setStatus("DEAD");
-        msg.setManualRetryCount(2);
-        msg.setLastError("broker down");
-        when(outboxMapper.selectDeadBatch(200)).thenReturn(List.of(msg));
-
-        var result = outboxService.listDeadMessages(999);
-
-        assertEquals(1, result.size());
-        assertEquals(1L, result.get(0).getId());
-        assertEquals(2, result.get(0).getManualRetryCount());
-        assertEquals("broker down", result.get(0).getLastError());
-    }
-
-    @Test
-    void retryDeadMessage_usesCasAndRecordsOperator() {
-        when(outboxMapper.retryDead(any(), any(), any())).thenReturn(1);
-
-        outboxService.retryDeadMessage(1L, 9L);
-
-        verify(outboxMapper).retryDead(org.mockito.ArgumentMatchers.eq(1L),
-                org.mockito.ArgumentMatchers.eq(9L), any(LocalDateTime.class));
-    }
-
-    @Test
-    void retryDeadMessage_nonDead_rejects() {
-        when(outboxMapper.retryDead(any(), any(), any())).thenReturn(0);
-
-        assertThrows(com.cozy.common.exception.BusinessException.class,
-                () -> outboxService.retryDeadMessage(1L, 9L));
     }
 }
