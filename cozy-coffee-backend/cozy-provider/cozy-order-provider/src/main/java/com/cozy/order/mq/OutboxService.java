@@ -61,7 +61,7 @@ public class OutboxService {
         }
     }
 
-    private void trySend(MessageOutbox msg) {
+    private boolean trySend(MessageOutbox msg) {
         String destination = msg.getTopic() + ":" + msg.getTag();
         try {
             rocketMQTemplate.syncSend(destination,
@@ -73,10 +73,12 @@ public class OutboxService {
             msg.setUpdatedAt(LocalDateTime.now());
             outboxMapper.updateById(msg);
             log.info("Outbox 消息投递成功: id={}, aggregateId={}", msg.getId(), msg.getAggregateId());
+            return true;
         } catch (Exception e) {
-            // 投递失败保留 PENDING，由兜底任务重试
+            // 返回 false，由调用方累计重试（不能吞掉失败，否则重试计数不增长）
             log.warn("Outbox 投递失败，等待重试: id={}, aggregateId={}, error={}",
                     msg.getId(), msg.getAggregateId(), e.getMessage());
+            return false;
         }
     }
 
@@ -100,9 +102,7 @@ public class OutboxService {
                 outboxMapper.updateById(msg);
                 continue;
             }
-            try {
-                trySend(msg);
-            } catch (Exception e) {
+            if (!trySend(msg)) {
                 int newRetry = msg.getRetryCount() + 1;
                 msg.setRetryCount(newRetry);
                 msg.setNextRetryAt(LocalDateTime.now().plusSeconds(backoffSeconds(newRetry)));
