@@ -12,6 +12,8 @@ import com.cozy.order.dto.request.OrderItemRequest;
 import com.cozy.order.dto.response.CartCheckResultDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
 import com.cozy.order.service.order.OrderCreator;
+import com.cozy.order.service.infra.OrderCancelledEventPublisher;
+import com.cozy.common.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,10 +28,14 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.eq;
 
 /**
  * 进程内集成测试（Plan C）：验证「预览 checkCart + 下单 createOrder 用券 → 折扣/实付一致且正确」。
@@ -56,6 +62,9 @@ public class OrderCouponFlowIntegrationTest {
 
     @MockBean
     private MemberService memberService;
+
+    @MockBean
+    private OrderCancelledEventPublisher orderCancelledEventPublisher;
 
     private static final Long USER_ID = 43L;
     private static final String MEMBER_LEVEL = "diamond";
@@ -140,6 +149,23 @@ public class OrderCouponFlowIntegrationTest {
         assertEquals(0, new BigDecimal("22").compareTo(order.getPayAmount()));
         // preview 与 create 口径一致
         assertEquals(0, check.getPreview().getPayable().compareTo(order.getPayAmount()));
+    }
+
+    @Test
+    void createOrder_deliveryFeeCouponOnTakeout_publishesRollbackAfterFreeze() {
+        CouponCombinationResult combo = discount(0, 0, 3);
+        combo.setAddonCouponIds(List.of(888L));
+        when(pointsMallService.useCouponCombination(anyLong(), anyList(),
+                any(BigDecimal.class), any(BigDecimal.class), anyList(), anyList())).thenReturn(combo);
+        CreateOrderRequest request = orderRequest(null);
+        request.setAddonCouponCodes(List.of("CPN_DELIVERY_FEE"));
+
+        assertThrows(BusinessException.class,
+                () -> orderService.createOrder(USER_ID, MEMBER_LEVEL, "it-invalid-delivery-coupon", request));
+
+        verify(orderCancelledEventPublisher).publishCouponRollbackEvent(
+                argThat(failedOrder -> USER_ID.equals(failedOrder.getUserId())),
+                anyLong(), eq(null), eq(List.of(888L)));
     }
 
     // ==================== 工具 ====================

@@ -33,12 +33,20 @@ public class MessageOutbox {
     /** 消息体 JSON */
     private String payload;
 
-    /** PENDING / SENT / CONFIRMED */
+    /** PENDING / SENT / DEAD */
     private String status;
 
     private Integer retryCount;
 
+    private Integer manualRetryCount;
+
     private LocalDateTime nextRetryAt;
+
+    private String lastError;
+
+    private LocalDateTime lastManualRetryAt;
+
+    private Long lastManualRetryBy;
 
     private LocalDateTime createdAt;
 

@@ -11,9 +11,11 @@ import com.cozy.order.dto.response.CoffeeBlendDTO;
 import com.cozy.order.dto.response.CoffeeOriginDTO;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.MonthlyStatsDTO;
+import com.cozy.order.dto.response.OrderOutboxDeadLetterDTO;
 import com.cozy.order.dto.response.ProductAddonDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
 import com.cozy.order.service.order.OrderPreviewer;
+import com.cozy.order.mq.OutboxService;
 import com.cozy.order.service.order.OrderQueryService;
 import com.cozy.order.service.order.OrderCreator;
 import com.cozy.order.service.order.OrderCommandService;
@@ -43,6 +45,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductAdminService productAdminService;
     private final CoffeeContentAdminService contentAdminService;
     private final OrderPreviewer previewer;
+    private final OutboxService outboxService;
 
     // ==================== 商品查询 ====================
 
@@ -145,6 +148,21 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public ShopOrderDTO cancelUserOrder(Long orderId, Long userId) {
         return commandService.cancelUserOrder(orderId, userId);
+    }
+
+    @Override
+    public List<OrderOutboxDeadLetterDTO> listDeadOutboxMessages(Integer limit) {
+        return outboxService.listDeadMessages(limit);
+    }
+
+    @Override
+    public void retryDeadOutboxMessage(Long id, Long operatorId) {
+        outboxService.retryDeadMessage(id, operatorId);
+    }
+
+    @Override
+    public long countDeadOutboxMessages() {
+        return outboxService.countDeadMessages();
     }
 
     // ==================== 商品管理（管理端）====================

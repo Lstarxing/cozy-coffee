@@ -19,6 +19,8 @@ import com.cozy.order.mq.OrderCompletedEventPublisher;
 import com.cozy.order.service.order.PickupCodeService;
 import com.cozy.order.service.infra.OrderCancelledEventPublisher;
 import com.cozy.order.service.infra.OrderTimeoutIndexer;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -33,6 +35,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
@@ -53,6 +56,7 @@ public class OrderCommandService {
     private final OrderCancelledEventPublisher orderCancelledEventPublisher;
     private final TransactionTemplate transactionTemplate;
     private final OrderCompletedEventPublisher orderCompletedEventPublisher;
+    private final ObjectMapper objectMapper;
 
     @DubboReference(check = false)
     private MemberService memberService;
@@ -146,12 +150,25 @@ public class OrderCommandService {
 
     /** 订单支付/接单成功后确认优惠券（FROZEN → USED），失败不阻塞接单。 */
     private void confirmOrderCoupon(ShopOrder order) {
-        if (order == null || order.getAppliedCouponId() == null) return;
+        if (order == null) return;
+        List<Long> couponIds = new ArrayList<>();
+        if (order.getAppliedCouponId() != null) {
+            couponIds.add(order.getAppliedCouponId());
+        }
+        if (order.getAppliedAddonCouponIds() != null && !order.getAppliedAddonCouponIds().isBlank()) {
+            try {
+                couponIds.addAll(objectMapper.readValue(order.getAppliedAddonCouponIds(),
+                        new TypeReference<List<Long>>() { }));
+            } catch (Exception e) {
+                log.error("解析附加券ID失败，无法完整确认订单券: orderId={}", order.getId(), e);
+            }
+        }
+        if (couponIds.isEmpty()) return;
         try {
-            pointsMallService.confirmCoupon(order.getAppliedCouponId(), order.getUserId());
+            pointsMallService.confirmCoupons(couponIds.stream().distinct().toList(), order.getUserId());
         } catch (Exception e) {
-            log.warn("确认优惠券失败(不影响接单): orderId={}, couponId={}, error={}",
-                    order.getId(), order.getAppliedCouponId(), e.getMessage());
+            log.warn("确认优惠券失败(不影响接单): orderId={}, couponIds={}, error={}",
+                    order.getId(), couponIds, e.getMessage());
         }
     }
 

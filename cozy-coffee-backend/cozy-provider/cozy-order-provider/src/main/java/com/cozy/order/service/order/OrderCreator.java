@@ -254,6 +254,14 @@ public class OrderCreator {
             }
         }
 
+        boolean orderCreated = false;
+        boolean couponRollbackPublished = false;
+        ShopOrder order = new ShopOrder();
+        // 券已在远程服务冻结；后续任一校验失败时，回滚事件也必须携带券所属用户。
+        // 不能等到组装订单字段时再赋值，否则配送费等前置校验异常会发布 userId=null 的事件。
+        order.setUserId(userId);
+        try {
+
         // ============================================================
         // v5.3: 配送费与黑金会员无限免运费逻辑
         // ============================================================
@@ -345,7 +353,6 @@ public class OrderCreator {
         }
 
         // 创建订单主表
-        ShopOrder order = new ShopOrder();
         order.setOrderNo(generateOrderNo());
         order.setUserId(userId);
         order.setIdempotencyKey(idempotencyKey);
@@ -395,9 +402,11 @@ public class OrderCreator {
         // 如果此处失败但券已核销，publishCouponRollbackEvent 通过 Outbox 异步回滚。
         try {
             doCreateOrderInTx(order, orderItems);
+            orderCreated = true;
         } catch (DuplicateKeyException e) {
             // 并发幂等/唯一键冲突：本次请求已冻结的券必须回滚，再返回已有订单或抛错（依赖 A3 CAS 冻结已生效）
             publishCouponRollbackIfUsed(appliedCouponId, addonCouponIds, order, rollbackOperationId);
+            couponRollbackPublished = true;
             ShopOrder duplicate = idempotencyKey != null
                     ? orderMapper.selectByUserAndIdempotencyKey(userId, idempotencyKey)
                     : null;
@@ -411,6 +420,7 @@ public class OrderCreator {
             throw new BusinessException(BusinessErrorCode.ORDER_CREATE_FAILED, "订单创建冲突，请稍后重试");
         } catch (Exception e) {
             publishCouponRollbackIfUsed(appliedCouponId, addonCouponIds, order, rollbackOperationId);
+            couponRollbackPublished = true;
             log.error("订单落库失败: orderNo={}, error={}", order.getOrderNo(), e.getMessage(), e);
             throw new BusinessException(BusinessErrorCode.ORDER_CREATE_FAILED,
                     "订单创建失败: " + extractMessage(e));
@@ -420,6 +430,12 @@ public class OrderCreator {
                 order.getOrderNo(), userId, totalAmount, itemsSummary);
 
         return orderDtoEnricher.toOrderDTO(order, orderItems);
+        } finally {
+            // 冻结后的任意失败（不仅是 DB insert）都必须归还本次请求占用的券。
+            if (!orderCreated && !couponRollbackPublished) {
+                publishCouponRollbackIfUsed(appliedCouponId, addonCouponIds, order, rollbackOperationId);
+            }
+        }
     }
 
     private void doCreateOrderInTx(ShopOrder order, List<ShopOrderItem> orderItems) {
@@ -439,7 +455,8 @@ public class OrderCreator {
         if (appliedCouponId != null || (addonCouponIds != null && !addonCouponIds.isEmpty())) {
             log.error("订单落库失败，触发券回滚: orderNo={}, couponId={}, addonIds={}",
                     order.getOrderNo(), appliedCouponId, addonCouponIds);
-            orderCancelledEventPublisher.publishCouponRollbackEvent(order, rollbackOperationId);
+            orderCancelledEventPublisher.publishCouponRollbackEvent(
+                    order, rollbackOperationId, appliedCouponId, addonCouponIds);
         }
     }
 

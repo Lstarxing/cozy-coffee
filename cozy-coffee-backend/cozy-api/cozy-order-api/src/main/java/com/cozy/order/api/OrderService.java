@@ -9,6 +9,7 @@ import com.cozy.order.dto.response.CoffeeBlendDTO;
 import com.cozy.order.dto.response.CoffeeOriginDTO;
 import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.order.dto.response.MonthlyStatsDTO;
+import com.cozy.order.dto.response.OrderOutboxDeadLetterDTO;
 import com.cozy.order.dto.response.ProductAddonDTO;
 import com.cozy.order.dto.response.ShopOrderDTO;
 
@@ -117,6 +118,15 @@ public interface OrderService {
      * 取消订单（管理端，无需验证用户）
      */
     ShopOrderDTO cancelOrder(Long orderId);
+
+    /** 查询订单服务 DEAD outbox（管理端运维）。 */
+    List<OrderOutboxDeadLetterDTO> listDeadOutboxMessages(Integer limit);
+
+    /** DEAD → PENDING 的 CAS 人工重试；记录操作人和重试次数。 */
+    void retryDeadOutboxMessage(Long id, Long operatorId);
+
+    /** 当前订单服务 DEAD outbox 数量。 */
+    long countDeadOutboxMessages();
 
     // ==================== 用户端方法 ====================
 

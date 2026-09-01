@@ -2,6 +2,7 @@ package com.cozy.order.service;
 
 import com.cozy.common.mq.MqTags;
 import com.cozy.common.mq.MqTopics;
+import com.cozy.common.mq.OrderCancelledEvent;
 import com.cozy.order.entity.ShopOrder;
 import com.cozy.order.mq.OutboxService;
 import com.cozy.order.service.infra.OrderCancelledEventPublisher;
@@ -36,9 +37,11 @@ class OrderCancelledEventPublisherTest {
         publisher.publishCouponRollbackEvent(order, 10001L); // fallback operationId
 
         ArgumentCaptor<Long> aggCaptor = ArgumentCaptor.forClass(Long.class);
+        ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
         verify(outboxService).publish(eq(MqTopics.ORDER_EVENTS), eq(MqTags.ORDER_CANCELLED),
-                eq("coupon_rollback"), aggCaptor.capture(), Mockito.any());
+                eq("coupon_rollback"), aggCaptor.capture(), eventCaptor.capture());
         assertNotNull(aggCaptor.getValue());
         assertEquals(10001L, aggCaptor.getValue().longValue());
+        assertEquals("operation:10001", ((OrderCancelledEvent) eventCaptor.getValue()).getRollbackEventId());
     }
 }

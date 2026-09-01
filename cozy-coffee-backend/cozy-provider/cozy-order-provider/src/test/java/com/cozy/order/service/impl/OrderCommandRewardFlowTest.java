@@ -14,12 +14,15 @@ import com.cozy.order.service.order.OrderRewardService;
 import com.cozy.order.service.order.PickupCodeService;
 import com.cozy.order.service.infra.OrderCancelledEventPublisher;
 import com.cozy.order.service.infra.OrderTimeoutIndexer;
+import com.cozy.mall.api.PointsMallService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -43,6 +46,7 @@ class OrderCommandRewardFlowTest {
     private TransactionTemplate transactionTemplate;
     private OrderCompletedEventPublisher publisher;
     private OrderCommandService commandService;
+    private PointsMallService pointsMallService;
 
     @BeforeEach
     void setUp() {
@@ -54,11 +58,13 @@ class OrderCommandRewardFlowTest {
         eventPublisher = mock(OrderCancelledEventPublisher.class);
         transactionTemplate = mock(TransactionTemplate.class);
         publisher = mock(OrderCompletedEventPublisher.class);
+        pointsMallService = mock(PointsMallService.class);
         commandService = new OrderCommandService(
                 orderMapper, orderItemMapper, mock(CoffeeProductMapper.class),
                 mock(PickupCodeService.class), rewardService, enricher,
                 timeoutIndexer, eventPublisher,
-                transactionTemplate, publisher);
+                transactionTemplate, publisher, new ObjectMapper());
+        ReflectionTestUtils.setField(commandService, "pointsMallService", pointsMallService);
 
         // 事务模板：直接执行 lambda 并返回其结果
         when(transactionTemplate.execute(any())).thenAnswer(inv -> {
@@ -79,6 +85,19 @@ class OrderCommandRewardFlowTest {
             dto.setPointsEarned(o.getPointsEarned());
             return dto;
         });
+    }
+
+    @Test
+    void confirmOrderCoupon_confirmsMainAndAddonCouponsTogether() {
+        ShopOrder order = new ShopOrder();
+        order.setId(100L);
+        order.setUserId(7L);
+        order.setAppliedCouponId(10L);
+        order.setAppliedAddonCouponIds("[11,12]");
+
+        ReflectionTestUtils.invokeMethod(commandService, "confirmOrderCoupon", order);
+
+        verify(pointsMallService).confirmCoupons(List.of(10L, 11L, 12L), 7L);
     }
 
     // ==================== 出餐：仅履约不发奖 ====================

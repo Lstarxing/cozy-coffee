@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 订单取消事件投递（Outbox 模式，事务内原子提交保证消息不丢）。
@@ -33,10 +34,19 @@ public class OrderCancelledEventPublisher {
 
     /** 订单落库失败（order.id 为 null）时用 fallbackAggregateId 作为非空聚合键，保证 outbox 行能写入 */
     public void publishCouponRollbackEvent(ShopOrder order, Long fallbackAggregateId) {
-        Long mainCouponId = order.getAppliedCouponId();
-        List<Long> addonCouponIds = parseAddonCouponIds(order);
+        publishCouponRollbackEvent(order, fallbackAggregateId,
+                order.getAppliedCouponId(), parseAddonCouponIds(order));
+    }
 
-        if (mainCouponId == null && addonCouponIds.isEmpty()) {
+    /**
+     * 使用调用方持有的券 ID 发布回滚事件，避免订单快照序列化失败时丢失附加券。
+     */
+    public void publishCouponRollbackEvent(ShopOrder order, Long fallbackAggregateId,
+            Long mainCouponId, List<Long> addonCouponIds) {
+        List<Long> safeAddonCouponIds = addonCouponIds == null ? Collections.emptyList()
+                : addonCouponIds.stream().filter(Objects::nonNull).distinct().toList();
+
+        if (mainCouponId == null && safeAddonCouponIds.isEmpty()) {
             log.info("订单未使用优惠券，无需回滚: orderId={}", order.getId());
             return;
         }
@@ -47,10 +57,11 @@ public class OrderCancelledEventPublisher {
         }
 
         OrderCancelledEvent event = OrderCancelledEvent.builder()
+                .rollbackEventId((order.getId() != null ? "order:" : "operation:") + aggregateId)
                 .orderId(order.getId())
                 .userId(order.getUserId())
                 .appliedCouponId(mainCouponId)
-                .addonCouponIds(addonCouponIds)
+                .addonCouponIds(safeAddonCouponIds)
                 .occurredAt(LocalDateTime.now())
                 .build();
 
@@ -61,7 +72,7 @@ public class OrderCancelledEventPublisher {
                 aggregateId,
                 event);
         log.info("OrderCancelledEvent 已写入 outbox: aggregateId={}, mainCoupon={}, addonCount={}",
-                aggregateId, mainCouponId, addonCouponIds.size());
+                aggregateId, mainCouponId, safeAddonCouponIds.size());
     }
 
     private List<Long> parseAddonCouponIds(ShopOrder order) {
@@ -74,8 +85,7 @@ public class OrderCancelledEventPublisher {
                     new TypeReference<List<Long>>() {
                     });
         } catch (Exception e) {
-            log.warn("解析附加券ID失败: orderId={}, error={}", order.getId(), e.getMessage());
-            return Collections.emptyList();
+            throw new IllegalStateException("解析附加券ID失败: orderId=" + order.getId(), e);
         }
     }
 }
