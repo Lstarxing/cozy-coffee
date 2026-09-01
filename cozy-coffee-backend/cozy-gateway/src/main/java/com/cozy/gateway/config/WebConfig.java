@@ -27,6 +27,9 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${storage.local-upload-dir:./uploads}")
     private String localUploadDir;
 
+    @Value("${cozy.web.allowed-origins:*}")
+    private String allowedOrigins;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         Path uploadPath = Paths.get(localUploadDir).toAbsolutePath().normalize();
@@ -60,8 +63,12 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        String[] origins = java.util.Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toArray(String[]::new);
         registry.addMapping("/**")
-                .allowedOriginPatterns("*")
+                .allowedOriginPatterns(origins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)

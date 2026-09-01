@@ -61,7 +61,10 @@ storage:
 # 认证配置：微信登录（未配置 secret 时走开发登录）
 cozy:
   auth:
-    dev-login-enabled: ${AUTH_DEV_LOGIN_ENABLED:true}
+    dev-login-enabled: ${AUTH_DEV_LOGIN_ENABLED:false}
     wechat:
       appid: ${WECHAT_APPID:}
       secret: ${WECHAT_SECRET:}
+  web:
+    # 生产必须用 CORS_ALLOWED_ORIGINS 指定明确 https 域名白名单（逗号分隔）；ProdConfigGuard 会拦截生产漏配
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}

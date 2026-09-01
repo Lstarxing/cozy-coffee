@@ -1,13 +1,17 @@
 package com.cozy.gateway.controller;
 
+import com.cozy.gateway.config.AuthProperties;
 import com.cozy.gateway.exception.GlobalExceptionHandler;
 import com.cozy.gateway.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -22,7 +26,9 @@ import static org.mockito.Mockito.when;
  * 返回 400 + 字段错误信息。
  */
 @WebMvcTest(controllers = AuthController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, ConfigurationPropertiesAutoConfiguration.class})
+@EnableConfigurationProperties(AuthProperties.class)
+@TestPropertySource(properties = "cozy.auth.dev-login-enabled=true")
 class AuthControllerValidationTest {
 
     @Autowired

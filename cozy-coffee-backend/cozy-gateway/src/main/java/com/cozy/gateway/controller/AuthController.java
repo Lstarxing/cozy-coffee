@@ -2,6 +2,7 @@ package com.cozy.gateway.controller;
 
 import com.cozy.common.context.UserContext;
 import com.cozy.common.result.Result;
+import com.cozy.gateway.config.AuthProperties;
 import com.cozy.gateway.dto.ApplyInviteCodeRequest;
 import com.cozy.gateway.dto.ChangePasswordRequest;
 import com.cozy.gateway.dto.DevPasswordResetRequest;
@@ -15,7 +16,6 @@ import com.cozy.user.dto.request.UpdateProfileRequest;
 import com.cozy.user.dto.response.UserDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.beans.factory.annotation.Value;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,9 +30,7 @@ import java.util.Optional;
 public class AuthController {
 
     private final AuthService authService;
-
-    @Value("${cozy.auth.dev-login-enabled:true}")
-    private boolean devLoginEnabled;
+    private final AuthProperties authProperties;
 
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterRequest request) {
@@ -59,7 +57,7 @@ public class AuthController {
 
     @PostMapping("/wechat/session")
     public Result<Map<String, Object>> wechatSession(@Valid @RequestBody WechatDevSessionRequest request) {
-        if (!devLoginEnabled && !authService.wechatConfigured()) {
+        if (!authProperties.isDevLoginEnabled() && !authService.wechatConfigured()) {
             return Result.forbidden();
         }
         boolean real = authService.wechatConfigured();
@@ -69,7 +67,7 @@ public class AuthController {
 
     @PostMapping("/password/reset-dev")
     public Result<Void> resetPasswordDev(@Valid @RequestBody DevPasswordResetRequest request) {
-        if (!devLoginEnabled) {
+        if (!authProperties.isDevLoginEnabled()) {
             return Result.forbidden();
         }
         authService.resetPasswordDev(request.getUsername(), request.getNewPassword());
