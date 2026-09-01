@@ -9,6 +9,8 @@ import com.cozy.mall.mapper.PointsOrderFulfillmentMapper;
 import com.cozy.mall.mapper.PointsOrderMapper;
 import com.cozy.mall.mapper.PointsProductMapper;
 import com.cozy.mall.mapper.UserCouponMapper;
+import com.cozy.mall.mapper.CouponRollbackInboxMapper;
+import com.cozy.mall.service.PointsRefundOutboxService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +49,8 @@ class CouponTemplateTest {
         service = new PointsMallServiceImpl(
                 mock(PointsProductMapper.class), mock(PointsOrderMapper.class),
                 mock(MonthlyRedemptionMapper.class), mock(PointsOrderFulfillmentMapper.class),
-                userCouponMapper, mock(RedisTemplate.class), mock(StringRedisTemplate.class),
+                userCouponMapper, mock(CouponRollbackInboxMapper.class), mock(PointsRefundOutboxService.class),
+                mock(RedisTemplate.class), mock(StringRedisTemplate.class),
                 objectMapper, new CouponTemplateConfig(), new HashMap<String, CouponCalculator>(),
                 mock(CouponCombinationService.class));
     }

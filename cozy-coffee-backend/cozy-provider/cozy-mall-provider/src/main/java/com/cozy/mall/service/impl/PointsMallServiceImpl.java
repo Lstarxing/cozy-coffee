@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.cozy.mall.coupon.CouponCalculator;
 import com.cozy.mall.coupon.CouponCombinationService;
 import com.cozy.mall.util.CouponRuleUtil;
+import com.cozy.mall.service.PointsRefundOutboxService;
 import com.cozy.mall.entity.PointsOrder;
 import com.cozy.mall.entity.PointsOrderFulfillment;
 import com.cozy.mall.entity.PointsProduct;
@@ -19,6 +20,7 @@ import com.cozy.mall.mapper.PointsOrderMapper;
 import com.cozy.mall.mapper.PointsProductMapper;
 import com.cozy.mall.mapper.UserCouponMapper;
 import com.cozy.mall.mapper.MonthlyRedemptionMapper;
+import com.cozy.mall.mapper.CouponRollbackInboxMapper;
 import com.cozy.mall.entity.MonthlyRedemption;
 import com.cozy.member.api.AddressService;
 import com.cozy.member.api.MemberService;
@@ -29,6 +31,7 @@ import com.cozy.member.dto.response.AddressDTO;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.mall.dto.response.CouponCombinationResult;
 import com.cozy.mall.dto.response.PointsOrderDTO;
+import com.cozy.mall.dto.response.PointsRefundDeadLetterDTO;
 import com.cozy.mall.dto.response.PointsProductDTO;
 import com.cozy.order.api.OrderService;
 import com.cozy.order.dto.response.CoffeeProductDTO;
@@ -57,6 +60,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -92,6 +96,8 @@ public class PointsMallServiceImpl implements PointsMallService {
     private final MonthlyRedemptionMapper monthlyRedemptionMapper;
     private final PointsOrderFulfillmentMapper fulfillmentMapper;
     private final UserCouponMapper userCouponMapper;
+    private final CouponRollbackInboxMapper couponRollbackInboxMapper;
+    private final PointsRefundOutboxService pointsRefundOutboxService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
@@ -498,6 +504,7 @@ public class PointsMallServiceImpl implements PointsMallService {
         }
 
         // 兜底补偿：远程扣分已提交后若本地事务回滚（如 DB 提交失败），退还积分（幂等：consumeId=orderId，见 Task A4）
+        // 补偿走持久化退款 outbox，消除"远程扣分已提交、进程在补偿前崩溃"的丢失窗口；uk_refund_order 幂等
         // 守卫 isSynchronizationActive：纯单测（无活跃事务）时跳过
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             final Long consumeId = order.getId();
@@ -506,10 +513,10 @@ public class PointsMallServiceImpl implements PointsMallService {
                 public void afterCompletion(int status) {
                     if (status == TransactionSynchronization.STATUS_ROLLED_BACK) {
                         try {
-                            memberService.refundPointsByConsumption(userId, totalCost, "redeem", consumeId,
+                            pointsRefundOutboxService.enqueue(consumeId, userId, totalCost, "redeem",
                                     "兑换事务回滚补偿");
                         } catch (Exception e) {
-                            log.error("兑换事务回滚补偿失败: orderId={}, userId={}", consumeId, userId, e);
+                            log.error("兑换事务回滚补偿入队失败: orderId={}, userId={}", consumeId, userId, e);
                         }
                     }
                 }
@@ -534,9 +541,6 @@ public class PointsMallServiceImpl implements PointsMallService {
         }
     }
 
-    /**
-     * 恢复商品库存（加分布式锁防止并发取消导致库存错乱）
-     */
     /**
      * 恢复商品库存：原子自增（与兑换侧 deductStock 同为单语句 UPDATE，DB 行锁串行，无丢失更新）
      */
@@ -646,8 +650,8 @@ public class PointsMallServiceImpl implements PointsMallService {
         // 原子恢复库存（与兑换侧原子扣减一致，不会丢失并发更新）
         restoreProductStock(order.getProductId(), order.getQuantity());
 
-        // 跨服务调用：按消费明细回补原批次退还积分（幂等：refund 流水唯一）
-        memberService.refundPointsByConsumption(userId, order.getPointsCost(), "redeem", order.getId(),
+        // 与取消状态、库存恢复同事务写入退款 outbox；提交后由定时 relay 幂等调用 member，消除远程先提交窗口。
+        pointsRefundOutboxService.enqueue(order.getId(), userId, order.getPointsCost(), "redeem",
                 "订单取消退还: " + order.getProductName() + " x" + order.getQuantity());
 
         log.info("订单取消成功: orderNo={}, refund={}", order.getOrderNo(), order.getPointsCost());
@@ -1751,8 +1755,53 @@ public class PointsMallServiceImpl implements PointsMallService {
     }
 
     @Override
+    public List<PointsRefundDeadLetterDTO> listDeadPointRefunds(Integer limit) {
+        return pointsRefundOutboxService.listDeadRefunds(limit);
+    }
+
+    @Override
+    public void retryDeadPointRefund(Long id, Long operatorId) {
+        pointsRefundOutboxService.retryDeadRefund(id, operatorId);
+    }
+
+    @Override
+    public long countDeadPointRefunds() {
+        return pointsRefundOutboxService.countDeadRefunds();
+    }
+
+    @Override
     @Transactional
     public void rollbackCoupon(Long couponId, Long userId) {
+        rollbackCouponInternal(couponId, userId, false);
+    }
+
+    @Override
+    @Transactional
+    public void rollbackCoupons(String rollbackEventId, Long orderId, Long userId,
+            Long mainCouponId, List<Long> addonCouponIds) {
+        if (rollbackEventId == null || rollbackEventId.isBlank()) {
+            throw new BusinessException("券回滚事件幂等键不能为空");
+        }
+        if (userId == null) {
+            throw new BusinessException("券回滚事件用户不能为空");
+        }
+        if (couponRollbackInboxMapper.insertIfAbsent(rollbackEventId, LocalDateTime.now()) == 0) {
+            log.info("券回滚事件已处理，幂等跳过: eventId={}, orderId={}", rollbackEventId, orderId);
+            return;
+        }
+        List<Long> couponIds = new ArrayList<>();
+        if (mainCouponId != null) {
+            couponIds.add(mainCouponId);
+        }
+        if (addonCouponIds != null) {
+            couponIds.addAll(addonCouponIds);
+        }
+        for (Long couponId : couponIds.stream().filter(Objects::nonNull).distinct().toList()) {
+            rollbackCouponInternal(couponId, userId, true);
+        }
+    }
+
+    private void rollbackCouponInternal(Long couponId, Long userId, boolean failOnOwnerMismatch) {
         log.info("回滚优惠券: couponId={}, userId={}", couponId, userId);
         if (couponId == null)
             return;
@@ -1763,7 +1812,11 @@ public class PointsMallServiceImpl implements PointsMallService {
             return;
         }
 
-        if (!coupon.getUserId().equals(userId)) {
+        if (!Objects.equals(coupon.getUserId(), userId)) {
+            if (failOnOwnerMismatch) {
+                // 批量 MQ 回滚必须失败并回滚 inbox；否则错误事件会被永久标记为已处理，券却仍被冻结。
+                throw new BusinessException("券回滚事件用户与券归属不一致");
+            }
             log.warn("回滚优惠券失败，用户不匹配: couponUserId={}, requestUserId={}", coupon.getUserId(), userId);
             return;
         }
@@ -1783,9 +1836,22 @@ public class PointsMallServiceImpl implements PointsMallService {
     @Override
     @Transactional
     public void confirmCoupon(Long couponId, Long userId) {
-        log.info("确认优惠券(FROZEN→USED): couponId={}, userId={}", couponId, userId);
-        if (couponId == null)
+        confirmCoupons(couponId == null ? Collections.emptyList() : List.of(couponId), userId);
+    }
+
+    @Override
+    @Transactional
+    public void confirmCoupons(List<Long> couponIds, Long userId) {
+        if (couponIds == null || couponIds.isEmpty()) {
             return;
+        }
+        for (Long couponId : couponIds.stream().filter(Objects::nonNull).distinct().toList()) {
+            confirmCouponInternal(couponId, userId);
+        }
+    }
+
+    private void confirmCouponInternal(Long couponId, Long userId) {
+        log.info("确认优惠券(FROZEN→USED): couponId={}, userId={}", couponId, userId);
 
         UserCoupon coupon = userCouponMapper.selectById(couponId);
         if (coupon == null) {

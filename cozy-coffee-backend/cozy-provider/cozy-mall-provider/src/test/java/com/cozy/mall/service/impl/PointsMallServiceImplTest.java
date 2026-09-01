@@ -11,6 +11,8 @@ import com.cozy.mall.mapper.PointsOrderFulfillmentMapper;
 import com.cozy.mall.mapper.PointsOrderMapper;
 import com.cozy.mall.mapper.PointsProductMapper;
 import com.cozy.mall.mapper.UserCouponMapper;
+import com.cozy.mall.mapper.CouponRollbackInboxMapper;
+import com.cozy.mall.service.PointsRefundOutboxService;
 import com.cozy.member.api.AddressService;
 import com.cozy.member.api.MemberService;
 import com.cozy.order.api.OrderService;
@@ -40,6 +42,8 @@ class PointsMallServiceImplTest {
     @Mock private MonthlyRedemptionMapper monthlyRedemptionMapper;
     @Mock private PointsOrderFulfillmentMapper fulfillmentMapper;
     @Mock private UserCouponMapper userCouponMapper;
+    @Mock private CouponRollbackInboxMapper couponRollbackInboxMapper;
+    @Mock private PointsRefundOutboxService pointsRefundOutboxService;
     @Mock private RedisTemplate<String, Object> redisTemplate;
     @Mock private StringRedisTemplate stringRedisTemplate;
     @Mock private ObjectMapper objectMapper;
@@ -115,11 +119,11 @@ class PointsMallServiceImplTest {
 
         pointsMallService.cancelOrder(500L, 1L);
 
-        org.mockito.Mockito.verify(memberService).refundPointsByConsumption(
+        org.mockito.Mockito.verify(pointsRefundOutboxService).enqueue(
+                org.mockito.ArgumentMatchers.eq(500L),
                 org.mockito.ArgumentMatchers.eq(1L),
                 org.mockito.ArgumentMatchers.eq(100),
                 org.mockito.ArgumentMatchers.eq("redeem"),
-                org.mockito.ArgumentMatchers.eq(500L),
                 org.mockito.ArgumentMatchers.anyString());
         org.mockito.Mockito.verify(productMapper).addStock(100L, 2);
     }
@@ -136,13 +140,71 @@ class PointsMallServiceImplTest {
 
         pointsMallService.cancelOrder(500L, 1L);
 
-        org.mockito.Mockito.verify(memberService, org.mockito.Mockito.never())
-                .refundPointsByConsumption(org.mockito.ArgumentMatchers.anyLong(),
+        org.mockito.Mockito.verify(pointsRefundOutboxService, org.mockito.Mockito.never())
+                .enqueue(org.mockito.ArgumentMatchers.anyLong(),
+                        org.mockito.ArgumentMatchers.anyLong(),
                         org.mockito.ArgumentMatchers.anyInt(),
                         org.mockito.ArgumentMatchers.anyString(),
-                        org.mockito.ArgumentMatchers.anyLong(),
                         org.mockito.ArgumentMatchers.anyString());
         org.mockito.Mockito.verify(productMapper, org.mockito.Mockito.never()).addStock(
                 org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void rollbackCoupons_duplicateEvent_skipsCouponMutation() {
+        when(couponRollbackInboxMapper.insertIfAbsent(
+                org.mockito.ArgumentMatchers.eq("operation:1"), org.mockito.ArgumentMatchers.any())).thenReturn(0);
+
+        pointsMallService.rollbackCoupons("operation:1", null, 1L, 10L, java.util.List.of(11L));
+
+        org.mockito.Mockito.verify(userCouponMapper, org.mockito.Mockito.never()).selectById(
+                org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    @Test
+    void rollbackCoupons_missingUser_rejectsBeforeRecordingInbox() {
+        assertThrows(BusinessException.class,
+                () -> pointsMallService.rollbackCoupons("operation:1", null, null, 10L, java.util.List.of()));
+
+        org.mockito.Mockito.verifyNoInteractions(couponRollbackInboxMapper);
+    }
+
+    @Test
+    void rollbackCoupons_ownerMismatch_failsInsteadOfAcknowledgingEvent() {
+        com.cozy.mall.entity.UserCoupon coupon = new com.cozy.mall.entity.UserCoupon();
+        coupon.setId(10L);
+        coupon.setUserId(2L);
+        coupon.setStatus("FROZEN");
+        when(couponRollbackInboxMapper.insertIfAbsent(
+                org.mockito.ArgumentMatchers.eq("operation:1"), org.mockito.ArgumentMatchers.any())).thenReturn(1);
+        when(userCouponMapper.selectById(10L)).thenReturn(coupon);
+
+        assertThrows(BusinessException.class,
+                () -> pointsMallService.rollbackCoupons("operation:1", null, 1L, 10L, java.util.List.of()));
+        org.mockito.Mockito.verify(userCouponMapper, org.mockito.Mockito.never()).updateById(
+                org.mockito.ArgumentMatchers.any(com.cozy.mall.entity.UserCoupon.class));
+    }
+
+    @Test
+    void rollbackCoupons_firstDelivery_rollsBackWholeCouponSet() {
+        com.cozy.mall.entity.UserCoupon main = new com.cozy.mall.entity.UserCoupon();
+        main.setId(10L);
+        main.setUserId(1L);
+        main.setStatus("FROZEN");
+        com.cozy.mall.entity.UserCoupon addon = new com.cozy.mall.entity.UserCoupon();
+        addon.setId(11L);
+        addon.setUserId(1L);
+        addon.setStatus("USED");
+        when(couponRollbackInboxMapper.insertIfAbsent(
+                org.mockito.ArgumentMatchers.eq("order:500"), org.mockito.ArgumentMatchers.any())).thenReturn(1);
+        when(userCouponMapper.selectById(10L)).thenReturn(main);
+        when(userCouponMapper.selectById(11L)).thenReturn(addon);
+
+        pointsMallService.rollbackCoupons("order:500", 500L, 1L, 10L, java.util.List.of(11L));
+
+        org.junit.jupiter.api.Assertions.assertEquals("ISSUED", main.getStatus());
+        org.junit.jupiter.api.Assertions.assertEquals("ISSUED", addon.getStatus());
+        org.mockito.Mockito.verify(userCouponMapper).updateById(main);
+        org.mockito.Mockito.verify(userCouponMapper).updateById(addon);
     }
 }

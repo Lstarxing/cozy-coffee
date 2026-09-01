@@ -5,6 +5,7 @@ import com.cozy.mall.dto.request.RedeemRequest;
 import com.cozy.mall.dto.response.CouponCombinationResult;
 import com.cozy.mall.dto.response.CouponUsageResult;
 import com.cozy.mall.dto.response.PointsOrderDTO;
+import com.cozy.mall.dto.response.PointsRefundDeadLetterDTO;
 import com.cozy.mall.dto.response.PointsProductDTO;
 import com.cozy.mall.dto.response.UserCouponDTO;
 import java.math.BigDecimal;
@@ -168,6 +169,15 @@ public interface PointsMallService {
          */
         void deleteOrder(Long orderId);
 
+        /** 查询积分退款 DEAD outbox（管理端运维）。 */
+        List<PointsRefundDeadLetterDTO> listDeadPointRefunds(Integer limit);
+
+        /** DEAD → PENDING 的 CAS 人工重试；记录操作人和重试次数。 */
+        void retryDeadPointRefund(Long id, Long operatorId);
+
+        /** 当前积分退款 DEAD outbox 数量。 */
+        long countDeadPointRefunds();
+
         /**
          * 回滚/归还优惠券（取消订单时调用）
          *
@@ -176,6 +186,10 @@ public interface PointsMallService {
          */
         void rollbackCoupon(Long couponId, Long userId);
 
+        /** 按事件幂等键整组回滚订单券；同一事件重复投递只处理一次。 */
+        void rollbackCoupons(String rollbackEventId, Long orderId, Long userId,
+                        Long mainCouponId, List<Long> addonCouponIds);
+
         /**
          * 确认优惠券（订单支付/接单成功后调用）：FROZEN → USED
          *
@@ -183,6 +197,9 @@ public interface PointsMallService {
          * @param userId   用户ID
          */
         void confirmCoupon(Long couponId, Long userId);
+
+        /** 整组确认优惠券（主券 + 附加券），在 mall 单事务内完成。 */
+        void confirmCoupons(List<Long> couponIds, Long userId);
 
         /**
          * 按券 ID 批量查询优惠券（订单详情展示券名用）

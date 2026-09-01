@@ -12,13 +12,11 @@ import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
 /**
  * 订单取消 -> 回滚优惠券（CLUSTERING 模式）
  * <p>
- * 幂等保障：PointsMallService.rollbackCoupon 内部已检查 status=USED 才回滚，
- * 多次消费同一事件不会重复回滚。
+ * 幂等保障：PointsMallService.rollbackCoupons 在同一事务内先写 coupon_rollback_inbox，
+ * 同一回滚事件重复投递不会再次修改券状态。
  */
 @Slf4j
 @Component
@@ -40,27 +38,22 @@ public class CouponRollbackConsumer implements RocketMQListener<OrderCancelledEv
                 event.getOrderId(), event.getUserId(), event.getAppliedCouponId(),
                 event.getAddonCouponIds() == null ? 0 : event.getAddonCouponIds().size());
 
-        if (event.getAppliedCouponId() != null) {
-            rollbackSafely(event.getOrderId(), event.getAppliedCouponId(), event.getUserId());
-        }
-
-        List<Long> addonCouponIds = event.getAddonCouponIds();
-        if (addonCouponIds != null && !addonCouponIds.isEmpty()) {
-            for (Long id : addonCouponIds) {
-                rollbackSafely(event.getOrderId(), id, event.getUserId());
-            }
-        }
-    }
-
-    private void rollbackSafely(Long orderId, Long couponId, Long userId) {
         try {
-            pointsMallService.rollbackCoupon(couponId, userId);
-            log.info("优惠券回滚成功: orderId={}, couponId={}", orderId, couponId);
+            String eventId = event.getRollbackEventId();
+            if (eventId == null || eventId.isBlank()) {
+                // 兼容升级前已经在 MQ 中的旧事件；orderId 非空时仍可稳定去重。
+                eventId = event.getOrderId() == null ? null : "legacy-order:" + event.getOrderId();
+            }
+            if (eventId == null) {
+                throw new IllegalArgumentException("券回滚事件缺少幂等键");
+            }
+            pointsMallService.rollbackCoupons(eventId, event.getOrderId(), event.getUserId(),
+                    event.getAppliedCouponId(), event.getAddonCouponIds());
+            log.info("优惠券整组回滚成功: eventId={}, orderId={}", eventId, event.getOrderId());
         } catch (Exception e) {
-            // rollbackCoupon 内部对非 USED 状态视为无需回滚并直接返回，不会抛异常；
-            // 真正异常时抛出 -> RocketMQ 自动重试，达到死信阈值后进 DLQ
-            log.error("优惠券回滚失败: orderId={}, couponId={}, error={}", orderId, couponId, e.getMessage(), e);
-            throw new RuntimeException("券回滚失败: " + couponId, e);
+            log.error("优惠券整组回滚失败: eventId={}, orderId={}, error={}",
+                    event.getRollbackEventId(), event.getOrderId(), e.getMessage(), e);
+            throw new RuntimeException("券回滚失败: " + event.getRollbackEventId(), e);
         }
     }
 }
