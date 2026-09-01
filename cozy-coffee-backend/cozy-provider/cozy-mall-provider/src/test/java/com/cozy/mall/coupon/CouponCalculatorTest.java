@@ -62,11 +62,11 @@ class CouponCalculatorTest {
     @Test
     void exchangeBlockSoeAndStandardOnly() {
         ExchangeCouponCalculator calc = new ExchangeCouponCalculator();
-        // 排除 SOE
+        // 排除 SOE（V2 分类 = SPECIALTY）
         BigDecimal d = calc.calculate(coupon("EXCHANGE",
                         "{\"maxDiscount\":40,\"categoryBlocklist\":[\"soe\",\"pour-over\"]}"),
                 BigDecimal.ZERO,
-                List.of(item(1L, new BigDecimal("30"), "soe", 1, "STANDARD", false),
+                List.of(item(1L, new BigDecimal("30"), "SPECIALTY", 1, "STANDARD", false),
                         drink(2, new BigDecimal("20"))));
         assertEquals(0, new BigDecimal("20").compareTo(d));
 

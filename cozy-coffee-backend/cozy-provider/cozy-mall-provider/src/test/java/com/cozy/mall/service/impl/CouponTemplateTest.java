@@ -90,7 +90,7 @@ class CouponTemplateTest {
         JsonNode r1 = rule(black.getRuleJson());
         assertInt(r1, "maxDiscount", 40);
         assertStr(r1, "skuLimit", "ALL");
-        assertEquals("soe", r1.get("categoryBlocklist").get(0).asText());
+        assertEquals("SPECIALTY", r1.get("categoryBlocklist").get(0).asText());
         assertEquals("黑金月度全通兑免单券", black.getDisplayTitle());
 
         // 钻石月度：STANDARD_ONLY
@@ -105,10 +105,10 @@ class CouponTemplateTest {
         UserCoupon bDiamond = issue("BIRTHDAY_DIAMOND_FREE", 0, 50);
         assertInt(rule(bDiamond.getRuleJson()), "maxDiscount", 50);
 
-        // 生日黄金：排除 signature+soe+pour-over
+        // 生日黄金：排除 SIGNATURE + SPECIALTY（V2 分类）
         UserCoupon bGold = issue("BIRTHDAY_GOLD_FREE", 0, 40);
         JsonNode g = rule(bGold.getRuleJson());
-        assertEquals(3, g.get("categoryBlocklist").size());
+        assertEquals(2, g.get("categoryBlocklist").size());
         assertStr(g, "skuLimit", "STANDARD_ONLY");
 
         // 钻石升级礼
@@ -206,9 +206,9 @@ class CouponTemplateTest {
 
         UserCoupon birthday = issue("BIRTHDAY_FREE_DRINK", 0, 40);
         JsonNode b = rule(birthday.getRuleJson());
-        assertEquals("soe", b.get("categoryBlocklist").get(0).asText());
+        assertEquals("SPECIALTY", b.get("categoryBlocklist").get(0).asText());
         assertEquals("生日免单券", birthday.getDisplayTitle());
-        assertEquals("排除SOE | 封顶¥40", birthday.getDisplaySubTitle());
+        assertEquals("排除精品咖啡 | 封顶¥40", birthday.getDisplaySubTitle());
     }
 
     // ==================== EXCHANGE_ 关联商品 ====================
