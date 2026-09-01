@@ -101,7 +101,7 @@
                 <view v-if="product.tags && product.tags.length" class="product-tags-row">
                   <text v-for="t in product.tags" :key="t" class="product-tag-chip">{{ tagLabel(t) }}</text>
                 </view>
-                <text class="product-desc">{{ product.description || '门店现制' }}</text>
+                <text class="product-desc">{{ product.shortDescription || product.description || '门店现制' }}</text>
                 <text v-if="product.sold" class="product-extra">月售 {{ product.sold }} · 好评 {{ product.praise }}%</text>
                 <view class="product-foot">
                   <view class="product-price">
@@ -582,7 +582,7 @@ function closeOffShelf() {
 .product-tag { flex: none; padding: 4rpx 10rpx; border-radius: 6rpx; background: $cozy-surface; color: $cozy-ink; font-size: 18rpx; font-weight: 600; }
 .product-tags-row { display: flex; flex-wrap: wrap; gap: 8rpx; margin-top: 8rpx; }
 .product-tag-chip { padding: 3rpx 10rpx; border-radius: 6rpx; background: $cozy-primary-soft; color: $cozy-primary; font-size: 18rpx; font-weight: 600; }
-.product-desc { display: -webkit-box; overflow: hidden; margin-top: 6rpx; color: $cozy-muted; font-size: 21rpx; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+.product-desc { overflow: hidden; margin-top: 6rpx; color: $cozy-muted; font-size: 21rpx; line-height: 1.5; }
 .product-extra { margin-top: 6rpx; font-size: 19rpx; color: $cozy-placeholder; }
 .product-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
 .product-price { display: flex; align-items: baseline; color: $cozy-ink; }

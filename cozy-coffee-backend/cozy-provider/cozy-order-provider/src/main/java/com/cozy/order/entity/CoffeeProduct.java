@@ -12,6 +12,7 @@ public class CoffeeProduct {
     private Long id;
     private String name;
     private String description;
+    private String shortDescription; // 列表凝练描述（3.4 风味句，列表不截断）；选规格/详情用 description
     private BigDecimal price; // 默认价格（中杯）
     private BigDecimal priceMedium; // v5.0: 中杯价格
     private BigDecimal priceLarge; // v5.0: 大杯价格

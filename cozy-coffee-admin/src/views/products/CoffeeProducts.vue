@@ -5,6 +5,10 @@
       subtitle="管理咖啡与甜品菜单"
     >
       <template #actions>
+        <el-button @click="beanListVisible = true">
+          <el-icon class="el-icon--left"><CoffeeCup /></el-icon>
+          今日豆单
+        </el-button>
         <el-button type="primary" @click="showAddModal">
           <el-icon class="el-icon--left"><Plus /></el-icon>
           添加商品
@@ -200,13 +204,23 @@
       :product="addonEditingProduct"
       @saved="loadData"
     />
+
+    <!-- 今日豆单：勾选今日上架的精品 Bean（菜单 04 实时更新） -->
+    <el-dialog v-model="beanListVisible" title="今日豆单" width="520px" :close-on-click-modal="false">
+      <div class="bean-list-hint">勾选今日上架的手冲 Bean（菜单 04 精品咖啡实时更新）；下架 = 从菜单移除</div>
+      <div v-for="bean in todayBeans" :key="bean.id" class="bean-list-item">
+        <span class="bean-name">{{ bean.name }}</span>
+        <span class="bean-price">手冲 ¥{{ bean.price }}{{ bean.coldBrewPrice ? ` · 冷萃 ¥${bean.coldBrewPrice}` : '' }}</span>
+        <el-switch :model-value="bean.status === 'active'" @change="(v) => toggleTodayBean(bean, v)" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, Picture, Check, Edit, Delete, Setting } from '@element-plus/icons-vue'
+import { Plus, Picture, Check, Edit, Delete, Setting, CoffeeCup } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import {
   getCoffeeProducts, addCoffeeProduct, updateCoffeeProduct,
@@ -233,6 +247,22 @@ const addonDialogVisible = ref(false)
 const addonEditingProduct = ref(null)
 const beans = ref([])
 const blends = ref([])
+const beanListVisible = ref(false)
+
+// 今日豆单：04 精品咖啡的 Bean 商品（brewMethod 非空），按 sort_order 排序
+const todayBeans = computed(() => rawData.value
+  .filter(p => p.category === 'SPECIALTY' && p.brewMethod)
+  .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)))
+
+const toggleTodayBean = async (bean, active) => {
+  try {
+    const res = await toggleCoffeeProductStatus(bean.id)
+    bean.status = res.data.status
+    ElMessage.success(active ? `「${bean.name}」今日上架` : `「${bean.name}」已从今日豆单移除`)
+  } catch (e) {
+    ElMessage.error('操作失败: ' + e.message)
+  }
+}
 
 const filters = reactive({
   keyword: '',
@@ -261,7 +291,7 @@ const productForm = ref(createEmptyForm())
 
 function createEmptyForm() {
   return {
-    name: '', description: '', imageUrl: '',
+    name: '', description: '', shortDescription: '', imageUrl: '',
     price: null, priceMedium: null, priceLarge: null,
     category: 'ESPRESSO',
     isNewProduct: false,
@@ -333,6 +363,7 @@ const editProduct = (row) => {
   productForm.value = {
     name: row.name,
     description: row.description,
+    shortDescription: row.shortDescription || '',
     imageUrl: row.imageUrl,
     price: row.price,
     priceMedium: row.priceMedium || null,
@@ -361,6 +392,7 @@ const saveProduct = async () => {
     const data = {
       name: productForm.value.name,
       description: productForm.value.description,
+      shortDescription: productForm.value.shortDescription || null,
       imageUrl: productForm.value.imageUrl,
       category: productForm.value.category,
       price: isMediumLarge ? null : (productForm.value.price ?? 0),
@@ -492,6 +524,32 @@ onMounted(() => {
   line-height: 1;
   padding: 3px 7px;
   border-radius: 4px;
+}
+
+.bean-list-hint {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 12px;
+}
+
+.bean-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid #F0F2F5;
+}
+
+.bean-name {
+  flex: 1;
+  font-size: 14px;
+  color: #303133;
+  font-weight: 600;
+}
+
+.bean-price {
+  font-size: 12px;
+  color: #8B5E3C;
 }
 
 .truncate {

@@ -76,6 +76,7 @@ public class ProductAdminService {
         CoffeeProduct product = new CoffeeProduct();
         product.setName(dto.getName().trim());
         product.setDescription(dto.getDescription());
+        product.setShortDescription(dto.getShortDescription());
         product.setPrice(dto.getPrice());
         product.setPriceMedium(dto.getPriceMedium()); // v5.0
         product.setPriceLarge(dto.getPriceLarge()); // v5.0
@@ -125,6 +126,7 @@ public class ProductAdminService {
         }
         if (dto.getDescription() != null)
             product.setDescription(dto.getDescription());
+        product.setShortDescription(dto.getShortDescription()); // 列表凝练描述（表单始终下发）
         if (dto.getPrice() != null) {
             if (dto.getPrice().compareTo(BigDecimal.ZERO) < 0) {
                 throw new BusinessException("商品价格不能为负数");

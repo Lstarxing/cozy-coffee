@@ -55,7 +55,7 @@
           <div v-if="product.tags && product.tags.length" class="product-tags">
             <span v-for="t in product.tags" :key="t" class="product-tag">{{ tagLabel(t) }}</span>
           </div>
-          <p class="product-desc">{{ product.description }}</p>
+          <p class="product-desc">{{ product.shortDescription || product.description }}</p>
           <div class="product-footer">
             <span class="price">¥{{ product.priceMedium || product.price }}</span>
             <button class="add-btn" @click="openCustomizer(product)">选规格</button>

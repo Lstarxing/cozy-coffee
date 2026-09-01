@@ -50,6 +50,7 @@ public class OrderDtoConverter {
         dto.setId(entity.getId());
         dto.setName(entity.getName());
         dto.setDescription(entity.getDescription());
+        dto.setShortDescription(entity.getShortDescription());
         dto.setPrice(entity.getPrice());
         dto.setPriceMedium(entity.getPriceMedium());
         dto.setPriceLarge(entity.getPriceLarge());

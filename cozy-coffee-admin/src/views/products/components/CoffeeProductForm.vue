@@ -19,12 +19,25 @@
       </el-col>
 
       <el-col :span="24">
+        <el-form-item label="列表描述">
+          <el-input
+            v-model="form.shortDescription"
+            type="textarea"
+            :rows="1"
+            maxlength="100"
+            show-word-limit
+            placeholder="菜单列表展示的凝练一句话（不截断）"
+          />
+        </el-form-item>
+      </el-col>
+
+      <el-col :span="24">
         <el-form-item label="商品描述">
           <el-input
             v-model="form.description"
             type="textarea"
             :rows="3"
-            placeholder="请输入商品描述"
+            placeholder="选规格/详情页展示的完整描述"
             maxlength="200"
             show-word-limit
           />

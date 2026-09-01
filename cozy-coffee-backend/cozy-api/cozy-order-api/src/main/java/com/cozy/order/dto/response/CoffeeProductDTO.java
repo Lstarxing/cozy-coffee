@@ -11,6 +11,7 @@ public class CoffeeProductDTO implements Serializable {
     private Long id;
     private String name;
     private String description;
+    private String shortDescription; // 列表凝练描述；选规格/详情用 description
     private BigDecimal price;
     private BigDecimal priceMedium; // v5.0: 中杯价格
     private BigDecimal priceLarge; // v5.0: 大杯价格
