@@ -22,11 +22,12 @@ public enum SugarType {
     /**
      * 锁定无糖 - 仅允许无糖选项
      * 适用商品：Dirty (脏咖)、手冲精品 (SOE)、澳白
-     * 允许选项：[NONE]
-     * 
-     * 业务逻辑：这些产品的风味体验要求不添加任何糖分
+     * 允许选项：[NONE, NO_ADDED_SUGAR]
+     *
+     * 业务逻辑：这些产品的风味体验要求不添加任何糖分。
+     * 兼容 V2 糖度值 NO_ADDED_SUGAR（不另外加糖）——语义等同无糖，前端对无糖限定商品发送该值。
      */
-    NO_SUGAR_ONLY("仅无糖", new String[]{"NONE", "none"}),
+    NO_SUGAR_ONLY("仅无糖", new String[]{"NONE", "none", "NO_ADDED_SUGAR", "no_added_sugar"}),
     
     /**
      * 最低少甜 (不可去糖) - 不允许无糖选项

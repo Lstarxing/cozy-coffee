@@ -129,7 +129,7 @@ onLoad(() => {
     ? source.sugarLevel
     : (product.value.defaultSugarLevel && sugarOptions.value.some(o => o.value === product.value.defaultSugarLevel)
       ? product.value.defaultSugarLevel
-      : sugarOptions.value[0]?.value || 'NO_ADDED_SUGAR')
+      : sugarOptions.value[0]?.value || 'NONE')
   form.brewMethod = source.brewMethod || 'POUR_OVER'
   form.quantity = Number(source.quantity || 1)
 })

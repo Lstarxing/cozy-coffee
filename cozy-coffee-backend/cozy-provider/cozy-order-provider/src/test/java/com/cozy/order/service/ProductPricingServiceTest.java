@@ -331,6 +331,16 @@ class ProductPricingServiceTest {
     }
 
     @Test
+    void noSugarOnly_acceptsNoAddedSugar() {
+        // 回归：Espresso/Dirty/澳白等 NO_SUGAR_ONLY 商品，前端发送 V2 值 NO_ADDED_SUGAR（不另外加糖），
+        // 语义等同无糖，后端必须接受（否则确认页金额核对失败）。
+        var s = pricing(List.of(), List.of(), List.of());
+        var r = s.price(brewableProduct("50", "38"), null, "HOT", "NO_ADDED_SUGAR", "POUR_OVER", "[]");
+        assertTrue(r.valid(), r.error());
+        assertEquals(new BigDecimal("50"), r.basePrice());
+    }
+
+    @Test
     void brewableColdBrewUsesColdBrewPrice() {
         var s = pricing(List.of(), List.of(), List.of());
         var r = s.price(brewableProduct("50", "38"), null, "COLD", null, "COLD_BREW", "[]");
