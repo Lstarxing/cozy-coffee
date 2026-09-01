@@ -23,6 +23,20 @@ class ProdConfigGuardTest {
     }
 
     @Test
+    void prod_withHttpsWildcardCors_fails() {
+        assertThrows(IllegalStateException.class, () ->
+                new ProdConfigGuard(env("prod"), "https://*", "x".repeat(40)).validate());
+    }
+
+    @Test
+    void prod_withDevLoginEnabled_fails() {
+        AuthProperties auth = new AuthProperties();
+        auth.setDevLoginEnabled(true);
+        assertThrows(IllegalStateException.class, () ->
+                new ProdConfigGuard(env("prod"), auth, "https://shop.example.com", "x".repeat(40)).validate());
+    }
+
+    @Test
     void prod_withNonHttpsOrigin_fails() {
         assertThrows(IllegalStateException.class, () ->
                 new ProdConfigGuard(env("prod"), "http://shop.example.com", "x".repeat(40)).validate());

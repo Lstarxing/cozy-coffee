@@ -3,10 +3,12 @@ package com.cozy.gateway.config;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 
@@ -23,17 +25,26 @@ public class ProdConfigGuard {
     static final String DEFAULT_JWT_SECRET = "cozy-coffee-dev-secret-key-change-in-production-32bytes";
 
     private final Environment environment;
+    private final AuthProperties authProperties;
     private final String allowedOrigins;
     private final String jwtSecret;
 
+    @Autowired
     public ProdConfigGuard(Environment environment,
+            AuthProperties authProperties,
             @Value("${cozy.web.allowed-origins:*}") String allowedOrigins) {
-        this(environment, allowedOrigins, System.getenv("JWT_SECRET"));
+        this(environment, authProperties, allowedOrigins, System.getenv("JWT_SECRET"));
     }
 
     /** 包内可见：测试用确定性注入 jwtSecret */
     ProdConfigGuard(Environment environment, String allowedOrigins, String jwtSecret) {
+        this(environment, new AuthProperties(), allowedOrigins, jwtSecret);
+    }
+
+    /** 包内可见：测试生产环境的认证开关 */
+    ProdConfigGuard(Environment environment, AuthProperties authProperties, String allowedOrigins, String jwtSecret) {
         this.environment = environment;
+        this.authProperties = authProperties;
         this.allowedOrigins = allowedOrigins;
         this.jwtSecret = jwtSecret;
     }
@@ -52,15 +63,19 @@ public class ProdConfigGuard {
             return; // 本地/测试跳过
         }
 
+        if (authProperties.isDevLoginEnabled()) {
+            throw new IllegalStateException("非 local/test 环境禁止开启开发登录和开发密码重置");
+        }
+
         List<String> origins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
-        if (origins.isEmpty() || origins.stream().anyMatch("*"::equals)) {
+        if (origins.isEmpty() || origins.stream().anyMatch(o -> o.contains("*"))) {
             throw new IllegalStateException(
                     "生产环境 CORS 不能为空或通配符：请设置 CORS_ALLOWED_ORIGINS 为明确域名白名单");
         }
-        if (!origins.stream().allMatch(o -> o.startsWith("https://"))) {
+        if (!origins.stream().allMatch(this::isExplicitHttpsOrigin)) {
             throw new IllegalStateException("生产环境 CORS 来源必须为 https 域名");
         }
 
@@ -70,5 +85,21 @@ public class ProdConfigGuard {
                     "生产环境必须设置长度>=32且非默认值的 JWT_SECRET 环境变量");
         }
         log.info("生产环境配置校验通过：CORS 白名单={}", origins);
+    }
+
+    private boolean isExplicitHttpsOrigin(String origin) {
+        try {
+            URI uri = URI.create(origin);
+            String path = uri.getPath();
+            return "https".equalsIgnoreCase(uri.getScheme())
+                    && uri.getHost() != null
+                    && !uri.getHost().isBlank()
+                    && uri.getUserInfo() == null
+                    && uri.getQuery() == null
+                    && uri.getFragment() == null
+                    && (path == null || path.isEmpty() || "/".equals(path));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 }
