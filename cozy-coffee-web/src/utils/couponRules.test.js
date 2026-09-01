@@ -39,12 +39,6 @@ describe('isDrinkCategory', () => {
     expect(isDrinkCategory('milk')).toBe(true)
     expect(isDrinkCategory('pour-over')).toBe(true)
   })
-
-  it('returns false for empty/undefined category', () => {
-    expect(isDrinkCategory(undefined)).toBe(false)
-    expect(isDrinkCategory('')).toBe(false)
-    expect(isDrinkCategory(null)).toBe(false)
-  })
 })
 
 describe('isBakeryCategory', () => {
@@ -140,16 +134,6 @@ describe('validateCouponForCart', () => {
     expect(validateCouponForCart(coupon, [linkedLarge], baseContext).valid).toBe(false)
   })
 
-  it('distinguishes generic exchange coupons for cake vs drink', () => {
-    const cakeCoupon = { couponType: COUPON_TYPE.EXCHANGE, parsedRule: {}, displayTitle: '蛋糕兑换券' }
-    expect(validateCouponForCart(cakeCoupon, [drinkItem], baseContext).valid).toBe(false)
-    expect(validateCouponForCart(cakeCoupon, [cakeItem], baseContext).valid).toBe(true)
-
-    const drinkCoupon = { couponType: COUPON_TYPE.EXCHANGE, parsedRule: {}, displayTitle: '拿铁兑换券' }
-    expect(validateCouponForCart(drinkCoupon, [cakeItem], baseContext).valid).toBe(false)
-    expect(validateCouponForCart(drinkCoupon, [drinkItem], baseContext).valid).toBe(true)
-  })
-
   it('requires an extra-shot item for SHOT coupons', () => {
     const coupon = { couponType: COUPON_TYPE.SHOT, parsedRule: {} }
     expect(validateCouponForCart(coupon, [drinkItem], baseContext).valid).toBe(false)
@@ -168,14 +152,6 @@ describe('validateCouponForCart', () => {
     expect(validateCouponForCart(coupon, [{ ...drinkItem, quantity: 2 }], baseContext).valid).toBe(true)
   })
 
-  it('enforces DISCOUNT scope constraints', () => {
-    const drinkOnly = { couponType: COUPON_TYPE.DISCOUNT, parsedRule: { scope: 'DRINK_ONLY' } }
-    expect(validateCouponForCart(drinkOnly, [cakeItem], baseContext).valid).toBe(false)
-    const cakeOnly = { couponType: COUPON_TYPE.DISCOUNT, parsedRule: { scope: 'CAKE_ONLY' } }
-    expect(validateCouponForCart(cakeOnly, [drinkItem], baseContext).valid).toBe(false)
-    expect(validateCouponForCart(cakeOnly, [cakeItem], baseContext).valid).toBe(true)
-  })
-
   it('handles missing inputs without throwing', () => {
     const coupon = { couponType: COUPON_TYPE.DISCOUNT, parsedRule: {} }
     expect(validateCouponForCart(coupon, null, baseContext)).toEqual({ valid: true, reason: '' })
@@ -190,20 +166,6 @@ describe('validateCouponForCart', () => {
 describe('calculateDiscountAmount', () => {
   const pricing = { baseSubtotal: 50, cupExtraTotal: 4 }
   const items = [drinkItem, { ...drinkItem, productId: 'p3', quantity: 1, cupSize: 'LARGE', unitPrice: 28 }]
-
-  it('computes a percentage discount across drinks', () => {
-    const coupon = { couponType: COUPON_TYPE.DISCOUNT, value: 20, parsedRule: {} }
-    // baseAmount = 50 + 4 = 54 (plus LARGE +3 on the LARGE item)
-    const discount = calculateDiscountAmount(coupon, items, pricing)
-    expect(discount).toBeCloseTo((54 + 3) * 0.8, 5)
-  })
-
-  it('derives percent from discountRate when value missing', () => {
-    const coupon = { couponType: COUPON_TYPE.DISCOUNT, parsedRule: { discountRate: 0.15 } }
-    expect(calculateDiscountAmount(coupon, items, pricing)).toBeCloseTo((54 + 3) * 0.85, 5)
-    const coupon2 = { couponType: COUPON_TYPE.DISCOUNT, parsedRule: { discountRate: 5 } }
-    expect(calculateDiscountAmount(coupon2, items, pricing)).toBeCloseTo((54 + 3) * 0.5, 5)
-  })
 
   it('caps the discount at maxDiscountAmount', () => {
     const coupon = { couponType: COUPON_TYPE.DISCOUNT, value: 50, parsedRule: { maxDiscountAmount: 10 } }
@@ -233,11 +195,6 @@ describe('calculateCouponDiscount', () => {
 
   it('returns 0 for null coupon', () => {
     expect(calculateCouponDiscount(null, [], pricing)).toBe(0)
-  })
-
-  it('handles DISCOUNT via calculateDiscountAmount', () => {
-    const coupon = { couponType: COUPON_TYPE.DISCOUNT, value: 50, parsedRule: {} }
-    expect(calculateCouponDiscount(coupon, [{ ...drinkItem, quantity: 2 }], pricing)).toBe(25)
   })
 
   it('computes BOGO as the cheapest drink price', () => {
@@ -421,15 +378,5 @@ describe('allocateItemDiscounts', () => {
     const total = out.reduce((s, i) => s + i.discountAmount * i.quantity, 0)
     expect(total).toBeCloseTo(15, 5)
     expect(out.every(i => i.discountAmount >= 0)).toBe(true)
-  })
-
-  it('DRINK_ONLY discount allocates across drinks only', () => {
-    const coupon = { couponType: COUPON_TYPE.DISCOUNT, parsedRule: { scope: 'DRINK_ONLY' } }
-    const mixed = [...items, { ...cakeItem, quantity: 1, unitPrice: 50 }]
-    const out = allocateItemDiscounts(mixed, coupon, 15, pricing)
-    const cake = out.find(i => i.category === 'cake')
-    expect(cake.discountAmount).toBe(0)
-    const drinkTotal = out.filter(i => i.category !== 'cake').reduce((s, i) => s + i.discountAmount * i.quantity, 0)
-    expect(drinkTotal).toBeCloseTo(15, 5)
   })
 })

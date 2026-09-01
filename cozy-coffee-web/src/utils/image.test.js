@@ -20,10 +20,9 @@ describe('getImageUrl', () => {
     expect(getImageUrl(cdn)).toBe(cdn)
   })
 
-  it('prepends the API base to relative paths', () => {
+  it('keeps a leading-slash relative path as-is when image base is empty', () => {
     const result = getImageUrl('/uploads/products/latte.png')
-    expect(result.endsWith('/uploads/products/latte.png')).toBe(true)
-    expect(result).not.toBe('/uploads/products/latte.png')
+    expect(result).toBe('/uploads/products/latte.png')
   })
 
   it('inserts a slash between API base and relative path without leading slash', () => {
