@@ -1,6 +1,7 @@
 package com.cozy.order.dto.response;
 
 import lombok.Data;
+import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
@@ -11,7 +12,8 @@ public class CoffeeProductDTO implements Serializable {
     private Long id;
     private String name;
     private String description;
-    private String shortDescription; // 列表凝练描述；选规格/详情用 description
+    @Size(max = 40, message = "列表简短描述最多 40 个字符")
+    private String shortDescription; // 菜单列表凝练一句（≤40 字，完整展示不省略）；选规格/详情用 description
     private BigDecimal price;
     private BigDecimal priceMedium; // v5.0: 中杯价格
     private BigDecimal priceLarge; // v5.0: 大杯价格

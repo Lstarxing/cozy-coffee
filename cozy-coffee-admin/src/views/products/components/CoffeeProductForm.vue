@@ -24,9 +24,9 @@
             v-model="form.shortDescription"
             type="textarea"
             :rows="1"
-            maxlength="100"
+            maxlength="40"
             show-word-limit
-            placeholder="菜单列表展示的凝练一句话（不截断）"
+            placeholder="菜单列表凝练一句（≤40 字，完整展示不省略）"
           />
         </el-form-item>
       </el-col>
