@@ -41,7 +41,10 @@ import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -286,57 +289,68 @@ public class PointsMallServiceImpl implements PointsMallService {
     @Override
     @Transactional
     public PointsOrderDTO redeem(Long userId, RedeemRequest request) {
-        log.info("用户 {} 发起兑换请求: productId={}", userId, request.getProductId());
-
         if (userId == null) {
             throw new BusinessException("用户未登录");
         }
         if (request == null || request.getProductId() == null) {
             throw new BusinessException("请选择商品");
         }
+        log.info("用户 {} 发起兑换请求: productId={}", userId, request.getProductId());
         int quantity = request.getQuantity() != null ? request.getQuantity() : 1;
-
-        String lockKey = RedisKeyConstants.lockMallProductStock(request.getProductId());
-        String lockToken = UUID.randomUUID().toString();
-        Boolean lockOk = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, lockToken, 8, TimeUnit.SECONDS);
-        if (!Boolean.TRUE.equals(lockOk)) {
-            throw new BusinessException("当前兑换请求较多，请稍后重试");
+        // 服务层数量校验：Dubbo/内部调用不经 Web 校验，负数量会让库存反向增加
+        if (quantity < 1 || quantity > 50) {
+            throw new BusinessException("兑换数量不合法");
         }
 
-        PointsProduct product;
-        try {
-            // 查询商品
-            product = productMapper.selectById(request.getProductId());
-            if (product == null) {
-                throw new BusinessException("商品不存在");
-            }
-            if (!"active".equals(product.getStatus())) {
-                throw new BusinessException("商品已下架");
-            }
-            if (product.getStock() < quantity) {
-                throw new BusinessException("库存不足");
-            }
-
-            // 扣减库存
-            product.setStock(product.getStock() - quantity);
-            productMapper.updateById(product);
-            invalidateMallProductsCache();
-        } finally {
-            releaseLockSafely(lockKey, lockToken);
+        PointsProduct product = productMapper.selectById(request.getProductId());
+        if (product == null) {
+            throw new BusinessException("商品不存在");
+        }
+        if (!"active".equals(product.getStatus())) {
+            throw new BusinessException("商品已下架");
         }
 
-        // v4.2: 检查月度限购 (基于计数表)
+        // 原子扣减库存：条件更新，并发下也不会超卖（stock >= qty 才扣减）
+        int deducted = productMapper.deductStock(product.getId(), quantity);
+        if (deducted == 0) {
+            throw new BusinessException("库存不足");
+        }
+        product.setStock(product.getStock() - quantity);
+        invalidateMallProductsCacheAfterCommit();
+
+        // v4.2: 月度限购（条件自增；放在远程扣分之前，本地失败可整体回滚）
         if (product.getMonthlyLimit() != null && product.getMonthlyLimit() > 0) {
-            String currentMonth = java.time.LocalDate.now()
-                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
-            MonthlyRedemption mr = monthlyRedemptionMapper.selectOne(new LambdaQueryWrapper<MonthlyRedemption>()
-                    .eq(MonthlyRedemption::getUserId, userId)
-                    .eq(MonthlyRedemption::getProductId, product.getId())
-                    .eq(MonthlyRedemption::getMonth, currentMonth));
-
-            int usedCount = (mr != null) ? mr.getRedeemedCount() : 0;
-            if (usedCount + quantity > product.getMonthlyLimit()) {
-                throw new BusinessException("该商品每月限兑 " + product.getMonthlyLimit() + " 件，本月已兑换 " + usedCount + " 件");
+            String currentMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+            int limit = product.getMonthlyLimit();
+            int incremented = monthlyRedemptionMapper.incrementIfWithinLimit(
+                    userId, product.getId(), currentMonth, quantity, limit);
+            if (incremented == 0) {
+                MonthlyRedemption mr = monthlyRedemptionMapper.selectOne(new LambdaQueryWrapper<MonthlyRedemption>()
+                        .eq(MonthlyRedemption::getUserId, userId)
+                        .eq(MonthlyRedemption::getProductId, product.getId())
+                        .eq(MonthlyRedemption::getMonth, currentMonth));
+                if (mr == null) {
+                    // 本月首兑：行不存在，校验不超限后插入
+                    if (quantity > limit) {
+                        throw new BusinessException("该商品每月限兑 " + limit + " 件");
+                    }
+                    MonthlyRedemption nr = new MonthlyRedemption();
+                    nr.setUserId(userId);
+                    nr.setProductId(product.getId());
+                    nr.setMonth(currentMonth);
+                    nr.setRedeemedCount(quantity);
+                    try {
+                        monthlyRedemptionMapper.insert(nr);
+                    } catch (DuplicateKeyException e) {
+                        // 并发首兑：另一请求已插入，重试条件自增
+                        if (monthlyRedemptionMapper.incrementIfWithinLimit(
+                                userId, product.getId(), currentMonth, quantity, limit) == 0) {
+                            throw new BusinessException("该商品每月限兑 " + limit + " 件");
+                        }
+                    }
+                } else {
+                    throw new BusinessException("该商品每月限兑 " + limit + " 件，本月已兑换 " + mr.getRedeemedCount() + " 件");
+                }
             }
         }
 
@@ -477,21 +491,32 @@ public class PointsMallServiceImpl implements PointsMallService {
             log.info("自提订单取货码生成: orderNo={}, pickupCode={}", order.getOrderNo(), pickupCode);
         }
 
-        // 跨服务调用：FIFO 扣减积分
+        // 7. 跨服务调用：FIFO 扣减积分（最后一步远程副作用；失败则本地整体回滚）
         boolean consumed = memberService.consumePointsFIFO(userId, totalCost, "redeem", order.getId());
         if (!consumed) {
             throw new BusinessException("积分扣减失败");
         }
 
-        log.info("兑换成功: orderNo={}, cost={}, type={}", order.getOrderNo(), totalCost, fulfillmentType);
-
-        // v4.2: 更新月度限购计数 (基于计数表)
-        if (product.getMonthlyLimit() != null && product.getMonthlyLimit() > 0) {
-            String currentMonth = java.time.LocalDate.now()
-                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
-            monthlyRedemptionMapper.incrementRedemption(userId, product.getId(), currentMonth, quantity);
+        // 兜底补偿：远程扣分已提交后若本地事务回滚（如 DB 提交失败），退还积分（幂等：consumeId=orderId，见 Task A4）
+        // 守卫 isSynchronizationActive：纯单测（无活跃事务）时跳过
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            final Long consumeId = order.getId();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status == TransactionSynchronization.STATUS_ROLLED_BACK) {
+                        try {
+                            memberService.refundPointsByConsumption(userId, totalCost, "redeem", consumeId,
+                                    "兑换事务回滚补偿");
+                        } catch (Exception e) {
+                            log.error("兑换事务回滚补偿失败: orderId={}, userId={}", consumeId, userId, e);
+                        }
+                    }
+                }
+            });
         }
 
+        log.info("兑换成功: orderNo={}, cost={}, type={}", order.getOrderNo(), totalCost, fulfillmentType);
         return toOrderDTO(order);
     }
 
@@ -544,6 +569,22 @@ public class PointsMallServiceImpl implements PointsMallService {
         } catch (Exception e) {
             log.warn("清理Redis积分商城商品缓存失败", e);
         }
+    }
+
+    /** 库存变更后 afterCommit 才清缓存，避免提交前失效被并发请求用旧数据重建 */
+    private void invalidateMallProductsCacheAfterCommit() {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            invalidateMallProductsCache();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == TransactionSynchronization.STATUS_COMMITTED) {
+                    invalidateMallProductsCache();
+                }
+            }
+        });
     }
 
     private List<PointsProductDTO> convertToPointsProductList(Object cachedValue) {
