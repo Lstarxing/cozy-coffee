@@ -47,7 +47,8 @@ describe('ReorderService', () => {
       ]
     }
     const menuApi = vi.fn().mockResolvedValue({ data: [
-      { id: 2, name: '限定冷饮', price: 16, status: 'active', sizeType: 'DEFAULT', tempType: 'COLD_ONLY', sugarType: 'NO_SUGAR_ONLY' }
+      { id: 2, name: '限定冷饮', price: 16, status: 'active', sizeType: 'DEFAULT', tempType: 'COLD_ONLY', sugarType: 'NO_SUGAR_ONLY',
+        allowedSizes: ['STANDARD'], allowedTemps: ['COLD'], allowedSugars: [] }
     ] })
 
     const result = await restoreOrderToCart({ order, cartStore, menuApi })

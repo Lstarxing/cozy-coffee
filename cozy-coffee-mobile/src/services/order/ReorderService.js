@@ -21,28 +21,15 @@ function isFood(product) {
   return ['bakery', 'dessert', 'food', 'addon'].includes(String(product?.category || '').toLowerCase())
 }
 
+// 规格允许选项：单一事实源取后端 allowedSizes/allowedTemps/allowedSugars（旧数据缺字段时兜底默认值）
 function allowedSizes(product) {
-  if (isFood(product)) return ['STANDARD']
-  const type = String(product?.sizeType || 'MEDIUM_LARGE').toUpperCase()
-  if (type === 'DEFAULT') return ['STANDARD']
-  if (type === 'ALL_SIZES') return ['MEDIUM', 'LARGE', 'EXTRA_LARGE']
-  return ['MEDIUM', 'LARGE'] // MEDIUM_LARGE：中/大杯（V2，原漏了 MEDIUM）
+  return Array.isArray(product?.allowedSizes) ? product.allowedSizes : ['MEDIUM', 'LARGE']
 }
-
 function allowedTemperatures(product) {
-  if (isFood(product)) return ['']
-  const type = String(product?.tempType || 'HOT_COLD').toUpperCase()
-  if (type === 'COLD_ONLY') return ['COLD']
-  if (type === 'HOT_ONLY') return ['HOT']
-  return ['HOT', 'COLD']
+  return Array.isArray(product?.allowedTemps) ? product.allowedTemps : ['HOT', 'COLD']
 }
-
 function allowedSugarLevels(product) {
-  if (isFood(product)) return ['']
-  const type = String(product?.sugarType || 'FREE_CHOICE').toUpperCase()
-  if (type === 'NO_SUGAR_ONLY') return [''] // 无糖度配置，不显示糖度行
-  if (type === 'MIN_LESS_SWEET') return ['STANDARD', 'LESS', 'HALF']
-  return ['STANDARD', 'LESS', 'HALF', 'NO_ADDED_SUGAR']
+  return Array.isArray(product?.allowedSugars) ? product.allowedSugars : ['STANDARD', 'LESS', 'HALF', 'NO_ADDED_SUGAR']
 }
 
 function restoreAllowedOption(value, allowed, aliases = {}) {

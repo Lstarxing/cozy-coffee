@@ -15,6 +15,7 @@ import com.cozy.order.mapper.CoffeeBeanMapper;
 import com.cozy.order.mapper.CoffeeBlendMapper;
 import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.service.product.ProductAddonResolver;
+import com.cozy.order.service.product.ProductRuleValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -39,6 +40,7 @@ public class OrderDtoConverter {
     private final ObjectMapper objectMapper;
     private final CoffeeProductMapper productMapper;
     private final ProductAddonResolver productAddonResolver;
+    private final ProductRuleValidator ruleValidator;
     private final CoffeeBeanMapper beanMapper;
     private final CoffeeBlendMapper blendMapper;
 
@@ -71,6 +73,11 @@ public class OrderDtoConverter {
         dto.setBeanId(entity.getBeanId());
         dto.setBlendId(entity.getBlendId());
         dto.setAddonGroups(productAddonResolver.loadMenuGroups(entity.getId()));
+        // 规格允许选项（单一事实源：后端由枚举规范值计算，前端渲染用）
+        ProductRuleValidator.AllowedOptionsDTO opts = ruleValidator.getAllowedOptions(entity);
+        dto.setAllowedSizes(java.util.Arrays.asList(opts.getAllowedSizes()));
+        dto.setAllowedSugars(java.util.Arrays.asList(opts.getAllowedSugars()));
+        dto.setAllowedTemps(java.util.Arrays.asList(opts.getAllowedTemps()));
         if (entity.getBeanId() != null) {
             CoffeeBean bean = beanMapper.selectById(entity.getBeanId());
             if (bean != null) dto.setBeanProfile(toBeanProfile(bean));

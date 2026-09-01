@@ -199,42 +199,39 @@ public class ProductRuleValidator {
     }
 
     /**
-     * 获取产品的允许选项（用于前端显示）
-     *
-     * @param product 产品实体
-     * @return 允许的选项配置
+     * 获取产品的允许选项（单一事实源，用于前端渲染）。
+     * 返回规范展示值（canonicalValues），区别于校验别名；烘焙/甜品等食品无糖度/温度选择，杯型固定单份。
      */
     public AllowedOptionsDTO getAllowedOptions(CoffeeProduct product) {
         AllowedOptionsDTO options = new AllowedOptionsDTO();
-        
-        // 杯型选项
-        String sizeTypeStr = product.getSizeType() != null ? product.getSizeType() : "MEDIUM_LARGE";
-        try {
-            SizeType sizeType = SizeType.valueOf(sizeTypeStr);
-            options.setAllowedSizes(sizeType.getAllowedValues());
-        } catch (IllegalArgumentException e) {
-            options.setAllowedSizes(new String[]{"medium", "large"});
+        if (isFoodCategory(product.getCategory())) {
+            options.setAllowedSizes(new String[]{"STANDARD"});
+            options.setAllowedSugars(new String[0]);
+            options.setAllowedTemps(new String[0]);
+            return options;
         }
-
-        // 甜度选项
-        String sugarTypeStr = product.getSugarType() != null ? product.getSugarType() : "FREE_CHOICE";
-        try {
-            SugarType sugarType = SugarType.valueOf(sugarTypeStr);
-            options.setAllowedSugars(sugarType.getAllowedValues());
-        } catch (IllegalArgumentException e) {
-            options.setAllowedSugars(new String[]{"full", "half", "less", "none"});
-        }
-
-        // 温度选项
-        String tempTypeStr = product.getTempType() != null ? product.getTempType() : "HOT_COLD";
-        try {
-            TempType tempType = TempType.valueOf(tempTypeStr);
-            options.setAllowedTemps(tempType.getAllowedValues());
-        } catch (IllegalArgumentException e) {
-            options.setAllowedTemps(new String[]{"iced", "hot"});
-        }
-
+        options.setAllowedSizes(canonical(SizeType.class, product.getSizeType(), "MEDIUM_LARGE", SizeType::canonicalValues));
+        options.setAllowedSugars(canonical(SugarType.class, product.getSugarType(), "FREE_CHOICE", SugarType::canonicalValues));
+        options.setAllowedTemps(canonical(TempType.class, product.getTempType(), "HOT_COLD", TempType::canonicalValues));
         return options;
+    }
+
+    private static boolean isFoodCategory(String category) {
+        if (category == null) {
+            return false;
+        }
+        String c = category.toLowerCase();
+        return "bakery".equals(c) || "dessert".equals(c) || "food".equals(c) || "addon".equals(c);
+    }
+
+    private static <E extends Enum<E>> String[] canonical(Class<E> enumClass, String type,
+            String defaultType, java.util.function.Function<E, String[]> values) {
+        String t = type == null || type.isBlank() ? defaultType : type;
+        try {
+            return values.apply(Enum.valueOf(enumClass, t.toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            return values.apply(Enum.valueOf(enumClass, defaultType));
+        }
     }
 
     /**

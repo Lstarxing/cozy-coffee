@@ -141,31 +141,26 @@ const addonGroups = computed(() => product.value.addonGroups || [])
 const { groupLabel, selection, isSelected, toggle, reset: resetAddons, addonFee, addons, selectedText } = useAddonSelection(addonGroups)
 
 const sizeOptions = computed(() => {
-  if (isFood.value) return [{ value: 'STANDARD', label: '单份', base: Number(product.value?.price || 0), extra: 0 }]
-  const type = String(product.value?.sizeType || 'MEDIUM_LARGE').toUpperCase()
-  if (type === 'DEFAULT') return [{ value: 'STANDARD', label: '标准杯', base: Number(product.value?.price || 0), extra: 0 }]
-  // MEDIUM_LARGE：基础价按杯型读 price_medium / price_large（V2 禁止硬编码大杯 +3）
-  return [
-    { value: 'MEDIUM', label: '中杯', base: Number(product.value?.priceMedium || 0), extra: 0 },
-    { value: 'LARGE', label: '大杯', base: Number(product.value?.priceLarge || 0), extra: Number(product.value?.priceLarge || 0) - Number(product.value?.priceMedium || 0) }
-  ]
+  // 单一事实源：allowedSizes 由后端按 sizeType 规范值下发；价格按杯型读 price/priceMedium/priceLarge
+  const allowed = product.value?.allowedSizes || []
+  const labels = { STANDARD: '标准杯', MEDIUM: '中杯', LARGE: '大杯', SMALL: '小杯', EXTRA_LARGE: '超大杯' }
+  return allowed.map(v => {
+    const base = { MEDIUM: Number(product.value?.priceMedium || 0), LARGE: Number(product.value?.priceLarge || 0) }[v] ?? Number(product.value?.price || 0)
+    const extra = v === 'LARGE' ? Number(product.value?.priceLarge || 0) - Number(product.value?.priceMedium || 0) : 0
+    return { value: v, label: isFood.value ? '单份' : (labels[v] || v), base, extra }
+  })
 })
 const sugarOptions = computed(() => {
-  if (isFood.value) return []
-  const type = String(product.value?.sugarType || 'FREE_CHOICE').toUpperCase()
-  if (type === 'NO_SUGAR_ONLY') return [] // 无糖度配置，UI 不显示糖度行
-  const values = [{ value: 'STANDARD', label: '标准糖' }, { value: 'LESS', label: '少糖' }, { value: 'HALF', label: '半糖' }]
-  if (type !== 'MIN_LESS_SWEET') values.push({ value: 'NO_ADDED_SUGAR', label: '不另外加糖' })
-  return values
+  // 单一事实源：allowedSugars 由后端按 sugarType 规范值下发（NO_SUGAR_ONLY/食品为空数组 → 隐藏糖度行）
+  const allowed = product.value?.allowedSugars || []
+  const labels = { STANDARD: '标准糖', LESS: '少糖', HALF: '半糖', NONE: '无糖', NO_ADDED_SUGAR: '不另外加糖' }
+  return allowed.map(v => ({ value: v, label: labels[v] || v }))
 })
 const tempOptions = computed(() => {
-  if (isFood.value) return []
-  // 精品 Bean：冷萃固定冰饮
+  // 精品 Bean 冷萃固定冰饮（出品方式交互决定温度，覆盖后端 allowedTemps）
   if (showBrewMethod.value && form.brewMethod === 'COLD_BREW') return [{ value: 'COLD', label: '冰' }]
-  const type = String(product.value?.tempType || 'HOT_COLD').toUpperCase()
-  if (type === 'COLD_ONLY') return [{ value: 'COLD', label: '冰' }]
-  if (type === 'HOT_ONLY') return [{ value: 'HOT', label: '热' }]
-  return [{ value: 'HOT', label: '热' }, { value: 'COLD', label: '冰' }]
+  const allowed = product.value?.allowedTemps || []
+  return allowed.map(v => ({ value: v, label: v === 'HOT' ? '热' : '冰' }))
 })
 
 const basePrice = computed(() => {
@@ -193,7 +188,7 @@ const selectedSpecsText = computed(() => {
   if (showBrewMethod.value) parts.push({ POUR_OVER: '手冲', COLD_BREW: '冷萃' }[form.brewMethod] || form.brewMethod)
   if (sizeOptions.value.length > 1) parts.push({ STANDARD: '标准杯', MEDIUM: '中杯', LARGE: '大杯', EXTRA_LARGE: '超大杯' }[form.cupSize] || form.cupSize)
   if (tempOptions.value.length > 1) parts.push({ HOT: '热', COLD: '冰' }[form.temperature] || form.temperature)
-  if (sugarOptions.value.length > 1) parts.push({ STANDARD: '标准糖', LESS: '少糖', HALF: '半糖', NO_ADDED_SUGAR: '不另外加糖' }[form.sugarLevel] || form.sugarLevel)
+  if (sugarOptions.value.length > 1) parts.push({ STANDARD: '标准糖', LESS: '少糖', HALF: '半糖', NONE: '无糖', NO_ADDED_SUGAR: '不另外加糖' }[form.sugarLevel] || form.sugarLevel)
   if (selectedText.value) parts.push(selectedText.value)
   return parts.length ? parts.join(' · ') : '默认规格'
 })

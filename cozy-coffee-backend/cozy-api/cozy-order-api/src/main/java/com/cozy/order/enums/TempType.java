@@ -36,6 +36,20 @@ public enum TempType {
         return allowedValues;
     }
 
+    /** 规范展示值（前端渲染用，区别于校验别名 getAllowedValues） */
+    public String[] canonicalValues() {
+        switch (this) {
+            case HOT_COLD:
+                return new String[]{"HOT", "COLD"};
+            case COLD_ONLY:
+                return new String[]{"COLD"};
+            case HOT_ONLY:
+                return new String[]{"HOT"};
+            default:
+                return new String[0];
+        }
+    }
+
     /**
      * 检查给定的温度是否被允许（v2：已砍温，WARM 不在任何 allowedValues 中）
      */

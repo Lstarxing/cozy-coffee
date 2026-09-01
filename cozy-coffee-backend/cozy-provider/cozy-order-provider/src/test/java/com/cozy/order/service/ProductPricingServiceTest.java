@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -338,6 +339,48 @@ class ProductPricingServiceTest {
         var r = s.price(brewableProduct("50", "38"), null, "HOT", "NO_ADDED_SUGAR", "POUR_OVER", "[]");
         assertTrue(r.valid(), r.error());
         assertEquals(new BigDecimal("50"), r.basePrice());
+    }
+
+    // ── getAllowedOptions：规范展示值（单一事实源） ──
+
+    @Test
+    void allowedOptions_noSugarOnly_returnsEmptySugars() {
+        var v = new ProductRuleValidator();
+        // brewableProduct：NO_SUGAR_ONLY + DEFAULT + HOT_COLD
+        var opts = v.getAllowedOptions(brewableProduct("50", "38"));
+        assertArrayEquals(new String[]{"STANDARD"}, opts.getAllowedSizes());
+        assertArrayEquals(new String[0], opts.getAllowedSugars()); // 无糖限定：无糖度选择
+        assertArrayEquals(new String[]{"HOT", "COLD"}, opts.getAllowedTemps());
+    }
+
+    @Test
+    void allowedOptions_freeChoice_returnsCanonicalSugars() {
+        var v = new ProductRuleValidator();
+        CoffeeProduct p = new CoffeeProduct();
+        p.setId(1L);
+        p.setStatus("active");
+        p.setSizeType("MEDIUM_LARGE");
+        p.setSugarType("FREE_CHOICE");
+        p.setTempType("HOT_COLD");
+        var opts = v.getAllowedOptions(p);
+        assertEquals(List.of("MEDIUM", "LARGE"), java.util.Arrays.asList(opts.getAllowedSizes()));
+        assertEquals(List.of("STANDARD", "LESS", "HALF", "NO_ADDED_SUGAR"),
+                java.util.Arrays.asList(opts.getAllowedSugars()));
+        assertEquals(List.of("HOT", "COLD"), java.util.Arrays.asList(opts.getAllowedTemps()));
+    }
+
+    @Test
+    void allowedOptions_bakery_hidesSugarAndTemp() {
+        var v = new ProductRuleValidator();
+        CoffeeProduct p = new CoffeeProduct();
+        p.setId(2L);
+        p.setStatus("active");
+        p.setCategory("BAKERY");
+        p.setSizeType("DEFAULT");
+        var opts = v.getAllowedOptions(p);
+        assertArrayEquals(new String[]{"STANDARD"}, opts.getAllowedSizes());
+        assertArrayEquals(new String[0], opts.getAllowedSugars());
+        assertArrayEquals(new String[0], opts.getAllowedTemps());
     }
 
     @Test

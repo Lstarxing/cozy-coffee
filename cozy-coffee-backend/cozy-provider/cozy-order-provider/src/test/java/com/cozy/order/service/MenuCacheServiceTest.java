@@ -11,6 +11,7 @@ import com.cozy.order.mapper.CoffeeProductMapper;
 import com.cozy.order.mapper.ProductAddonMapper;
 import com.cozy.order.service.product.MenuCacheService;
 import com.cozy.order.service.product.ProductAddonResolver;
+import com.cozy.order.service.product.ProductRuleValidator;
 import com.cozy.order.service.converter.OrderDtoConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,7 +50,7 @@ class MenuCacheServiceTest {
                 mock(ProductAddonMapper.class),
                 new ObjectMapper());
         OrderDtoConverter dtoConverter = new OrderDtoConverter(new ObjectMapper(), productMapper, addonResolver,
-                mock(CoffeeBeanMapper.class), mock(CoffeeBlendMapper.class));
+                new ProductRuleValidator(), mock(CoffeeBeanMapper.class), mock(CoffeeBlendMapper.class));
 
         ValueOperations<String, Object> valueOps = mock(ValueOperations.class);
         ValueOperations<String, String> stringValueOps = mock(ValueOperations.class);

@@ -232,40 +232,30 @@ onMounted(async () => {
 
 // ==================== 规格配置（杯型/糖度/温度） ====================
 
-// 杯型：中/大杯价来自接口 priceMedium/priceLarge，前端仅展示（V2 禁止硬编码 +3）
+// 单一事实源：allowedSizes/allowedSugars/allowedTemps 由后端按 sizeType/sugarType/tempType 规范值下发
 const sizeOptions = computed(() => {
-  if (isBakery.value) return [{ value: 'STANDARD', label: '标准杯', base: Number(props.product.price || 0), extra: 0 }]
-  const type = props.product.sizeType || 'MEDIUM_LARGE'
-  if (type === 'DEFAULT') return [{ value: 'STANDARD', label: '标准杯', base: Number(props.product.price || 0), extra: 0 }]
+  const allowed = props.product.allowedSizes || []
   const medium = Number(props.product.priceMedium || 0)
   const large = Number(props.product.priceLarge || 0)
-  return [
-    { value: 'MEDIUM', label: '中杯', base: medium, extra: 0 },
-    { value: 'LARGE', label: '大杯', base: large, extra: large - medium }
-  ]
+  const labels = { STANDARD: '标准杯', MEDIUM: '中杯', LARGE: '大杯', SMALL: '小杯', EXTRA_LARGE: '超大杯' }
+  return allowed.map(v => {
+    const base = { MEDIUM: medium, LARGE: large }[v] ?? Number(props.product.price || 0)
+    return { value: v, label: labels[v] || v, base, extra: v === 'LARGE' ? large - medium : 0 }
+  })
 })
 
 const showCupSize = computed(() => !isBakery.value)
 
-// 糖度：NO_SUGAR_ONLY 无糖度行；NO_ADDED_SUGAR = 不另外加糖
 const sugarOptions = computed(() => {
-  if (isBakery.value) return []
-  const type = props.product.sugarType || 'FREE_CHOICE'
-  if (type === 'NO_SUGAR_ONLY') return []
-  const values = [
-    { value: 'STANDARD', label: '标准糖' },
-    { value: 'LESS', label: '少糖' },
-    { value: 'HALF', label: '半糖' }
-  ]
-  if (type !== 'MIN_LESS_SWEET') values.push({ value: 'NO_ADDED_SUGAR', label: '不另外加糖' })
-  return values
+  const allowed = props.product.allowedSugars || []
+  const labels = { STANDARD: '标准糖', LESS: '少糖', HALF: '半糖', NONE: '无糖', NO_ADDED_SUGAR: '不另外加糖' }
+  return allowed.map(v => ({ value: v, label: labels[v] || v }))
 })
 
 const showSugar = computed(() => !isBakery.value && sugarOptions.value.length > 0)
 
-// 温度（P1D 已同步 HOT_COLD/COLD_ONLY/HOT_ONLY）
+// 温度（精品 Bean 冷萃固定冰饮覆盖；其余由后端 allowedTemps 驱动）
 const tempConfig = computed(() => {
-  // 精品 Bean 冷萃固定冰饮
   if (showBrewMethod.value && customization.brewMethod === 'COLD_BREW') {
     return {
       show: true,
@@ -274,29 +264,18 @@ const tempConfig = computed(() => {
       hint: '冷萃仅限冰饮'
     }
   }
-  const tempType = props.product.tempType || 'HOT_COLD'
-  switch (tempType) {
-    case 'COLD_ONLY':
-      return {
-        show: true,
-        options: [{ label: '冰', value: 'COLD', disabled: false }, { label: '热', value: 'HOT', disabled: true }],
-        defaultValue: 'COLD',
-        hint: '本品仅供冰饮'
-      }
-    case 'HOT_ONLY':
-      return {
-        show: true,
-        options: [{ label: '冰', value: 'COLD', disabled: true }, { label: '热', value: 'HOT', disabled: false }],
-        defaultValue: 'HOT',
-        hint: '本品仅供热饮'
-      }
-    case 'HOT_COLD':
-    default:
-      return {
-        show: true,
-        options: [{ label: '冰', value: 'COLD', disabled: false }, { label: '热', value: 'HOT', disabled: false }],
-        defaultValue: 'HOT'
-      }
+  const allowed = props.product.allowedTemps || []
+  if (allowed.length === 0) return { show: false, options: [], defaultValue: 'HOT', hint: '' }
+  const hotAllowed = allowed.includes('HOT')
+  const coldAllowed = allowed.includes('COLD')
+  return {
+    show: true,
+    options: [
+      { label: '热', value: 'HOT', disabled: !hotAllowed },
+      { label: '冰', value: 'COLD', disabled: !coldAllowed }
+    ],
+    defaultValue: coldAllowed && !hotAllowed ? 'COLD' : 'HOT',
+    hint: !hotAllowed ? '本品仅供冰饮' : (!coldAllowed ? '本品仅供热饮' : '')
   }
 })
 const showTemp = computed(() => !isBakery.value && props.product.category !== 'addon' && tempConfig.value.show)

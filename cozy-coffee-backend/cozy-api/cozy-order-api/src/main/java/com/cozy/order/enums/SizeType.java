@@ -39,6 +39,20 @@ public enum SizeType {
         return allowedValues;
     }
 
+    /** 规范展示值（前端渲染用，区别于校验别名 getAllowedValues） */
+    public String[] canonicalValues() {
+        switch (this) {
+            case DEFAULT:
+                return new String[]{"STANDARD"};
+            case MEDIUM_LARGE:
+                return new String[]{"MEDIUM", "LARGE"};
+            case ALL_SIZES:
+                return new String[]{"SMALL", "MEDIUM", "LARGE"};
+            default:
+                return new String[0];
+        }
+    }
+
     /**
      * 检查给定的尺寸是否被允许
      * v5.3: 兼容大小写和旧命名 (STANDARD/standard/medium)

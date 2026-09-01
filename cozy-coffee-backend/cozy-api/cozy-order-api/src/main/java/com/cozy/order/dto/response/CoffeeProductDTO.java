@@ -48,4 +48,9 @@ public class CoffeeProductDTO implements Serializable {
     private Long blendId;
     private BeanProfileDTO beanProfile;
     private BlendProfileDTO blendProfile;
+
+    // 规格允许选项（单一事实源，后端由 sizeType/sugarType/tempType 规范值计算；前端渲染用）
+    private List<String> allowedSizes;
+    private List<String> allowedSugars;
+    private List<String> allowedTemps;
 }

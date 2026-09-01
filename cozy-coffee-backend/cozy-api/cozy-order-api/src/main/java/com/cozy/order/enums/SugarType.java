@@ -57,6 +57,23 @@ public enum SugarType {
     }
 
     /**
+     * 规范展示值（前端渲染用，区别于校验别名 getAllowedValues）。
+     * NO_SUGAR_ONLY 返回空数组——糖度固定「不另外加糖」，前端据此隐藏糖度行。
+     */
+    public String[] canonicalValues() {
+        switch (this) {
+            case FREE_CHOICE:
+                return new String[]{"STANDARD", "LESS", "HALF", "NO_ADDED_SUGAR"};
+            case NO_SUGAR_ONLY:
+                return new String[0];
+            case MIN_LESS_SWEET:
+                return new String[]{"STANDARD", "LESS", "HALF"};
+            default:
+                return new String[0];
+        }
+    }
+
+    /**
      * 检查给定的甜度是否被允许
      * v5.3.1: 兼容大小写和不同命名（STANDARD/standard/full, LIGHT/LESS/less）
      * 
