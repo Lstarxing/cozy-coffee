@@ -5,7 +5,7 @@
   选择模式（select=1，从确认页进入）：
   - 主券区：单张可选（兑换/折扣/满减/BOGO 等）
   - 辅券区：DELIVERY_FEE 单选、SHOT 多选（≤ 订单加浓缩杯数），可叠加
-  - 底部"完成"栏统一确认并回跳；"不使用优惠券"清空全部
+  - 底部"完成"栏统一确认并回跳；已选券再点可取消，主券区空时"不使用优惠券"清空全部
 -->
 <template>
   <view class="coupon-page">
@@ -18,9 +18,6 @@
 
       <!-- 主券 tab：单张选择 -->
       <template v-if="selectTab === 'main'">
-        <view class="none-hint" @click="pickNone">
-          <text>不使用优惠券，按商品原价结算</text>
-        </view>
         <view v-if="mainCoupons.length" class="coupon-list">
           <view v-for="item in mainCoupons" :key="item.id" class="coupon-tap" @click="toggleMain(item)">
             <CouponCard :coupon="item" :selectable="true" :disabled="item.disabled" :reason="item.reason" :selected="item.selected" @use="toggleMain(item)" />
@@ -331,19 +328,6 @@ function useCoupon(coupon) {
   margin: 32rpx 40rpx 0;
 }
 .coupon-tap { border-radius: 28rpx; }
-
-/* ── 选择模式：不使用优惠券（灰色提示） ── */
-.none-hint {
-  margin: 36rpx 40rpx 0;
-  padding: 22rpx 24rpx;
-  border-radius: 16rpx;
-  background: $cozy-surface;
-  color: $cozy-muted;
-  font-size: 24rpx;
-  text-align: center;
-
-  &:active { opacity: .8; }
-}
 
 /* ── 底部完成栏 ── */
 .confirm-bar {
