@@ -14,6 +14,9 @@
         </view>
       </view>
 
+      <!-- 短分隔符：hero 描述与豆/拼配档案之间 -->
+      <view v-if="product?.beanProfile || product?.blendProfile" class="spec-divider" />
+
       <!-- V2 豆档案（P2 收尾）：烘焙 · 风味 · 醇厚 · 酸度 -->
       <view class="bean-profile-wrap">
         <BeanBlendProfile v-if="product?.beanProfile || product?.blendProfile" :product="product" />
@@ -23,7 +26,7 @@
       <view v-if="product?.servingDesc" class="serving-desc">{{ product.servingDesc }}</view>
 
       <!-- 规格选择 -->
-      <view class="spec-section">
+      <view class="spec-section" :class="{ 'spec-section-empty': !hasVisibleSpecs }">
         <!-- V2 出品方式（精品 Bean 必选）：手冲 / 冷萃 -->
         <view v-if="showBrewMethod" class="spec-group">
           <text class="spec-title">出品方式</text>
@@ -168,6 +171,15 @@ const tempOptions = computed(() => {
   return allowed.map(v => ({ value: v, label: v === 'HOT' ? '热' : '冰' }))
 })
 
+// 是否有可见规格选项（烘焙/甜品等无规格商品：空规格区折叠为分隔线，避免 36+28 双重留白）
+const hasVisibleSpecs = computed(() =>
+  showBrewMethod.value ||
+  sizeOptions.value.length > 1 ||
+  tempOptions.value.length > 1 ||
+  sugarOptions.value.length > 1 ||
+  addonGroups.value.length > 0
+)
+
 const basePrice = computed(() => {
   // 精品 Bean：POUR_OVER 用 price / COLD_BREW 用 cold_brew_price
   if (showBrewMethod.value) {
@@ -272,13 +284,14 @@ function addToCart() {
 .spec-image { width: 460rpx; height: 460rpx; display: block; }
 .spec-image-wrap.spec-image-wide { height: 560rpx; }
 .spec-image-wrap.spec-image-wide .spec-image { width: 560rpx; height: 560rpx; }
-.spec-hero-info { padding: 40rpx 40rpx 0; }
+.spec-hero-info { padding: 40rpx 40rpx 20rpx; }
 .spec-tag { display: inline-block; margin-bottom: 18rpx; padding: 6rpx 18rpx; border-radius: 8rpx; background: $cozy-ink; color: #fff; font-size: 22rpx; font-weight: 700; letter-spacing: .06em; }
 .spec-eyebrow { display: block; font-size: 20rpx; font-weight: 700; letter-spacing: .24em; color: $cozy-muted; }
 .spec-name { display: block; margin-top: 14rpx; font-family: $font-display; font-size: 44rpx; font-weight: 600; color: $cozy-ink; line-height: 1.2; }
 .spec-notes { display: block; margin-top: 16rpx; font-family: $font-display; font-size: 24rpx; color: $cozy-muted; letter-spacing: .02em; }
 
-.spec-section { border-top: 1rpx solid $cozy-border; padding: 36rpx 40rpx 8rpx; }
+.spec-section { border-top: 1rpx solid $cozy-border; padding: 36rpx 40rpx 28rpx; }
+.spec-section.spec-section-empty { padding: 0 40rpx 20rpx; } /* 无规格选项：折叠为分隔线 + 20 下留白，与 hero 上间距对称 */
 .spec-group { margin-top: 28rpx; }
 .spec-group:first-child { margin-top: 0; }
 .spec-title { display: block; margin-bottom: 20rpx; font-size: 26rpx; font-weight: 600; color: $cozy-ink; }
@@ -288,9 +301,11 @@ function addToCart() {
 .spec-extra { color: $cozy-muted; font-size: 18rpx; }
 .spec-option.active .spec-extra { color: $cozy-ink; }
 
-.spec-disclaimer { margin-top: 24rpx; padding: 0 40rpx 48rpx; font-size: 22rpx; line-height: 1.7; color: $cozy-placeholder; }
+.spec-disclaimer { margin-top: 0; padding: 0 40rpx 48rpx; font-size: 22rpx; line-height: 1.7; color: $cozy-placeholder; }
 .serving-desc { padding: 20rpx 40rpx 4rpx; color: $cozy-muted; font-size: $font-size-sm; line-height: 1.6; }
 .bean-profile-wrap { padding: 0 40rpx; }
+.bean-profile-wrap :deep(.bean-profile) { padding-top: 0; } /* 描述下间距由 spec-hero-info 承担，拼配卡不再自带顶部留白 */
+.spec-divider { width: 70rpx; height: 4rpx; margin: 0 0 20rpx 40rpx; border-radius: 999rpx; background: $cozy-border; }
 .spec-bottom { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid $cozy-border; }
 .spec-bottom-top { display: flex; align-items: center; gap: 24rpx; margin-bottom: 20rpx; }
 .spec-price-col { flex: 1; min-width: 0; }
