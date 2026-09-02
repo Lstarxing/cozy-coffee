@@ -1,14 +1,21 @@
 <template>
   <div class="customizer-overlay" @click.self="$emit('close')">
     <div class="customizer-panel">
-      <!-- 顶部大图区域 (无价格) -->
-      <div class="product-banner">
+      <button class="close-btn-float" @click="$emit('close')">×</button>
+
+      <!-- 左栏：Sticky 商品展示区（图 + 豆/拼配 metadata，克制不拉高） -->
+      <div class="customizer-left">
         <img :src="getImageUrl(product.imageUrl)" :alt="product.name" @error="handleImageError">
-        <button class="close-btn-float" @click="$emit('close')">×</button>
+        <div v-if="beanProfile" class="product-visual-meta">
+          <p v-if="beanProfile.nameEn" class="visual-meta-en">{{ beanProfile.nameEn }}</p>
+          <p class="visual-meta-name">{{ beanProfile.name }}</p>
+          <p v-if="metaProfileText" class="visual-meta-profile">{{ metaProfileText }}</p>
+        </div>
       </div>
 
-      <!-- 内容区域 -->
+      <!-- 右栏：商品描述 + 选规格 + 底部加购 -->
       <div class="panel-body">
+        <!-- 商品描述 -->
         <div class="product-header">
           <h3>{{ product.name }}</h3>
           <p v-if="product.description" class="product-desc-text">{{ product.description }}</p>
@@ -42,7 +49,6 @@ v-for="size in sizeOptions" :key="size.value"
                 <span v-if="size.extra > 0" class="price-tag">+¥{{ size.extra }}</span>
               </button>
             </div>
-            <p v-if="sizeOptions.length === 1" class="option-hint">💡 本品仅限{{ sizeOptions[0].label }}</p>
           </div>
 
           <!-- 糖度 v6.2: NO_SUGAR_ONLY 不显示糖度行；NO_ADDED_SUGAR = 不另外加糖 -->
@@ -74,7 +80,6 @@ v-for="temp in temperatures" :key="temp.value"
                 <span v-if="temp.disabled" class="disabled-hint">不可选</span>
               </button>
             </div>
-            <p v-if="tempConfig.hint" class="option-hint">💡 {{ tempConfig.hint }}</p>
           </div>
 
           <!-- V2 加料组 (P2-4): MILK/SHOT/SYRUP/OTHER，按 price_delta 展示，前端只提交 code -->
@@ -94,19 +99,21 @@ v-for="item in group.items" :key="item.code"
         </div>
       </div>
 
-      <!-- 底部固定栏 (唯一动态价格展示) -->
+      <!-- 底部结算栏（整宽：左侧价格/当前规格，右侧数量 + 加购） -->
       <div class="panel-footer-fixed">
         <div class="footer-content">
-          <div class="quantity-wrapper">
-             <button :disabled="quantity <= 1" @click="quantity > 1 && quantity--">-</button>
-             <span>{{ quantity }}</span>
-             <button @click="quantity < 99 && quantity++">+</button>
-          </div>
           <div class="price-summary">
-            <span class="label">Total</span>
             <span class="amount">¥{{ totalPrice.toFixed(2) }}</span>
+            <span class="spec-summary">{{ specSummary }}</span>
           </div>
-          <button class="add-cart-btn" @click="addToCart">加入购物车</button>
+          <div class="footer-actions">
+            <div class="quantity-wrapper">
+               <button :disabled="quantity <= 1" @click="quantity > 1 && quantity--">-</button>
+               <span>{{ quantity }}</span>
+               <button @click="quantity < 99 && quantity++">+</button>
+            </div>
+            <button class="add-cart-btn" @click="addToCart">加入购物车</button>
+          </div>
         </div>
       </div>
     </div>
@@ -145,8 +152,13 @@ const brewMethodOptions = computed(() => [
 // v5.3: 检查是否持有加浓缩券
 const userHasShotCoupon = ref(false)
 
-// 分类判断 helper
-const isBakery = computed(() => props.product.category === 'bakery')
+// 单一事实源：后端 isFood 信号（V2 分类为大写 BAKERY 等，不能靠小写分类硬编码匹配）
+const isFood = computed(() => {
+  if (props.product.isFood !== undefined) return props.product.isFood
+  // 旧数据兜底：食品无糖度/温度选项（allowed 数组为空）
+  const s = props.product.allowedSugars, t = props.product.allowedTemps
+  return (Array.isArray(s) && s.length === 0) && (Array.isArray(t) && t.length === 0)
+})
 
 // ==================== V2 加料组（P2-4）：消费 addonGroups ====================
 
@@ -219,6 +231,36 @@ const milkType = computed(() => {
   return ({ WHOLE_MILK: 'WHOLE', OAT_MILK: 'OAT', COCONUT_MILK: 'COCONUT', SOY_MILK: 'SOY' })[milk] || 'WHOLE'
 })
 
+// 豆/拼配档案（精品豆商品 bean/blend 二选一挂接；普通商品无此数据则不显示左栏 metadata）
+const beanProfile = computed(() => props.product.beanProfile || props.product.blendProfile)
+const metaProfileText = computed(() => {
+  const b = beanProfile.value
+  if (!b) return ''
+  return [b.roast, b.flavorNotes].filter(Boolean).join(' · ')
+})
+
+// 当前规格摘要（底部结算栏左侧展示）
+const specSummary = computed(() => {
+  const parts = []
+  if (!isFood.value) {
+    if (showCupSize.value) {
+      const o = sizeOptions.value.find(s => s.value === customization.cupSize)
+      if (o) parts.push(o.label)
+    }
+    if (sugarOptions.value.length > 1) {
+      const o = sugarOptions.value.find(s => s.value === customization.sugarLevel)
+      if (o) parts.push(o.label)
+    }
+    if (enabledTempCount.value > 1) {
+      const t = temperatures.value.find(o => !o.disabled && o.value === customization.temperature)
+      if (t) parts.push(t.label)
+    }
+    parts.push({ WHOLE: '全脂奶', OAT: '燕麦奶', COCONUT: '椰奶', SOY: '豆奶' }[milkType.value] || milkType.value)
+  }
+  extraAddons.value.forEach(a => parts.push(a.name))
+  return parts.length ? parts.join(' · ') : '含所选规格'
+})
+
 onMounted(async () => {
   try {
     const res = await getUserCoupons('ISSUED')
@@ -244,7 +286,7 @@ const sizeOptions = computed(() => {
   })
 })
 
-const showCupSize = computed(() => !isBakery.value)
+const showCupSize = computed(() => sizeOptions.value.length > 1)
 
 const sugarOptions = computed(() => {
   const allowed = props.product.allowedSugars || []
@@ -252,7 +294,7 @@ const sugarOptions = computed(() => {
   return allowed.map(v => ({ value: v, label: labels[v] || v }))
 })
 
-const showSugar = computed(() => !isBakery.value && sugarOptions.value.length > 0)
+const showSugar = computed(() => sugarOptions.value.length > 1)
 
 // 温度（精品 Bean 冷萃固定冰饮覆盖；其余由后端 allowedTemps 驱动）
 const tempConfig = computed(() => {
@@ -278,7 +320,9 @@ const tempConfig = computed(() => {
     hint: !hotAllowed ? '本品仅供冰饮' : (!coldAllowed ? '本品仅供热饮' : '')
   }
 })
-const showTemp = computed(() => !isBakery.value && props.product.category !== 'addon' && tempConfig.value.show)
+// 对齐移动端：温度行仅在可用选项 > 1 时展示（固定热/冰/冷萃隐藏整行）
+const enabledTempCount = computed(() => tempConfig.value.options.filter(o => !o.disabled).length)
+const showTemp = computed(() => enabledTempCount.value > 1)
 const temperatures = computed(() => tempConfig.value.options)
 
 // ==================== 初始化（每次打开重挂载） ====================
@@ -353,10 +397,11 @@ const addToCart = () => {
   }
 
   // 甜品不传递饮品参数，后端 SKU 验证已支持 null 值
-  if (!isBakery.value) {
-    if (showCupSize.value) payload.cupSize = customization.cupSize
-    if (showSugar.value) payload.sugarLevel = customization.sugarLevel
-    if (showTemp.value) payload.temperature = customization.temperature
+  // 显示阈值对齐移动端（选项 >1 才显示行）；payload 只要有选项就传（与改动前行为一致，单杯型/固定温度仍回传）
+  if (!isFood.value) {
+    if (sizeOptions.value.length > 0) payload.cupSize = customization.cupSize
+    if (sugarOptions.value.length > 0) payload.sugarLevel = customization.sugarLevel
+    if (enabledTempCount.value > 0) payload.temperature = customization.temperature
     if (showBrewMethod.value) payload.brewMethod = customization.brewMethod
     payload.coffeeStrength = coffeeStrength.value
     payload.milkType = milkType.value
@@ -387,31 +432,70 @@ const addToCart = () => {
 
 .customizer-panel {
   background: #FCFAF8;
-  border-radius: 24px;
-  width: 90%;
-  max-width: 440px;
-  max-height: 85vh;
+  border-radius: 20px;
+  width: min(900px, calc(100vw - 64px));
+  max-height: min(680px, calc(100vh - 64px));
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  grid-template-rows: minmax(0, 1fr) auto;
+  column-gap: 44px;
+  padding: 32px 32px 0;
   box-shadow: 0 24px 60px rgba(93, 64, 55, 0.25);
   position: relative;
 }
 
-/* 顶部 Banner */
-.product-banner {
-  position: relative;
-  width: 100%;
-  height: 240px;
-  flex-shrink: 0;
+/* 左栏：完整视觉区（图放大到 320 + 少量 bean/blend 信息，整组在主体内垂直居中） */
+.customizer-left {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
-.product-banner img {
-  width: 100%;
-  height: 100%;
+.customizer-left img {
+  width: 320px;
+  height: 320px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #EEE;
+  background: #fff;
   object-fit: cover;
+  display: block;
 }
 
+/* 左栏豆/拼配档案（克制 2–3 行，随图一起垂直居中） */
+.product-visual-meta {
+  width: 320px;
+  text-align: center;
+}
+
+.visual-meta-en {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #443A35;
+}
+
+.visual-meta-name {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #9E948E;
+}
+
+.visual-meta-profile {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #756A63;
+  line-height: 1.6;
+}
+
+/* 关闭按钮（面板右上角浮动） */
 .close-btn-float {
   position: absolute;
   top: 16px;
@@ -429,6 +513,7 @@ const addToCart = () => {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
+  z-index: 5;
 }
 
 .close-btn-float:hover {
@@ -436,11 +521,13 @@ const addToCart = () => {
   transform: rotate(90deg);
 }
 
-/* 内容主体 */
+/* 内容主体（右栏，独立滚动；间距由 panel padding 承担） */
 .panel-body {
-  flex: 1;
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 24px 24px 100px; /* Leave space for footer */
+  padding-right: 8px;
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
@@ -448,70 +535,63 @@ const addToCart = () => {
   display: none;
 }
 
+/* 商品描述（右栏顶部，标题层级重建；右上角给关闭按钮留位） */
 .product-header {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
+  padding-right: 36px;
 }
 
 .product-header h3 {
   margin: 0;
   font-size: 24px;
-  font-weight: 700;
-  color: #3E2723;
+  font-weight: 600;
+  color: #2B1E16;
   line-height: 1.2;
 }
 
 .product-desc-text {
-  margin: 8px 0 0;
+  margin: 12px 0 0;
   font-size: 13px;
-  color: #8D6E63;
-  line-height: 1.5;
+  color: #777;
+  line-height: 1.7;
 }
 
 .serving-desc-text {
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   font-size: 12px;
   color: #A9712F;
-  line-height: 1.5;
-  background: rgba(169, 113, 47, 0.08);
-  padding: 6px 10px;
-  border-radius: 8px;
+  line-height: 1.6;
 }
 
 .options-section {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 26px;
 }
 
 .option-group label {
   display: block;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: #5D4037;
+  color: #443A35;
   margin-bottom: 12px;
 }
 
-/* Button Layouts */
+/* Choice Cards — 弹性换行、等高手势区；未选中无边框，靠浅底区分 */
 .option-buttons.grid-layout {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
-.option-buttons.grid-layout-large {
-  display: grid;
-  grid-template-columns: 1fr 1fr; /* Two large buttons */
-  gap: 12px;
-}
-
-/* Button Styles */
 .option-buttons button {
-  padding: 10px 8px;
-  border: none;
-  background: #EFEBE9; /* Unselected: Light beige */
-  border-radius: 12px;
+  min-height: 44px;
+  padding: 8px 18px;
+  border: 1px solid transparent;
+  background: #F7F5F2;
+  border-radius: 10px;
   font-size: 13px;
-  color: #5D4037;
+  color: #443A35;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
   text-align: center;
@@ -523,50 +603,46 @@ const addToCart = () => {
 }
 
 .option-buttons button:hover {
-  background: #D7CCC8;
+  background: #F0EBE5;
 }
 
 /* v6.1: 禁用状态样式 */
 .option-buttons button.disabled,
 .option-buttons button:disabled {
-  background: #F5F5F5;
-  color: #BDBDBD;
+  background: #F7F5F2;
+  color: #9E948E;
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.45;
 }
 
 .option-buttons button.disabled:hover,
 .option-buttons button:disabled:hover {
-  background: #F5F5F5;
+  background: #F7F5F2;
 }
 
-/* Active State */
+/* Active State — 选中态：暖白底 + 主色描边 + 主色字 */
 .option-buttons button.active {
-  background: #5D4037; /* Dark Coffee Brown */
-  color: #fff;
+  background: #FFF9F5;
+  border-color: #8A4528;
+  color: #74371F;
   font-weight: 600;
-  box-shadow: 0 4px 10px rgba(93, 64, 55, 0.2);
 }
 
 /* 禁用状态不覆盖选中状态（如果商品默认值被禁用，这种情况不应该发生但做容错处理） */
 .option-buttons button.active.disabled {
-  background: #9E9E9E;
-  box-shadow: none;
+  border-color: transparent;
+  background: #F7F5F2;
 }
 
-/* 溢价标签样式 */
+/* 溢价标签样式 — 次要色文字，选中时转主色 */
 .price-tag {
   font-size: 11px;
-  padding: 1px 4px;
-  border-radius: 4px;
-  background: rgba(216, 67, 21, 0.1); /* 浅橙色背景 */
-  color: #D84315; /* 醒目橙色字 */
-  font-weight: 700;
+  color: #756A63;
+  font-weight: 500;
 }
 
 .option-buttons button.active .price-tag {
-  background: rgba(255, 255, 255, 0.2); /* 选中时改为白色半透明 */
-  color: #FFCCBC; /* 浅色字 */
+  color: #74371F;
 }
 
 /* v6.1: 禁用提示标签 */
@@ -579,45 +655,37 @@ const addToCart = () => {
   font-weight: 500;
 }
 
-/* v6.1: 选项提示文字 */
-.option-hint {
-  font-size: 12px;
-  color: #795548;
-  margin-top: 8px;
-  margin-bottom: 0;
-  padding: 6px 10px;
-  background: rgba(255, 160, 0, 0.08);
-  border-radius: 6px;
-  border-left: 3px solid #FFA000;
-}
-
-/* 底部固定栏 */
+/* 底部结算栏（整宽 + 分隔线；左侧价格/当前规格，右侧数量 + 加购） */
 .panel-footer-fixed {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(180deg, rgba(93, 64, 55, 0.95) 0%, #3E2723 100%);
-  padding: 16px 24px;
-  z-index: 10;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin: 28px -32px 0; /* 上间距 + 两侧出血：分隔线横跨整宽 */
+  padding: 18px 32px 28px;
+  border-top: 1px solid #EEEAE6;
 }
 
 .footer-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 24px;
+}
+
+.footer-actions {
+  display: flex;
+  align-items: center;
   gap: 16px;
 }
 
-/* 数量控制器 */
+/* 数量控制器 — 对齐移动端（描边 + 墨字） */
 .quantity-wrapper {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #E3DED8;
+  border-radius: 10px;
   padding: 4px;
-  border-radius: 20px;
+  background: #fff;
 }
 
 .quantity-wrapper button {
@@ -625,8 +693,8 @@ const addToCart = () => {
   height: 28px;
   border-radius: 50%;
   border: none;
-  background: #FFF;
-  color: #5D4037;
+  background: #F7F5F3;
+  color: #2B1E16;
   font-weight: bold;
   cursor: pointer;
   display: flex;
@@ -634,12 +702,12 @@ const addToCart = () => {
   justify-content: center;
 }
 .quantity-wrapper button:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .quantity-wrapper span {
-  color: #FFF;
+  color: #2B1E16;
   font-weight: 600;
   min-width: 20px;
   text-align: center;
@@ -648,41 +716,41 @@ const addToCart = () => {
 .price-summary {
   display: flex;
   flex-direction: column;
-  margin-left: auto;
-  align-items: flex-end;
-  margin-right: 12px;
-}
-
-.price-summary .label {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
+  gap: 4px;
 }
 
 .price-summary .amount {
-  font-size: 20px;
+  font-size: 28px;
   font-weight: 700;
-  color: #FFF;
+  color: #2B1E16;
   line-height: 1;
 }
 
-.add-cart-btn {
-  background: linear-gradient(135deg, #FFB74D 0%, #FF9800 100%); /* 暖橙色渐变 */
-  color: #FFF; /* 白色文字 */
-  border: none;
-  border-radius: 12px;
-  padding: 10px 24px;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.1s;
-  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+.price-summary .spec-summary {
+  font-size: 12px;
+  color: #756A63;
 }
 
+.add-cart-btn {
+  width: 144px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #753A22;
+  color: #FFF;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(117, 58, 34, 0.25);
+}
 
 .add-cart-btn:hover {
-  transform: scale(1.03);
-  filter: brightness(1.05);
+  background: #5E2E1B;
+  transform: scale(1.02);
 }
 
 /* 免费券提示标签 */
