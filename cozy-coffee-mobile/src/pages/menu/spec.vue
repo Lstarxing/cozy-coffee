@@ -134,7 +134,12 @@ onLoad(() => {
   form.quantity = Number(source.quantity || 1)
 })
 
-const isFood = computed(() => ['bakery', 'dessert', 'food', 'addon'].includes(String(product.value?.category || '').toLowerCase()))
+const isFood = computed(() => {
+  if (product.value?.isFood !== undefined) return product.value.isFood
+  // 旧数据兜底：食品无糖度/温度选项（allowed 数组为空），不硬编码分类列表
+  const s = product.value?.allowedSugars, t = product.value?.allowedTemps
+  return (Array.isArray(s) && s.length === 0) && (Array.isArray(t) && t.length === 0)
+})
 
 // V2 加料组选择（P2-3）
 const addonGroups = computed(() => product.value.addonGroups || [])

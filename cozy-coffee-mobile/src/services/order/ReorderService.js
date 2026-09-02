@@ -18,7 +18,10 @@ function normalizeOption(value) {
 }
 
 function isFood(product) {
-  return ['bakery', 'dessert', 'food', 'addon'].includes(String(product?.category || '').toLowerCase())
+  if (product?.isFood !== undefined) return product.isFood
+  // 旧数据兜底：食品无糖度/温度选项（allowed 数组为空），不硬编码分类列表
+  const s = product?.allowedSugars, t = product?.allowedTemps
+  return (Array.isArray(s) && s.length === 0) && (Array.isArray(t) && t.length === 0)
 }
 
 // 规格允许选项：单一事实源取后端 allowedSizes/allowedTemps/allowedSugars（旧数据缺字段时兜底默认值）

@@ -216,7 +216,8 @@ public class ProductRuleValidator {
         return options;
     }
 
-    private static boolean isFoodCategory(String category) {
+    /** 食品/烘焙等非饮品分类（前端用 product.isFood 信号，无需各自硬编码分类列表） */
+    public static boolean isFoodCategory(String category) {
         if (category == null) {
             return false;
         }

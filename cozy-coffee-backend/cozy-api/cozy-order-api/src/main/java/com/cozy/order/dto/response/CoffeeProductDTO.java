@@ -53,4 +53,7 @@ public class CoffeeProductDTO implements Serializable {
     private List<String> allowedSizes;
     private List<String> allowedSugars;
     private List<String> allowedTemps;
+
+    // 食品/烘焙等非饮品（前端用于「是否显示糖度/温度行、杯型标签单份」等，无需各自硬编码分类列表）
+    private Boolean isFood;
 }

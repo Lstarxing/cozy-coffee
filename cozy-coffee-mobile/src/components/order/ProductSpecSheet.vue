@@ -104,7 +104,12 @@ const form = reactive({
 const editing = computed(() => Boolean(props.line?.lineKey))
 const displayProduct = computed(() => ({ ...props.product, ...props.line, image: props.product?.image || props.line?.image }))
 const category = computed(() => String(displayProduct.value.category || '').toLowerCase())
-const isFood = computed(() => ['bakery', 'dessert', 'food', 'addon'].includes(category.value))
+const isFood = computed(() => {
+  if (displayProduct.value.isFood !== undefined) return displayProduct.value.isFood
+  // 旧数据兜底：食品无糖度/温度选项（allowed 数组为空），不硬编码分类列表
+  const s = displayProduct.value.allowedSugars, t = displayProduct.value.allowedTemps
+  return (Array.isArray(s) && s.length === 0) && (Array.isArray(t) && t.length === 0)
+})
 
 // V2 出品方式（精品 Bean 必选）：POUR_OVER 手冲 / COLD_BREW 冷萃
 const showBrewMethod = computed(() => Boolean(displayProduct.value.brewMethod))

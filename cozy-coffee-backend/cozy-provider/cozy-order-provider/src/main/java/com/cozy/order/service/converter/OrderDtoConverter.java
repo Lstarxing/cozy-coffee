@@ -78,6 +78,8 @@ public class OrderDtoConverter {
         dto.setAllowedSizes(java.util.Arrays.asList(opts.getAllowedSizes()));
         dto.setAllowedSugars(java.util.Arrays.asList(opts.getAllowedSugars()));
         dto.setAllowedTemps(java.util.Arrays.asList(opts.getAllowedTemps()));
+        // 食品/烘焙信号（前端无需各自硬编码分类列表）
+        dto.setIsFood(ProductRuleValidator.isFoodCategory(entity.getCategory()));
         if (entity.getBeanId() != null) {
             CoffeeBean bean = beanMapper.selectById(entity.getBeanId());
             if (bean != null) dto.setBeanProfile(toBeanProfile(bean));

@@ -450,8 +450,9 @@ const handleAddUpsell = (product) => {
     extraPrices: { cup: 0, strength: 0, milk: 0 }
   }
 
-  const isBakery = ['bakery', 'snack', 'dessert', 'food'].includes(product.category)
-  if (!isBakery) {
+  // 食品/烘焙信号由后端 isFood 下发（无规格默认值），不再前端硬编码分类列表
+  const isFood = product.isFood === true
+  if (!isFood) {
     newItem.cupSize = 'STANDARD'
     newItem.sugarLevel = 'STANDARD'
     newItem.temperature = 'HOT'
