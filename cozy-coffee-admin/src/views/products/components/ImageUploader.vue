@@ -34,8 +34,9 @@ import { Plus, Link } from '@element-plus/icons-vue'
 import { uploadImage } from '@/api'
 import { getImageUrl } from '@/utils/image'
 
-defineProps({
-  modelValue: { type: String, default: '' }
+const props = defineProps({
+  modelValue: { type: String, default: '' },
+  uploadType: { type: String, default: 'products' } // coffee / points / products
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -50,7 +51,7 @@ const beforeImageUpload = (file) => {
 
 const handleImageUpload = async (opt) => {
   try {
-    const res = await uploadImage(opt.file)
+    const res = await uploadImage(opt.file, props.uploadType)
     if (res.data?.url) {
       emit('update:modelValue', res.data.url)
       ElMessage.success('上传成功')

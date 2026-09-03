@@ -190,7 +190,7 @@
 
             <el-col :span="24">
               <el-form-item label="商品图片">
-                <ImageUploader v-model="productForm.imageUrl" />
+                <ImageUploader v-model="productForm.imageUrl" upload-type="points" />
               </el-form-item>
             </el-col>
 

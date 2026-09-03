@@ -135,10 +135,11 @@ export const shipRedemption = (orderId, company, trackingNo) =>
 export const completeRedemption = (orderId) => api.post(`/admin/redemptions/${orderId}/complete`)
 export const deleteRedemption = (orderId) => api.delete(`/admin/redemptions/${orderId}`)
 
-// 文件上传
-export const uploadImage = (file) => {
+// 文件上传（type: coffee 咖啡商品 / points 积分兑换商品）
+export const uploadImage = (file, type = 'products') => {
     const formData = new FormData()
     formData.append('file', file)
+    if (type) formData.append('type', type)
     return api.post('/admin/upload/image', formData)
 }
 

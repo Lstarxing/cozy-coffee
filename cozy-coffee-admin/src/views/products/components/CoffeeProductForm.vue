@@ -53,7 +53,7 @@
 
       <el-col :span="24">
         <el-form-item label="商品图片">
-          <ImageUploader v-model="form.imageUrl" />
+          <ImageUploader v-model="form.imageUrl" upload-type="coffee" />
         </el-form-item>
       </el-col>
 
