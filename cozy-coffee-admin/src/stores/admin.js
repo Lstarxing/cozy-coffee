@@ -34,6 +34,7 @@ export const useAdminStore = defineStore('admin', () => {
                     role: payload.role
                 }
                 isLoggedIn.value = true
+                localStorage.setItem('adminToken', token)
                 return { success: true }
             }
             return { success: false, message: res.message || res.msg || '登录失败' }
@@ -69,24 +70,28 @@ export const useAdminStore = defineStore('admin', () => {
         } catch (error) {
             console.warn('Admin logout API failed:', error)
         } finally {
+            localStorage.removeItem('adminToken')
             adminInfo.value = null
             isLoggedIn.value = false
         }
     }
 
-    const init = async () => {
+    // 刷新后本地恢复会话（adminToken 已持久化；真实有效性由后续 API 401 兜底）
+    const init = () => {
+        const token = localStorage.getItem('adminToken')
+        if (!token) return
         try {
-            const baseURL = (import.meta.env.VITE_API_BASE_URL || '') + '/api'
-            const response = await fetch(baseURL + '/auth/me', { credentials: 'include' })
-            if (response.ok) {
-                const userData = await response.json()
-                if (userData.data?.role === 'admin') {
-                    adminInfo.value = userData.data
-                    isLoggedIn.value = true
+            const payload = parseJwt(token)
+            if (payload.role === 'admin') {
+                adminInfo.value = {
+                    userId: payload.sub,
+                    username: payload.username,
+                    role: payload.role
                 }
+                isLoggedIn.value = true
             }
         } catch (e) {
-            console.warn('Admin init check failed:', e)
+            console.warn('Admin init parse failed:', e)
         }
     }
 

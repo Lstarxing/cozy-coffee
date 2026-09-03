@@ -55,6 +55,32 @@ public class AuthController {
         return Result.success(loginResult, "登录成功");
     }
 
+    /**
+     * 管理端登录：只返回 token 到 body，不写共享 cozy_token cookie。
+     * 管理端走 Authorization: Bearer（JwtAuthInterceptor 优先读 header），
+     * 避免与用户端（web，cookie 认证）在同一网关 origin 上互相覆盖会话。
+     */
+    @PostMapping("/admin/login")
+    public Result<Map<String, Object>> adminLogin(@Valid @RequestBody LoginRequest loginRequest) {
+        return Result.success(authService.login(loginRequest), "登录成功");
+    }
+
+    /**
+     * 管理端登出：仅吊销 Bearer header 携带的 token，不清除用户端 cozy_token cookie。
+     */
+    @PostMapping("/admin/logout")
+    public Result<Void> adminLogout(
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        String token = null;
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            token = authorization.substring(7).trim();
+        }
+        if (token != null) {
+            authService.logout(token);
+        }
+        return Result.success(null, "退出成功");
+    }
+
     @PostMapping("/wechat/session")
     public Result<Map<String, Object>> wechatSession(@Valid @RequestBody WechatDevSessionRequest request) {
         if (!authProperties.isDevLoginEnabled() && !authService.wechatConfigured()) {

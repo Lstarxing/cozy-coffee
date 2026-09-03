@@ -25,9 +25,16 @@ function handleAuthFailure() {
     }, 1500)
 }
 
-// 请求拦截器 — cookie 自动携带 token，无需手动注入
+// 请求拦截器 — 管理端走 JWT Bearer header（不依赖共享 cozy_token cookie，避免与用户端串号）
 api.interceptors.request.use(
-    config => config,
+    config => {
+        const token = localStorage.getItem('adminToken')
+        if (token) {
+            config.headers = config.headers || {}
+            config.headers['Authorization'] = `Bearer ${token}`
+        }
+        return config
+    },
     error => Promise.reject(error)
 )
 
@@ -60,12 +67,12 @@ export default api
 
 // ==================== 管理端 API ====================
 
-// 登录认证
+// 登录认证（admin 专属端点：只返回 token，不写用户端 cookie）
 export const adminLogin = (username, password) =>
-    api.post('/auth/login', { username, password })
+    api.post('/auth/admin/login', { username, password })
 
-// 退出登录（服务端使会话失效）
-export const adminLogout = () => api.post('/auth/logout')
+// 退出登录（仅吊销 admin token，不清用户端 cookie）
+export const adminLogout = () => api.post('/auth/admin/logout')
 
 // 控制台
 export const getDashboardStats = (startDate, endDate) => api.get('/admin/dashboard/stats', { params: { startDate, endDate } })

@@ -83,27 +83,27 @@ const router = createRouter({
     routes
 })
 
-// 路由守卫：通过 /api/auth/me 验证 cookie 登录状态 + RBAC
-router.beforeEach(async (to, from, next) => {
+// 路由守卫：通过 localStorage adminToken 校验登录状态 + RBAC（管理端已改 JWT Bearer 认证，不依赖 cookie）
+router.beforeEach((to, from, next) => {
     if (to.meta.requiresAuth) {
-        try {
-            const baseURL = (import.meta.env.VITE_API_BASE_URL || '') + '/api'
-            const response = await fetch(baseURL + '/auth/me', { credentials: 'include' })
-            if (response.ok) {
-                const data = await response.json()
-                const role = data.data?.role
-                const requiredRoles = to.meta.roles
-                if (requiredRoles && !requiredRoles.includes(role)) {
-                    next('/login')
-                    return
-                }
-                next()
-                return
-            }
-        } catch (e) {
-            // 网络错误
+        const token = localStorage.getItem('adminToken')
+        if (!token || isTokenExpired(token)) {
+            next('/login')
+            return
         }
-        next('/login')
+        let role = ''
+        try {
+            role = JSON.parse(atob(token.split('.')[1])).role
+        } catch (e) {
+            next('/login')
+            return
+        }
+        const requiredRoles = to.meta.roles
+        if (requiredRoles && !requiredRoles.includes(role)) {
+            next('/login')
+            return
+        }
+        next()
         return
     }
     next()
