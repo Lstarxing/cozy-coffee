@@ -496,12 +496,12 @@ export const HOME_FLAVOR_ROUTES = Object.freeze([
 ])
 
 export const HOME_MENU_SERIES = Object.freeze([
-  { id: 'espresso',   name: '经典咖啡', englishName: 'ESPRESSO',   category: 'espresso',   description: '清晰基底', image: productSeriesImage('/images/v2/01-espresso.png', '经典咖啡'),   href: '/member/order' },
-  { id: 'milk',       name: '奶咖',     englishName: 'MILK',       category: 'milk',       description: '柔和圆润', image: productSeriesImage('/images/v2/02-caffe-latte.png', '奶咖'),       href: '/member/order' },
-  { id: 'signature',  name: '招牌特调', englishName: 'SIGNATURE',  category: 'signature',  description: '品牌风味', image: productSeriesImage('/images/v2/03-orange-sparkling.png', '招牌特调'),       href: '/member/order' },
-  { id: 'specialty',  name: '精品咖啡', englishName: 'SPECIALTY',  category: 'specialty',  description: '产地慢萃', image: productSeriesImage('/images/v2/04-origin-ethiopia.png', '精品咖啡'),  href: '/member/order' },
-  { id: 'non-coffee', name: '非咖啡',   englishName: 'NON COFFEE', category: 'non-coffee', description: '无咖啡因', image: productSeriesImage('/images/v2/05-matcha-latte.png', '非咖啡'),     href: '/member/order' },
-  { id: 'bakery',     name: '烘焙轻食', englishName: 'BAKERY',     category: 'bakery',     description: '搭配杯中', image: productSeriesImage('/images/v2/06-basque-cheesecake.png', '烘焙轻食'), href: '/member/order' }
+  { id: 'espresso',   name: '经典咖啡', englishName: 'ESPRESSO',   category: 'espresso',   description: '清晰基底', image: productSeriesImage('/images/v2/01-espresso.webp', '经典咖啡'),   href: '/member/order' },
+  { id: 'milk',       name: '奶咖',     englishName: 'MILK',       category: 'milk',       description: '柔和圆润', image: productSeriesImage('/images/v2/02-caffe-latte.webp', '奶咖'),       href: '/member/order' },
+  { id: 'signature',  name: '招牌特调', englishName: 'SIGNATURE',  category: 'signature',  description: '品牌风味', image: productSeriesImage('/images/v2/03-orange-sparkling.webp', '招牌特调'),       href: '/member/order' },
+  { id: 'specialty',  name: '精品咖啡', englishName: 'SPECIALTY',  category: 'specialty',  description: '产地慢萃', image: productSeriesImage('/images/v2/04-origin-ethiopia.webp', '精品咖啡'),  href: '/member/order' },
+  { id: 'non-coffee', name: '非咖啡',   englishName: 'NON COFFEE', category: 'non-coffee', description: '无咖啡因', image: productSeriesImage('/images/v2/05-matcha-latte.webp', '非咖啡'),     href: '/member/order' },
+  { id: 'bakery',     name: '烘焙轻食', englishName: 'BAKERY',     category: 'bakery',     description: '搭配杯中', image: productSeriesImage('/images/v2/06-basque-cheesecake.webp', '烘焙轻食'), href: '/member/order' }
 ])
 
 export const FLAVOR_IMAGE_MAP = FLAVOR_IMAGES

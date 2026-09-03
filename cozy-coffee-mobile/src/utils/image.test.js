@@ -22,8 +22,8 @@ describe('getImageUrl', () => {
   })
 
   it('prepends IMAGE_BASE to relative paths', () => {
-    // IMAGE_BASE from config/image.js = http://127.0.0.1:8080
-    const result = getImageUrl('/images/seed/coffee.png')
-    expect(result).toBe('http://127.0.0.1:8080/images/seed/coffee.png')
+    // IMAGE_BASE from config/image.js 默认指向本地 MinIO（可用 VITE_IMAGE_BASE_URL 覆盖）
+    const result = getImageUrl('/images/seed/coffee.webp')
+    expect(result).toBe('http://127.0.0.1:9000/cozycoffee/images/seed/coffee.webp')
   })
 })
