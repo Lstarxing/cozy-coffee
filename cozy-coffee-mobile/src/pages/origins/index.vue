@@ -5,7 +5,7 @@
       <!-- 世界产区地图 -->
       <view class="map-section">
         <image
-          :src="imageUrl('origin-map.png')"
+          :src="imageUrl('origin-map.webp')"
           mode="widthFix"
           class="map-image"
         />

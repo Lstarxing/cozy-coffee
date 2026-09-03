@@ -16,7 +16,7 @@
       <swiper-item>
         <view class="screen-1">
           <view class="hero">
-            <image class="hero-img" :src="imageUrl('hero-coffee-photo.jpg')" mode="aspectFill" />
+            <image class="hero-img" :src="imageUrl('hero-coffee-photo.webp')" mode="aspectFill" />
             <view class="hero-copy">
               <text class="hero-kicker">COZY COFFEE</text>
               <text class="hero-cn">一杯咖啡</text>

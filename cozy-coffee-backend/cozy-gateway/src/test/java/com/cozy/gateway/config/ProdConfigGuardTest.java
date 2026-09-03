@@ -66,4 +66,32 @@ class ProdConfigGuardTest {
         assertDoesNotThrow(() ->
                 new ProdConfigGuard(env("local"), "*", null).validate());
     }
+
+    @Test
+    void prod_withHttpOriginAndAllowInsecureHttp_passes() {
+        assertDoesNotThrow(() ->
+                new ProdConfigGuard(env("prod"), new AuthProperties(),
+                        "http://47.98.123.45", "x".repeat(40), true).validate());
+    }
+
+    @Test
+    void prod_withHttpOriginWithoutAllowInsecureHttp_fails() {
+        assertThrows(IllegalStateException.class, () ->
+                new ProdConfigGuard(env("prod"), new AuthProperties(),
+                        "http://47.98.123.45", "x".repeat(40), false).validate());
+    }
+
+    @Test
+    void prod_withAllowInsecureHttp_stillRejectsWildcard() {
+        assertThrows(IllegalStateException.class, () ->
+                new ProdConfigGuard(env("prod"), new AuthProperties(),
+                        "http://*", "x".repeat(40), true).validate());
+    }
+
+    @Test
+    void prod_withAllowInsecureHttp_stillRejectsPathSuffixedOrigin() {
+        assertThrows(IllegalStateException.class, () ->
+                new ProdConfigGuard(env("prod"), new AuthProperties(),
+                        "https://shop.example.com/some/path", "x".repeat(40), true).validate());
+    }
 }

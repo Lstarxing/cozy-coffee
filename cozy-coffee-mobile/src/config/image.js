@@ -1,8 +1,10 @@
 // 图片加载统一配置
 // IMAGE_BASE 是唯一图片基址：本地托管时指向网关（图片由网关 classpath 静态 /images 服务）；
 // 上线配好 OSS 后改为 OSS 域名即可，其余代码零改动。
-export const IMAGE_BASE = 'http://127.0.0.1:8080'
-// OSS 上线后：export const IMAGE_BASE = 'https://cozycoffee-srx.oss-cn-hangzhou.aliyuncs.com'
+export const IMAGE_BASE =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_IMAGE_BASE_URL) ||
+  'http://127.0.0.1:9000/cozycoffee'
+// 上线/真机预览：经 VITE_IMAGE_BASE_URL 覆盖为服务器 MinIO 反代，如 http://<公网IP>/media/cozycoffee
 
 /** 静态营销图（about/index/origins） */
 export function imageUrl(name) {

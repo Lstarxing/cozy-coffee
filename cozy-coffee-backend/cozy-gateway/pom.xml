@@ -96,6 +96,13 @@
             <version>2.3.9</version>
         </dependency>
 
+        <!-- MinIO（S3 兼容对象存储）：自建对象存储 / 自托管图片 -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.17</version>
+        </dependency>
+
         <!-- 测试：Spring Boot Test + MockMvc -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

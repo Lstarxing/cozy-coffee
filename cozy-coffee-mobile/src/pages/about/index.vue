@@ -14,7 +14,7 @@
         <text class="story-body">Cozy Coffee 希望记录这些关于产地、风味和人的故事。</text>
       </view>
       <view class="story-media">
-        <image :src="imageUrl('about-store.jpg')" mode="aspectFill" class="story-image" />
+        <image :src="imageUrl('about-store.webp')" mode="aspectFill" class="story-image" />
       </view>
     </view>
 
@@ -107,10 +107,10 @@ const values = [
 ]
 
 const behindCells = [
-  { image: imageUrl('about-beans.jpg'), caption: '豆子 · 从生到熟的两次旅途' },
-  { image: imageUrl('about-cupping.jpg'), caption: '杯测 · 听风味的语言' },
-  { image: imageUrl('about-roastery.jpg'), caption: '烘焙 · 看见风味在变化' },
-  { image: imageUrl('about-pour-over.jpg'), caption: '手冲 · 把水流写进风味' }
+  { image: imageUrl('about-beans.webp'), caption: '豆子 · 从生到熟的两次旅途' },
+  { image: imageUrl('about-cupping.webp'), caption: '杯测 · 听风味的语言' },
+  { image: imageUrl('about-roastery.webp'), caption: '烘焙 · 看见风味在变化' },
+  { image: imageUrl('about-pour-over.webp'), caption: '手冲 · 把水流写进风味' }
 ]
 </script>
 
