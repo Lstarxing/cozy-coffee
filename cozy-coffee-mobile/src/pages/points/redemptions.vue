@@ -30,7 +30,7 @@
 
         <view class="receipt-items">
           <view class="order-item">
-            <view class="item-image"><image v-if="order.productImage" :src="order.productImage" class="item-img" mode="aspectFill" /></view>
+            <view class="item-image"><image v-if="order.productImage" :src="resolveImageUrl(order.productImage)" class="item-img" mode="aspectFill" /></view>
             <view class="item-info">
               <text class="item-name">{{ order.productName }}</text>
               <text class="item-spec">数量 ×{{ order.quantity || 1 }}</text>
@@ -82,6 +82,7 @@ import RetryState from '@/components/states/RetryState.vue'
 import CozyIcon from '@/components/CozyIcon.vue'
 import FilterTabs from '@/components/common/FilterTabs.vue'
 import { FIXED_STORE } from '@/config/store'
+import { resolveImageUrl } from '@/config/image'
 import { formatPoints, formatTime } from '@/utils/format'
 
 const filters = [

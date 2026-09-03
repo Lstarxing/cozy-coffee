@@ -75,6 +75,15 @@
         </div>
       </div>
 
+      <!-- 修改密码 -->
+      <div class="form-group">
+        <label>修改密码</label>
+        <div class="input-wrapper">
+          <span class="static-value">已设置</span>
+          <button class="edit-btn" @click="openPasswordModal">修改</button>
+        </div>
+      </div>
+
       <!-- 邀请码相关 -->
       <div class="form-group">
         <label>我的邀请码</label>
@@ -105,35 +114,6 @@ class="save-btn verify-btn" :disabled="isApplyingInviteCode || inputInviteCode.l
           <span class="static-value completed">✅ 已填写完成</span>
         </div>
       </div>
-    </div>
-
-    <!-- 修改密码 -->
-    <div class="password-section">
-      <div class="section-header">
-        <h4>修改密码</h4>
-      </div>
-      <div class="form-group">
-        <label>原密码</label>
-        <div class="input-wrapper">
-          <input v-model="pwdOld" type="password" class="modern-input" placeholder="请输入当前密码">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>新密码</label>
-        <div class="input-wrapper">
-          <input v-model="pwdNew" type="password" class="modern-input" placeholder="6-20 位新密码">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>确认新密码</label>
-        <div class="input-wrapper">
-          <input v-model="pwdConfirm" type="password" class="modern-input" placeholder="再次输入新密码">
-        </div>
-      </div>
-      <button class="password-save-btn" :disabled="changingPassword" @click="submitChangePassword">
-        {{ changingPassword ? '修改中...' : '确认修改' }}
-      </button>
-      <p class="field-hint">修改成功后需重新登录</p>
     </div>
 
     <!-- 收货地址管理 -->
@@ -221,6 +201,32 @@ class="save-btn verify-btn" :disabled="isApplyingInviteCode || inputInviteCode.l
         </div>
       </div>
     </div>
+
+    <!-- 修改密码模态框 -->
+    <div v-if="showPasswordModal" class="address-modal" @click.self="closePasswordModal">
+      <div class="modal-content password-modal-content">
+        <h3 class="modal-title">修改密码</h3>
+        <div class="form-item">
+          <label>原密码 <span class="required">*</span></label>
+          <input v-model="pwdOld" type="password" placeholder="请输入当前密码" />
+        </div>
+        <div class="form-item">
+          <label>新密码 <span class="required">*</span></label>
+          <input v-model="pwdNew" type="password" placeholder="6-20 位新密码" />
+        </div>
+        <div class="form-item">
+          <label>确认新密码 <span class="required">*</span></label>
+          <input v-model="pwdConfirm" type="password" placeholder="再次输入新密码" />
+        </div>
+        <p class="field-hint modal-hint">修改成功后需重新登录，请牢记新密码</p>
+        <div class="modal-actions">
+          <button class="cancel-btn" @click="closePasswordModal">取消</button>
+          <button class="confirm-btn" :disabled="changingPassword" @click="submitChangePassword">
+            {{ changingPassword ? '修改中...' : '确认修改' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -271,6 +277,7 @@ const pwdOld = ref('')
 const pwdNew = ref('')
 const pwdConfirm = ref('')
 const changingPassword = ref(false)
+const showPasswordModal = ref(false)
 
 const newAddress = ref({
   receiverName: '', receiverPhone: '',
@@ -418,6 +425,16 @@ async function applyInviteCode() {
   } finally { isApplyingInviteCode.value = false }
 }
 
+function openPasswordModal() {
+  pwdOld.value = ''; pwdNew.value = ''; pwdConfirm.value = ''
+  showPasswordModal.value = true
+}
+
+function closePasswordModal() {
+  showPasswordModal.value = false
+  pwdOld.value = ''; pwdNew.value = ''; pwdConfirm.value = ''
+}
+
 async function submitChangePassword() {
   if (!pwdOld.value) { ElMessage.warning('请输入原密码'); return }
   if (pwdNew.value.length < 6 || pwdNew.value.length > 20) { ElMessage.warning('新密码需为 6-20 位'); return }
@@ -427,7 +444,7 @@ async function submitChangePassword() {
   try {
     const data = await changePassword(pwdOld.value, pwdNew.value)
     ElMessage.success(data.message || '密码修改成功，请重新登录')
-    pwdOld.value = ''; pwdNew.value = ''; pwdConfirm.value = ''
+    closePasswordModal()
   } catch (error) {
     ElMessage.error(error.message || '修改失败，请重试')
   } finally {
@@ -538,18 +555,13 @@ onMounted(() => {
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .section-header h4 { margin: 0; font-size: 18px; font-weight: 500; }
 
-/* Password Change */
-.password-section { margin-top: 40px; background: white; border-radius: 12px; padding: 25px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.02); max-width: 600px; }
-.password-save-btn {
-  margin-top: 8px;
-  background: #d4a762; color: white;
-  border: none; padding: 8px 24px; border-radius: 6px;
-  cursor: pointer; min-width: 110px; height: 42px;
-  font-size: 14px; font-weight: 500;
-  display: flex; align-items: center; justify-content: center;
+.password-modal-content { max-width: 420px; }
+.password-modal-content .modal-title {
+  margin: 0 0 25px 0; font-size: 20px; font-weight: 500;
+  color: #333; text-align: center; padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
 }
-.password-save-btn:hover:not(:disabled) { background: #c39651; }
-.password-save-btn:disabled { background: #e0e0e0; cursor: not-allowed; }
+.password-modal-content .modal-hint { text-align: center; }
 
 .add-btn { background: #C69C6D; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; }
 .add-btn:hover { background: #B88A5A; }
@@ -632,8 +644,10 @@ onMounted(() => {
 .form-item.full-width { width: 100%; }
 .form-item { margin-bottom: 15px; }
 .form-item label { display: block; margin-bottom: 8px; color: #555; font-size: 14px; font-weight: 500; }
-.form-item input[type="text"] { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
-.form-item input[type="text"]:focus { border-color: #C69C6D; outline: none; }
+.form-item input[type="text"],
+.form-item input[type="password"] { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+.form-item input[type="text"]:focus,
+.form-item input[type="password"]:focus { border-color: #C69C6D; outline: none; }
 .form-item.checkbox label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 400; }
 .form-item.checkbox input { width: 18px; height: 18px; accent-color: #C69C6D; }
 
