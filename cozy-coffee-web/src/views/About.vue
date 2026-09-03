@@ -226,16 +226,16 @@
 <script setup>
 import { onMounted, ref, onUnmounted } from 'vue'
 
-const OSS_BASE = import.meta.env.VITE_ASSET_BASE_URL || ''
-const asset = (ossPath, localPath) => OSS_BASE ? `${OSS_BASE}${ossPath}` : localPath
+// About 营销图统一走 MinIO（IMAGE_BASE + /marketing），与商品图同源；上线仅改 VITE_IMAGE_BASE_URL
+const IMG_BASE = import.meta.env.VITE_IMAGE_BASE_URL || ''
+const marketing = (path) => `${IMG_BASE}${path}`
 
-// About 页静态图片映射（ossPath == localPath，OSS 同步后本地即原图）
-const aboutHero = asset('/images/about/hero-about-20260716.png', '/images/about/hero-about-20260716.png')
-const editorialStore = asset('/images/about/editorial-store.png', '/images/about/editorial-store.png')
-const editorialBeans = asset('/images/about/editorial-beans-comparison.png', '/images/about/editorial-beans-comparison.png')
-const editorialCupping = asset('/images/about/editorial-cupping.png', '/images/about/editorial-cupping.png')
-const editorialRoastery = asset('/images/about/editorial-roastery.png', '/images/about/editorial-roastery.png')
-const editorialPourOver = asset('/images/about/editorial-pour-over.png', '/images/about/editorial-pour-over.png')
+const aboutHero = marketing('/images/marketing/web/about/hero-about-20260716.webp')
+const editorialStore = marketing('/images/marketing/web/about/editorial-store.webp')
+const editorialBeans = marketing('/images/marketing/web/about/editorial-beans-comparison.webp')
+const editorialCupping = marketing('/images/marketing/web/about/editorial-cupping.webp')
+const editorialRoastery = marketing('/images/marketing/web/about/editorial-roastery.webp')
+const editorialPourOver = marketing('/images/marketing/web/about/editorial-pour-over.webp')
 
 const journeySection = ref(null)
 

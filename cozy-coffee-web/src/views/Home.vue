@@ -54,24 +54,12 @@
 
     <section class="honor-banner" aria-labelledby="honor-banner-title">
       <picture class="honor-banner__media" aria-hidden="true">
-        <source
-          type="image/avif"
-          :srcset="honorSrcsetAvif"
-          sizes="(min-width: 1716px) 1716px, 100vw"
-        >
-        <source
-          type="image/webp"
-          :srcset="honorSrcsetWebp"
-          sizes="(min-width: 1716px) 1716px, 100vw"
-        >
         <img
-          :src="honorFallback"
-          :srcset="honorSrcsetJpg"
-          sizes="(min-width: 1716px) 1716px, 100vw"
+          :src="honorBanner"
           alt="Cozy Coffee 连续五年获得 IIAC 金奖"
           loading="lazy"
-          width="4096"
-          height="928"
+          width="1920"
+          height="435"
         >
       </picture>
       <div class="honor-banner__scrim" aria-hidden="true"></div>
@@ -95,23 +83,13 @@ import { useUserStore } from '@/stores/user'
 import { HOME_FLAVOR_ROUTES, HOME_MENU_PRODUCTS } from '@/data/homeMenu'
 import { useHomeMembership } from '@/composables/useHomeMembership'
 
-// 静态资源：有 OSS 时走 OSS，否则用本地占位图
-const OSS_BASE = import.meta.env.VITE_ASSET_BASE_URL || ''
-const asset = (ossPath, localPath) => OSS_BASE ? `${OSS_BASE}${ossPath}` : localPath
+// 首页营销图统一走 MinIO（IMAGE_BASE + /marketing），与商品图同源；上线仅改 VITE_IMAGE_BASE_URL
+const IMG_BASE = import.meta.env.VITE_IMAGE_BASE_URL || ''
+const marketing = (path) => `${IMG_BASE}${path}`
 
-const heroImage = asset(
-  '/images/home/hero-prototype-20260717-v3.jpg',
-  '/images/home/hero-prototype-20260717-v3.jpg'
-)
-const heroArrow = asset('/images/hero/hero-arrow.svg', '/images/hero/hero-arrow.svg')
-
-const honorBannerBase = OSS_BASE
-  ? `${OSS_BASE}/images/home/honor-banner`
-  : '/images/home/honor-banner'
-const honorSrcsetAvif = [768, 1440, 1920].map(w => `${honorBannerBase}-${w}.avif ${w}w`).join(', ')
-const honorSrcsetWebp = [768, 1440, 1920].map(w => `${honorBannerBase}-${w}.webp ${w}w`).join(', ')
-const honorSrcsetJpg = [768, 1440, 1920].map(w => `${honorBannerBase}-${w}.jpg ${w}w`).join(', ')
-const honorFallback = `${honorBannerBase}-1440.jpg`
+const heroImage = marketing('/images/marketing/web/home/hero.webp')
+const heroArrow = '/images/hero/hero-arrow.svg'
+const honorBanner = marketing('/images/marketing/web/home/honor-banner.webp')
 
 const userStore = useUserStore()
 const isMobile = ref(false)

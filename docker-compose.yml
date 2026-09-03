@@ -92,6 +92,23 @@ services:
       - "${ROCKETMQ_BROKER_PORT:-10911}:10911"
       - "10909:10909"
 
+  minio:
+    image: minio/minio
+    container_name: cozy-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      TZ: ${TIMEZONE:-Asia/Shanghai}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+# 首次或换新环境后，初始化桶/账号/种子图请执行：
+#   bash scripts/minio/seed.sh   （依赖 docker，可重复幂等）
+
   # ====================================================================
   # 以下 5 个后端微服务已在 IDE 本地运行，平时不需要 Docker 跑。
   # 需要全链路 Docker 验证时取消注释即可。
@@ -270,3 +287,4 @@ volumes:
   redis_data:
   nacos_data:
   nacos_logs:
+  minio_data:

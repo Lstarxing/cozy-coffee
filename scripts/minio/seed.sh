@@ -48,8 +48,8 @@ echo "[4/5] Gateway 上传专用账号 $GW_USER"
   && echo "  新建账号") || echo "  账号已存在，沿用"
 mc admin policy attach "cozy" readwrite --user "$GW_USER" >/dev/null
 
-echo "[5/5] 上传种子图 images/{v2,seed,mobile,marketing}"
-for top in v2 seed mobile marketing; do
+echo "[5/5] 上传种子图（images/{products/coffee,products/points,marketing/web,marketing/mobile}）"
+for top in products/coffee products/points marketing/web marketing/mobile; do
   mc cp --recursive "/seedroot/images/$top/" "cozy/$BUCKET/images/$top/" >/dev/null
   echo "  $top ok"
 done

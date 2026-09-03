@@ -1,33 +1,18 @@
-const MENU_IMAGE_BASE = import.meta.env.VITE_MENU_IMAGE_BASE || '/images/home/menu'
 const PRODUCT_IMAGE_BASE = import.meta.env.VITE_IMAGE_BASE_URL || ''
+const MARKETING_BASE = `${PRODUCT_IMAGE_BASE}/images/marketing/web/home/menu`
 const LOCAL_FALLBACK = '/images/beans.jpg'
 
+/** 营销图统一为 MinIO 单张 webp（经 IMAGE_BASE）；保留 avif/webp/jpg 同值以便旧 <picture> 兼容 */
+function toMarketingImage(url, alt = '') {
+  return Object.freeze({ avif: url, webp: url, jpg: url, fallback: url, localFallback: LOCAL_FALLBACK, alt })
+}
+
 function flavorImage(flavor, alt = '') {
-  const base = MENU_IMAGE_BASE
-  const name = `menu-featured-${flavor}`
-  const sizes = [640, 960, 1200]
-  return Object.freeze({
-    avif: sizes.map(w => `${base}/${name}-${w}.avif ${w}w`).join(', '),
-    webp: sizes.map(w => `${base}/${name}-${w}.webp ${w}w`).join(', '),
-    jpg: sizes.map(w => `${base}/${name}-${w}.jpg ${w}w`).join(', '),
-    fallback: `${base}/${name}-960.jpg`,
-    localFallback: LOCAL_FALLBACK,
-    alt
-  })
+  return toMarketingImage(`${MARKETING_BASE}/menu-featured-${flavor}.webp`, alt)
 }
 
 function heroImage(alt = '') {
-  const base = MENU_IMAGE_BASE
-  const name = 'menu-hero-still'
-  const sizes = [768, 1440, 1920]
-  return Object.freeze({
-    avif: sizes.map(w => `${base}/${name}-${w}.avif ${w}w`).join(', '),
-    webp: sizes.map(w => `${base}/${name}-${w}.webp ${w}w`).join(', '),
-    jpg: sizes.map(w => `${base}/${name}-${w}.jpg ${w}w`).join(', '),
-    fallback: `${base}/${name}-1440.jpg`,
-    localFallback: LOCAL_FALLBACK,
-    alt
-  })
+  return toMarketingImage(`${MARKETING_BASE}/menu-hero-still.webp`, alt)
 }
 
 /** 代表性分类图：复用 V2 商品图（网关 /images/v2，DB 商品图），VITE_IMAGE_BASE_URL 拼接 */
@@ -496,12 +481,12 @@ export const HOME_FLAVOR_ROUTES = Object.freeze([
 ])
 
 export const HOME_MENU_SERIES = Object.freeze([
-  { id: 'espresso',   name: '经典咖啡', englishName: 'ESPRESSO',   category: 'espresso',   description: '清晰基底', image: productSeriesImage('/images/v2/01-espresso.webp', '经典咖啡'),   href: '/member/order' },
-  { id: 'milk',       name: '奶咖',     englishName: 'MILK',       category: 'milk',       description: '柔和圆润', image: productSeriesImage('/images/v2/02-caffe-latte.webp', '奶咖'),       href: '/member/order' },
-  { id: 'signature',  name: '招牌特调', englishName: 'SIGNATURE',  category: 'signature',  description: '品牌风味', image: productSeriesImage('/images/v2/03-orange-sparkling.webp', '招牌特调'),       href: '/member/order' },
-  { id: 'specialty',  name: '精品咖啡', englishName: 'SPECIALTY',  category: 'specialty',  description: '产地慢萃', image: productSeriesImage('/images/v2/04-origin-ethiopia.webp', '精品咖啡'),  href: '/member/order' },
-  { id: 'non-coffee', name: '非咖啡',   englishName: 'NON COFFEE', category: 'non-coffee', description: '无咖啡因', image: productSeriesImage('/images/v2/05-matcha-latte.webp', '非咖啡'),     href: '/member/order' },
-  { id: 'bakery',     name: '烘焙轻食', englishName: 'BAKERY',     category: 'bakery',     description: '搭配杯中', image: productSeriesImage('/images/v2/06-basque-cheesecake.webp', '烘焙轻食'), href: '/member/order' }
+  { id: 'espresso',   name: '经典咖啡', englishName: 'ESPRESSO',   category: 'espresso',   description: '清晰基底', image: productSeriesImage('/images/products/coffee/01-espresso.webp', '经典咖啡'),   href: '/member/order' },
+  { id: 'milk',       name: '奶咖',     englishName: 'MILK',       category: 'milk',       description: '柔和圆润', image: productSeriesImage('/images/products/coffee/02-caffe-latte.webp', '奶咖'),       href: '/member/order' },
+  { id: 'signature',  name: '招牌特调', englishName: 'SIGNATURE',  category: 'signature',  description: '品牌风味', image: productSeriesImage('/images/products/coffee/03-orange-sparkling.webp', '招牌特调'),       href: '/member/order' },
+  { id: 'specialty',  name: '精品咖啡', englishName: 'SPECIALTY',  category: 'specialty',  description: '产地慢萃', image: productSeriesImage('/images/products/coffee/04-origin-ethiopia.webp', '精品咖啡'),  href: '/member/order' },
+  { id: 'non-coffee', name: '非咖啡',   englishName: 'NON COFFEE', category: 'non-coffee', description: '无咖啡因', image: productSeriesImage('/images/products/coffee/05-matcha-latte.webp', '非咖啡'),     href: '/member/order' },
+  { id: 'bakery',     name: '烘焙轻食', englishName: 'BAKERY',     category: 'bakery',     description: '搭配杯中', image: productSeriesImage('/images/products/coffee/06-basque-cheesecake.webp', '烘焙轻食'), href: '/member/order' }
 ])
 
 export const FLAVOR_IMAGE_MAP = FLAVOR_IMAGES
