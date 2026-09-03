@@ -66,9 +66,8 @@ public class ProductAdminService {
         if (dto.getName() == null || dto.getName().trim().isEmpty()) {
             throw new BusinessException("商品名称不能为空");
         }
-        if (dto.getPrice() == null || dto.getPrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("商品价格不能为负数");
-        }
+        validatePrices(dto.getSizeType() != null ? dto.getSizeType() : "MEDIUM_LARGE",
+                dto.getPrice(), dto.getPriceMedium(), dto.getPriceLarge());
         if (dto.getCategory() == null || dto.getCategory().trim().isEmpty()) {
             throw new BusinessException("商品分类不能为空");
         }
@@ -98,6 +97,9 @@ public class ProductAdminService {
         product.setTags(writeTags(dto.getTags()));
         product.setBrewMethod(dto.getBrewMethod());
         product.setColdBrewPrice(dto.getColdBrewPrice());
+        product.setServingMode(dto.getServingMode());
+        product.setServingConfig(dto.getServingConfig());
+        product.setServingDesc(dto.getServingDesc());
 
         // 手动设置时间戳（修复 MetaObjectHandler 可能未扫码到的问题）
         LocalDateTime now = LocalDateTime.now();
@@ -135,6 +137,12 @@ public class ProductAdminService {
             }
             product.setPrice(dto.getPrice());
         }
+        if (dto.getPriceMedium() != null && dto.getPriceMedium().compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException("中杯价格不能为负数");
+        }
+        if (dto.getPriceLarge() != null && dto.getPriceLarge().compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException("大杯价格不能为负数");
+        }
         // v5.0: 中/大杯价格更新（始终设置，允许清除）
         product.setPriceMedium(dto.getPriceMedium());
         product.setPriceLarge(dto.getPriceLarge());
@@ -152,6 +160,9 @@ public class ProductAdminService {
         product.setTags(writeTags(dto.getTags()));
         product.setBrewMethod(dto.getBrewMethod());
         product.setColdBrewPrice(dto.getColdBrewPrice());
+        product.setServingMode(dto.getServingMode());
+        product.setServingConfig(dto.getServingConfig());
+        product.setServingDesc(dto.getServingDesc());
 
         if (dto.getImageUrl() != null)
             product.setImageUrl(dto.getImageUrl());
@@ -204,6 +215,23 @@ public class ProductAdminService {
             CoffeeBlend blend = blendMapper.selectById(blendId);
             if (blend == null) throw new BusinessException("拼配豆不存在: " + blendId);
             if (!"active".equals(blend.getStatus())) throw new BusinessException("inactive 拼配禁止挂接: " + blend.getCode());
+        }
+    }
+
+    /**
+     * 按杯型校验价格非负（结构性 null/互斥由 validateIntegrity 负责）：
+     * MEDIUM_LARGE 只校验中/大杯价；DEFAULT 校验基础价。price 为 null 对 MEDIUM_LARGE 是合法的。
+     */
+    private void validatePrices(String sizeType, BigDecimal price, BigDecimal medium, BigDecimal large) {
+        if ("MEDIUM_LARGE".equals(sizeType)) {
+            if (medium != null && medium.compareTo(BigDecimal.ZERO) < 0) {
+                throw new BusinessException("中杯价格不能为负数");
+            }
+            if (large != null && large.compareTo(BigDecimal.ZERO) < 0) {
+                throw new BusinessException("大杯价格不能为负数");
+            }
+        } else if (price != null && price.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException("商品价格不能为负数");
         }
     }
 

@@ -67,6 +67,7 @@ public class OrderDtoConverter {
         dto.setDefaultSugarLevel(entity.getDefaultSugarLevel());
         dto.setServingMode(entity.getServingMode());
         dto.setServingDesc(entity.getServingDesc());
+        dto.setServingConfig(entity.getServingConfig());
         dto.setTags(parseTags(entity.getTags()));
         dto.setBrewMethod(entity.getBrewMethod());
         dto.setColdBrewPrice(entity.getColdBrewPrice());

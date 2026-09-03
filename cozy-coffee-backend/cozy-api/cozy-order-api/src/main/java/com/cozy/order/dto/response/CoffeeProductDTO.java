@@ -32,6 +32,7 @@ public class CoffeeProductDTO implements Serializable {
     // V2：固定组合（一豆两喝/三喝）出杯说明
     private String servingMode; // NULL=常规 / FIXED_COMBINATION=固定组合
     private String servingDesc; // 固定组合出杯说明（仅展示文案）
+    private String servingConfig; // 固定组合结构化构成 JSON：[{"type":"ESPRESSO","quantity":1},...]
 
     // V2：标签（展示用；NEW/COLD/FRUITY...，TOP1 数据驱动不静态录入）
     private List<String> tags;

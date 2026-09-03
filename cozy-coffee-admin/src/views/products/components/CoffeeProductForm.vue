@@ -256,11 +256,57 @@
       <div class="form-hint-inline">单品豆/拼配豆二选一；非咖啡/烘焙无需选择</div>
     </el-form-item>
   </div>
+
+  <!-- 出杯模式：固定组合（一豆两喝/三喝） -->
+  <div class="form-section">
+    <div class="section-title">
+      <el-icon><Coffee /></el-icon>
+      <span>出杯模式</span>
+    </div>
+    <el-form-item label="出杯模式">
+      <el-radio-group v-model="servingMode">
+        <el-radio label="">常规单品</el-radio>
+        <el-radio label="FIXED_COMBINATION">固定组合（一豆两喝/三喝）</el-radio>
+      </el-radio-group>
+      <div class="form-hint-inline">固定组合需挂单品豆（bean），移动端按构成逐杯出品</div>
+    </el-form-item>
+
+    <template v-if="servingMode === 'FIXED_COMBINATION'">
+      <el-form-item label="组合构成">
+        <div class="serving-rows">
+          <div v-for="(row, idx) in servingRows" :key="idx" class="serving-row">
+            <el-select v-model="row.type" style="width: 180px">
+              <el-option v-for="t in servingTypes" :key="t.value" :value="t.value" :label="t.label" />
+            </el-select>
+            <el-input-number
+              v-model="row.quantity"
+              :min="1"
+              :precision="0"
+              controls-position="right"
+              style="width: 120px"
+            />
+            <el-button :icon="Delete" circle size="small" type="danger" plain @click="removeServingRow(idx)" />
+          </div>
+          <el-button :icon="Plus" size="small" @click="addServingRow">加一份出杯</el-button>
+        </div>
+      </el-form-item>
+      <el-form-item label="出杯说明">
+        <el-input
+          v-model="form.servingDesc"
+          type="textarea"
+          :rows="2"
+          maxlength="80"
+          show-word-limit
+          placeholder="如：一豆两喝 · 浓缩 + 手冲，一次尝尽两种表达"
+        />
+      </el-form-item>
+    </template>
+  </div>
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
-import { InfoFilled, Setting, Coffee } from '@element-plus/icons-vue'
+import { computed, ref, watch } from 'vue'
+import { InfoFilled, Setting, Coffee, Plus, Delete } from '@element-plus/icons-vue'
 import ImageUploader from './ImageUploader.vue'
 import { PRODUCT_TAG_OPTIONS as tagOptions } from '@/constants/product'
 
@@ -297,6 +343,57 @@ const beanBlendValue = computed({
 watch(() => props.form.sugarType, (v) => {
   if (v === 'NO_SUGAR_ONLY') props.form.defaultSugarLevel = null
 })
+
+// ---- 固定组合（一豆两喝/三喝）：servingMode + servingConfig(JSON) + servingDesc ----
+const servingTypes = [
+  { value: 'ESPRESSO', label: '浓缩' },
+  { value: 'POUR_OVER', label: '手冲' },
+  { value: 'MILK_COFFEE', label: '奶咖' }
+]
+
+const servingMode = computed({
+  get: () => props.form.servingMode || '',
+  set: (v) => {
+    if (v === 'FIXED_COMBINATION') {
+      props.form.servingMode = 'FIXED_COMBINATION'
+    } else {
+      props.form.servingMode = null
+      props.form.servingConfig = null
+      props.form.servingDesc = ''
+      servingRows.value = []
+    }
+  }
+})
+
+const servingRows = ref([])
+let syncingServing = false
+
+function parseServingConfig() {
+  const raw = props.form.servingConfig
+  if (!raw) { servingRows.value = []; return }
+  try {
+    const arr = JSON.parse(raw)
+    servingRows.value = Array.isArray(arr) ? arr : []
+  } catch (e) {
+    servingRows.value = []
+  }
+}
+
+watch(() => props.form.servingConfig, () => {
+  if (props.form.servingMode === 'FIXED_COMBINATION') parseServingConfig()
+}, { immediate: true })
+
+watch(servingRows, () => {
+  if (syncingServing) return
+  props.form.servingConfig = servingRows.value.length ? JSON.stringify(servingRows.value) : null
+}, { deep: true })
+
+function addServingRow() {
+  servingRows.value.push({ type: 'ESPRESSO', quantity: 1 })
+}
+function removeServingRow(idx) {
+  servingRows.value.splice(idx, 1)
+}
 </script>
 
 <style scoped lang="scss">
@@ -333,5 +430,12 @@ watch(() => props.form.sugarType, (v) => {
   color: #909399;
   font-size: 12px;
   line-height: 1.4;
+}
+
+.serving-rows .serving-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 </style>

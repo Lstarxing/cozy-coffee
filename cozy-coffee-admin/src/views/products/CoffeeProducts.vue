@@ -303,7 +303,10 @@ function createEmptyForm() {
     blendId: null,
     tags: [],
     brewMethod: '',
-    coldBrewPrice: null
+    coldBrewPrice: null,
+    servingMode: null,
+    servingConfig: null,
+    servingDesc: ''
   }
 }
 
@@ -379,7 +382,10 @@ const editProduct = (row) => {
     blendId: row.blendId || null,
     tags: row.tags || [],
     brewMethod: row.brewMethod || '',
-    coldBrewPrice: row.coldBrewPrice || null
+    coldBrewPrice: row.coldBrewPrice || null,
+    servingMode: row.servingMode || null,
+    servingConfig: row.servingConfig || null,
+    servingDesc: row.servingDesc || ''
   }
   dialogVisible.value = true
 }
@@ -409,7 +415,10 @@ const saveProduct = async () => {
       blendId: productForm.value.blendId || null,
       tags: productForm.value.tags || [],
       brewMethod: productForm.value.brewMethod || null,
-      coldBrewPrice: productForm.value.coldBrewPrice || null
+      coldBrewPrice: productForm.value.coldBrewPrice || null,
+      servingMode: productForm.value.servingMode || null,
+      servingConfig: productForm.value.servingConfig || null,
+      servingDesc: productForm.value.servingDesc || ''
     }
 
     if (isEdit.value) await updateCoffeeProduct(editingId.value, data)
