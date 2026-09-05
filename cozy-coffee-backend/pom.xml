@@ -30,7 +30,7 @@
         
         <spring-boot.version>3.4.3</spring-boot.version>
         <dubbo.version>3.2.7</dubbo.version>
-        <nacos.version>2.4.3</nacos.version>
+        <nacos.version>2.2.3</nacos.version>  <!-- dubbo 3.2.7 + nacos-client 2.4.3 配置/元数据健康检查 DOWN；回退 2.2.3（init 版本） -->
         <mysql.version>8.0.32</mysql.version>
         <mybatis-plus.version>3.5.11</mybatis-plus.version>
         <jjwt.version>0.12.6</jjwt.version>

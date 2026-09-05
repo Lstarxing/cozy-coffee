@@ -13,7 +13,8 @@ name: cozycoffee-prod
 x-java-limits: &java-limits
   mem_limit: 512m
   environment: &java-env
-    JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8"
+    JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8 -Ddubbo.registry.address=nacos://nacos:8848"
+    JWT_SECRET: ${JWT_SECRET:?需设置}
 
 services:
   # ---------- 基础设施 ----------
@@ -47,7 +48,7 @@ services:
     mem_limit: 160m
 
   nacos:
-    image: nacos/nacos-server:v2.4.3
+    image: nacos/nacos-server:v2.2.3   # dubbo 3.2.7 对 nacos 2.3+ 健康检查 DOWN；2.2.x 正常（本地实测 2.2.3）
     restart: unless-stopped
     environment:
       MODE: standalone
@@ -173,7 +174,7 @@ services:
     restart: unless-stopped
     depends_on: [mysql, redis, nacos, rocketmq-namesrv, user-provider, member-provider, order-provider, mall-provider]
     environment:
-      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8"
+      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8 -Ddubbo.registry.address=nacos://nacos:8848"
       SPRING_DATA_REDIS_HOST: redis
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
       ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
