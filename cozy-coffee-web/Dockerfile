@@ -3,6 +3,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
+# 构建期注入 VITE_*（prod compose 通过 ARG 传入；留空则走 .env.production）
+ARG VITE_API_BASE_URL=
+ARG VITE_IMAGE_BASE_URL=
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL} VITE_IMAGE_BASE_URL=${VITE_IMAGE_BASE_URL}
 RUN npm run build
 
 FROM nginx:1.27-alpine

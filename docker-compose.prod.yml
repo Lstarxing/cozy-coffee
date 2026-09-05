@@ -1,0 +1,223 @@
+# ============================================================
+# CozyCoffee 生产部署编排（单机 2C8G 演示）
+# 用法（服务器上 /opt/cozycoffee，带 .env 环境变量）：
+#   1) docker compose -f docker-compose.prod.yml up -d mysql redis nacos \
+#        rocketmq-namesrv rocketmq-broker minio
+#   2) bash scripts/minio/seed.sh        # 首次/换环境：建桶+策略+账号+灌 65 种子图
+#   3) docker compose -f docker-compose.prod.yml up -d --build  # 全量
+# 说明：provider/gateway/web/admin 先本地打镜像；web 为公网 80 入口（含 /api /media 反代），
+#       admin 走独立端口；详情见 surx-note《服务器图片迁移.md》《部署上线前置清单》。
+# ============================================================
+name: cozycoffee-prod
+
+x-java-limits: &java-limits
+  mem_limit: 512m
+  environment: &java-env
+    JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8"
+
+services:
+  # ---------- 基础设施 ----------
+  mysql:
+    image: mysql:8.0.36
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?需设置}
+      TZ: ${TIMEZONE:-Asia/Shanghai}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=512M
+      - --max-connections=200
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init/00-bootstrap.sql:/docker-entrypoint-initdb.d/00-bootstrap.sql:ro
+    mem_limit: 900m
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["sh", "-c", "redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $$REDIS_PASSWORD}"]
+    volumes:
+      - redis_data:/data
+    mem_limit: 160m
+
+  nacos:
+    image: nacos/nacos-server:v2.4.3
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      JVM_XMS: 256m
+      JVM_XMX: 384m
+      JVM_XMN: 128m
+      TZ: ${TIMEZONE:-Asia/Shanghai}
+    volumes:
+      - nacos_data:/home/nacos/data
+      - nacos_logs:/home/nacos/logs
+    mem_limit: 640m
+
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.3.0
+    restart: unless-stopped
+    command: sh mqnamesrv
+    environment:
+      JAVA_OPT_EXT: "-Xms128m -Xmx256m -Xmn96m"
+      TZ: ${TIMEZONE:-Asia/Shanghai}
+    mem_limit: 320m
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.3.0
+    restart: unless-stopped
+    depends_on:
+      rocketmq-namesrv:
+        condition: service_started
+    command: sh mqbroker -n rocketmq-namesrv:9876 -c /home/rocketmq/conf/broker.conf
+    environment:
+      NAMESRV_ADDR: rocketmq-namesrv:9876
+      JAVA_OPT_EXT: "-Xms256m -Xmx512m -Xmn160m"
+      TZ: ${TIMEZONE:-Asia/Shanghai}
+    volumes:
+      - ./docker/rocketmq/broker.conf:/home/rocketmq/conf/broker.conf:ro
+    mem_limit: 900m
+
+  minio:
+    image: minio/minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?需设置}
+      TZ: ${TIMEZONE:-Asia/Shanghai}
+    volumes:
+      - minio_data:/data
+    mem_limit: 384m
+
+  # ---------- 后端 5 服务 ----------
+  user-provider:
+    build:
+      context: ./cozy-coffee-backend
+      dockerfile: Dockerfile.service
+      args: { MODULE_PATH: cozy-provider/cozy-user-provider }
+    <<: *java-limits
+    restart: unless-stopped
+    depends_on: [mysql, redis, nacos]
+    environment:
+      <<: *java-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+
+  member-provider:
+    build:
+      context: ./cozy-coffee-backend
+      dockerfile: Dockerfile.service
+      args: { MODULE_PATH: cozy-provider/cozy-member-provider }
+    <<: *java-limits
+    restart: unless-stopped
+    depends_on: [mysql, redis, nacos]
+    environment:
+      <<: *java-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_member?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+      ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
+
+  order-provider:
+    build:
+      context: ./cozy-coffee-backend
+      dockerfile: Dockerfile.service
+      args: { MODULE_PATH: cozy-provider/cozy-order-provider }
+    <<: *java-limits
+    restart: unless-stopped
+    depends_on: [mysql, redis, nacos, rocketmq-namesrv]
+    environment:
+      <<: *java-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+      ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
+
+  mall-provider:
+    build:
+      context: ./cozy-coffee-backend
+      dockerfile: Dockerfile.service
+      args: { MODULE_PATH: cozy-provider/cozy-mall-provider }
+    <<: *java-limits
+    restart: unless-stopped
+    depends_on: [mysql, redis, nacos, rocketmq-namesrv]
+    environment:
+      <<: *java-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+      ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
+
+  gateway:
+    build:
+      context: ./cozy-coffee-backend
+      dockerfile: Dockerfile.service
+      args: { MODULE_PATH: cozy-gateway }
+    mem_limit: 640m
+    restart: unless-stopped
+    depends_on: [mysql, redis, nacos, rocketmq-namesrv, user-provider, member-provider, order-provider, mall-provider]
+    environment:
+      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8"
+      SPRING_DATA_REDIS_HOST: redis
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+      ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
+      STORAGE_TYPE: ${STORAGE_TYPE:-minio}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-http://minio:9000}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-cozycoffee}
+      STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID}
+      STORAGE_ACCESS_KEY_SECRET: ${STORAGE_ACCESS_KEY_SECRET}
+      STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:?需设置，如 http://IP/media/cozycoffee}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?需设置}
+      COZY_GUARD_ALLOW_INSECURE_HTTP: ${COZY_GUARD_ALLOW_INSECURE_HTTP:-false}
+      AUTH_DEV_LOGIN_ENABLED: "false"
+      JWT_SECRET: ${JWT_SECRET:?需设置>=32字符}
+      WECHAT_APPID: ${WECHAT_APPID:-}
+      WECHAT_SECRET: ${WECHAT_SECRET:-}
+
+  # ---------- 前端 ----------
+  web:
+    build:
+      context: ./cozy-coffee-web
+      args:
+        VITE_API_BASE_URL: ${WEB_API_BASE:-}
+        VITE_IMAGE_BASE_URL: ${WEB_IMAGE_BASE:-/media/cozycoffee}
+    restart: unless-stopped
+    depends_on: [gateway]
+    ports:
+      - "80:80"
+    mem_limit: 96m
+
+  admin:
+    build:
+      context: ./cozy-coffee-admin
+      args:
+        VITE_API_BASE_URL: ${ADMIN_API_BASE:-}
+        VITE_IMAGE_BASE_URL: ${ADMIN_IMAGE_BASE:-}
+    restart: unless-stopped
+    depends_on: [gateway]
+    ports:
+      - "${ADMIN_PORT:-5174}:80"
+    mem_limit: 96m
+
+volumes:
+  mysql_data:
+  redis_data:
+  nacos_data:
+  nacos_logs:
+  minio_data:
