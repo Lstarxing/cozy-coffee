@@ -27,10 +27,13 @@ jobs:
           cache: maven
 
       - name: Run Maven tests
-        # 排除 4 个需要本地基础设施（MySQL/Redis/Dubbo 微服务）的 @SpringBootTest
-        # 集成测试：PointsConsistencyTest / PointsFIFOConsistencyTest / OrderFlowBaselineTest / OrderCouponFlowIntegrationTest，
-        # 它们依赖 IDE 里运行中的服务，CI 环境无此设施；其余纯单测在此跑
-        run: mvn -q -B test -Dtest='!PointsConsistencyTest,!PointsFIFOConsistencyTest,!OrderFlowBaselineTest,!OrderCouponFlowIntegrationTest' -Dsurefire.failIfNoSpecifiedTests=false
+        # 排除需要本地基础设施（MySQL/Redis/Nacos 微服务）的测试：
+        # - 4 个 @SpringBootTest 集成测试（PointsConsistency / PointsFIFOConsistency / OrderFlowBaseline / OrderCouponFlow），
+        #   依赖 IDE 里运行中的服务，CI 环境无此设施；
+        # - gateway 两个 @WebMvcTest（AuthControllerValidation / AuthSecurityConfig）虽标注切片，但主类 GatewayApplication
+        #   带 @EnableDubbo，启动仍会连 Nacos，CI 无 Nacos → context 加载失败，一并排除；
+        # 其余纯单测在此跑
+        run: mvn -q -B test -Dtest='!PointsConsistencyTest,!PointsFIFOConsistencyTest,!OrderFlowBaselineTest,!OrderCouponFlowIntegrationTest,!AuthControllerValidationTest,!AuthSecurityConfigTest' -Dsurefire.failIfNoSpecifiedTests=false
 
   frontend:
     name: Frontend (${{ matrix.app }})
