@@ -117,7 +117,7 @@ href="#" class="nav-link nav-parent"
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useRouter, useRoute } from 'vue-router'
-import { updateProfile } from '@/api/auth'
+import { updateProfile, uploadAvatar } from '@/api/auth'
 import { ElMessage } from 'element-plus'
 import { LayoutDashboard, Coffee, ClipboardList, ChevronRight, ShoppingBag, User, Ticket, Crown, Home, LogOut } from 'lucide-vue-next'
 
@@ -128,7 +128,8 @@ const route = useRoute()
 const isOrdersExpanded = ref(false)
 
 const showAvatarModal = ref(false)
-const avatarPreview = ref('')
+const avatarPreview = ref('')   // 本地预览（FileReader base64，仅展示，不入库）
+const avatarFile = ref(null)    // 待上传的原文件
 const avatarInput = ref(null)
 
 const themeClass = computed(() => {
@@ -146,6 +147,7 @@ function handleAvatarChange(event) {
       window.alert('图片大小不能超过2MB')
       return
     }
+    avatarFile.value = file
     const reader = new FileReader()
     reader.onload = (e) => {
       avatarPreview.value = e.target.result
@@ -155,14 +157,18 @@ function handleAvatarChange(event) {
 }
 
 async function saveAvatar() {
-  if (!avatarPreview.value) {
+  if (!avatarFile.value) {
     return
   }
   try {
-    await updateProfile({ avatar: avatarPreview.value })
-    userStore.userInfo.avatar = avatarPreview.value
+    // 先传原文件到 MinIO，拿回 URL 再写 profile（avatar 字段限 500 字符，不能存 base64）
+    const res = await uploadAvatar(avatarFile.value)
+    const url = res.data?.url || res.url
+    await updateProfile({ avatar: url })
+    userStore.userInfo.avatar = url
     showAvatarModal.value = false
     avatarPreview.value = ''
+    avatarFile.value = null
     ElMessage.success('头像更新成功')
   } catch (error) {
     ElMessage.error('头像保存失败: ' + (error.message || '请稍后重试'))

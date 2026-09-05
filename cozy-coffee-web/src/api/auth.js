@@ -24,6 +24,13 @@ export function updateProfile(data) {
     return request.put('/auth/profile', data)
 }
 
+// 头像先上传到 MinIO（经 gateway /api/auth/avatar），拿回 URL 再写入 profile
+export function uploadAvatar(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return request.post('/auth/avatar', formData)
+}
+
 export function changePassword(oldPassword, newPassword) {
     return request.post('/auth/password/change', { oldPassword, newPassword })
 }
