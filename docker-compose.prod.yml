@@ -59,7 +59,7 @@ services:
     volumes:
       - nacos_data:/home/nacos/data
       - nacos_logs:/home/nacos/logs
-    mem_limit: 640m
+    mem_limit: 1024m   # 曾 640m 实际~600m 太贴边 → OOM 重启循环；加高余量
 
   rocketmq-namesrv:
     image: apache/rocketmq:5.3.0
