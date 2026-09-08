@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
+import com.cozy.common.util.RedisLockUtil;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -202,16 +202,9 @@ public class MenuCacheService {
                 stringRedisTemplate.opsForValue().setIfAbsent(lockKey, lockToken, Duration.ofSeconds(ttlSeconds)));
     }
 
-    private static final String RELEASE_LOCK_SCRIPT =
-            "if redis.call('get', KEYS[1]) == ARGV[1] then " +
-            "return redis.call('del', KEYS[1]) else return 0 end";
-
     private void releaseRebuildLock(String lockKey, String lockToken) {
         try {
-            DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
-            redisScript.setScriptText(RELEASE_LOCK_SCRIPT);
-            redisScript.setResultType(Long.class);
-            stringRedisTemplate.execute(redisScript, Collections.singletonList(lockKey), lockToken);
+            RedisLockUtil.releaseLock(stringRedisTemplate, lockKey, lockToken);
         } catch (Exception e) {
             log.warn("释放Redis重建锁失败: key={}", lockKey, e);
         }

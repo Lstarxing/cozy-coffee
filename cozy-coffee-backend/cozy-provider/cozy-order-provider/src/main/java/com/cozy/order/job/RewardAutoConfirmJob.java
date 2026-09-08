@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
+import com.cozy.common.util.RedisLockUtil;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -155,16 +155,8 @@ public class RewardAutoConfirmJob {
 
     private void releaseLock(String lockToken) {
         try {
-            String releaseScript = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
-                    "return redis.call('del', KEYS[1]) else return 0 end";
-            DefaultRedisScript<Long> redisScript =
-                    new DefaultRedisScript<>();
-            redisScript.setScriptText(releaseScript);
-            redisScript.setResultType(Long.class);
-            stringRedisTemplate.execute(
-                    redisScript,
-                    Collections.singletonList(RedisKeyConstants.LOCK_ORDER_DELIVERY_AUTO_COMPLETE_JOB),
-                    lockToken);
+            RedisLockUtil.releaseLock(stringRedisTemplate,
+                    RedisKeyConstants.LOCK_ORDER_DELIVERY_AUTO_COMPLETE_JOB, lockToken);
         } catch (Exception e) {
             log.warn("释放奖励自动确认任务锁失败", e);
         }

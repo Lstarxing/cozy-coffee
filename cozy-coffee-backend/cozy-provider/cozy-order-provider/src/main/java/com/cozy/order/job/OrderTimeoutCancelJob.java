@@ -2,6 +2,7 @@ package com.cozy.order.job;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
+import com.cozy.common.util.RedisLockUtil;
 import com.cozy.order.entity.ShopOrder;
 import com.cozy.order.mapper.ShopOrderMapper;
 import com.cozy.order.service.impl.OrderServiceImpl;
@@ -198,16 +199,8 @@ public class OrderTimeoutCancelJob {
 
     private void releaseLock(String lockToken) {
         try {
-            String releaseScript = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
-                    "return redis.call('del', KEYS[1]) else return 0 end";
-            org.springframework.data.redis.core.script.DefaultRedisScript<Long> redisScript =
-                    new org.springframework.data.redis.core.script.DefaultRedisScript<>();
-            redisScript.setScriptText(releaseScript);
-            redisScript.setResultType(Long.class);
-            stringRedisTemplate.execute(
-                    redisScript,
-                    Collections.singletonList(RedisKeyConstants.LOCK_ORDER_TIMEOUT_CANCEL_JOB),
-                    lockToken);
+            RedisLockUtil.releaseLock(stringRedisTemplate,
+                    RedisKeyConstants.LOCK_ORDER_TIMEOUT_CANCEL_JOB, lockToken);
         } catch (Exception e) {
             log.warn("释放超时取消任务锁失败", e);
         }

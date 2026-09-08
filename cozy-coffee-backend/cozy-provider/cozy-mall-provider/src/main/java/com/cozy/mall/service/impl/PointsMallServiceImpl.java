@@ -42,7 +42,7 @@ import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
+import com.cozy.common.util.RedisLockUtil;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -528,13 +528,8 @@ public class PointsMallServiceImpl implements PointsMallService {
 
     private void releaseLockSafely(String lockKey, String lockToken) {
         try {
-            // 若切换到 Redisson，分布式锁可改为 RLock，自动续约、可重入和看门狗机制可进一步降低锁误释放风险。
-            String releaseScript = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
-                    "return redis.call('del', KEYS[1]) else return 0 end";
-            DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
-            redisScript.setScriptText(releaseScript);
-            redisScript.setResultType(Long.class);
-            stringRedisTemplate.execute(redisScript, Collections.singletonList(lockKey), lockToken);
+            // 若切换到 Redisson，RLock 自带的续约/可重入/看门狗可替代这套手写 Lua
+            RedisLockUtil.releaseLock(stringRedisTemplate, lockKey, lockToken);
         } catch (Exception e) {
             log.warn("释放Redis库存锁失败: key={}", lockKey, e);
         }
