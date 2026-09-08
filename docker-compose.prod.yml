@@ -21,6 +21,8 @@ services:
   mysql:
     image: mysql:8.0.36
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:3306:3306"   # 仅宿主机 loopback，供 SSH 隧道管理；不对公网
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?需设置}
       TZ: ${TIMEZONE:-Asia/Shanghai}
