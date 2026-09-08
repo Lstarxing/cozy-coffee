@@ -269,15 +269,10 @@ public class OrderCommandService {
         log.info("确认发奖(奖励已解耦到MQ): orderId={}, exp={}, points={}, isFirst={}, isDelivery={}, hasNew={}",
                 order.getId(), expEarned, pointsEarned, isFirstOrder, isDelivery, hasNewProduct);
 
-        // ===== CAS：赢家才发事件 =====
-        if (tryGrantRewards(order.getId(), expEarned, pointsEarned)) {
-            orderCompletedEventPublisher.publish(order, expEarned, pointsEarned, isFirstOrder, hasNewProduct, isDelivery);
-        }
-        return orderDtoEnricher.toOrderDTO(orderMapper.selectById(orderId), null);
-    }
-
-    private boolean tryGrantRewards(Long orderId, int expEarned, int pointsEarned) {
-        return Boolean.TRUE.equals(transactionTemplate.execute(status -> {
+        // ===== 单事务：CAS 置已发奖 + 写 Outbox（同事务原子） =====
+        // 事件进 message_outbox(PENDING)，broker 不可用也不丢；OutboxService 兜底任务恢复后自动重投。
+        // 若写 Outbox 抛异常，整笔回滚（rewards_granted 仍为 0），下次确认/兜底任务重试，不会丢失。
+        transactionTemplate.executeWithoutResult(status -> {
             ShopOrder update = new ShopOrder();
             update.setStatus(OrderStateMachine.COMPLETED.value());
             update.setExpEarned(expEarned);
@@ -285,13 +280,18 @@ public class OrderCommandService {
             update.setRewardsGranted(true);
             update.setCompletedAt(LocalDateTime.now());
             update.setUpdatedAt(LocalDateTime.now());
-            return orderMapper.update(update, new LambdaUpdateWrapper<ShopOrder>()
-                    .eq(ShopOrder::getId, orderId)
+            boolean won = orderMapper.update(update, new LambdaUpdateWrapper<ShopOrder>()
+                    .eq(ShopOrder::getId, order.getId())
                     .eq(ShopOrder::getRewardsGranted, false)
                     .in(ShopOrder::getStatus,
                             OrderStateMachine.COMPLETED.value(),
                             OrderStateMachine.DELIVERING.value())) == 1;
-        }));
+            if (won) {
+                orderCompletedEventPublisher.publish(order, expEarned, pointsEarned,
+                        isFirstOrder, hasNewProduct, isDelivery);
+            }
+        });
+        return orderDtoEnricher.toOrderDTO(orderMapper.selectById(orderId), null);
     }
 
     private String resolveMemberLevel(Long userId) {
