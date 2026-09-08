@@ -50,7 +50,7 @@ CozyCoffee 是面向咖啡零售场景的微服务业务系统，覆盖用户认
 | 层 | 技术 |
 |---|---|
 | 后端 | Java 17 · Spring Boot 3.4 · Dubbo 3.2 · Nacos 2.2 · RocketMQ 5.3 · MyBatis-Plus 3.5 · Flyway 数据库迁移 |
-| 数据与缓存 | MySQL 8.0 · Redis 7 · 阿里云 OSS（可切换本地存储，前端单开关切换） |
+| 数据与缓存 | MySQL 8.0 · Redis 7 · MinIO 对象存储（S3 兼容，部署默认；网关 `storage.type` 可切阿里云 OSS / 本地文件） |
 | 前端 | Vue 3（Web / Admin）· uni-app 微信小程序 · Element Plus · Pinia |
 | 工程与质量 | Maven · JUnit 5 / Vitest · GitHub Actions CI · Locust 压测 |
 
