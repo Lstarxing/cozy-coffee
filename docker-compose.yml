@@ -49,11 +49,14 @@ services:
       retries: 15
 
   nacos:
-    image: nacos/nacos-server:v2.4.3
+    # 与服务器/客户端对齐 v2.2.3：dubbo 3.2.7 + nacos-client 2.2.3 验证组合（2.3+ server 无必要差异）
+    # JAVA_TOOL_OPTIONS=-XX:-UseContainerSupport：2.2.3 镜像自带 JDK 在 Docker Desktop 读 cgroupv2 缺失会 NPE（Derby 起 JMX 触发），关容器感知规避；服务器真 Linux 不受影响
+    image: nacos/nacos-server:v2.2.3
     container_name: cozy-nacos
     restart: unless-stopped
     environment:
       MODE: standalone
+      JAVA_TOOL_OPTIONS: "-XX:-UseContainerSupport"
       TZ: ${TIMEZONE:-Asia/Shanghai}
     ports:
       - "${NACOS_PORT:-8848}:8848"
