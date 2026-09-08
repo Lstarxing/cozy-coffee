@@ -40,11 +40,19 @@
           </view>
         </view>
 
-        <view v-if="tempOptions.length > 1" class="spec-section">
+        <view v-if="tempOptions.length >= 1" class="spec-section">
           <text class="spec-title">温度</text>
           <view class="option-grid">
-            <view v-for="option in tempOptions" :key="option.value" class="option" :class="{ selected: form.temperature === option.value }" @click="form.temperature = option.value">{{ option.label }}</view>
+            <view v-for="option in tempOptions" :key="option.value" class="option"
+              :class="{ selected: form.temperature === option.value }"
+              @click="tempOptions.length === 1 ? null : (form.temperature = option.value)">
+              <text>{{ option.label }}</text>
+            </view>
           </view>
+          <!-- 固定出品：单值不隐藏，用选中态 + 说明明确出品边界（非灰色禁用） -->
+          <text v-if="tempOptions.length === 1" class="spec-fixed-hint">
+            本品仅提供{{ tempOptions[0].value === 'HOT' ? '热饮' : '冰饮' }}
+          </text>
         </view>
 
         <view v-if="sugarOptions.length > 1" class="spec-section">
@@ -241,6 +249,7 @@ function confirm() {
 .sheet-scroll { max-height: 54vh; padding: 0 32rpx; box-sizing: border-box; }
 .spec-section { padding: 26rpx 0 6rpx; }
 .spec-title { display: block; margin-bottom: 16rpx; color: $cozy-ink; font-size: 27rpx; font-weight: 650; }
+.spec-fixed-hint { display: block; margin-top: 8rpx; color: $cozy-muted; font-size: 22rpx; line-height: 1.5; }
 .serving-desc { padding: 8rpx 0 4rpx; color: $cozy-muted; font-size: 22rpx; line-height: 1.6; }
 .option-grid { display: flex; flex-wrap: wrap; gap: 14rpx; }
 .option {

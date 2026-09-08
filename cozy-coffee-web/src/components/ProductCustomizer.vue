@@ -64,22 +64,18 @@ v-for="sugar in sugarOptions" :key="sugar.value"
             </div>
           </div>
 
-          <!-- 温度 (免费) v6.1: 支持禁用状态 -->
+          <!-- 温度：可用项 >=1 展示；单可用项=固定出品，显示选中态+说明 -->
           <div v-if="showTemp" class="option-group">
             <label>温度</label>
             <div class="option-buttons grid-layout">
               <button
 v-for="temp in temperatures" :key="temp.value"
-                :class="{
-                  active: customization.temperature === temp.value,
-                  disabled: temp.disabled
-                }"
-                :disabled="temp.disabled"
-                @click="!temp.disabled && (customization.temperature = temp.value)">
+                :class="{ active: customization.temperature === temp.value }"
+                @click="customization.temperature = temp.value">
                 <span class="opt-label">{{ temp.label }}</span>
-                <span v-if="temp.disabled" class="disabled-hint">不可选</span>
               </button>
             </div>
+            <div v-if="enabledTempCount === 1 && tempConfig.hint" class="spec-fixed-hint">{{ tempConfig.hint }}</div>
           </div>
 
           <!-- V2 加料组 (P2-4): MILK/SHOT/SYRUP/OTHER，按 price_delta 展示，前端只提交 code -->
@@ -320,10 +316,12 @@ const tempConfig = computed(() => {
     hint: !hotAllowed ? '本品仅供冰饮' : (!coldAllowed ? '本品仅供热饮' : '')
   }
 })
-// 对齐移动端：温度行仅在可用选项 > 1 时展示（固定热/冰/冷萃隐藏整行）
-const enabledTempCount = computed(() => tempConfig.value.options.filter(o => !o.disabled).length)
-const showTemp = computed(() => enabledTempCount.value > 1)
-const temperatures = computed(() => tempConfig.value.options)
+// 对齐移动端：可用选项 >= 1 即展示温度行；
+// 单可用项=固定出品，显示唯一选中态 + 说明文案（不渲染灰色"不可选"互补项）
+const enabledTemps = computed(() => tempConfig.value.options.filter(o => !o.disabled))
+const enabledTempCount = computed(() => enabledTemps.value.length)
+const showTemp = computed(() => enabledTempCount.value >= 1)
+const temperatures = computed(() => enabledTemps.value)
 
 // ==================== 初始化（每次打开重挂载） ====================
 
@@ -653,6 +651,13 @@ const addToCart = () => {
   background: rgba(189, 189, 189, 0.2);
   color: #9E9E9E;
   font-weight: 500;
+}
+
+/* 固定出品说明（单可用项：如"本品仅供热饮/冰饮"） */
+.spec-fixed-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #8B8B8B;
 }
 
 /* 底部结算栏（整宽 + 分隔线；左侧价格/当前规格，右侧数量 + 加购） */
