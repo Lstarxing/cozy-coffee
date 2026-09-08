@@ -8,7 +8,7 @@
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.3-6DB33F?logo=springboot&logoColor=white)
 ![Dubbo](https://img.shields.io/badge/Dubbo-3.2.7-718D19?logo=apache&logoColor=white)
 ![RocketMQ](https://img.shields.io/badge/RocketMQ-5.3.0-D77310)
-![Nacos](https://img.shields.io/badge/Nacos-2.4.3-0096E0?logo=alibaba&logoColor=white)
+![Nacos](https://img.shields.io/badge/Nacos-2.2.3-0096E0?logo=alibaba&logoColor=white)
 ![MyBatis-Plus](https://img.shields.io/badge/MyBatis--Plus-3.5.11-1B6AC6)
 
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
@@ -34,7 +34,7 @@ CozyCoffee 是面向咖啡零售场景的微服务业务系统，覆盖用户认
 - 展示从需求建模、原型设计、开发交付到压测优化、CI 测试的完整工程闭环
 
 ## 核心亮点
-- **微服务架构**：用户 / 会员 / 订单 / 积分商城四 Provider 各自独立数据库（cozy_user / member / order / mall），基于 Dubbo 3.2 + Nacos 2.4 完成 RPC 与服务发现；Gateway 统一鉴权、聚合与 SSE 推送
+- **微服务架构**：用户 / 会员 / 订单 / 积分商城四 Provider 各自独立数据库（cozy_user / member / order / mall），基于 Dubbo 3.2 + Nacos 2.2 完成 RPC 与服务发现；Gateway 统一鉴权、聚合与 SSE 推送
 - **会员积分闭环**：EXP / 积分双账户、五级成长与等级特权矩阵、FIFO 先到期先消耗；签到 / 月度挑战 / 生日 / 首单 / 邀请 / 晋升礼 / 月度权益等奖励规则全部 `@ConfigurationProperties` 配置化——**改 yml 即可调整业务策略，不改码**
 - **优惠券系统**：发券模板配置化 + 抵扣策略化（`CouponCalculator` 接口 + 9 类券按类型分发）+ L1 主券 / L2 辅券组合引擎，合法性校验收敛到后端单一事实源，前端不再复刻营销规则
 - **V2 商品体系**：统一规格校验与定价核心（杯型 / 出品方式定价）、加料组权威解析、咖啡内容层（8 产区 / 8 单品豆 / 2 拼配）数据驱动，三端点单 / 菜单 / 详情同源
@@ -49,7 +49,7 @@ CozyCoffee 是面向咖啡零售场景的微服务业务系统，覆盖用户认
 ## 技术栈
 | 层 | 技术 |
 |---|---|
-| 后端 | Java 17 · Spring Boot 3.4 · Dubbo 3.2 · Nacos 2.4 · RocketMQ 5.3 · MyBatis-Plus 3.5 · Flyway 数据库迁移 |
+| 后端 | Java 17 · Spring Boot 3.4 · Dubbo 3.2 · Nacos 2.2 · RocketMQ 5.3 · MyBatis-Plus 3.5 · Flyway 数据库迁移 |
 | 数据与缓存 | MySQL 8.0 · Redis 7 · 阿里云 OSS（可切换本地存储，前端单开关切换） |
 | 前端 | Vue 3（Web / Admin）· uni-app 微信小程序 · Element Plus · Pinia |
 | 工程与质量 | Maven · JUnit 5 / Vitest · GitHub Actions CI · Locust 压测 |

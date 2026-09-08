@@ -26,6 +26,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -71,6 +72,12 @@ class OrderCommandRewardFlowTest {
             TransactionCallback<?> cb = inv.getArgument(0);
             return cb.doInTransaction(mock(TransactionStatus.class));
         });
+        // Outbox 改造后 grantRewards 走 executeWithoutResult，需同样让事务回调真正执行
+        doAnswer(inv -> {
+            Consumer<TransactionStatus> action = inv.getArgument(0);
+            action.accept(mock(TransactionStatus.class));
+            return null;
+        }).when(transactionTemplate).executeWithoutResult(any());
         // 商品/首单/新品检查默认值
         when(orderItemMapper.selectList(any())).thenReturn(List.of());
         when(orderMapper.selectCount(any())).thenReturn(1L);
