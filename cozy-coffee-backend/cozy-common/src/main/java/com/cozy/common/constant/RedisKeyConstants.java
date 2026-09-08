@@ -36,10 +36,6 @@ public final class RedisKeyConstants {
         return "cozy:auth:user:token:" + userId;
     }
 
-    public static String userProfileById(Long userId) {
-        return "cozy:user:profile:" + userId;
-    }
-
     public static String memberProfileByUserId(Long userId) {
         return "cozy:member:profile:" + userId;
     }

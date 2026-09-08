@@ -16,14 +16,12 @@ import com.cozy.user.dto.request.UpdateProfileRequest;
 import com.cozy.user.dto.response.UserDTO;
 import com.cozy.user.entity.User;
 import com.cozy.user.mapper.UserMapper;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.Cursor;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -34,7 +32,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -47,9 +44,7 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
-    private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
-    private final ObjectMapper objectMapper;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // 首单邀请奖励配置（单一事实源 @ConfigurationProperties，见 cozy.user.invite）
@@ -393,37 +388,13 @@ public class UserServiceImpl implements UserService {
         if (userId == null) {
             throw new BusinessException("用户ID不能为空");
         }
-        String cacheKey = RedisKeyConstants.userProfileById(userId);
-        try {
-            Object cachedObj = redisTemplate.opsForValue().get(cacheKey);
-            if (cachedObj != null) {
-                if (cachedObj instanceof UserDTO) {
-                    return (UserDTO) cachedObj;
-                }
-                if (cachedObj instanceof Map) {
-                    return objectMapper.convertValue(cachedObj, UserDTO.class);
-                }
-                if (cachedObj instanceof String) {
-                    return objectMapper.readValue((String) cachedObj, UserDTO.class);
-                }
-            }
-        } catch (Exception e) {
-            log.warn("读取Redis用户资料缓存失败: userId={}", userId, e);
-        }
-
+        // 单行资料直读 DB，不做 Redis 缓存（per-user 廉价查询 + 频繁变更，缓存收益低且易引入 stale）
         User user = userMapper.selectById(userId);
         if (user == null) {
             log.debug("getUserById未找到用户: userId={}", userId);
             return null;
         }
-        UserDTO dto = toDTO(user);
-
-        try {
-            redisTemplate.opsForValue().set(cacheKey, dto, 10, TimeUnit.MINUTES);
-        } catch (Exception e) {
-            log.warn("写入Redis用户资料缓存失败: userId={}", userId, e);
-        }
-        return dto;
+        return toDTO(user);
     }
 
     @Override
@@ -560,7 +531,6 @@ public class UserServiceImpl implements UserService {
 
         try {
             userMapper.updateById(user);
-            stringRedisTemplate.delete(RedisKeyConstants.userProfileById(userId));
         } catch (DuplicateKeyException e) {
             String msg = e.getMessage();
             if (msg.contains("uk_phone")) {
