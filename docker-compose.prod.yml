@@ -1,12 +1,15 @@
 # ============================================================
 # CozyCoffee 生产部署编排（单机 2C8G 演示）
-# 用法（服务器上 /opt/cozycoffee，带 .env 环境变量）：
-#   1) docker compose -f docker-compose.prod.yml up -d mysql redis nacos \
+# 应用镜像来自阿里云 ACR（由 CI 构建，tag = git SHA）；本文件只负责拉取运行，不再本地 --build。
+# 用法（服务器上 /opt/cozycoffee，配合 deploy.sh）：
+#   1) 首次：docker compose -f docker-compose.prod.yml up -d mysql redis nacos \
 #        rocketmq-namesrv rocketmq-broker minio
-#   2) bash scripts/minio/seed.sh        # 首次/换环境：建桶+策略+账号+灌 65 种子图
-#   3) docker compose -f docker-compose.prod.yml up -d --build  # 全量
-# 说明：provider/gateway/web/admin 先本地打镜像；web 为公网 80 入口（含 /api /media 反代），
-#       admin 走独立端口；详情见 surx-note《服务器图片迁移.md》《部署上线前置清单》。
+#      bash scripts/minio/seed.sh        # 首次/换环境：建桶+策略+账号+灌 65 种子图
+#   2) 发布：./deploy.sh <git-sha>       # pull + up -d --wait（healthcheck 门禁）
+#      回滚：./rollback.sh
+# 所需环境变量（.env.prod）：ACR_REGISTRY、ACR_NAMESPACE 及各密钥；
+#   IMAGE_TAG 由 deploy.sh 按发布参数注入（勿长期写在 .env.prod 里）。
+#   详见 surx-note《05-持续交付（CD）实施方案.md》《01-部署操作手册.md》
 # ============================================================
 name: cozycoffee-prod
 
@@ -102,13 +105,16 @@ services:
 
   # ---------- 后端 5 服务 ----------
   user-provider:
-    build:
-      context: ./cozy-coffee-backend
-      dockerfile: Dockerfile.service
-      args: { MODULE_PATH: cozy-provider/cozy-user-provider }
+    image: ${ACR_REGISTRY:?需设置 ACR_REGISTRY}/${ACR_NAMESPACE:?需设置 ACR_NAMESPACE}/user-provider:${IMAGE_TAG:?需设置 IMAGE_TAG}
     <<: *java-limits
     restart: unless-stopped
     depends_on: [mysql, redis, nacos]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health/readiness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
     environment:
       <<: *java-env
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
@@ -118,13 +124,16 @@ services:
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
 
   member-provider:
-    build:
-      context: ./cozy-coffee-backend
-      dockerfile: Dockerfile.service
-      args: { MODULE_PATH: cozy-provider/cozy-member-provider }
+    image: ${ACR_REGISTRY:?需设置 ACR_REGISTRY}/${ACR_NAMESPACE:?需设置 ACR_NAMESPACE}/member-provider:${IMAGE_TAG:?需设置 IMAGE_TAG}
     <<: *java-limits
     restart: unless-stopped
     depends_on: [mysql, redis, nacos]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health/readiness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
     environment:
       <<: *java-env
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_member?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
@@ -135,13 +144,16 @@ services:
       ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
 
   order-provider:
-    build:
-      context: ./cozy-coffee-backend
-      dockerfile: Dockerfile.service
-      args: { MODULE_PATH: cozy-provider/cozy-order-provider }
+    image: ${ACR_REGISTRY:?需设置 ACR_REGISTRY}/${ACR_NAMESPACE:?需设置 ACR_NAMESPACE}/order-provider:${IMAGE_TAG:?需设置 IMAGE_TAG}
     <<: *java-limits
     restart: unless-stopped
     depends_on: [mysql, redis, nacos, rocketmq-namesrv]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/actuator/health/readiness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
     environment:
       <<: *java-env
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
@@ -152,13 +164,16 @@ services:
       ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
 
   mall-provider:
-    build:
-      context: ./cozy-coffee-backend
-      dockerfile: Dockerfile.service
-      args: { MODULE_PATH: cozy-provider/cozy-mall-provider }
+    image: ${ACR_REGISTRY:?需设置 ACR_REGISTRY}/${ACR_NAMESPACE:?需设置 ACR_NAMESPACE}/mall-provider:${IMAGE_TAG:?需设置 IMAGE_TAG}
     <<: *java-limits
     restart: unless-stopped
     depends_on: [mysql, redis, nacos, rocketmq-namesrv]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8084/actuator/health/readiness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
     environment:
       <<: *java-env
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
@@ -169,13 +184,16 @@ services:
       ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
 
   gateway:
-    build:
-      context: ./cozy-coffee-backend
-      dockerfile: Dockerfile.service
-      args: { MODULE_PATH: cozy-gateway }
+    image: ${ACR_REGISTRY:?需设置 ACR_REGISTRY}/${ACR_NAMESPACE:?需设置 ACR_NAMESPACE}/gateway:${IMAGE_TAG:?需设置 IMAGE_TAG}
     mem_limit: 640m
     restart: unless-stopped
     depends_on: [mysql, redis, nacos, rocketmq-namesrv, user-provider, member-provider, order-provider, mall-provider]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health/readiness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
     environment:
       JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8 -Ddubbo.registry.address=nacos://nacos:8848"
       SPRING_DATA_REDIS_HOST: redis
@@ -196,11 +214,7 @@ services:
 
   # ---------- 前端 ----------
   web:
-    build:
-      context: ./cozy-coffee-web
-      args:
-        VITE_API_BASE_URL: ${WEB_API_BASE:-}
-        VITE_IMAGE_BASE_URL: ${WEB_IMAGE_BASE:-/media/cozycoffee}
+    image: ${ACR_REGISTRY:?需设置 ACR_REGISTRY}/${ACR_NAMESPACE:?需设置 ACR_NAMESPACE}/web:${IMAGE_TAG:?需设置 IMAGE_TAG}
     restart: unless-stopped
     depends_on: [gateway]
     ports:
@@ -208,11 +222,7 @@ services:
     mem_limit: 96m
 
   admin:
-    build:
-      context: ./cozy-coffee-admin
-      args:
-        VITE_API_BASE_URL: ${ADMIN_API_BASE:-}
-        VITE_IMAGE_BASE_URL: ${ADMIN_IMAGE_BASE:-}
+    image: ${ACR_REGISTRY:?需设置 ACR_REGISTRY}/${ACR_NAMESPACE:?需设置 ACR_NAMESPACE}/admin:${IMAGE_TAG:?需设置 IMAGE_TAG}
     restart: unless-stopped
     depends_on: [gateway]
     ports:

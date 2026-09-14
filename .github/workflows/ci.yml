@@ -1,12 +1,15 @@
-# CI for the CozyCoffee monorepo
+# CI/CD for the CozyCoffee monorepo
 #
 # - Backend: Maven multi-module (Java 17 per cozy-coffee-backend/pom.xml)
 # - Frontend: three Vue apps (web / admin / mobile), each runs `npm ci` + `npm test`
+# - CD（build-push）：仅当 push 到 main **且测试全部通过**时，构建 7 个镜像并推送阿里云 ACR（tag = git SHA）。
+#   生产发布不在 CI 内：由人工在服务器执行 `./deploy.sh <git-sha>`（见 deploy/）。
 name: CI
 
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   backend:
@@ -63,3 +66,80 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+  # ---------- CD：构建并推送镜像（仅 main 且测试通过） ----------
+  build-push:
+    name: Build & push images (ACR)
+    needs: [backend, frontend]
+    # pull_request 不推镜像；仅 main 分支（push 或手动 dispatch）
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      ACR_REGISTRY: ${{ vars.ACR_REGISTRY }}     # 例：registry.cn-hangzhou.aliyuncs.com
+      ACR_NAMESPACE: ${{ vars.ACR_NAMESPACE }}   # 例：cozycoffee（ACR 个人版仓储一级名）
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build backend jars (once)
+        working-directory: cozy-coffee-backend
+        run: mvn -B -DskipTests package
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build & push backend images (5)
+        # 构建上下文 = 各模块目录（COPY target/*.jar 相对 context 解析）
+        run: |
+          set -euo pipefail
+          : "${ACR_REGISTRY:?未配置仓库变量 ACR_REGISTRY}"
+          : "${ACR_NAMESPACE:?未配置仓库变量 ACR_NAMESPACE}"
+          TAG="${GITHUB_SHA}"
+          while IFS=: read -r name ctx; do
+            [ -z "$name" ] && continue
+            echo "==> ${name}  (context: ${ctx})"
+            docker build \
+              -f cozy-coffee-backend/Dockerfile.runtime \
+              -t "${ACR_REGISTRY}/${ACR_NAMESPACE}/${name}:${TAG}" \
+              "${ctx}"
+            docker push "${ACR_REGISTRY}/${ACR_NAMESPACE}/${name}:${TAG}"
+          done <<'EOF'
+          gateway:cozy-coffee-backend/cozy-gateway
+          user-provider:cozy-coffee-backend/cozy-provider/cozy-user-provider
+          member-provider:cozy-coffee-backend/cozy-provider/cozy-member-provider
+          order-provider:cozy-coffee-backend/cozy-provider/cozy-order-provider
+          mall-provider:cozy-coffee-backend/cozy-provider/cozy-mall-provider
+          EOF
+
+      - name: Build & push frontend images (2)
+        # VITE_* 在此「烤」进镜像：改了必须重新构建镜像（发新 SHA）
+        run: |
+          set -euo pipefail
+          : "${ACR_REGISTRY:?未配置仓库变量 ACR_REGISTRY}"
+          : "${ACR_NAMESPACE:?未配置仓库变量 ACR_NAMESPACE}"
+          TAG="${GITHUB_SHA}"
+          echo "==> web"
+          docker build -t "${ACR_REGISTRY}/${ACR_NAMESPACE}/web:${TAG}" \
+            --build-arg VITE_API_BASE_URL= \
+            --build-arg VITE_IMAGE_BASE_URL=/media/cozycoffee \
+            cozy-coffee-web
+          docker push "${ACR_REGISTRY}/${ACR_NAMESPACE}/web:${TAG}"
+          echo "==> admin"
+          docker build -t "${ACR_REGISTRY}/${ACR_NAMESPACE}/admin:${TAG}" \
+            --build-arg VITE_API_BASE_URL= \
+            --build-arg VITE_IMAGE_BASE_URL= \
+            cozy-coffee-admin
+          docker push "${ACR_REGISTRY}/${ACR_NAMESPACE}/admin:${TAG}"

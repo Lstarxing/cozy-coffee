@@ -1,0 +1,19 @@
+# 运行时镜像：只打包「已构建好的可执行 jar」。
+# CI 里先在 cozy-coffee-backend 根跑一次 `mvn -B -DskipTests package`，再为每个服务构建镜像。
+#
+# 注意：COPY 的路径是相对 **build context** 解析的（不是相对 Dockerfile 所在目录）。
+#   所以这里用「可执行模块目录」作为 context，`COPY target/*.jar` 即取该模块的构建产物，
+#   同时也避开了 backend 根目录 .dockerignore 对 `**/target/` 的排除。
+#   例：docker build -f cozy-coffee-backend/Dockerfile.runtime \
+#         -t <registry>/<namespace>/gateway:<sha> cozy-coffee-backend/cozy-gateway
+FROM eclipse-temurin:17-jre
+
+WORKDIR /app
+
+# target/*.jar 只匹配 repackage 后的可执行 jar（不含 *.jar.original）
+ARG JAR_FILE=target/*.jar
+COPY ${JAR_FILE} app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java","-XX:+UseContainerSupport","-XX:MaxRAMPercentage=75.0","-Dfile.encoding=UTF-8","-jar","/app/app.jar"]

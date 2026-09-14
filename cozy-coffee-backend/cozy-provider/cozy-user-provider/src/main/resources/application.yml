@@ -1,6 +1,12 @@
 server:
   port: 8081
 
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
 spring:
   application:
     name: cozy-user-provider
