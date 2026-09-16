@@ -111,10 +111,10 @@ services:
     depends_on: [mysql, redis, nacos]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health/readiness || exit 1"]
-      interval: 10s
+      interval: 15s
       timeout: 5s
-      retries: 12
-      start_period: 60s
+      retries: 24
+      start_period: 180s
     environment:
       <<: *java-env
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
@@ -130,10 +130,10 @@ services:
     depends_on: [mysql, redis, nacos]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health/readiness || exit 1"]
-      interval: 10s
+      interval: 15s
       timeout: 5s
-      retries: 12
-      start_period: 60s
+      retries: 24
+      start_period: 180s
     environment:
       <<: *java-env
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_member?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
@@ -150,10 +150,10 @@ services:
     depends_on: [mysql, redis, nacos, rocketmq-namesrv]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8083/actuator/health/readiness || exit 1"]
-      interval: 10s
+      interval: 15s
       timeout: 5s
-      retries: 12
-      start_period: 60s
+      retries: 24
+      start_period: 180s
     environment:
       <<: *java-env
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
@@ -170,10 +170,10 @@ services:
     depends_on: [mysql, redis, nacos, rocketmq-namesrv]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8084/actuator/health/readiness || exit 1"]
-      interval: 10s
+      interval: 15s
       timeout: 5s
-      retries: 12
-      start_period: 60s
+      retries: 24
+      start_period: 180s
     environment:
       <<: *java-env
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
@@ -190,10 +190,10 @@ services:
     depends_on: [mysql, redis, nacos, rocketmq-namesrv, user-provider, member-provider, order-provider, mall-provider]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health/readiness || exit 1"]
-      interval: 10s
+      interval: 15s
       timeout: 5s
-      retries: 12
-      start_period: 60s
+      retries: 24
+      start_period: 180s
     environment:
       JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8 -Ddubbo.registry.address=nacos://nacos:8848"
       SPRING_DATA_REDIS_HOST: redis

@@ -33,7 +33,8 @@ cur="$(cat "${CURRENT_FILE}" 2>/dev/null || true)"
 echo "==> 发布 CozyCoffee：IMAGE_TAG=${IMAGE_TAG}（当前成功版本：${cur:-无}）"
 "${COMPOSE[@]}" pull
 
-if ! "${COMPOSE[@]}" up -d --remove-orphans --wait --wait-timeout 180; then
+# 2C8G 上 5 个 JVM 同时冷启动约需 7~8 分钟（实测），故 wait 超时给到 600s
+if ! "${COMPOSE[@]}" up -d --remove-orphans --wait --wait-timeout 600; then
   echo "" >&2
   echo "❌ 发布失败：服务未在超时内就绪（容器可能已切到 ${IMAGE_TAG}）。" >&2
   if [ -n "${cur}" ]; then
