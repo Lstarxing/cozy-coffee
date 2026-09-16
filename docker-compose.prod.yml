@@ -16,7 +16,7 @@ name: cozycoffee-prod
 x-java-limits: &java-limits
   mem_limit: 512m
   environment: &java-env
-    JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8 -Ddubbo.registry.address=nacos://nacos:8848"
+    JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF-8 -Ddubbo.registry.address=nacos://nacos:8848"
     JWT_SECRET: ${JWT_SECRET:?需设置}
 
 services:
@@ -195,7 +195,7 @@ services:
       retries: 24
       start_period: 180s
     environment:
-      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8 -Ddubbo.registry.address=nacos://nacos:8848"
+      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF-8 -Ddubbo.registry.address=nacos://nacos:8848"
       SPRING_DATA_REDIS_HOST: redis
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
       ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
