@@ -31,7 +31,16 @@ COMPOSE=(docker compose -p cozycoffee --env-file "${ENV_FILE}" -f "${COMPOSE_FIL
 cur="$(cat "${CURRENT_FILE}" 2>/dev/null || true)"
 
 echo "==> 发布 CozyCoffee：IMAGE_TAG=${IMAGE_TAG}（当前成功版本：${cur:-无}）"
-"${COMPOSE[@]}" pull
+
+if ! "${COMPOSE[@]}" pull; then
+  echo "" >&2
+  echo "❌ 发布失败：镜像拉取失败（IMAGE_TAG=${IMAGE_TAG}）。" >&2
+  echo "   常见原因：tag 不存在 / ACR 未登录 / ACR_REGISTRY 写错。" >&2
+  if [ -n "${cur}" ]; then
+    echo "   本次未改动任何容器；当前仍运行版本：${cur}" >&2
+  fi
+  exit 1
+fi
 
 # 2C8G 上 5 个 JVM 同时冷启动约需 7~8 分钟（实测），故 wait 超时给到 600s
 if ! "${COMPOSE[@]}" up -d --remove-orphans --wait --wait-timeout 600; then
