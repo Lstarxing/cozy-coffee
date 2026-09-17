@@ -8,6 +8,7 @@ application-prod.properties
 .env
 .env.local
 .env.production
+.env.*.local
 *.key
 *.pem
 *.jks  # Java证书文件
