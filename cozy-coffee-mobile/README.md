@@ -56,8 +56,10 @@ cozy-coffee-mobile/
 │  ├─ App.vue                 App 生命周期、会话与网络恢复
 │  ├─ pages.json              页面路由和 TabBar
 │  └─ uni.scss                全局设计 Token
-├─ .env.development           本地开发接口地址
+├─ .env.development           本地后端基址（dev / dev:mp-weixin）
+├─ .env.production            构建基址占位（build:mp-weixin）
 ├─ .env.test                  自动化测试配置
+├─ .env.[mode].local          本机临时覆盖基址（已 gitignore，优先级最高，见「常见问题」）
 ├─ package.json               启动、构建和测试命令
 └─ vite.config.js             H5 代理与 uni-app 构建配置
 ```
@@ -87,16 +89,14 @@ npm install
 ```powershell
 cd C:\Users\dell\Desktop\CozyCoffee\cozy-coffee
 $env:MYSQL_ROOT_PASSWORD="123456"
-docker compose up -d mysql redis nacos rocketmq-namesrv rocketmq-broker
+docker compose up -d mysql redis nacos rocketmq-namesrv rocketmq-broker minio
 docker compose ps
 ```
 
-首次使用新的移动端 Checkout 代码时执行数据库迁移：
+> `minio` 必须一起起：商品图与营销图都存在 MinIO 桶里（`VITE_IMAGE_BASE_URL` 指向它），漏掉会整站图片 404。
 
-```powershell
-Get-Content -Raw .\cozy-coffee-backend\mysql\migrations\V20260714_014__add_order_idempotency_key.sql |
-  docker exec -i cozy-mysql mysql -uroot -p123456 cozy_order
-```
+数据库表与种子数据由各 Provider 启动时的 **Flyway 自动迁移**（`src/main/resources/db/migration`），无需手工执行 SQL。
+若迁移失败，先看 Provider 启动日志里的 Flyway 报错。注意 `cozy-coffee-backend/mysql/migrations/` 是**历史手工脚本目录，Flyway 不读取**，别照它手工灌库。
 
 然后在 IDEA 中依次启动：
 
@@ -197,11 +197,24 @@ npm run build:mp-weixin
 
 ### 微信工具请求不到后端
 
-微信开发者工具在电脑上可以使用 `127.0.0.1:8080`。如果使用手机预览，需要把 `.env.development` 的 `VITE_API_BASE_URL` 改为电脑局域网 IP，然后重新构建。
+微信开发者工具在电脑上可直接用默认的 `127.0.0.1:8080`（值在 `.env.development`）。
+
+要改成别的地址（真机预览需电脑局域网 IP、或直连服务器），**用 `.env.[mode].local`**：
+
+| 场景 | 建哪个文件 | 生效于 |
+|---|---|---|
+| dev 热更连服务器 / 局域网 IP | `.env.development.local` | `npm run dev:mp-weixin` |
+| build 产物连服务器 | `.env.production.local` | `npm run build:mp-weixin` |
+
+两个文件都已 gitignore（公网 IP 不会入库），改完按对应命令重新跑即可。
+
+⚠️ **不要用 `.env.local`**：uni-app（Vite）读取优先级为 `.env.[mode].local > .env.[mode] > .env.local > .env`，
+`.env.local` 会被 `.env.production` / `.env.development` 压过，对 mp-weixin 构建**完全无效**。
 
 ### 提示 Unknown column `idempotency_key`
 
-说明尚未执行 `V20260714_014__add_order_idempotency_key.sql`。
+该列由 Flyway 迁移 `V20260714_014__add_order_idempotency_key.sql` 添加，Order Provider 启动时会自动应用。
+若仍报错，说明迁移没跑成功——**先看 Order Provider 启动日志里的 Flyway 报错**（常见原因：连不上库、迁移被跳过），不要手工 ALTER 补列。
 
 ### npm install 出现 Vue/Pinia 冲突
 

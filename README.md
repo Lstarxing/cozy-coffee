@@ -17,10 +17,9 @@
 ![uni-app](https://img.shields.io/badge/uni--app-%E5%BE%AE%E4%BF%A1%E5%B0%8F%E7%A8%8B%E5%BA%8F-2FB344?logo=wechat&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)
 
-![License](https://img.shields.io/github/license/Lstarxing/cozy-coffee)
 ![GitHub Repo stars](https://img.shields.io/github/stars/Lstarxing/cozy-coffee?style=social)
 
-**高并发咖啡点单与会员运营全链路｜Web + 微信小程序 + 管理端三端｜RocketMQ 事件驱动一致性｜压测驱动性能优化**
+**咖啡点单与会员运营全链路｜Web + 微信小程序 + 管理端三端｜RocketMQ 事件驱动一致性｜可复现的性能与并发验证**
 
 </div>
 
@@ -39,20 +38,21 @@ CozyCoffee 是面向咖啡零售场景的微服务业务系统，覆盖用户认
 - **优惠券系统**：发券模板配置化 + 抵扣策略化（`CouponCalculator` 接口 + 9 类券按类型分发）+ L1 主券 / L2 辅券组合引擎，合法性校验收敛到后端单一事实源，前端不再复刻营销规则
 - **V2 商品体系**：统一规格校验与定价核心（杯型 / 出品方式定价）、加料组权威解析、咖啡内容层（8 产区 / 8 单品豆 / 2 拼配）数据驱动，三端点单 / 菜单 / 详情同源
 - **Redis 深度应用**
-  - String：菜单等热点数据缓存（本地 + Redis 多级缓存、空值缓存、TTL 抖动、互斥重建锁）
+  - String：菜单等热点数据缓存（本地 + Redis 多级缓存、空值缓存、TTL 抖动、本地 SingleFlight、Redis 重建锁）
   - Bitmap：签到日历与连续签到统计
   - ZSet：订单超时到期队列
-- **事件驱动一致性**：RocketMQ 解耦下单 / 完成 / 取消的副作用；跨库退款走本地 **Outbox** 可靠投递、券回滚消费端 **Inbox** 去重，幂等消费 + 失败重试保证最终一致不丢消息
+- **菜单查询优化**：批量预加载加料组、咖啡豆与拼配档案，消除 DTO 转换 N+1；一次完整菜单重建的 SQL 从 **77 条降至 6 条**
+- **事件驱动一致性**：RocketMQ 解耦订单创建、完成与取消后的业务处理；`ORDER_COMPLETED` 和 `ORDER_CANCELLED` 在订单事务内写入 **Outbox**，由定时 Relay 可靠投递，券回滚消费端通过 **Inbox** 按事件 ID 去重；`ORDER_CREATED` 由 Gateway 使用 `syncSend` 投递并重试，SSE 推送及缓存失效由消费者异步处理
 - **稳定性治理**：分布式锁、CAS 乐观锁（防超卖 / 防重复发放 / 防重复领取）、幂等防重、订单状态机、降级兜底
-- **压测驱动优化**（Locust，500 并发）：吞吐量 **+8.6%** · 平均响应时间 **-19.61%** · P99 **-16%** · 0 失败请求
+- **性能与并发验证**：使用 k6 在隔离环境进行多轮 A/B 测试；菜单接口在 200 RPS 下连续 3 轮无失败或丢弃，冷缓存 200 并发连续 3 轮均返回有效菜单且每轮只重建 1 次
 
 ## 技术栈
 | 层 | 技术 |
 |---|---|
 | 后端 | Java 17 · Spring Boot 3.4 · Dubbo 3.2 · Nacos 2.2 · RocketMQ 5.3 · MyBatis-Plus 3.5 · Flyway 数据库迁移 |
-| 数据与缓存 | MySQL 8.0 · Redis 7 · MinIO 对象存储（S3 兼容，部署默认；网关 `storage.type` 可切阿里云 OSS / 本地文件） |
+| 数据与缓存 | MySQL 8.0 · Redis 7 · MinIO 对象存储（S3 兼容，部署使用；本地开发走本地文件） |
 | 前端 | Vue 3（Web / Admin）· uni-app 微信小程序 · Element Plus · Pinia |
-| 工程与质量 | Maven · JUnit 5 / Vitest · GitHub Actions CI · Locust 压测 |
+| 工程与质量 | Maven · JUnit 5 / Vitest · GitHub Actions CI · k6 压测 |
 
 ## 系统架构图
 ```mermaid
@@ -70,6 +70,15 @@ flowchart LR
     OS --> MYSQL3[(MySQL order)]
     PS --> MYSQL4[(MySQL mall)]
 
+    OS --> OUTBOX[(Message Outbox)]
+    OUTBOX --> MQ[RocketMQ]
+    G -->|ORDER_CREATED syncSend| MQ
+    MQ --> G
+    MQ --> MS
+    MQ --> PS
+
+    G --> MINIO[(MinIO)]
+
     US --> R[(Redis)]
     MS --> R
     OS --> R
@@ -82,17 +91,17 @@ flowchart LR
     G --> N
 ```
 
-> 网关以 RocketMQ 异步派发业务事件（积分发放、SSE 推送、券回滚等），下单 / 完成 / 取消主流程不被副作用阻塞。
+> Gateway 在订单创建成功后使用 `syncSend` 投递 `ORDER_CREATED`，等待 Broker ACK 后返回；SSE 推送和管理端缓存失效由消费者异步处理。订单完成与取消事件在订单事务内写入 Outbox，再由 Relay 投递至 RocketMQ。
 
 ## 事件驱动与最终一致性
-订单域只负责状态流转，奖励与通知全部通过 `cozy-order-events` Topic 异步派发；跨库操作以本地 **Outbox** 落库 + 定时投递，消费端以 **Inbox** 去重 + 幂等保证不丢不重。
+订单完成与取消事件采用事务内 Outbox：业务状态与待投递事件在同一事务中提交，Relay 定时扫描并发送。优惠券回滚消费端通过 Inbox 去重；订单创建事件由 Gateway 使用 `syncSend` 投递，消费者异步处理 SSE 广播和管理端缓存失效。
 
 ```
 cozy-order-events
- ├── order_created   → gateway SSE 广播 + 管理端缓存失效       (BROADCASTING)
- ├── order_completed → 积分 / EXP / 首单奖励 / 月度任务        (CLUSTERING)
+ ├── order_created   → Gateway syncSend → SSE 广播 + 管理端缓存失效 (BROADCASTING)
+ ├── order_completed → Order Outbox → 积分 / EXP / 首单奖励 / 月度任务 (CLUSTERING)
  │                    → gateway SSE 完成通知                  (BROADCASTING)
- └── order_cancelled → mall 券回滚（rollbackEventId 去重）      (CLUSTERING)
+ └── order_cancelled → Order Outbox → mall 券回滚（Inbox 去重） (CLUSTERING)
 
 积分退款 / 兑换回滚补偿：points_refund_outbox 本地 Outbox → 定时 relay 投递
 ```
@@ -113,14 +122,14 @@ sequenceDiagram
     OS->>RS: 校验缓存/规则数据
     OS->>DB: 写订单与明细
     OS-->>GW: 返回订单结果
-    GW->>MQ: sendOneWay OrderCreatedEvent
+    GW->>MQ: syncSend OrderCreatedEvent（等待 Broker ACK）
     GW-->>C: 下单成功响应
     MQ-->>GW: 广播消费(BROADCASTING)
     GW->>RS: 失效管理端订单与看板缓存
     GW->>SSE: 推送新订单事件
 ```
 
-> 说明：下单响应不再等待 SSE 广播与缓存清理这两个副作用完成；`order_completed` / `order_cancelled` 分别由积分、首单、月度任务、券回滚等消费者订阅，取消订单的跨库券回滚通过 Outbox 保证最终一致。
+> 说明：下单响应会等待 `ORDER_CREATED` 获得 Broker ACK，但不会等待 SSE 广播与缓存失效等消费端逻辑完成；`ORDER_COMPLETED` 和 `ORDER_CANCELLED` 由 Order Provider 在事务内写入 Outbox，分别触发积分、成长值、首单、月度任务和优惠券回滚。
 
 ## 缓存策略图
 ```mermaid
@@ -130,9 +139,14 @@ flowchart TD
     L1 -- 否 --> L2{Redis命中?}
     L2 -- 是 --> RET2[回填本地缓存并返回]
     L2 -- 否 --> LOCK{获取重建锁?}
-    LOCK -- 否 --> DEG[短等待后重试/降级返回]
+    LOCK -- 否 --> WAIT[有界随机退避并等待Redis结果]
+    WAIT --> READY{Redis结果已就绪?}
+    READY -- 是 --> RET2
+    READY -- 否 --> FALLBACK[单实例受控数据库兜底]
+    FALLBACK --> DBQ
     LOCK -- 是 --> DBQ[查询MySQL]
-    DBQ --> W1[写入Redis 含TTL抖动]
+    DBQ --> BATCH[批量组装DTO 规避N+1]
+    BATCH --> W1[写入Redis 含TTL抖动]
     W1 --> W2[写入本地缓存]
     W2 --> RET3[返回结果]
 ```
@@ -161,7 +175,7 @@ flowchart TD
 - scripts：测试与运维脚本
 
 ## Docker 部署说明
-`docker-compose.yml` 已默认只拉起基础设施（MySQL / Redis / Nacos / RocketMQ），五个后端微服务在 IDE 本地运行，Web 与管理端亦可选择 Docker 或本地 `npm run dev`。需要全链路 Docker 验证时，取消 `cozy-*-provider` / `cozy-gateway` 服务注释后 `docker compose up -d --build`。
+`docker-compose.yml` 默认只拉起基础设施（MySQL、Redis、Nacos、RocketMQ 和 MinIO），4 个 Provider 与 Gateway 在 IDE 本地运行，Web 与管理端可选择 Docker 或本地 `npm run dev`。需要全链路 Docker 验证时，取消 `cozy-*-provider` / `cozy-gateway` 服务注释后执行 `docker compose up -d --build`。
 
 基础设施启动：
 ```bash
@@ -175,15 +189,47 @@ docker compose up -d
 
 ## 测试与 CI
 - 后端：100+ 单元测试（订单状态机 / 定价与加料 / 奖励发放 / 券计算与组合 / 积分一致性），JUnit 5 + Spring Boot Test
-- E2E 全链路测试覆盖注册、登录、下单、取消与 7 种券类型边界
+- 菜单缓存并发回归：200 个冷缓存请求全部返回有效菜单，并验证同一实例只执行一次顶层重建
+- DTO 批量转换回归：验证加料组、咖啡豆和拼配档案使用批量查询，不再逐商品执行 `selectById`
+- 后端测试覆盖订单状态流转、定价与加料、优惠券计算与组合、用券下单、取消回滚、奖励发放和积分一致性；另提供积分及优惠券业务链路验证脚本
 - 前端：Web / 小程序 / 管理端 Vitest 单测
 - GitHub Actions：JDK17 + `mvn test` + 三端前端测试矩阵，自动判败
 
 ## 压测说明
-- 工具：Locust
-- 场景：高频读 + 下单混合压测
-- 并发：500
-- 指标：QPS、平均 RT、P95/P99、错误率
+- **工具与模型**：k6 1.5.0；稳态测试使用固定到达率开放模型，突发测试使用并发 VU
+- **环境隔离**：专用 Nacos、RocketMQ、MySQL Schema 和 Redis DB；Gateway、Order Provider 各限制为 1 CPU / 512 MiB
+- **统计口径**：正式 A/B 使用 5 轮中位数，容量与突发测试使用 3 轮中位数；不取单轮最好成绩
+
+### 菜单缓存 A/B
+
+该组测试完成于 DTO N+1 修复前；对照双方使用相同代码、数据和容器资源，仅切换 DB 直读与本地缓存 + Redis 模式。测试负载为 20 RPS、60 秒/轮，各运行 5 轮。
+
+| 模式 | 平均响应时间中位数 | P95 中位数 | P99 中位数 | HTTP 失败 | 丢弃迭代 |
+|---|---:|---:|---:|---:|---:|
+| DB 直读 | 40.879 ms | 64.610 ms | 90.488 ms | 0 | 0 |
+| 本地缓存 + Redis | 3.956 ms | 5.909 ms | 8.005 ms | 0 | 0 |
+
+缓存模式下平均响应时间降低 **90.32%**，P99 降低 **91.15%**。在 200 RPS 下连续运行 3 轮，共完成 36,003 次请求，P95 / P99 中位数为 3.991 / 7.499 ms，无失败或丢弃。
+
+### DTO N+1 优化
+
+使用 DB 直读模式按相同的 20 RPS、60 秒、5 轮口径复测，避免缓存命中掩盖查询成本。
+
+| 指标 | 优化前 | 优化后 | 变化 |
+|---|---:|---:|---:|
+| 完整菜单重建 SQL | 77 | 6 | -92.21% |
+| 平均响应时间中位数 | 40.879 ms | 10.389 ms | -74.59% |
+| P95 中位数 | 64.610 ms | 15.938 ms | -75.33% |
+| P99 中位数 | 90.488 ms | 22.614 ms | -75.01% |
+| 5 轮 MySQL 语句数中位数 | 92,473 | 7,208 | -92.21% |
+
+### 冷缓存与下单正确性
+
+- 冷缓存 200 并发连续 3 轮均为 200/200 非空、0 HTTP 错误、0 业务错误，每轮只记录 1 次缓存更新和 6 条 SQL。
+- 完整“购物车预览 → 创建订单 → RocketMQ 发布”链路以 5 个工作流/秒运行 5 轮，共创建并落库 1,503 笔订单，0 业务失败、0 丢弃；创建订单 P95 / P99 中位数为 54.806 / 61.857 ms。
+- 50 个并发请求使用同一个幂等键创建订单时，1 次首次创建、49 次幂等重放，数据库只生成 1 笔订单。
+
+> 上述数据用于说明当前本地隔离环境下的优化效果与并发正确性，不代表线上容量上限。
 
 ## 前端界面预览
 
@@ -260,11 +306,6 @@ docker compose up -d
   <img width="24%" src="docs/images/frontend-mobile/15-signin.png" alt="每日签到">
   <img width="24%" src="docs/images/frontend-mobile/17-challenge.png" alt="月度挑战">
 </p>
-
-### 压测与可视化证据
-目标：展示性能优化的结果证据。
-
-![Locust 压测结果](docs/images/frontend-common/01-locust-result.png)
 
 ## 作者
 - Name: 苏瑞鑫

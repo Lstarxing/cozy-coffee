@@ -62,7 +62,7 @@ cozy-coffee-web/
 │  │  ├─ couponRules.js        纯函数：6 种券型验证与折扣计算
 │  │  ├─ date.js               日期/时间格式化
 │  │  ├─ homepageMembership.js 积分收益、兑换成本、进度计算
-│  │  └─ image.js              图片 URL 解析（API 前缀 / CDN 回退）
+│  │  └─ image.js              图片 URL 解析（统一拼 VITE_IMAGE_BASE_URL，缺图回退本地兜底图）
 │  └─ views/
 │     ├─ Home.vue              首页（hero + 产地旅程 + 菜单 + 会员板块）
 │     ├─ About.vue             关于页（品牌故事、团队、拼配实验室）
@@ -79,7 +79,8 @@ cozy-coffee-web/
 │        ├─ MyCoupons.vue      我的券包
 │        ├─ MemberBenefits.vue 会员权益对比（5 等级）
 │        └─ components/        会员仪表盘子组件
-├─ .env.development            本地开发环境变量
+├─ .env.development            本地开发环境变量（生产基址由 CI 构建镜像时 --build-arg 注入）
+├─ .env.[mode].local           本机临时覆盖（已 gitignore，优先级最高）
 ├─ .eslintrc.cjs               ESLint 配置
 ├─ .prettierrc                 Prettier 配置
 ├─ Dockerfile                  多阶段构建（Node 20 → Nginx）
@@ -111,9 +112,11 @@ Web 端与移动端共用同一套后端。在仓库根目录启动基础设施�
 ```powershell
 cd C:\Users\dell\Desktop\CozyCoffee\cozy-coffee
 $env:MYSQL_ROOT_PASSWORD="123456"
-docker compose up -d mysql redis nacos rocketmq-namesrv rocketmq-broker
+docker compose up -d mysql redis nacos rocketmq-namesrv rocketmq-broker minio
 docker compose ps
 ```
+
+> `minio` 必须一起起：所有商品图与营销图都存在 MinIO 桶里（由 `VITE_IMAGE_BASE_URL` 指向），漏掉会整站图片 404。
 
 在 IDEA 中依次启动 5 个微服务：
 
@@ -178,10 +181,12 @@ node scripts/homepage-membership.test.mjs
 
 | 变量 | 开发环境值 | 说明 |
 |------|-----------|------|
-| `VITE_API_BASE_URL` | （空） | API 基础路径，为空时走 Vite 代理 `/api` |
-| `VITE_API_TARGET` | `http://localhost:8080` | 代理目标地址 |
-| `VITE_ASSET_BASE_URL` | OSS CDN URL | 静态资源基址，为空时用本地图片 |
-| `VITE_MENU_IMAGE_BASE` | OSS CDN 路径 | 菜单位图具体路径 |
+| `VITE_API_BASE_URL` | （空） | API 基础路径。为空时走相对 `/api`：开发由 Vite 代理转发，生产由 Nginx 反代到 Gateway |
+| `VITE_API_TARGET` | `http://localhost:8080` | 仅供 Vite dev server 代理使用 |
+| `VITE_IMAGE_BASE_URL` | `http://127.0.0.1:9000/cozycoffee` | 图片统一基址。DB 只存相对路径（`/images/...`），前端拼此基址；生产值形如 `http://<公网IP>/media/cozycoffee`（Nginx 反代 MinIO） |
+
+> `VITE_ASSET_BASE_URL` / `VITE_MENU_IMAGE_BASE` 已并入 `VITE_IMAGE_BASE_URL`，**代码不再读取**；
+> `.env.*` 中仍留有同名空占位，无需填写。
 
 ## 常见问题
 
@@ -191,7 +196,7 @@ node scripts/homepage-membership.test.mjs
 
 ### 菜单或首页图片不显示
 
-生产环境图片托管在阿里云 OSS，通过 `VITE_ASSET_BASE_URL` 和 `VITE_MENU_IMAGE_BASE` 配置。本地开发时优先使用 `public/images/` 中的本地图片。如果图片缺失，`getImageUrl()` 有回退逻辑。
+生产环境图片托管在服务器 MinIO 桶，经 Nginx `/media/cozycoffee` 反代对外；前端统一由 `VITE_IMAGE_BASE_URL` 拼接（DB 只存相对路径）。本地开发时该变量指向本地 MinIO（`http://127.0.0.1:9000/cozycoffee`）。如果图片缺失，`getImageUrl()` 有回退逻辑（默认 `/images/menu/floral.svg`）。
 
 ### Element Plus 组件未注册
 

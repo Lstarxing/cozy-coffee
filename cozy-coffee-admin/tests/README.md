@@ -4,21 +4,31 @@
 
 ### 1. 前置准备（只需执行一次）
 
-```bash
-# 执行数据库迁移
-mysql -u root -p cozy_coffee < cozy-coffee-backend/mysql/admin_role_migration.sql
+数据库表与种子数据由各 Provider 启动时的 **Flyway 自动迁移**，**无需手工执行 SQL**。
 
-# 确保有管理员账号（如果没有，创建一个）
-mysql -u root -p cozy_coffee -e "UPDATE users SET role = 'admin' WHERE id = 1;"
+唯一要手动做的是准备两个测试账号 —— 脚本里账号是**写死的**，所以必须同名同密码：
+
+| 角色 | 账号 | 密码 | 用途 |
+|---|---|---|---|
+| 管理员 | `testadmin` | `123456` | 正常访问 /api/admin/* |
+| 普通用户 | `testuser` | `123456` | 验证权限拦截 |
+
+```bash
+# 先在前端注册这两个账号，再把 testadmin 提升为管理员（users 表在 cozy_user 库）
+docker exec -i cozy-mysql mysql -uroot -p123456 -e \
+  "UPDATE cozy_user.users SET role='admin' WHERE email='<testadmin 注册用的邮箱>';"
 ```
+
+不改账号的话就照上表造；想用别的账号，改 `tests/admin-api-test.js` 里的 `ADMIN_CREDENTIALS` / `USER_CREDENTIALS` 常量。
+
+> ⚠️ 早期文档里的 `cozy_coffee` 库、`mysql/admin_role_migration.sql`、`mysql/test_accounts.sql` **都已不存在**，
+> 脚本头部注释里那两条 `mysql -u root -p cozy_coffee < ...` 命令也已失效（注释里的密码 `admin123`/`user123` 同样与代码不符）。
 
 ### 2. 启动服务
 
 ```bash
-# 后端（多个终端，或用 IDE 启动）
-cd cozy-coffee-backend
-mvn clean install -DskipTests
-# 启动各个 provider 和 gateway
+# 后端：在仓库根目录起基础设施（注意要含 minio），再用 IDE 启动 5 个微服务
+docker compose up -d mysql redis nacos rocketmq-namesrv rocketmq-broker minio
 
 # 前端管理端
 cd cozy-coffee-admin
@@ -130,18 +140,18 @@ node tests/admin-api-test.js
 
 ### Q: 测试脚本报错 "管理员登录失败"
 A: 检查：
-1. 后端服务是否启动
-2. 数据库中是否有用户
-3. 用户的 role 是否为 'admin'
+1. 后端服务是否启动（默认 `http://localhost:8080/api`）
+2. 是否已注册 `testadmin` / `testuser` 两个账号（账号写死在脚本第 81~82 行）
+3. `testadmin` 的 `role` 是否为 `'admin'`（`cozy_user.users` 表）
 
 ### Q: 安全性测试失败
 A: 检查：
-1. 是否执行了数据库迁移脚本
-2. WebConfig 是否正确注册了 AdminAuthInterceptor
+1. `testadmin` 的 role 是否已改为 `admin`
+2. Gateway 是否加载了 `AdminAuthInterceptor`（见 `cozy-gateway` 的 `WebConfig`）
 3. 重新编译并重启后端服务
 
 ### Q: 商品CRUD测试失败
 A: 检查：
-1. OrderServiceImpl 是否正确实现了所有方法
-2. AdminController 是否添加了所有端点
-3. CoffeeProductDTO 是否正确导入
+1. Order Provider 是否正常启动（商品接口走 order 域）
+2. Gateway 的管理端控制器是否齐全：`AdminOrderController` / `AdminUserController` / `AdminMallController` / `AdminDashboardController`
+3. 接口返回的 DTO 字段是否与前端一致（如 `CoffeeProductDTO`）
