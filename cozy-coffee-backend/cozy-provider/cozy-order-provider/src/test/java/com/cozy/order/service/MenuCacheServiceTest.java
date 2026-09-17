@@ -2,7 +2,12 @@ package com.cozy.order.service;
 
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.order.dto.response.CoffeeProductDTO;
+import com.cozy.order.entity.CoffeeBean;
+import com.cozy.order.entity.CoffeeBlend;
 import com.cozy.order.entity.CoffeeProduct;
+import com.cozy.order.entity.CoffeeProductAddon;
+import com.cozy.order.entity.CoffeeProductAddonGroup;
+import com.cozy.order.entity.ProductAddon;
 import com.cozy.order.mapper.CoffeeBeanMapper;
 import com.cozy.order.mapper.CoffeeBlendMapper;
 import com.cozy.order.mapper.CoffeeProductAddonGroupMapper;
@@ -23,20 +28,35 @@ import org.springframework.data.redis.core.ValueOperations;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class MenuCacheServiceTest {
 
     private MenuCacheService cacheService;
     private CoffeeProductMapper productMapper;
+    private CoffeeProductAddonGroupMapper groupMapper;
+    private CoffeeProductAddonMapper productAddonMapper;
+    private ProductAddonMapper addonMapper;
+    private CoffeeBeanMapper beanMapper;
+    private CoffeeBlendMapper blendMapper;
 
     @BeforeEach
     @SuppressWarnings("unchecked")
@@ -44,13 +64,15 @@ class MenuCacheServiceTest {
         RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
         StringRedisTemplate stringRedisTemplate = mock(StringRedisTemplate.class);
         productMapper = mock(CoffeeProductMapper.class);
+        groupMapper = mock(CoffeeProductAddonGroupMapper.class);
+        productAddonMapper = mock(CoffeeProductAddonMapper.class);
+        addonMapper = mock(ProductAddonMapper.class);
+        beanMapper = mock(CoffeeBeanMapper.class);
+        blendMapper = mock(CoffeeBlendMapper.class);
         ProductAddonResolver addonResolver = new ProductAddonResolver(
-                mock(CoffeeProductAddonGroupMapper.class),
-                mock(CoffeeProductAddonMapper.class),
-                mock(ProductAddonMapper.class),
-                new ObjectMapper());
+                groupMapper, productAddonMapper, addonMapper, new ObjectMapper());
         OrderDtoConverter dtoConverter = new OrderDtoConverter(new ObjectMapper(), productMapper, addonResolver,
-                new ProductRuleValidator(), mock(CoffeeBeanMapper.class), mock(CoffeeBlendMapper.class));
+                new ProductRuleValidator(), beanMapper, blendMapper);
 
         ValueOperations<String, Object> valueOps = mock(ValueOperations.class);
         ValueOperations<String, String> stringValueOps = mock(ValueOperations.class);
@@ -63,6 +85,7 @@ class MenuCacheServiceTest {
                 .thenReturn(true);
 
         when(productMapper.selectList(any())).thenReturn(List.of(product()));
+        when(groupMapper.selectList(any())).thenReturn(List.of());
 
         cacheService = new MenuCacheService(redisTemplate, stringRedisTemplate, productMapper, dtoConverter);
     }
@@ -75,6 +98,88 @@ class MenuCacheServiceTest {
             List<CoffeeProductDTO> menu = cacheService.getMenu();
             assertFalse(menu.isEmpty(), "第 " + (i + 1) + " 次重建后菜单不应为空");
         }
+    }
+
+    @Test
+    void concurrentColdMissesShareOneRebuildWithoutReturningEmptyMenus() throws Exception {
+        CountDownLatch start = new CountDownLatch(1);
+        when(productMapper.selectList(any())).thenAnswer(invocation -> {
+            TimeUnit.MILLISECONDS.sleep(100);
+            return List.of(product());
+        });
+
+        ExecutorService executor = Executors.newFixedThreadPool(32);
+        try {
+            List<CompletableFuture<List<CoffeeProductDTO>>> requests = IntStream.range(0, 200)
+                    .mapToObj(ignored -> CompletableFuture.supplyAsync(() -> {
+                        try {
+                            start.await();
+                            return cacheService.getMenu();
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new IllegalStateException(e);
+                        }
+                    }, executor))
+                    .toList();
+
+            start.countDown();
+            for (CompletableFuture<List<CoffeeProductDTO>> request : requests) {
+                assertFalse(request.get(5, TimeUnit.SECONDS).isEmpty());
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+
+        verify(productMapper, times(1)).selectList(any());
+    }
+
+    @Test
+    void batchesMenuRelationsWithoutPerProductQueries() {
+        CoffeeProduct beanProduct = product("SPECIALTY", "bean-product", 1, null);
+        beanProduct.setId(1L);
+        beanProduct.setBeanId(11L);
+        CoffeeProduct blendProduct = product("SPECIALTY", "blend-product", 2, null);
+        blendProduct.setId(2L);
+        blendProduct.setBlendId(22L);
+        when(productMapper.selectList(any())).thenReturn(List.of(beanProduct, blendProduct));
+
+        CoffeeProductAddonGroup group1 = addonGroup(101L, 1L);
+        CoffeeProductAddonGroup group2 = addonGroup(102L, 2L);
+        when(groupMapper.selectList(any())).thenReturn(List.of(group1, group2));
+
+        CoffeeProductAddon binding1 = addonBinding(101L, 201L);
+        CoffeeProductAddon binding2 = addonBinding(102L, 201L);
+        when(productAddonMapper.selectList(any())).thenReturn(List.of(binding1, binding2));
+
+        ProductAddon addon = new ProductAddon();
+        addon.setId(201L);
+        addon.setCode("OAT_MILK");
+        addon.setName("燕麦奶");
+        when(addonMapper.selectList(any())).thenReturn(List.of(addon));
+
+        CoffeeBean bean = new CoffeeBean();
+        bean.setId(11L);
+        bean.setCode("BEAN_11");
+        CoffeeBlend blend = new CoffeeBlend();
+        blend.setId(22L);
+        blend.setCode("BLEND_22");
+        when(beanMapper.selectBatchIds(any())).thenReturn(List.of(bean));
+        when(blendMapper.selectBatchIds(any())).thenReturn(List.of(blend));
+
+        List<CoffeeProductDTO> menu = cacheService.getMenu();
+
+        assertEquals(2, menu.size());
+        assertEquals(1, menu.get(0).getAddonGroups().size());
+        assertEquals(1, menu.get(1).getAddonGroups().size());
+        assertNotNull(menu.get(0).getBeanProfile());
+        assertNotNull(menu.get(1).getBlendProfile());
+        verify(groupMapper, times(1)).selectList(any());
+        verify(productAddonMapper, times(1)).selectList(any());
+        verify(addonMapper, times(1)).selectList(any());
+        verify(beanMapper, times(1)).selectBatchIds(any());
+        verify(blendMapper, times(1)).selectBatchIds(any());
+        verify(beanMapper, never()).selectById(any());
+        verify(blendMapper, never()).selectById(any());
     }
 
     @Test
@@ -116,5 +221,27 @@ class MenuCacheServiceTest {
         p.setServingMode(servingMode);
         p.setPrice(new BigDecimal("20.00"));
         return p;
+    }
+
+    private CoffeeProductAddonGroup addonGroup(Long id, Long productId) {
+        CoffeeProductAddonGroup group = new CoffeeProductAddonGroup();
+        group.setId(id);
+        group.setProductId(productId);
+        group.setCategory("MILK");
+        group.setSelectionMode("SINGLE");
+        group.setMinSelect(1);
+        group.setMaxSelect(1);
+        group.setSortOrder(1);
+        return group;
+    }
+
+    private CoffeeProductAddon addonBinding(Long groupId, Long addonId) {
+        CoffeeProductAddon binding = new CoffeeProductAddon();
+        binding.setGroupId(groupId);
+        binding.setAddonId(addonId);
+        binding.setIsDefault(true);
+        binding.setPriceDelta(BigDecimal.ZERO);
+        binding.setSortOrder(1);
+        return binding;
     }
 }

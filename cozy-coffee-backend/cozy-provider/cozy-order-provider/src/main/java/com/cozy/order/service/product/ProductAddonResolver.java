@@ -147,35 +147,97 @@ public class ProductAddonResolver {
      * 菜单 / 详情展示用：读取商品加料组（组约束 + 组内项 + price_delta 权威价）。
      */
     public List<AddonGroupDTO> loadMenuGroups(Long productId) {
-        List<CoffeeProductAddonGroup> groups = loadGroups(productId);
-        if (groups.isEmpty()) {
+        if (productId == null) {
             return List.of();
         }
-        Map<String, ResolvedAddon> byCode = loadResolvedAddons(groups);
-        List<AddonGroupDTO> result = new ArrayList<>();
-        for (CoffeeProductAddonGroup g : groups) {
+        return loadMenuGroupsBatch(List.of(productId)).getOrDefault(productId, List.of());
+    }
+
+    /**
+     * 菜单批量读取：无论商品数量多少，加料组、绑定和主数据最多各查询一次。
+     */
+    public Map<Long, List<AddonGroupDTO>> loadMenuGroupsBatch(List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> distinctProductIds = productIds.stream()
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        if (distinctProductIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<CoffeeProductAddonGroup> groups = groupMapper.selectList(
+                new LambdaQueryWrapper<CoffeeProductAddonGroup>()
+                        .in(CoffeeProductAddonGroup::getProductId, distinctProductIds)
+                        .orderByAsc(CoffeeProductAddonGroup::getProductId)
+                        .orderByAsc(CoffeeProductAddonGroup::getSortOrder));
+        if (groups == null || groups.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> groupIds = groups.stream().map(CoffeeProductAddonGroup::getId).toList();
+        List<CoffeeProductAddon> bindings = productAddonMapper.selectList(
+                new LambdaQueryWrapper<CoffeeProductAddon>()
+                        .in(CoffeeProductAddon::getGroupId, groupIds));
+        if (bindings == null) {
+            bindings = List.of();
+        }
+
+        List<Long> addonIds = bindings.stream()
+                .map(CoffeeProductAddon::getAddonId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        List<ProductAddon> addons = addonIds.isEmpty()
+                ? List.of()
+                : addonMapper.selectList(new LambdaQueryWrapper<ProductAddon>()
+                        .in(ProductAddon::getId, addonIds));
+
+        Map<Long, ProductAddon> addonById = new LinkedHashMap<>();
+        if (addons != null) {
+            for (ProductAddon addon : addons) {
+                addonById.put(addon.getId(), addon);
+            }
+        }
+        Map<Long, List<CoffeeProductAddon>> bindingsByGroupId = new LinkedHashMap<>();
+        for (CoffeeProductAddon binding : bindings) {
+            bindingsByGroupId.computeIfAbsent(binding.getGroupId(), ignored -> new ArrayList<>())
+                    .add(binding);
+        }
+
+        Map<Long, List<AddonGroupDTO>> result = new LinkedHashMap<>();
+        for (CoffeeProductAddonGroup group : groups) {
             AddonGroupDTO groupDto = new AddonGroupDTO();
-            groupDto.setCategory(g.getCategory());
-            groupDto.setSelectionMode(g.getSelectionMode());
-            groupDto.setMinSelect(g.getMinSelect());
-            groupDto.setMaxSelect(g.getMaxSelect());
-            groupDto.setSortOrder(g.getSortOrder());
-            List<AddonItemDTO> items = byCode.values().stream()
-                    .filter(a -> a.category().equals(g.getCategory()))
-                    .sorted(Comparator.comparingInt(ResolvedAddon::sortOrder))
-                    .map(a -> {
+            groupDto.setCategory(group.getCategory());
+            groupDto.setSelectionMode(group.getSelectionMode());
+            groupDto.setMinSelect(group.getMinSelect());
+            groupDto.setMaxSelect(group.getMaxSelect());
+            groupDto.setSortOrder(group.getSortOrder());
+
+            List<AddonItemDTO> items = bindingsByGroupId.getOrDefault(group.getId(), List.of()).stream()
+                    .sorted(Comparator.comparing(CoffeeProductAddon::getSortOrder,
+                            Comparator.nullsLast(Comparator.<Integer>naturalOrder())))
+                    .map(binding -> {
+                        ProductAddon addon = addonById.get(binding.getAddonId());
+                        if (addon == null) {
+                            return null;
+                        }
                         AddonItemDTO item = new AddonItemDTO();
-                        item.setAddonId(a.addonId());
-                        item.setCode(a.code());
-                        item.setName(a.name());
-                        item.setPriceDelta(a.priceDelta());
-                        item.setIsDefault(a.isDefault());
-                        item.setSortOrder(a.sortOrder());
+                        item.setAddonId(addon.getId());
+                        item.setCode(addon.getCode());
+                        item.setName(addon.getName());
+                        item.setPriceDelta(binding.getPriceDelta());
+                        item.setIsDefault(Boolean.TRUE.equals(binding.getIsDefault()));
+                        item.setSortOrder(binding.getSortOrder());
                         return item;
                     })
+                    .filter(java.util.Objects::nonNull)
                     .toList();
             groupDto.setItems(items);
-            result.add(groupDto);
+            result.computeIfAbsent(group.getProductId(), ignored -> new ArrayList<>())
+                    .add(groupDto);
         }
         return result;
     }

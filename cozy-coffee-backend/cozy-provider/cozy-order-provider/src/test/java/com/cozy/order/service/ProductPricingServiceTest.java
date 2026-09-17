@@ -49,8 +49,10 @@ class ProductPricingServiceTest {
         return p;
     }
 
-    private static CoffeeProductAddonGroup group(long id, String category, String mode, int min, int max) {
+    private static CoffeeProductAddonGroup group(long productId, long id, String category, String mode,
+            int min, int max) {
         CoffeeProductAddonGroup g = new CoffeeProductAddonGroup();
+        g.setProductId(productId);
         g.setId(id);
         g.setCategory(category);
         g.setSelectionMode(mode);
@@ -96,10 +98,10 @@ class ProductPricingServiceTest {
     // ── 经典拿铁：MILK 1/1 + SHOT 0/1 + SYRUP 0/1（互斥）+ OTHER 0/1 ──
     private static List<CoffeeProductAddonGroup> latteGroups() {
         return List.of(
-                group(1L, "MILK", "SINGLE", 1, 1),
-                group(2L, "SHOT", "SINGLE", 0, 1),
-                group(3L, "SYRUP", "SINGLE", 0, 1),
-                group(4L, "OTHER", "MULTI", 0, 1));
+                group(1L, 1L, "MILK", "SINGLE", 1, 1),
+                group(1L, 2L, "SHOT", "SINGLE", 0, 1),
+                group(1L, 3L, "SYRUP", "SINGLE", 0, 1),
+                group(1L, 4L, "OTHER", "MULTI", 0, 1));
     }
 
     private static List<CoffeeProductAddon> latteBindings() {
@@ -124,7 +126,7 @@ class ProductPricingServiceTest {
 
     // ── 燕麦拿铁：MILK 默认燕麦 +0 / 全脂 +0 ──
     private static List<CoffeeProductAddonGroup> oatGroups() {
-        return List.of(group(11L, "MILK", "SINGLE", 1, 1));
+        return List.of(group(2L, 11L, "MILK", "SINGLE", 1, 1));
     }
 
     private static List<CoffeeProductAddon> oatBindings() {
@@ -139,7 +141,7 @@ class ProductPricingServiceTest {
 
     // ── 生椰拿铁：COLD_ONLY，椰奶默认 / 燕麦 +3 ──
     private static List<CoffeeProductAddonGroup> coconutGroups() {
-        return List.of(group(21L, "MILK", "SINGLE", 1, 1));
+        return List.of(group(3L, 21L, "MILK", "SINGLE", 1, 1));
     }
 
     private static List<CoffeeProductAddon> coconutBindings() {
@@ -155,8 +157,8 @@ class ProductPricingServiceTest {
     // ── 摩卡：MIN_LESS_SWEET，无 SYRUP 组 ──
     private static List<CoffeeProductAddonGroup> mochaGroups() {
         return List.of(
-                group(31L, "MILK", "SINGLE", 1, 1),
-                group(32L, "SHOT", "SINGLE", 0, 1));
+                group(4L, 31L, "MILK", "SINGLE", 1, 1),
+                group(4L, 32L, "SHOT", "SINGLE", 0, 1));
     }
 
     private static List<CoffeeProductAddon> mochaBindings() {

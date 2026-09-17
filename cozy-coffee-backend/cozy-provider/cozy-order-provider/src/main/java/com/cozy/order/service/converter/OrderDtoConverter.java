@@ -48,6 +48,63 @@ public class OrderDtoConverter {
      * CoffeeProduct entity -> DTO
      */
     public CoffeeProductDTO toProductDTO(CoffeeProduct entity) {
+        CoffeeBean bean = entity.getBeanId() == null ? null : beanMapper.selectById(entity.getBeanId());
+        CoffeeBlend blend = entity.getBlendId() == null ? null : blendMapper.selectById(entity.getBlendId());
+        return toProductDTO(entity, productAddonResolver.loadMenuGroups(entity.getId()), bean, blend);
+    }
+
+    /**
+     * 菜单批量转换：一次性预加载加料组、豆档案和拼配档案，避免逐商品查询。
+     */
+    public List<CoffeeProductDTO> toProductDTOList(List<CoffeeProduct> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> productIds = entities.stream()
+                .map(CoffeeProduct::getId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, List<com.cozy.order.dto.response.AddonGroupDTO>> addonGroupsByProductId =
+                productAddonResolver.loadMenuGroupsBatch(productIds);
+
+        List<Long> beanIds = entities.stream()
+                .map(CoffeeProduct::getBeanId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, CoffeeBean> beanById = beanIds.isEmpty()
+                ? Map.of()
+                : beanMapper.selectBatchIds(beanIds).stream()
+                        .collect(Collectors.toMap(CoffeeBean::getId, Function.identity()));
+
+        List<Long> blendIds = entities.stream()
+                .map(CoffeeProduct::getBlendId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, CoffeeBlend> blendById = blendIds.isEmpty()
+                ? Map.of()
+                : blendMapper.selectBatchIds(blendIds).stream()
+                        .collect(Collectors.toMap(CoffeeBlend::getId, Function.identity()));
+
+        return entities.stream()
+                .map(entity -> toProductDTO(
+                        entity,
+                        entity.getId() == null
+                                ? List.of()
+                                : addonGroupsByProductId.getOrDefault(entity.getId(), List.of()),
+                        entity.getBeanId() == null ? null : beanById.get(entity.getBeanId()),
+                        entity.getBlendId() == null ? null : blendById.get(entity.getBlendId())))
+                .toList();
+    }
+
+    private CoffeeProductDTO toProductDTO(
+            CoffeeProduct entity,
+            List<com.cozy.order.dto.response.AddonGroupDTO> addonGroups,
+            CoffeeBean bean,
+            CoffeeBlend blend) {
         CoffeeProductDTO dto = new CoffeeProductDTO();
         dto.setId(entity.getId());
         dto.setName(entity.getName());
@@ -73,7 +130,7 @@ public class OrderDtoConverter {
         dto.setColdBrewPrice(entity.getColdBrewPrice());
         dto.setBeanId(entity.getBeanId());
         dto.setBlendId(entity.getBlendId());
-        dto.setAddonGroups(productAddonResolver.loadMenuGroups(entity.getId()));
+        dto.setAddonGroups(addonGroups);
         // 规格允许选项（单一事实源：后端由枚举规范值计算，前端渲染用）
         ProductRuleValidator.AllowedOptionsDTO opts = ruleValidator.getAllowedOptions(entity);
         dto.setAllowedSizes(java.util.Arrays.asList(opts.getAllowedSizes()));
@@ -81,14 +138,8 @@ public class OrderDtoConverter {
         dto.setAllowedTemps(java.util.Arrays.asList(opts.getAllowedTemps()));
         // 食品/烘焙信号（前端无需各自硬编码分类列表）
         dto.setIsFood(ProductRuleValidator.isFoodCategory(entity.getCategory()));
-        if (entity.getBeanId() != null) {
-            CoffeeBean bean = beanMapper.selectById(entity.getBeanId());
-            if (bean != null) dto.setBeanProfile(toBeanProfile(bean));
-        }
-        if (entity.getBlendId() != null) {
-            CoffeeBlend blend = blendMapper.selectById(entity.getBlendId());
-            if (blend != null) dto.setBlendProfile(toBlendProfile(blend));
-        }
+        if (bean != null) dto.setBeanProfile(toBeanProfile(bean));
+        if (blend != null) dto.setBlendProfile(toBlendProfile(blend));
         return dto;
     }
 
