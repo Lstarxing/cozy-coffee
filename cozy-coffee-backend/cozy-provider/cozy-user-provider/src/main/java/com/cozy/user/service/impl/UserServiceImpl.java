@@ -5,6 +5,7 @@ import com.cozy.common.constant.InviteRewardConfig;
 import com.cozy.common.constant.ProfileRewardConfig;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
+import com.cozy.common.tx.AfterCommit;
 import com.cozy.common.util.JwtUtil;
 import com.cozy.member.api.MemberService;
 import com.cozy.mall.api.PointsMallService;
@@ -154,9 +155,12 @@ public class UserServiceImpl implements UserService {
         }
         log.info("用户注册成功: userId={}, username={}", user.getId(), user.getUsername());
 
-        // 异步创建会员信息及发放新用户福利，不阻塞注册流程
+        // 异步创建会员信息及发放新用户福利，不阻塞注册流程。
+        // 必须等本事务提交后再派发：直接 runAsync 会立即启动，若注册事务随后回滚（如唯一键冲突），
+        // 会员与新人券已经发出且无法撤销。会员侧另有自愈（getMemberByUserId 查不到会补建），
+        // 所以这里主要防的是"券发给了一个不存在的用户"。
         final Long userId = user.getId();
-        CompletableFuture.runAsync(() -> {
+        AfterCommit.run(() -> CompletableFuture.runAsync(() -> {
             try {
                 // 1. 创建会员基础信息
                 memberService.createMember(userId);
@@ -169,7 +173,7 @@ public class UserServiceImpl implements UserService {
             } catch (Exception e) {
                 log.error("执行注册后续逻辑失败: userId={}, error={}", userId, e.getMessage());
             }
-        });
+        }));
     }
 
     @Override

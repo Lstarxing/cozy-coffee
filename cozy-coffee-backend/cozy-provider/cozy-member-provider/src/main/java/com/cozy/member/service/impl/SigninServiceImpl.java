@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.constant.SigninRewardConfig;
 import com.cozy.common.exception.BusinessException;
+import com.cozy.common.tx.AfterCommit;
 import com.cozy.mall.api.PointsMallService;
 import com.cozy.member.api.SigninService;
 import com.cozy.member.dto.response.SigninResultDTO;
@@ -151,8 +152,10 @@ public class SigninServiceImpl implements SigninService {
 
         // 检查连签奖励 - 发放连签券（配置见 cozy.member.signin.seven-day-coupon）
         if (consecutiveDays == signinRewardConfig.getSevenDayCouponAfterDays()) {
-            // 奖励发券异步执行，避免下游波动拖慢签到主链路。
-            CompletableFuture.runAsync(() -> grant7DayCoupon(userId, record.getId()));
+            // 提交后再异步发券：直接 runAsync 会立即启动，可能先于本事务提交——一旦事务回滚，
+            // 券已发出且无法撤销。afterCommit 只解决"先于提交"；崩溃丢失由发券幂等键
+            // signin_7day_<recordId> 兜住（重复发放会被下游去重）。
+            AfterCommit.run(() -> CompletableFuture.runAsync(() -> grant7DayCoupon(userId, record.getId())));
         }
 
         return result;
