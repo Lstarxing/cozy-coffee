@@ -59,6 +59,15 @@ api.interceptors.response.use(
             handleAuthFailure()
         }
 
+        // 非 2xx 时后端仍带 Result 体（如 500「系统繁忙」/ 503「服务繁忙」/ 404）。
+        // 把它的 message 提到 error.message，否则调用方 toast(e.message) 只会显示
+        // "Request failed with status code 500" 这种英文原文。
+        const payload = error?.response?.data
+        const payloadMessage = payload?.message || payload?.msg
+        if (payloadMessage) {
+            error.message = payloadMessage
+        }
+
         return Promise.reject(error)
     }
 )
