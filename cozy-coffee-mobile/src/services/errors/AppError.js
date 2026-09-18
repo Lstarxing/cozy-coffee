@@ -1,6 +1,8 @@
+/**
+ * 后端业务失败恒为 `code: 400`（Result.fail），机器可读的错误码在 `errorCode`（如 PREVIEW_EXPIRED）。
+ * 所以判定与错误码都必须取 `errorCode`，不能取数字 `code`。
+ */
 const VALIDATION_CODES = new Set([
-  400,
-  422,
   'VALIDATION_ERROR',
   'INVALID_ARGUMENT',
   'CART_INVALID',
@@ -27,7 +29,7 @@ export class ValidationError extends AppError {}
 
 function errorOptions(payload, status) {
   return {
-    code: payload?.code ?? status ?? 'BUSINESS_ERROR',
+    code: payload?.errorCode ?? payload?.code ?? status ?? 'BUSINESS_ERROR',
     status,
     retryable: Boolean(payload?.retryable),
     details: payload?.data ?? payload?.details ?? null
@@ -65,7 +67,7 @@ export function mapResponseToResult(response) {
 
   const message = payload?.message || payload?.msg || '请求失败'
   const options = errorOptions(payload, status)
-  if (status === 422 || VALIDATION_CODES.has(payload?.code)) {
+  if (status === 422 || VALIDATION_CODES.has(payload?.errorCode)) {
     throw new ValidationError(message, options)
   }
 
