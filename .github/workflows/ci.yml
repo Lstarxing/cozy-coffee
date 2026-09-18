@@ -108,14 +108,18 @@ jobs:
           : "${ACR_REGISTRY:?未配置仓库变量 ACR_REGISTRY}"
           : "${ACR_NAMESPACE:?未配置仓库变量 ACR_NAMESPACE}"
           TAG="${GITHUB_SHA}"
+          # 同时推 7 位短 SHA：人工发布时 ./deploy.sh <短SHA> 也能直接用（服务器无 git 仓库，无法本地解析）
+          SHORT="${GITHUB_SHA:0:7}"
           while IFS=: read -r name ctx; do
             [ -z "$name" ] && continue
             echo "==> ${name}  (context: ${ctx})"
             docker build \
               -f cozy-coffee-backend/Dockerfile.runtime \
               -t "${ACR_REGISTRY}/${ACR_NAMESPACE}/${name}:${TAG}" \
+              -t "${ACR_REGISTRY}/${ACR_NAMESPACE}/${name}:${SHORT}" \
               "${ctx}"
             docker push "${ACR_REGISTRY}/${ACR_NAMESPACE}/${name}:${TAG}"
+            docker push "${ACR_REGISTRY}/${ACR_NAMESPACE}/${name}:${SHORT}"
           done <<'EOF'
           gateway:cozy-coffee-backend/cozy-gateway
           user-provider:cozy-coffee-backend/cozy-provider/cozy-user-provider
@@ -131,15 +135,20 @@ jobs:
           : "${ACR_REGISTRY:?未配置仓库变量 ACR_REGISTRY}"
           : "${ACR_NAMESPACE:?未配置仓库变量 ACR_NAMESPACE}"
           TAG="${GITHUB_SHA}"
+          SHORT="${GITHUB_SHA:0:7}"
           echo "==> web"
           docker build -t "${ACR_REGISTRY}/${ACR_NAMESPACE}/web:${TAG}" \
+            -t "${ACR_REGISTRY}/${ACR_NAMESPACE}/web:${SHORT}" \
             --build-arg VITE_API_BASE_URL= \
             --build-arg VITE_IMAGE_BASE_URL=/media/cozycoffee \
             cozy-coffee-web
           docker push "${ACR_REGISTRY}/${ACR_NAMESPACE}/web:${TAG}"
+          docker push "${ACR_REGISTRY}/${ACR_NAMESPACE}/web:${SHORT}"
           echo "==> admin"
           docker build -t "${ACR_REGISTRY}/${ACR_NAMESPACE}/admin:${TAG}" \
+            -t "${ACR_REGISTRY}/${ACR_NAMESPACE}/admin:${SHORT}" \
             --build-arg VITE_API_BASE_URL= \
             --build-arg VITE_IMAGE_BASE_URL= \
             cozy-coffee-admin
           docker push "${ACR_REGISTRY}/${ACR_NAMESPACE}/admin:${TAG}"
+          docker push "${ACR_REGISTRY}/${ACR_NAMESPACE}/admin:${SHORT}"

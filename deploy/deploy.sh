@@ -2,6 +2,9 @@
 # CozyCoffee 生产发布脚本（在服务器 /opt/cozycoffee 下执行）
 #
 # 用法：./deploy.sh <git-sha>
+#   - 40 位全 SHA 与 7 位短 SHA **都可用**：CI 每次发布把两个 tag 都推到 ACR
+#     （服务器上无 git 仓库，无法本地把短 SHA 解析成全 SHA，故由 CI 侧双 tag 兜住）
+#   - 取法：本机 `git rev-parse HEAD`（全）或 `git rev-parse --short HEAD`（短）
 #
 # 语义：
 # - 镜像来自阿里云 ACR（CI 构建，tag = git SHA）。本脚本只 pull + up -d --wait。
@@ -15,6 +18,22 @@
 set -euo pipefail
 
 TAG="${1:?用法: ./deploy.sh <git-sha>}"
+
+# 格式守卫：只接受 Git SHA 形态（7~40 位十六进制）。写错时立刻失败并说明，
+# 否则要等到 pull 阶段才报 "not found"，容易被误读成网络/服务器问题。
+case "${TAG}" in
+  *[!0-9a-fA-F]*)
+    echo "❌ IMAGE_TAG 格式不对：${TAG}" >&2
+    echo "   需要 Git SHA（7~40 位十六进制），例如 ./deploy.sh bb52601" >&2
+    echo "   取法：本机 git rev-parse --short HEAD" >&2
+    exit 2
+    ;;
+esac
+if [ "${#TAG}" -lt 7 ] || [ "${#TAG}" -gt 40 ]; then
+  echo "❌ IMAGE_TAG 长度不对（${#TAG} 位）：${TAG}" >&2
+  echo "   需要 7~40 位 Git SHA，例如 ./deploy.sh bb52601" >&2
+  exit 2
+fi
 
 BASE_DIR="/opt/cozycoffee"
 ENV_FILE="${BASE_DIR}/env/.env.prod"
