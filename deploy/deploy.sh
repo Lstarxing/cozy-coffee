@@ -62,15 +62,30 @@ if ! "${COMPOSE[@]}" pull; then
 fi
 
 # 2C8G 上 5 个 JVM 同时冷启动约需 7~8 分钟（实测），故 wait 超时给到 600s
+#
+# 为什么失败后重试一次：`up --wait` 一见到容器失败/unhealthy 就立即中止（不等满超时），
+# 但重启策略通常会在几十秒内让容器自愈。2026-09-18 实测：gateway 首次启动时 RocketMQ 客户端
+# 连 namesrv 超时（RemotingSendRequestException，同批 JVM 抢 2 vCPU，连 Nacos 都要 12s），
+# rocketmq-spring 的消费容器启动失败属硬失败 → 进程退出 → restart:unless-stopped 拉起 →
+# 第二次 34.5s 正常。此时再 --wait 正好等到它 healthy。
+# ⚠️ 这条重试只兜「瞬时启动竞态」，不掩盖稳定性 bug：若两次都失败就必须人工排查，
+#    若日后经常依赖重试才起得来，要修的是启动容忍/编排，而不是继续加重试。
 if ! "${COMPOSE[@]}" up -d --remove-orphans --wait --wait-timeout 600; then
   echo "" >&2
-  echo "❌ 发布失败：服务未在超时内就绪（容器可能已切到 ${IMAGE_TAG}）。" >&2
-  if [ -n "${cur}" ]; then
-    echo "   最后成功版本 = ${cur}" >&2
-    echo "   恢复命令：./deploy.sh ${cur}" >&2
+  echo "⚠️  首次就绪检测未通过；等待 15s 让容器按 restart 策略自愈后重试一次..." >&2
+  sleep 15
+  if ! "${COMPOSE[@]}" up -d --remove-orphans --wait --wait-timeout 600; then
+    echo "" >&2
+    echo "❌ 发布失败：两次就绪检测均未通过（容器可能已切到 ${IMAGE_TAG}）。" >&2
+    if [ -n "${cur}" ]; then
+      echo "   最后成功版本 = ${cur}" >&2
+      echo "   恢复命令：./deploy.sh ${cur}" >&2
+    fi
+    echo "   排查：docker compose -p cozycoffee -f ${COMPOSE_FILE} ps" >&2
+    echo "         docker compose -p cozycoffee -f ${COMPOSE_FILE} logs <svc>" >&2
+    exit 1
   fi
-  echo "   排查：docker compose -p cozycoffee -f ${COMPOSE_FILE} ps / logs <svc>" >&2
-  exit 1
+  echo "==> 重试后就绪检测通过（首发失败已被容器自愈兜住）。" >&2
 fi
 
 if [ "${TAG}" = "${cur}" ]; then
