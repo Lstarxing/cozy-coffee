@@ -1,0 +1,27 @@
+# 本机专属配置模板：复制成同目录的 application-local.yml 再填真实值
+# （那个文件名已 gitignore，不会入库；本模板入库，供新机器照着填）
+#
+# 为什么要复制到 config/ 而不是 src/main/resources/：见 application-local.yml 顶部说明
+# （resources 下的文件会被打进 jar → 打进镜像，而这里含密钥）
+#
+# 加载前提：Run Configuration 的 Working directory = 本模块目录（IntelliJ 默认如此），
+# 且 Active profiles = local。
+
+cozy:
+  auth:
+    # 本地开发登录（小程序/前端免微信授权登录用）；生产环境必须为 false
+    dev-login-enabled: true
+    wechat:
+      appid: <小程序 appid>
+      # 只有要走「微信一键登录」才需要填；本地只用账号密码登录可留空
+      secret: <小程序 AppSecret>
+
+storage:
+  # 本地统一用 compose 起的 minio（见仓库根 docker-compose.yml 的 minio 服务）
+  type: minio
+  endpoint: http://127.0.0.1:9000
+  bucket: cozycoffee
+  # 本地 seed 脚本创建的网关专用账号（勿用 minio root）
+  access-key-id: cozy-gateway
+  access-key-secret: <本地 minio gateway 账号口令>
+  public-base-url: http://127.0.0.1:9000/cozycoffee
