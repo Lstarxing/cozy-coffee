@@ -16,6 +16,9 @@ name: cozycoffee-prod
 x-java-limits: &java-limits
   mem_limit: 512m
   environment: &java-env
+    # 应用容器必须显式给时区：镜像默认 UTC，而全部业务取时走 LocalDateTime.now()。
+    # 缺了它订单时间会慢 8 小时，且 business_date 以 05:00 为分界会跨日错位（见 PickupCodeService）。
+    TZ: ${TIMEZONE:-Asia/Shanghai}
     JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF-8 -Ddubbo.registry.address=nacos://nacos:8848"
     JWT_SECRET: ${JWT_SECRET:?需设置}
 
@@ -195,6 +198,7 @@ services:
       retries: 24
       start_period: 180s
     environment:
+      TZ: ${TIMEZONE:-Asia/Shanghai}
       JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF-8 -Ddubbo.registry.address=nacos://nacos:8848"
       SPRING_DATA_REDIS_HOST: redis
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
