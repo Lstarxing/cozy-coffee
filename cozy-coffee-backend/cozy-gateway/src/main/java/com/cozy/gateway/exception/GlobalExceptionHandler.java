@@ -91,21 +91,28 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Dubbo ExceptionFilter 会将堆栈拼接到异常消息中，需要清洗。
+     * Dubbo ExceptionFilter 会把「异常信息 + 完整堆栈」拼成一个字符串回传，必须在网关侧清洗，
+     * 否则整段堆栈会当作 message 返回给客户端（线上实测 5KB）。
+     * 换行符随运行平台变化——Linux 容器是 \n、Windows 开发机是 \r\n，故按任意换行切分。
      */
     private String cleanDubboMessage(String msg) {
         if (msg == null) return null;
-        // 取第一行业务消息（Dubbo 会追加 \r\n + 完整类名和堆栈）
-        int end = msg.indexOf("\r\n");
-        if (end > 0) {
-            msg = msg.substring(0, end);
+        // 只取第一行，丢掉 Dubbo 拼接进来的堆栈
+        int cut = msg.length();
+        for (int i = 0; i < msg.length(); i++) {
+            char c = msg.charAt(i);
+            if (c == '\n' || c == '\r') {
+                cut = i;
+                break;
+            }
         }
+        String firstLine = msg.substring(0, cut).trim();
         // 去类名前缀 "com.xxx.BusinessException: "
-        if (msg.contains("BusinessException: ")) {
-            int colonIdx = msg.lastIndexOf("BusinessException: ");
-            msg = msg.substring(colonIdx + "BusinessException: ".length());
+        if (firstLine.contains("BusinessException: ")) {
+            int colonIdx = firstLine.lastIndexOf("BusinessException: ");
+            firstLine = firstLine.substring(colonIdx + "BusinessException: ".length());
         }
-        return msg;
+        return firstLine;
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

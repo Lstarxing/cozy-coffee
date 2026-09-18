@@ -1,5 +1,6 @@
 package com.cozy.mall.api;
 
+import com.cozy.common.exception.BusinessException;
 import com.cozy.mall.dto.request.ItemCheckDTO;
 import com.cozy.mall.dto.request.RedeemRequest;
 import com.cozy.mall.dto.response.CouponCombinationResult;
@@ -17,15 +18,15 @@ public interface PointsMallService {
          *
          * @param userId 当前用户ID（可选，用于查询月度限购进度），未登录传 null
          */
-        List<PointsProductDTO> listActiveProducts(Long userId);
+        List<PointsProductDTO> listActiveProducts(Long userId) throws BusinessException;
 
-        PointsProductDTO getProduct(Long id);
+        PointsProductDTO getProduct(Long id) throws BusinessException;
 
-        PointsOrderDTO redeem(Long userId, RedeemRequest request);
+        PointsOrderDTO redeem(Long userId, RedeemRequest request) throws BusinessException;
 
-        List<PointsOrderDTO> listUserOrders(Long userId);
+        List<PointsOrderDTO> listUserOrders(Long userId) throws BusinessException;
 
-        PointsOrderDTO getOrder(Long orderId, Long userId);
+        PointsOrderDTO getOrder(Long orderId, Long userId) throws BusinessException;
 
         /**
          * 取消订单（仅限发货前）
@@ -34,14 +35,14 @@ public interface PointsMallService {
          * @param userId  用户ID
          * @return 取消后的订单信息
          */
-        PointsOrderDTO cancelOrder(Long orderId, Long userId);
+        PointsOrderDTO cancelOrder(Long orderId, Long userId) throws BusinessException;
 
         // ==================== 用户券包 ====================
 
         /**
          * 获取用户券包（所有券）
          */
-        List<UserCouponDTO> getUserCoupons(Long userId, String status);
+        List<UserCouponDTO> getUserCoupons(Long userId, String status) throws BusinessException;
 
         /**
          * 获取下单可用券
@@ -50,7 +51,7 @@ public interface PointsMallService {
          * @param orderAmount 订单金额
          * @return 可用券列表
          */
-        List<UserCouponDTO> getAvailableCoupons(Long userId, BigDecimal orderAmount);
+        List<UserCouponDTO> getAvailableCoupons(Long userId, BigDecimal orderAmount) throws BusinessException;
 
         /**
          * 获取下单可用券（支持商品明细检查）
@@ -61,7 +62,7 @@ public interface PointsMallService {
          * @return 可用券列表
          */
         List<UserCouponDTO> getAvailableCoupons(Long userId, BigDecimal orderAmount,
-                        List<ItemCheckDTO> items);
+                        List<ItemCheckDTO> items) throws BusinessException;
 
         /**
          * 使用券（下单时核销）- 旧版兼容
@@ -71,7 +72,7 @@ public interface PointsMallService {
          * @param orderAmount 订单金额
          * @return 折扣金额
          */
-        BigDecimal useCoupon(Long userId, String couponCode, BigDecimal orderAmount);
+        BigDecimal useCoupon(Long userId, String couponCode, BigDecimal orderAmount) throws BusinessException;
 
         /**
          * 使用券（下单时核销）- 新版，返回券类型
@@ -84,13 +85,13 @@ public interface PointsMallService {
          * @return 券核销结果（包含折扣金额和券类型）
          */
         CouponUsageResult useCouponWithResult(Long userId, String couponCode, BigDecimal orderAmount,
-                        List<ItemCheckDTO> items);
+                        List<ItemCheckDTO> items) throws BusinessException;
 
         /**
          * Calculate and validate a coupon without consuming it. Checkout preview must use this method.
          */
         CouponUsageResult previewCouponWithResult(Long userId, String couponCode, BigDecimal orderAmount,
-                        List<ItemCheckDTO> items);
+                        List<ItemCheckDTO> items) throws BusinessException;
 
         /**
          * 整组券预览（不消费）：组合校验（主券≤1 / 独占唯一 / 配送费券上限 / SHOT 杯数 / 重复）+ 统一计算。
@@ -100,7 +101,7 @@ public interface PointsMallService {
          */
         CouponCombinationResult previewCouponCombination(Long userId, List<String> couponCodes,
                         BigDecimal couponBase, BigDecimal addonsTotal, List<BigDecimal> addonPrices,
-                        List<ItemCheckDTO> items);
+                        List<ItemCheckDTO> items) throws BusinessException;
 
         /**
          * 整组券核销（下单用）：组合校验 + 计算 + 整组冻结（ISSUED→FROZEN）。
@@ -108,66 +109,66 @@ public interface PointsMallService {
          */
         CouponCombinationResult useCouponCombination(Long userId, List<String> couponCodes,
                         BigDecimal couponBase, BigDecimal addonsTotal, List<BigDecimal> addonPrices,
-                        List<ItemCheckDTO> items);
+                        List<ItemCheckDTO> items) throws BusinessException;
 
         // ==================== 管理端方法 ====================
 
         /**
          * 获取所有兑换订单（管理端）
          */
-        List<PointsOrderDTO> listAllOrders(String status);
+        List<PointsOrderDTO> listAllOrders(String status) throws BusinessException;
 
         /**
          * 更新订单状态（管理端）
          */
-        PointsOrderDTO updateOrderStatus(Long orderId, String status);
+        PointsOrderDTO updateOrderStatus(Long orderId, String status) throws BusinessException;
 
         /**
          * 更新物流信息（管理端）
          */
-        PointsOrderDTO updateShipping(Long orderId, String company, String trackingNo);
+        PointsOrderDTO updateShipping(Long orderId, String company, String trackingNo) throws BusinessException;
 
         // ==================== 积分商品管理（管理端）====================
 
         /**
          * 获取所有积分商品（管理端，含下架商品）
          */
-        List<PointsProductDTO> listAllProducts();
+        List<PointsProductDTO> listAllProducts() throws BusinessException;
 
         /**
          * 添加积分商品
          */
-        PointsProductDTO addProduct(PointsProductDTO product);
+        PointsProductDTO addProduct(PointsProductDTO product) throws BusinessException;
 
         /**
          * 更新积分商品
          */
-        PointsProductDTO updateProduct(Long productId, PointsProductDTO product);
+        PointsProductDTO updateProduct(Long productId, PointsProductDTO product) throws BusinessException;
 
         /**
          * 删除积分商品
          */
-        void deleteProduct(Long productId);
+        void deleteProduct(Long productId) throws BusinessException;
 
         /**
          * 切换商品上下架状态
          */
-        PointsProductDTO toggleProductStatus(Long productId);
+        PointsProductDTO toggleProductStatus(Long productId) throws BusinessException;
 
         /**
          * 获取兑换订单详情（管理端）
          */
-        PointsOrderDTO getRedemptionDetail(Long orderId);
+        PointsOrderDTO getRedemptionDetail(Long orderId) throws BusinessException;
 
         /**
          * 用户确认收货（快递订单）
          */
-        PointsOrderDTO confirmReceipt(Long orderId, Long userId);
+        PointsOrderDTO confirmReceipt(Long orderId, Long userId) throws BusinessException;
 
         /**
          * 删除兑换订单（管理端，用于清理脏数据）
          */
-        void deleteOrder(Long orderId);
+        void deleteOrder(Long orderId) throws BusinessException;
 
         /**
          * 回滚/归还优惠券（取消订单时调用）
@@ -175,11 +176,11 @@ public interface PointsMallService {
          * @param couponId 券ID
          * @param userId   用户ID
          */
-        void rollbackCoupon(Long couponId, Long userId);
+        void rollbackCoupon(Long couponId, Long userId) throws BusinessException;
 
         /** 按事件幂等键整组回滚订单券；同一事件重复投递只处理一次。 */
         void rollbackCoupons(String rollbackEventId, Long orderId, Long userId,
-                        Long mainCouponId, List<Long> addonCouponIds);
+                        Long mainCouponId, List<Long> addonCouponIds) throws BusinessException;
 
         /**
          * 确认优惠券（订单支付/接单成功后调用）：FROZEN → USED
@@ -187,10 +188,10 @@ public interface PointsMallService {
          * @param couponId 券ID
          * @param userId   用户ID
          */
-        void confirmCoupon(Long couponId, Long userId);
+        void confirmCoupon(Long couponId, Long userId) throws BusinessException;
 
         /** 整组确认优惠券（主券 + 附加券），在 mall 单事务内完成。 */
-        void confirmCoupons(List<Long> couponIds, Long userId);
+        void confirmCoupons(List<Long> couponIds, Long userId) throws BusinessException;
 
         /**
          * 按券 ID 批量查询优惠券（订单详情展示券名用）
@@ -198,7 +199,7 @@ public interface PointsMallService {
          * @param couponIds 券ID列表
          * @return 优惠券 DTO 列表
          */
-        List<UserCouponDTO> getCouponsByIds(List<Long> couponIds);
+        List<UserCouponDTO> getCouponsByIds(List<Long> couponIds) throws BusinessException;
 
         /**
          * v5.0: 发放优惠券给用户（用于签到奖励等场景）
@@ -211,7 +212,7 @@ public interface PointsMallService {
          * @param validDays      有效天数
          */
         void issueCouponToUser(Long userId, String couponType, String uniqueKey, double minAmount,
-                        double discountAmount, int validDays);
+                        double discountAmount, int validDays) throws BusinessException;
 
         /**
          * v5.3: 发放带 SKU 限制的优惠券
@@ -225,7 +226,7 @@ public interface PointsMallService {
          * @param extraRuleJson  额外规则JSON（如 {"skuLimit":"STANDARD_ONLY","categoryBlocklist":["soe"]}）
          */
         void issueCouponWithSkuLimit(Long userId, String couponType, String uniqueKey, double minAmount,
-                        double discountAmount, int validDays, String extraRuleJson);
+                        double discountAmount, int validDays, String extraRuleJson) throws BusinessException;
 
         /**
          * v5.2: 发放新用户首单五折券
@@ -233,5 +234,5 @@ public interface PointsMallService {
          *
          * @param userId 用户ID
          */
-        void issueNewUserCoupon(Long userId);
+        void issueNewUserCoupon(Long userId) throws BusinessException;
 }

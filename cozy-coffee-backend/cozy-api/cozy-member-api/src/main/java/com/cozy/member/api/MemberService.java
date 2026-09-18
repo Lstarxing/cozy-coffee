@@ -1,5 +1,6 @@
 package com.cozy.member.api;
 
+import com.cozy.common.exception.BusinessException;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.member.dto.response.MemberOverviewDTO;
 import com.cozy.member.dto.response.PointsTransactionDTO;
@@ -13,7 +14,7 @@ public interface MemberService {
     /**
      * 获取会员信息
      */
-    MemberDTO getMemberByUserId(Long userId);
+    MemberDTO getMemberByUserId(Long userId) throws BusinessException;
 
     /**
      * 获取会员信息（别名）
@@ -28,17 +29,17 @@ public interface MemberService {
      * @param userIds 用户ID集合
      * @return userId -> MemberDTO 映射
      */
-    Map<Long, MemberDTO> getMembersByUserIds(Set<Long> userIds);
+    Map<Long, MemberDTO> getMembersByUserIds(Set<Long> userIds) throws BusinessException;
 
     /**
      * 创建会员
      */
-    void createMember(Long userId);
+    void createMember(Long userId) throws BusinessException;
 
     /**
      * 为用户增加积分（旧方法，保留兼容）
      */
-    void addPoints(Long userId, int points, String sourceType, String description);
+    void addPoints(Long userId, int points, String sourceType, String description) throws BusinessException;
 
     /**
      * 为用户增加积分并创建积分批次（FIFO）
@@ -49,7 +50,7 @@ public interface MemberService {
      * @param sourceId    来源ID（如订单ID）
      * @param description 描述
      */
-    void addPointsWithLot(Long userId, int points, String sourceType, Long sourceId, String description);
+    void addPointsWithLot(Long userId, int points, String sourceType, Long sourceId, String description) throws BusinessException;
 
     /**
      * 为用户增加 EXP（成长值）
@@ -58,7 +59,7 @@ public interface MemberService {
      * @param exp     EXP 数量
      * @param orderId 关联订单ID
      */
-    void addExp(Long userId, int exp, Long orderId);
+    void addExp(Long userId, int exp, Long orderId) throws BusinessException;
 
     /**
      * FIFO 扣减积分
@@ -69,7 +70,7 @@ public interface MemberService {
      * @param consumeId   消耗关联ID（如兑换订单ID）
      * @return 是否扣减成功
      */
-    boolean consumePointsFIFO(Long userId, int points, String consumeType, Long consumeId);
+    boolean consumePointsFIFO(Long userId, int points, String consumeType, Long consumeId) throws BusinessException;
 
     /**
      * 按消费明细退款：回补原积分批次（保持原到期时间，维持 FIFO 语义）
@@ -83,7 +84,7 @@ public interface MemberService {
      * @param consumeId   扣减关联ID（如兑换订单ID）
      * @param description 描述
      */
-    void refundPointsByConsumption(Long userId, int points, String consumeType, Long consumeId, String description);
+    void refundPointsByConsumption(Long userId, int points, String consumeType, Long consumeId, String description) throws BusinessException;
 
     /**
      * 管理员人工调整积分（支持正负，强一致性：同步更新批次 lot）
@@ -92,58 +93,58 @@ public interface MemberService {
      * @param delta  变动值（正数为加，负数为扣）
      * @param reason 调整原因
      */
-    void adminAdjustPoints(Long userId, int delta, String reason);
+    void adminAdjustPoints(Long userId, int delta, String reason) throws BusinessException;
 
     /**
      * 修复用户积分一致性故障（方案 B：补齐或扣减 Lot 使其 SUM 等于 current_points）
      *
      * @param userId 用户ID（若为 null 则修复所有不一致用户）
      */
-    void fixPointsConsistency(Long userId);
+    void fixPointsConsistency(Long userId) throws BusinessException;
 
     /**
      * 获取用户即将到期的积分（近30天）
      */
-    int getExpiringPoints(Long userId, int days);
+    int getExpiringPoints(Long userId, int days) throws BusinessException;
 
     /**
      * 获取用户积分流水记录
      */
-    List<PointsTransactionDTO> getPointsTransactions(Long userId, int limit);
+    List<PointsTransactionDTO> getPointsTransactions(Long userId, int limit) throws BusinessException;
 
     /**
      * 检查并升级会员等级
      */
-    void checkAndUpgradeLevel(Long userId);
+    void checkAndUpgradeLevel(Long userId) throws BusinessException;
 
     /**
      * 手动触发生日福利发放（测试用）
      */
-    void processBirthdayRewards();
+    void processBirthdayRewards() throws BusinessException;
 
     /**
      * 设置生日时立即发放权益包
      * 
      * @return true 发放成功, false 已领取过
      */
-    boolean grantBirthdayReward(Long userId);
+    boolean grantBirthdayReward(Long userId) throws BusinessException;
 
     /**
      * v5.5: 获取本月权益领取状态
      *
      * @return Map containing: claimed(bool), canClaim(bool), benefitName(String)
      */
-    Map<String, Object> getMonthlyBenefitStatus(Long userId);
+    Map<String, Object> getMonthlyBenefitStatus(Long userId) throws BusinessException;
 
     /**
      * v5.5: 领取本月等级权益
      */
-    void receiveMonthlyBenefit(Long userId);
+    void receiveMonthlyBenefit(Long userId) throws BusinessException;
 
     /**
      * v6.0: 会员权益面板聚合视图（权益页单一数据源）
      *
      * @return 当前等级身份 + 当前可享权益 + 升级预告 + 全部等级对比
      */
-    MemberOverviewDTO getMemberOverview(Long userId);
+    MemberOverviewDTO getMemberOverview(Long userId) throws BusinessException;
 }

@@ -16,6 +16,12 @@
     <description>积分商城服务API - Dubbo接口定义与DTO</description>
 
     <dependencies>
+        <!-- 接口签名要声明 throws BusinessException（用 Dubbo ExceptionFilter 的“签名声明”出口，
+             否则异常会被包成 RuntimeException(堆栈字符串)，客户端丢失 errorCode） -->
+        <dependency>
+            <groupId>com.cozy</groupId>
+            <artifactId>cozy-common</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
