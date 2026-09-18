@@ -148,7 +148,7 @@ jobs:
           docker build -t "${ACR_REGISTRY}/${ACR_NAMESPACE}/admin:${TAG}" \
             -t "${ACR_REGISTRY}/${ACR_NAMESPACE}/admin:${SHORT}" \
             --build-arg VITE_API_BASE_URL= \
-            --build-arg VITE_IMAGE_BASE_URL= \
+            --build-arg VITE_IMAGE_BASE_URL=/media/cozycoffee \
             cozy-coffee-admin
           docker push "${ACR_REGISTRY}/${ACR_NAMESPACE}/admin:${TAG}"
           docker push "${ACR_REGISTRY}/${ACR_NAMESPACE}/admin:${SHORT}"
