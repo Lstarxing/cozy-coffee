@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.rpc.RpcException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -67,17 +68,20 @@ public class GlobalExceptionHandler {
         return Result.businessFail(e.getCode().name(), msg, e.isRetryable());
     }
 
+    /**
+     * RuntimeException 分两类：cause 链里含 BusinessException 的仍按业务失败返回（HTTP 200）；
+     * 其余属未预期缺陷 —— 对内记录完整堆栈、对外只给通用文案，避免把类名 / SQL / 配置等内部信息透给客户端。
+     * 这里用 ResponseEntity 而非 @ResponseStatus，因为两类需要不同状态码。
+     */
     @ExceptionHandler(RuntimeException.class)
-    @ResponseStatus(HttpStatus.OK)
-    public Result<?> handleRuntimeException(RuntimeException e) {
+    public ResponseEntity<Result<?>> handleRuntimeException(RuntimeException e) {
         BusinessException business = findBusinessException(e);
         if (business != null) {
-            return Result.businessFail(business.getCode().name(), cleanDubboMessage(business.getMessage()),
-                    business.isRetryable());
+            return ResponseEntity.ok(Result.businessFail(business.getCode().name(),
+                    cleanDubboMessage(business.getMessage()), business.isRetryable()));
         }
-        String msg = cleanDubboMessage(e.getMessage());
-        log.warn("业务异常: {}", msg);
-        return Result.fail(msg);
+        log.error("未预期异常", e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Result.error("系统繁忙，请稍后重试"));
     }
 
     private BusinessException findBusinessException(Throwable throwable) {
@@ -149,12 +153,14 @@ public class GlobalExceptionHandler {
         return Result.fail("文件上传失败: " + e.getMessage());
     }
 
-    /** Dubbo RPC 调用失败（超时、无服务提供者、连接断开等） */
+    /** Dubbo RPC 调用失败（超时、无服务提供者、连接断开等）—— 属可重试的临时故障，返回 503 而非业务失败 */
     @ExceptionHandler(RpcException.class)
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public Result<?> handleRpcException(RpcException e) {
         log.error("Dubbo RPC 调用失败", e);
-        return Result.fail("服务繁忙，请稍后重试");
+        Result<Object> result = Result.fail(HttpStatus.SERVICE_UNAVAILABLE.value(), "服务繁忙，请稍后重试");
+        result.setRetryable(true);
+        return result;
     }
 
     @ExceptionHandler(Exception.class)
