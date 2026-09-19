@@ -4,6 +4,7 @@ import com.cozy.common.constant.InviteRewardConfig;
 import com.cozy.common.constant.ProfileRewardConfig;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.member.api.MemberService;
+import com.cozy.user.dto.request.UpdateProfileRequest;
 import com.cozy.user.dto.response.UserDTO;
 import com.cozy.user.entity.User;
 import com.cozy.user.mapper.UserMapper;
@@ -11,14 +12,25 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -85,5 +97,75 @@ class UserServiceImplTest {
         when(userMapper.selectById(7L)).thenReturn(null);
 
         assertThrows(BusinessException.class, () -> userService.getUserDetail(7L));
+    }
+
+    // ==================== updateProfile 的事务边界（ADR 0001 的 C1） ====================
+
+    /**
+     * 完善资料奖励必须等事务提交后才派发。
+     * 原先是裸 CompletableFuture，事务一回滚积分就已经加出去了、无法撤销。
+     */
+    @Test
+    void profileRewardIsDispatchedOnlyAfterCommit() {
+        when(userMapper.selectById(7L)).thenReturn(entity(7L)); // phone/email 为空 -> 算首次填写
+
+        UpdateProfileRequest request = new UpdateProfileRequest();
+        request.setPhone("13800000000");
+        request.setEmail("probe@example.com");
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            userService.updateProfile(7L, request);
+
+            // 事务还没提交：奖励绝不能已经发出去
+            verify(memberService, never()).addPoints(anyLong(), anyInt(), any(), any());
+
+            // 模拟提交
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(TransactionSynchronization::afterCommit);
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+
+        // 提交后才发；runAsync 是异步的，用 timeout 而不是立刻断言
+        verify(memberService, timeout(2000).times(1)).addPoints(anyLong(), anyInt(), any(), any());
+    }
+
+    /** 生日权益同理：提交前不能发。 */
+    @Test
+    void birthdayRewardIsDispatchedOnlyAfterCommit() {
+        when(userMapper.selectById(7L)).thenReturn(entity(7L));
+
+        UpdateProfileRequest request = new UpdateProfileRequest();
+        request.setBirthday("1990-05-20");
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            userService.updateProfile(7L, request);
+
+            verify(memberService, never()).grantBirthdayReward(anyLong());
+
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(TransactionSynchronization::afterCommit);
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+
+        verify(memberService, timeout(2000).times(1)).grantBirthdayReward(7L);
+    }
+
+    /**
+     * 结构性守卫：updateProfile 必须是 @Transactional。
+     *
+     * <p>{@code @Transactional} 的真实效果只有在 Spring 容器里才体现，而本模块的单测不起容器
+     * （起容器的集成测试依赖 MySQL/Redis/Nacos，CI 里被排除）。所以这里退而用反射守住注解本身 ——
+     * 它一旦被摘掉，"业务行与 outbox 行同事务" 这个前提就假了，而这正是 ADR 0001 C1 要防的。
+     */
+    @Test
+    void updateProfileIsTransactional() throws Exception {
+        Method method = UserServiceImpl.class.getMethod("updateProfile", Long.class, UpdateProfileRequest.class);
+
+        assertTrue(method.isAnnotationPresent(Transactional.class),
+                "updateProfile 必须带 @Transactional：否则 updateById 与后续写入各自 autocommit（见 ADR 0001 C1）");
     }
 }

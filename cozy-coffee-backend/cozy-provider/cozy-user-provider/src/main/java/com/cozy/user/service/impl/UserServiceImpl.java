@@ -426,6 +426,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void updateProfile(Long userId, UpdateProfileRequest request) {
         if (userId == null) {
             throw new BusinessException("用户未登录");
@@ -553,7 +554,8 @@ public class UserServiceImpl implements UserService {
         boolean shouldReward = (isFirstPhone || isFirstEmail) && profileNowComplete;
 
         if (shouldReward) {
-            CompletableFuture.runAsync(() -> {
+            // 等事务提交后再派发：否则资料更新事务一旦回滚，积分已经加出去了且无法撤销。
+            AfterCommit.run(() -> CompletableFuture.runAsync(() -> {
                 try {
                     memberService.addPoints(userId, profileRewardConfig.getPoints(),
                             profileRewardConfig.getSourceType(), profileRewardConfig.getDescription());
@@ -561,13 +563,13 @@ public class UserServiceImpl implements UserService {
                 } catch (Exception e) {
                     log.error("完善资料奖励积分失败: userId={}, error={}", userId, e.getMessage());
                 }
-            });
+            }));
         }
 
-        // v4.2: 设置生日后立即发放生日权益包
+        // v4.2: 设置生日后立即发放生日权益包（同样等提交后派发）
         if (request.getBirthday() != null) {
             final Long uid = userId;
-            CompletableFuture.runAsync(() -> {
+            AfterCommit.run(() -> CompletableFuture.runAsync(() -> {
                 try {
                     boolean granted = memberService.grantBirthdayReward(uid);
                     if (granted) {
@@ -578,7 +580,7 @@ public class UserServiceImpl implements UserService {
                 } catch (Exception e) {
                     log.error("生日权益包发放失败: userId={}, error={}", uid, e.getMessage());
                 }
-            });
+            }));
         }
     }
 
