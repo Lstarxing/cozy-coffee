@@ -4,6 +4,7 @@ import com.cozy.common.exception.BusinessException;
 import com.cozy.mall.dto.request.ItemCheckDTO;
 import com.cozy.mall.dto.request.RedeemRequest;
 import com.cozy.mall.dto.response.CouponCombinationResult;
+import com.cozy.mall.dto.response.CouponSummaryDTO;
 import com.cozy.mall.dto.response.CouponUsageResult;
 import com.cozy.mall.dto.response.PointsOrderDTO;
 import com.cozy.mall.dto.response.PointsOrderDTO;
@@ -43,6 +44,12 @@ public interface PointsMallService {
          * 获取用户券包（所有券）
          */
         List<UserCouponDTO> getUserCoupons(Long userId, String status) throws BusinessException;
+
+    /**
+     * 用户券包汇总（可用券数 / 其中兑换券数）。供网关组合会员资料，
+     * 避免把整张券列表跨服务拉过来再计数。
+     */
+    CouponSummaryDTO getCouponSummary(Long userId) throws BusinessException;
 
         /**
          * 获取下单可用券

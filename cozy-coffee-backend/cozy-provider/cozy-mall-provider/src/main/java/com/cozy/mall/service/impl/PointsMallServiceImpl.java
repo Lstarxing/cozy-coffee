@@ -30,6 +30,7 @@ import com.cozy.mall.dto.request.RedeemRequest;
 import com.cozy.member.dto.response.AddressDTO;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.mall.dto.response.CouponCombinationResult;
+import com.cozy.mall.dto.response.CouponSummaryDTO;
 import com.cozy.mall.dto.response.PointsOrderDTO;
 import com.cozy.mall.dto.response.PointsProductDTO;
 import com.cozy.order.api.OrderService;
@@ -687,6 +688,30 @@ public class PointsMallServiceImpl implements PointsMallService {
         return userCouponMapper.selectList(wrapper).stream()
                 .map(this::toCouponDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public CouponSummaryDTO getCouponSummary(Long userId) {
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        // 可用券口径与 getUserCoupons("ISSUED") 保持一致：ISSUED 且未过期
+        Long available = userCouponMapper.selectCount(new LambdaQueryWrapper<UserCoupon>()
+                .eq(UserCoupon::getUserId, userId)
+                .eq(UserCoupon::getStatus, "ISSUED")
+                .gt(UserCoupon::getExpiresAt, now));
+        Long exchange = userCouponMapper.selectCount(new LambdaQueryWrapper<UserCoupon>()
+                .eq(UserCoupon::getUserId, userId)
+                .eq(UserCoupon::getStatus, "ISSUED")
+                .gt(UserCoupon::getExpiresAt, now)
+                .eq(UserCoupon::getCouponType, "EXCHANGE"));
+
+        CouponSummaryDTO summary = new CouponSummaryDTO();
+        summary.setAvailableCount(available == null ? 0 : available.intValue());
+        summary.setExchangeCount(exchange == null ? 0 : exchange.intValue());
+        return summary;
     }
 
     @Override

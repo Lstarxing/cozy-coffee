@@ -1,11 +1,16 @@
 package com.cozy.mall.service.impl;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.cozy.common.constant.CouponTemplateConfig;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.mall.coupon.CouponCalculator;
 import com.cozy.mall.coupon.CouponCombinationService;
 import com.cozy.mall.dto.request.RedeemRequest;
+import com.cozy.mall.dto.response.CouponSummaryDTO;
 import com.cozy.mall.entity.PointsProduct;
+import com.cozy.mall.entity.UserCoupon;
 import com.cozy.mall.mapper.MonthlyRedemptionMapper;
 import com.cozy.mall.mapper.PointsOrderFulfillmentMapper;
 import com.cozy.mall.mapper.PointsOrderMapper;
@@ -18,9 +23,11 @@ import com.cozy.member.api.MemberService;
 import com.cozy.order.api.OrderService;
 import com.cozy.user.api.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -28,10 +35,16 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Collection;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,6 +69,15 @@ class PointsMallServiceImplTest {
     @Mock private UserService userService;
 
     @InjectMocks private PointsMallServiceImpl pointsMallService;
+
+    @BeforeAll
+    static void initMybatisPlusMetadata() {
+        // LambdaQueryWrapper 渲染列名要用 MP 的 TableInfo 缓存，纯单测环境下需手动初始化，
+        // 否则 getSqlSegment() 会抛 "can not find lambda cache for this entity"
+        TableInfoHelper.initTableInfo(
+                new org.apache.ibatis.builder.MapperBuilderAssistant(new MybatisConfiguration(), ""),
+                UserCoupon.class);
+    }
 
     @BeforeEach
     void injectDubboRefs() {
@@ -206,5 +228,50 @@ class PointsMallServiceImplTest {
         org.junit.jupiter.api.Assertions.assertEquals("ISSUED", addon.getStatus());
         org.mockito.Mockito.verify(userCouponMapper).updateById(main);
         org.mockito.Mockito.verify(userCouponMapper).updateById(addon);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void couponSummaryCountsOnlyIssuedAndUnexpiredCoupons() {
+        when(userCouponMapper.selectCount(any())).thenReturn(7L, 2L);
+
+        CouponSummaryDTO summary = pointsMallService.getCouponSummary(38L);
+
+        assertEquals(7, summary.getAvailableCount());
+        assertEquals(2, summary.getExchangeCount());
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Wrapper<UserCoupon>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(userCouponMapper, times(2)).selectCount(captor.capture());
+        Wrapper<UserCoupon> availableWrapper = captor.getAllValues().get(0);
+        Wrapper<UserCoupon> exchangeWrapper = captor.getAllValues().get(1);
+        String availableSql = availableWrapper.getSqlSegment();
+        Collection<Object> availableQuery = boundValues(availableWrapper);
+        Collection<Object> exchangeQuery = boundValues(exchangeWrapper);
+
+        assertTrue(availableSql.contains("status") && availableSql.contains("expires_at"),
+                "可用券需限定 status 且未过期，实际 SQL 片段=" + availableSql);
+        assertTrue(availableQuery.contains("ISSUED"), "可用券统计必须限定 ISSUED，实际绑定值=" + availableQuery);
+        assertFalse(availableQuery.contains("EXCHANGE"), "可用券统计不应限定券类型，实际绑定值=" + availableQuery);
+        assertTrue(exchangeQuery.contains("ISSUED"), "兑换券统计同样限定 ISSUED，实际绑定值=" + exchangeQuery);
+        assertTrue(exchangeQuery.contains("EXCHANGE"), "兑换券统计需限定 EXCHANGE，实际绑定值=" + exchangeQuery);
+    }
+
+    @Test
+    void couponSummaryRejectsMissingUser() {
+        assertThrows(BusinessException.class, () -> pointsMallService.getCouponSummary(null));
+    }
+
+    /**
+     * 取出 LambdaQueryWrapper 绑定的参数值。
+     * MyBatis-Plus 是惰性绑定：参数要等 SQL 渲染（getSqlSegment）时才写进 paramNameValuePairs，
+     * 所以这里必须先触发一次渲染。
+     */
+    @SuppressWarnings("unchecked")
+    private static Collection<Object> boundValues(Wrapper<UserCoupon> wrapper) {
+        wrapper.getSqlSegment();
+        Map<String, Object> pairs =
+                (Map<String, Object>) ReflectionTestUtils.getField(wrapper, "paramNameValuePairs");
+        return pairs.values();
     }
 }

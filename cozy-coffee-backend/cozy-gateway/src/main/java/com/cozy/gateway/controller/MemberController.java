@@ -2,6 +2,7 @@ package com.cozy.gateway.controller;
 
 import com.cozy.common.result.Result;
 import com.cozy.gateway.dto.AddPointsRequest;
+import com.cozy.gateway.service.MemberProfileCoordinator;
 import com.cozy.gateway.util.AuthUtil;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.api.MonthlyTaskService;
@@ -35,9 +36,12 @@ public class MemberController {
     @DubboReference(check = false)
     private MonthlyTaskService monthlyTaskService;
 
+    private final MemberProfileCoordinator memberProfileCoordinator;
+
     @GetMapping("/info")
     public Result<MemberDTO> getMemberInfo() {
-        return Result.success(memberService.getMemberByUserId(AuthUtil.requireUserId()));
+        // 主体信息来自 member 域、券数量来自 mall 域，组合见 MemberProfileCoordinator
+        return Result.success(memberProfileCoordinator.getMemberProfile(AuthUtil.requireUserId()));
     }
 
     @PostMapping("/signin")
