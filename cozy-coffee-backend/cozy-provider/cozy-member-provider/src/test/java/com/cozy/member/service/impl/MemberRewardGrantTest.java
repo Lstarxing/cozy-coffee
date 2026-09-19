@@ -5,7 +5,6 @@ import com.cozy.common.constant.MemberLevelConfig;
 import com.cozy.common.constant.MonthlyBenefitConfig;
 import com.cozy.common.constant.UpgradeRewardConfig;
 import com.cozy.common.exception.BusinessException;
-import com.cozy.mall.api.PointsMallService;
 import com.cozy.member.entity.MemberInfo;
 import com.cozy.member.entity.PointsLot;
 import com.cozy.member.entity.PointsTransaction;
@@ -14,6 +13,7 @@ import com.cozy.member.mapper.MonthlyTaskMapper;
 import com.cozy.member.mapper.PointsLotConsumptionMapper;
 import com.cozy.member.mapper.PointsLotMapper;
 import com.cozy.member.mapper.PointsTransactionMapper;
+import com.cozy.member.mq.CouponGrantOutboxService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +48,7 @@ class MemberRewardGrantTest {
     private MemberInfoMapper memberInfoMapper;
     private PointsTransactionMapper transactionMapper;
     private PointsLotMapper pointsLotMapper;
-    private PointsMallService pointsMallService;
+    private CouponGrantOutboxService couponGrantOutboxService;
     private MemberServiceImpl service;
     private MemberInfo member;
 
@@ -57,7 +57,7 @@ class MemberRewardGrantTest {
         memberInfoMapper = mock(MemberInfoMapper.class);
         transactionMapper = mock(PointsTransactionMapper.class);
         pointsLotMapper = mock(PointsLotMapper.class);
-        pointsMallService = mock(PointsMallService.class);
+        couponGrantOutboxService = mock(CouponGrantOutboxService.class);
 
         service = new MemberServiceImpl(
                 memberInfoMapper, transactionMapper, pointsLotMapper,
@@ -66,11 +66,8 @@ class MemberRewardGrantTest {
                 new ObjectMapper(),
                 new MemberLevelConfig(), new BirthdayRewardConfig(),
                 new UpgradeRewardConfig(), new MonthlyBenefitConfig(),
+                couponGrantOutboxService,
                 mock(PlatformTransactionManager.class));
-
-        Field f = MemberServiceImpl.class.getDeclaredField("pointsMallService");
-        f.setAccessible(true);
-        f.set(service, pointsMallService);
 
         member = new MemberInfo();
         member.setUserId(38L);
@@ -92,14 +89,15 @@ class MemberRewardGrantTest {
         return m.invoke(service, args);
     }
 
-    /** 统计与期望券类型/参数完全匹配的 issueCouponToUser 调用数 */
+    /** 统计与期望券类型/参数完全匹配的发券请求数（发券改为写本地 outbox） */
     private int countIssued(String couponType, double min, double discount, int days) {
         ArgumentCaptor<String> type = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Double> minCap = ArgumentCaptor.forClass(Double.class);
         ArgumentCaptor<Double> disCap = ArgumentCaptor.forClass(Double.class);
         ArgumentCaptor<Integer> daysCap = ArgumentCaptor.forClass(Integer.class);
-        verify(pointsMallService, atLeastOnce()).issueCouponToUser(
-                anyLong(), type.capture(), anyString(), minCap.capture(), disCap.capture(), daysCap.capture());
+        verify(couponGrantOutboxService, atLeastOnce()).publish(
+                anyLong(), type.capture(), anyString(), minCap.capture(), disCap.capture(), daysCap.capture(),
+                anyString());
         List<String> types = type.getAllValues();
         int count = 0;
         for (int i = 0; i < types.size(); i++) {
@@ -152,8 +150,8 @@ class MemberRewardGrantTest {
     void monthlyBenefitDiamond_issues9Coupons() throws Exception {
         member.setMemberLevel("diamond");
         service.receiveMonthlyBenefit(38L);
-        verify(pointsMallService, times(9)).issueCouponToUser(
-                anyLong(), anyString(), anyString(), anyDouble(), anyDouble(), anyInt());
+        verify(couponGrantOutboxService, times(9)).publish(
+                anyLong(), anyString(), anyString(), anyDouble(), anyDouble(), anyInt(), anyString());
         assertIssued("MONTHLY_DIAMOND_FREE", 0, 40, 30);
         assertIssued("BOGO", 0, 40, 30);
         assertIssued("DELIVERY_FEE", 0, 6, 30);
@@ -164,8 +162,8 @@ class MemberRewardGrantTest {
     void monthlyBenefitBlack_issues8Coupons() throws Exception {
         member.setMemberLevel("black");
         service.receiveMonthlyBenefit(38L);
-        verify(pointsMallService, times(8)).issueCouponToUser(
-                anyLong(), anyString(), anyString(), anyDouble(), anyDouble(), anyInt());
+        verify(couponGrantOutboxService, times(8)).publish(
+                anyLong(), anyString(), anyString(), anyDouble(), anyDouble(), anyInt(), anyString());
         assertIssued("MONTHLY_BLACK_FREE", 0, 40, 30);
         assertIssued("BOGO", 0, 40, 30);
         assertIssued("NEW_PRODUCT_FREE", 0, 40, 30);
@@ -175,8 +173,8 @@ class MemberRewardGrantTest {
     void monthlyBenefitGold_issues5Coupons() throws Exception {
         member.setMemberLevel("gold");
         service.receiveMonthlyBenefit(38L);
-        verify(pointsMallService, times(5)).issueCouponToUser(
-                anyLong(), anyString(), anyString(), anyDouble(), anyDouble(), anyInt());
+        verify(couponGrantOutboxService, times(5)).publish(
+                anyLong(), anyString(), anyString(), anyDouble(), anyDouble(), anyInt(), anyString());
         assertIssued("BOGO", 0, 40, 30);
         assertIssued("DISCOUNT", 0, 88, 30);
         assertIssued("DELIVERY_FEE", 0, 6, 30);
@@ -214,7 +212,7 @@ class MemberRewardGrantTest {
         } catch (BusinessException ignored) {
             // 已领取 → 抛业务异常
         }
-        verify(pointsMallService, times(0)).issueCouponToUser(
-                anyLong(), anyString(), anyString(), anyDouble(), anyDouble(), anyInt());
+        verify(couponGrantOutboxService, times(0)).publish(
+                anyLong(), anyString(), anyString(), anyDouble(), anyDouble(), anyInt(), anyString());
     }
 }

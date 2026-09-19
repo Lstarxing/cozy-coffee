@@ -10,7 +10,6 @@ import com.cozy.common.constant.RedemptionDiscountConfig;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.member.api.MemberService;
-import com.cozy.mall.api.PointsMallService;
 import java.math.BigDecimal;
 import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.member.dto.response.MemberOverviewDTO;
@@ -29,11 +28,13 @@ import com.cozy.member.mapper.MonthlyTaskMapper;
 import com.cozy.member.mapper.PointsLotConsumptionMapper;
 import com.cozy.member.mapper.PointsLotMapper;
 import com.cozy.member.mapper.PointsTransactionMapper;
+import com.cozy.member.mq.CouponGrantOutboxService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -86,8 +87,8 @@ public class MemberServiceImpl implements MemberService {
     @DubboReference(check = false)
     private UserService userService;
 
-    @DubboReference(check = false)
-    private PointsMallService pointsMallService;
+    // 发券请求走本地 outbox（不再同步 RPC 调 mall）；本域已不依赖 cozy-mall-api
+    private final CouponGrantOutboxService couponGrantOutboxService;
 
     @DubboReference(check = false)
     private OrderService orderService;
@@ -171,27 +172,8 @@ public class MemberServiceImpl implements MemberService {
         // 即将到期积分（近30天）
         dto.setExpiringPoints(getExpiringPoints(userId, 30));
 
-        // 获取优惠券数量（可用状态）
-        try {
-            if (pointsMallService != null) {
-                var coupons = pointsMallService.getUserCoupons(userId, "available");
-                if (coupons != null) {
-                    dto.setCouponCount(coupons.size());
-                    // 统计 EXCHANGE 类型的券数量
-                    long exchangeCount = coupons.stream()
-                            .filter(c -> "EXCHANGE".equals(c.getCouponType()))
-                            .count();
-                    dto.setExchangeCouponCount((int) exchangeCount);
-                } else {
-                    dto.setCouponCount(0);
-                    dto.setExchangeCouponCount(0);
-                }
-            }
-        } catch (Exception e) {
-            log.warn("获取用户优惠券数量失败: userId={}", userId, e);
-            dto.setCouponCount(0);
-            dto.setExchangeCouponCount(0);
-        }
+        // 券包数量不再由本域反查 mall（消除 member → mall 依赖环；原调用用的 "available" 状态
+        // 在 mall 侧并不存在、恒返 0）。改由网关在 /api/member/info 用 CouponSummary 组合填充。
 
         // Populate User Info (Nickname, Phone, Avatar) via UserService
         try {
@@ -833,8 +815,9 @@ public class MemberServiceImpl implements MemberService {
             int idx = 0;
             for (UpgradeRewardConfig.CouponGrant c : reward.getCoupons()) {
                 for (int i = 0; i < c.getCount(); i++) {
-                    pointsMallService.issueCouponToUser(userId, c.getCouponType(),
-                            uniqueKey + "_c" + idx, c.getMinAmount(), c.getDiscountAmount(), c.getValidDays());
+                    couponGrantOutboxService.publish(userId, c.getCouponType(),
+                            uniqueKey + "_c" + idx, c.getMinAmount(), c.getDiscountAmount(), c.getValidDays(),
+                            "level_upgrade");
                     idx++;
                 }
             }
@@ -844,9 +827,10 @@ public class MemberServiceImpl implements MemberService {
             }
             log.info("晋升礼包发放: userId={}, level={}, points={}, couponCount={}", userId, level,
                     reward.getPoints(), idx);
-        } catch (Exception e) {
-            // Unique Index 冲突意味着已领取过 (One-off)，忽略
-            log.info("晋升礼包已领取或发放失败(One-off): userId={}, level={}", userId, level);
+        } catch (DuplicateKeyException e) {
+            // 幂等：同一次晋升礼重复发放由唯一索引拦住（outbox 的重复入队已在 publish 内部消化）。
+            // 其余异常必须抛出，否则会出现"等级已升级、奖励事件没落库"的静默丢失。
+            log.info("晋升礼包已领取(One-off): userId={}, level={}", userId, level);
         }
     }
 
@@ -983,8 +967,9 @@ public class MemberServiceImpl implements MemberService {
             log.info("本月共有 {} 位寿星", userIds.size());
             for (Long userId : userIds) {
                 try {
-                    // grantBirthdayRewardInternal 会处理幂等性（birthday_userId_year）
-                    grantBirthdayRewardInternal(userId, year);
+                    // 每位寿星一个独立事务：积分/领取记录/outbox 原子提交，一人失败只回滚该人，不影响其余寿星
+                    new TransactionTemplate(transactionManager)
+                            .executeWithoutResult(status -> grantBirthdayRewardInternal(userId, year));
                 } catch (Exception e) {
                     log.error("发放生日福利失败: userId={}, error={}", userId, e.getMessage());
                 }
@@ -1010,7 +995,9 @@ public class MemberServiceImpl implements MemberService {
 
         int currentYear = LocalDate.now().getYear();
         try {
-            grantBirthdayRewardInternal(userId, currentYear);
+            // 积分 / 领取记录 / outbox 必须原子提交：任一失败整体回滚，不留"发了积分但没发券"的中间态
+            new TransactionTemplate(transactionManager)
+                    .executeWithoutResult(status -> grantBirthdayRewardInternal(userId, currentYear));
             log.info("生日权益包发放成功: userId={}, year={}", userId, currentYear);
             return true;
         } catch (Exception e) {
@@ -1048,30 +1035,27 @@ public class MemberServiceImpl implements MemberService {
             reward = birthdayRewardConfig.getLevel("basic");
         }
 
-        try {
-            // 生日积分（黑金 888，其余等级 0），配置见 cozy.member.birthday
-            if (reward.getPoints() > 0) {
-                addPointsWithLot(userId, reward.getPoints(), "birthday_gift", sourceId,
-                        "🎂 生日快乐！" + levelName(level) + "会员专属" + reward.getPoints() + "积分贺礼已发放");
-            }
-
-            // 各等级生日券（配置驱动）
-            int idx = 1;
-            for (BirthdayRewardConfig.BirthdayCoupon c : reward.getCoupons()) {
-                pointsMallService.issueCouponToUser(userId, c.getCouponType(),
-                        baseKey + "_gift" + idx, c.getMinAmount(), c.getDiscountAmount(), c.getValidDays());
-                idx++;
-            }
-
-            if (reward.getPoints() <= 0) {
-                recordTransaction(userId, 0, currentPoints, "birthday_gift", null,
-                        "生日快乐！" + levelName(level) + "会员生日礼已发放");
-            }
-            log.info("生日权益发放: userId={}, level={}, points={}, couponCount={}", userId, level,
-                    reward.getPoints(), reward.getCoupons().size());
-        } catch (Exception e) {
-            log.warn("生日权益发放失败: userId={}, level={}, error={}", userId, level, e.getMessage());
+        // 生日积分（黑金 888，其余等级 0），配置见 cozy.member.birthday
+        if (reward.getPoints() > 0) {
+            addPointsWithLot(userId, reward.getPoints(), "birthday_gift", sourceId,
+                    "🎂 生日快乐！" + levelName(level) + "会员专属" + reward.getPoints() + "积分贺礼已发放");
         }
+
+        // 各等级生日券（配置驱动）——发券走本地 outbox，与积分/领取记录同属一个事务
+        int idx = 1;
+        for (BirthdayRewardConfig.BirthdayCoupon c : reward.getCoupons()) {
+            couponGrantOutboxService.publish(userId, c.getCouponType(),
+                    baseKey + "_gift" + idx, c.getMinAmount(), c.getDiscountAmount(), c.getValidDays(),
+                    "birthday");
+            idx++;
+        }
+
+        if (reward.getPoints() <= 0) {
+            recordTransaction(userId, 0, currentPoints, "birthday_gift", null,
+                    "生日快乐！" + levelName(level) + "会员生日礼已发放");
+        }
+        log.info("生日权益发放: userId={}, level={}, points={}, couponCount={}", userId, level,
+                reward.getPoints(), reward.getCoupons().size());
     }
 
     private String levelName(String level) {
@@ -1309,8 +1293,9 @@ public class MemberServiceImpl implements MemberService {
                 int idx = 0;
                 for (MonthlyBenefitConfig.CouponGrant c : benefit.getCoupons()) {
                     for (int i = 0; i < c.getCount(); i++) {
-                        pointsMallService.issueCouponToUser(userId, c.getCouponType(),
-                                uniqueKeyBase + "_c" + idx, c.getMinAmount(), c.getDiscountAmount(), c.getValidDays());
+                        couponGrantOutboxService.publish(userId, c.getCouponType(),
+                                uniqueKeyBase + "_c" + idx, c.getMinAmount(), c.getDiscountAmount(), c.getValidDays(),
+                                "monthly_benefit");
                         idx++;
                     }
                 }

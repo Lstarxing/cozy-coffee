@@ -55,10 +55,14 @@ dubbo:
     check: false
     timeout: 30000
 
-# RocketMQ：消费订单完成事件（积分/EXP/首单/月度任务）
-# 使用 CLUSTERING 模式，多实例时只有一个实例消费，避免重复发放
+# RocketMQ：消费订单完成事件（积分/EXP/首单/月度任务）；生产发券请求事件（CouponGrantOutboxService）
+# 消费用 CLUSTERING 模式，多实例时只有一个实例消费，避免重复发放
 rocketmq:
   name-server: ${ROCKETMQ_NAME_SERVER:localhost:9876}
+  producer:
+    group: cozy-member-producer
+    send-message-timeout: 2000
+    retry-times-when-send-failed: 1
 
 # 会员等级与保级策略配置（MemberLevelConfig 单一事实源，改动只改这里）
 cozy:

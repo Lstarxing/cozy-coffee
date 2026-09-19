@@ -4,8 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.constant.SigninRewardConfig;
 import com.cozy.common.exception.BusinessException;
-import com.cozy.common.tx.AfterCommit;
-import com.cozy.mall.api.PointsMallService;
 import com.cozy.member.api.SigninService;
 import com.cozy.member.dto.response.SigninResultDTO;
 import com.cozy.member.entity.MemberInfo;
@@ -16,9 +14,9 @@ import com.cozy.member.mapper.MemberInfoMapper;
 import com.cozy.member.mapper.PointsLotMapper;
 import com.cozy.member.mapper.SigninRecordMapper;
 import com.cozy.member.mapper.PointsTransactionMapper;
+import com.cozy.member.mq.CouponGrantOutboxService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +29,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -54,9 +51,8 @@ public class SigninServiceImpl implements SigninService {
     // 签到奖励配置（单一事实源 @ConfigurationProperties，见 cozy.member.signin）
     private final SigninRewardConfig signinRewardConfig;
 
-    // v5.0: 通过 RPC 调用 PointsMallService 发放7日连签券
-    @DubboReference(check = false, timeout = 2000, retries = 0)
-    private PointsMallService pointsMallService;
+    // 发券请求不再同步 RPC 调 mall，改为写本地 outbox（见 CouponGrantOutboxService）
+    private final CouponGrantOutboxService couponGrantOutboxService;
 
     @Override
     @Transactional
@@ -152,10 +148,12 @@ public class SigninServiceImpl implements SigninService {
 
         // 检查连签奖励 - 发放连签券（配置见 cozy.member.signin.seven-day-coupon）
         if (consecutiveDays == signinRewardConfig.getSevenDayCouponAfterDays()) {
-            // 提交后再异步发券：直接 runAsync 会立即启动，可能先于本事务提交——一旦事务回滚，
-            // 券已发出且无法撤销。afterCommit 只解决"先于提交"；崩溃丢失由发券幂等键
-            // signin_7day_<recordId> 兜住（重复发放会被下游去重）。
-            AfterCommit.run(() -> CompletableFuture.runAsync(() -> grant7DayCoupon(userId, record.getId())));
+            // 与签到数据同事务写入 outbox：事务回滚则发券请求一并回滚，不会再出现"券发了但签到没落库"；
+            // 提交后投递、mall 消费发券（幂等键 signin_7day_<recordId>），投递失败由 relay 重投。
+            SigninRewardConfig.SevenDayCoupon coupon = signinRewardConfig.getSevenDayCoupon();
+            couponGrantOutboxService.publish(userId, coupon.getCouponType(),
+                    "signin_7day_" + record.getId(), coupon.getMinAmount(),
+                    coupon.getDiscountAmount(), coupon.getValidDays(), "signin_7day");
         }
 
         return result;
@@ -328,34 +326,6 @@ public class SigninServiceImpl implements SigninService {
             stringRedisTemplate.delete(RedisKeyConstants.signinMonthStatsByUserAndMonth(userId, monthText));
         } catch (Exception e) {
             log.warn("清理签到月统计缓存失败: userId={}, month={}", userId, monthText, e);
-        }
-    }
-
-    /**
-     * 发放连签奖励券（配置见 cozy.member.signin.seven-day-coupon）
-     * 通过 RPC 调用 PointsMallService 发放券
-     *
-     * @param signinRecordId 触发奖励的签到记录ID（第 N 天）
-     */
-    private void grant7DayCoupon(Long userId, Long signinRecordId) {
-        try {
-            SigninRewardConfig.SevenDayCoupon coupon = signinRewardConfig.getSevenDayCoupon();
-            if (pointsMallService != null) {
-                pointsMallService.issueCouponToUser(
-                        userId,
-                        coupon.getCouponType(), // 券模板类型
-                        "signin_7day_" + signinRecordId, // 唯一标识，防止重复发放
-                        coupon.getMinAmount(), // 使用门槛
-                        coupon.getDiscountAmount(), // 优惠金额
-                        coupon.getValidDays() // 有效天数
-                );
-                log.info("7日连签券发放成功: userId={}, signinRecordId={}", userId, signinRecordId);
-            } else {
-                log.warn("PointsMallService 未注入, 无法发放7日券: userId={}", userId);
-            }
-        } catch (Exception e) {
-            // 发放失败不影响签到主流程
-            log.warn("7日连签券发放失败: userId={}, error={}", userId, e.getMessage());
         }
     }
 }

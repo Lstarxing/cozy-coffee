@@ -12,4 +12,6 @@ public final class MqTags {
     public static final String ORDER_CREATED = "order_created";
     public static final String ORDER_COMPLETED = "order_completed";
     public static final String ORDER_CANCELLED = "order_cancelled";
+
+    public static final String COUPON_GRANT_REQUESTED = "coupon_grant_requested";
 }

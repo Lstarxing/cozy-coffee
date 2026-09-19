@@ -9,4 +9,7 @@ public final class MqTopics {
     }
 
     public static final String ORDER_EVENTS = "cozy-order-events";
+
+    /** 会员域事件（发券请求等），消费方为 mall-provider */
+    public static final String MEMBER_EVENTS = "cozy-member-events";
 }
