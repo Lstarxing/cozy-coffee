@@ -1,5 +1,6 @@
 package com.cozy.gateway.exception;
 
+import com.cozy.common.exception.BusinessErrorCode;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.common.exception.NotFoundException;
 import com.cozy.common.exception.UnauthorizedException;
@@ -34,7 +35,7 @@ public class GlobalExceptionHandler {
                 .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         log.warn("参数校验失败: {}", errors);
-        return Result.fail(errors);
+        return Result.businessFail(BusinessErrorCode.VALIDATION_ERROR.name(), errors, false);
     }
 
     /** JSR-303 @RequestParam / @PathVariable 校验失败 */
@@ -45,7 +46,7 @@ public class GlobalExceptionHandler {
                 .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
                 .collect(Collectors.joining("; "));
         log.warn("参数约束违反: {}", errors);
-        return Result.fail(errors);
+        return Result.businessFail(BusinessErrorCode.VALIDATION_ERROR.name(), errors, false);
     }
 
     @ExceptionHandler(UnauthorizedException.class)
@@ -122,13 +123,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<?> handleIllegalArgument(IllegalArgumentException e) {
-        return Result.error("参数错误: " + e.getMessage());
+        return Result.businessFail(BusinessErrorCode.VALIDATION_ERROR.name(), "参数错误: " + e.getMessage(), false);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<?> handleMissingParam(MissingServletRequestParameterException e) {
-        return Result.error("缺少必要参数: " + e.getParameterName());
+        return Result.businessFail(BusinessErrorCode.VALIDATION_ERROR.name(),
+                "缺少必要参数: " + e.getParameterName(), false);
     }
 
     @ExceptionHandler(DuplicateKeyException.class)

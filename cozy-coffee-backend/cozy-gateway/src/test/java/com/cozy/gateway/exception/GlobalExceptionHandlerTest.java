@@ -3,10 +3,18 @@ package com.cozy.gateway.exception;
 import com.cozy.common.exception.BusinessErrorCode;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.common.result.Result;
+import jakarta.validation.ConstraintViolationException;
 import org.apache.dubbo.rpc.RpcException;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -93,5 +101,47 @@ class GlobalExceptionHandlerTest {
         assertEquals(503, result.getCode());
         assertEquals("服务繁忙，请稍后重试", result.getMessage());
         assertTrue(result.getRetryable());
+    }
+
+    // ==================== 参数校验类：统一带 VALIDATION_ERROR ====================
+
+    /** 校验类失败统一形状：code 400 + errorCode=VALIDATION_ERROR + retryable=false（移动端据此归为 ValidationError） */
+    private void assertValidationShape(Result<?> result) {
+        assertFalse(result.isSuccess());
+        assertEquals(400, result.getCode());
+        assertEquals(BusinessErrorCode.VALIDATION_ERROR.name(), result.getErrorCode());
+        assertEquals(Boolean.FALSE, result.getRetryable());
+    }
+
+    @Test
+    void bodyValidationFailureCarriesValidationErrorCode() throws Exception {
+        MethodParameter param = new MethodParameter(String.class.getDeclaredMethod("substring", int.class), 0);
+        BindingResult binding = new BeanPropertyBindingResult(new Object(), "req");
+
+        Result<?> result = handler.handleValidation(new MethodArgumentNotValidException(param, binding));
+
+        assertValidationShape(result);
+    }
+
+    @Test
+    void constraintViolationCarriesValidationErrorCode() {
+        Result<?> result = handler.handleConstraintViolation(new ConstraintViolationException(Set.of()));
+
+        assertValidationShape(result);
+    }
+
+    @Test
+    void missingRequestParameterCarriesValidationErrorCode() {
+        Result<?> result = handler.handleMissingParam(new MissingServletRequestParameterException("q", "String"));
+
+        assertValidationShape(result);
+        assertTrue(result.getMessage().contains("q"));
+    }
+
+    @Test
+    void illegalArgumentCarriesValidationErrorCode() {
+        Result<?> result = handler.handleIllegalArgument(new IllegalArgumentException("bad arg"));
+
+        assertValidationShape(result);
     }
 }
