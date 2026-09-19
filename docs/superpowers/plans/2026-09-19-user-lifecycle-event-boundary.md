@@ -449,10 +449,14 @@ refactor(user): 移除 member/mall 依赖并锁定领域边界
 
 ## 12. 后续工作
 
-本计划完成后再创建并评审：
+**ADR 0002《商品目录所有权》已定稿（Accepted）**：`docs/adr/0002-product-catalog-ownership.md`。
+它不依赖本计划的完成 —— 写侧迁移开工前先把这条边界的责任划清更划算。
 
-```text
-docs/adr/0002-product-catalog-ownership.md
-```
+该 ADR 的结论是**移除** `mall → order` 依赖（而不是接受）：核实后 mall 的两处读取都是**冗余**的 ——
+order 已经把权威的当前规格基础价通过 `ItemCheckDTO.price` 交给 mall；
+券标题所需的商品名用 mall 本地数据即可 —— 取来源 `points_products.name` 作为完整标题并
+**快照到现有的 `user_coupons.display_title`**（`linkedProductId` 继续留在 `rule_json`，无需新增列与迁移）。
+两处删除后即可给 mall-provider 加 `bannedDependencies` 禁令。具体待办见该文件；本计划不实现它的任何一项。
 
-该 ADR 再决定接受 `mall -> order`、抽取 catalog，或由 mall 维护商品最小快照。本计划不提前实现任何一种方案。
+> 该 ADR 的第一版结论为"接受 `mall → order` 只读依赖"，因核心事实有误（把 `CoffeeProductDTO.price`
+> 误当成标准杯价格）**已作废**。

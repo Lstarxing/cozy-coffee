@@ -138,5 +138,5 @@ MyBatis-Plus 的 `updateById` 做不到条件更新。需
 - **推迟**：outbox 表、事件 DTO、消费者与生产者切换（原计划的 Phase 1–4 与 Phase 6）。
   理由：在没有生产者和消费者的情况下先建骨架收益为零，只会提前引入表、MQ 配置与指标维护成本；
   这些内容应与消费者实现同批进入，避免"基础设施建了但没人用"。
-- **本 ADR 之外**：`member → order`（月度统计投影）、`mall → order`（商品目录所有权，见待写的 ADR 0002）、
-  `cozy-common` 拆分。
+- **本 ADR 之外**：`member → order`（月度统计投影，尚无 ADR 覆盖）、
+  `mall → order`（见 **ADR 0002**，结论是**移除**该依赖：经核实两处读取都是冗余的）、`cozy-common` 拆分。
