@@ -2,11 +2,10 @@ package com.cozy.gateway.controller;
 
 import com.cozy.common.result.Result;
 import com.cozy.gateway.service.AdminListService;
+import com.cozy.gateway.service.AdminUserProfileCoordinator;
 import com.cozy.gateway.service.AdminUserService;
-import com.cozy.user.api.UserService;
 import com.cozy.user.dto.response.UserDTO;
 import lombok.RequiredArgsConstructor;
-import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,11 +15,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminUserController {
 
-    @DubboReference(check = false)
-    private UserService userService;
-
     private final AdminListService listService;
     private final AdminUserService adminUserService;
+    private final AdminUserProfileCoordinator adminUserProfileCoordinator;
 
     @GetMapping("/users")
     public Result<List<UserDTO>> listUsers(
@@ -45,6 +42,6 @@ public class AdminUserController {
 
     @GetMapping("/users/{userId}")
     public Result<UserDTO> getUserDetail(@PathVariable Long userId) {
-        return Result.success(userService.getUserDetail(userId));
+        return Result.success(adminUserProfileCoordinator.getUserDetail(userId));
     }
 }

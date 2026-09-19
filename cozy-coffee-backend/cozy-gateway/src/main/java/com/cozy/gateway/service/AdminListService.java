@@ -30,6 +30,7 @@ public class AdminListService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectMapper;
+    private final AdminUserProfileCoordinator adminUserProfileCoordinator;
 
     @DubboReference(check = false)
     private UserService userService;
@@ -43,6 +44,12 @@ public class AdminListService {
     public List<UserDTO> listUsers(String keyword, String memberLevel, String startDate, String endDate) {
         List<UserDTO> users = userService.listAllUsers();
         if (users == null) return java.util.Collections.emptyList();
+
+        // 会员等级/积分在网关一次批量补齐（user 域不再反查 member）。
+        // 必须早于下面的 memberLevel 过滤，否则过滤条件拿不到等级。
+        // 注意：listOrders/listRedemptions 也用 listAllUsers()，但它们只要 phone/username/nickname，
+        // 不能在这里补会员数据，否则白多一次 member 批量 RPC。
+        adminUserProfileCoordinator.enrichMemberSummaries(users);
 
         return users.stream().filter(u -> {
             if (keyword != null && !keyword.isEmpty()) {

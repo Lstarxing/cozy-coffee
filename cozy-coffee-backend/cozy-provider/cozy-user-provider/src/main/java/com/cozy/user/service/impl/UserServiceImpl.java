@@ -9,7 +9,6 @@ import com.cozy.common.tx.AfterCommit;
 import com.cozy.common.util.JwtUtil;
 import com.cozy.member.api.MemberService;
 import com.cozy.mall.api.PointsMallService;
-import com.cozy.member.dto.response.MemberDTO;
 import com.cozy.user.api.UserService;
 import com.cozy.user.dto.request.LoginRequest;
 import com.cozy.user.dto.request.RegisterRequest;
@@ -693,7 +692,7 @@ public class UserServiceImpl implements UserService {
         log.info("用户 {} 填写邀请码成功，邀请人: {}。奖励将在被邀请人首单完成时发放。", userId, inviter.getId());
 
         // v5.0: 不再立即发放奖励，改为在被邀请人首单完成时发放
-        // 详见 OrderServiceImpl.completeOrder() 中的 grantInviteRewardOnFirstOrder() 调用
+        // 实际调用方是 member-provider 的 FirstOrderConsumer（消费 ORDER_COMPLETED 后回调本方法）
     }
 
     @Override
@@ -711,25 +710,11 @@ public class UserServiceImpl implements UserService {
     public List<UserDTO> listAllUsers() {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.orderByDesc(User::getCreatedAt);
-        List<User> users = userMapper.selectList(wrapper);
-        return users.stream().map(user -> {
-            UserDTO dto = toDTO(user);
-            // 获取会员信息
-            try {
-                MemberDTO memberInfo = memberService.getMemberByUserId(user.getId());
-                if (memberInfo != null) {
-                    dto.setMemberLevel(memberInfo.getMemberLevel());
-                    dto.setCurrentPoints(memberInfo.getCurrentPoints());
-                    dto.setTotalPoints(memberInfo.getTotalPoints());
-                }
-            } catch (Exception e) {
-                // 如果获取会员信息失败，使用默认值
-                dto.setMemberLevel("basic");
-                dto.setCurrentPoints(0);
-                dto.setTotalPoints(0);
-            }
-            return dto;
-        }).collect(java.util.stream.Collectors.toList());
+        // 只返回 user 域字段。会员等级/积分由网关 AdminUserProfileCoordinator 一次批量补齐——
+        // 原先在这里逐用户反查 member 是 N+1，且 member 不可用时静默降级成 basic/0/0 的假数据（无日志）。
+        return userMapper.selectList(wrapper).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -770,23 +755,8 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException("用户不存在");
         }
 
-        UserDTO dto = toDTO(user);
-
-        // 获取会员信息
-        try {
-            MemberDTO memberInfo = memberService.getMemberByUserId(userId);
-            if (memberInfo != null) {
-                dto.setMemberLevel(memberInfo.getMemberLevel());
-                dto.setCurrentPoints(memberInfo.getCurrentPoints());
-                dto.setTotalPoints(memberInfo.getTotalPoints());
-            }
-        } catch (Exception e) {
-            dto.setMemberLevel("basic");
-            dto.setCurrentPoints(0);
-            dto.setTotalPoints(0);
-        }
-
-        return dto;
+        // 会员等级/积分由网关 AdminUserProfileCoordinator 组合填充，user 域不再反查 member。
+        return toDTO(user);
     }
 
     @Override
