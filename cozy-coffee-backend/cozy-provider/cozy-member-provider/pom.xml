@@ -54,6 +54,13 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Prometheus 原生格式输出（/actuator/prometheus），供抓取发券 outbox 的 dead / pending 指标。
+             版本由 spring-boot BOM 管理 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- MyBatis Plus -->
         <dependency>
             <groupId>com.baomidou</groupId>

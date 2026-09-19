@@ -2,12 +2,13 @@ server:
   port: 8082
 
 management:
-  # 暴露 metrics：发券 outbox 的 dead / oldest_pending_age 必须能被监控看见并配告警，
+  # 暴露 metrics（Micrometer 通用格式）+ prometheus（原生抓取格式）：
+  # 发券 outbox 的 dead / oldest_pending_age 必须能被监控看见并配告警，
   # 否则投递失败只剩一行日志。provider 端口不对公网发布，仅在容器网络内可达。
   endpoints:
     web:
       exposure:
-        include: health,metrics
+        include: health,metrics,prometheus
   endpoint:
     health:
       probes:
