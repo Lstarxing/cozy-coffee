@@ -7,6 +7,9 @@ import com.cozy.common.tx.AfterCommit;
 import com.cozy.member.entity.CouponGrantOutbox;
 import com.cozy.member.mapper.CouponGrantOutboxMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
@@ -16,7 +19,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 发券请求的本地 Outbox。
@@ -38,6 +43,44 @@ public class CouponGrantOutboxService {
     private final CouponGrantOutboxMapper outboxMapper;
     private final RocketMQTemplate rocketMQTemplate;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
+
+    // 指标值由 relay tick 刷新（每 30s），避免每次 scrape 都打库
+    private final AtomicLong pendingGauge = new AtomicLong();
+    private final AtomicLong deadGauge = new AtomicLong();
+    private final AtomicLong oldestPendingAgeSeconds = new AtomicLong();
+
+    /**
+     * DEAD/PENDING 必须可被监控看见——否则投递失败只剩一行日志，
+     * 会把"发券失败"变成静默丢失（比原先同步 RPC 直接报错更危险）。
+     * 建议对 dead 与 oldestPendingAgeSeconds 配告警。
+     */
+    @PostConstruct
+    void registerGauges() {
+        Gauge.builder("cozy.member.coupon_grant_outbox.pending", pendingGauge, AtomicLong::get)
+                .description("待投递的发券请求数")
+                .register(meterRegistry);
+        Gauge.builder("cozy.member.coupon_grant_outbox.dead", deadGauge, AtomicLong::get)
+                .description("重试耗尽、需人工重放的发券请求数")
+                .register(meterRegistry);
+        Gauge.builder("cozy.member.coupon_grant_outbox.oldest_pending_age_seconds",
+                        oldestPendingAgeSeconds, AtomicLong::get)
+                .description("最老待投递请求的滞留秒数")
+                .register(meterRegistry);
+    }
+
+    private void refreshGauges() {
+        try {
+            pendingGauge.set(outboxMapper.countByStatus("PENDING"));
+            deadGauge.set(outboxMapper.countByStatus("DEAD"));
+            LocalDateTime oldest = outboxMapper.oldestPendingCreatedAt();
+            oldestPendingAgeSeconds.set(
+                    oldest == null ? 0 : Math.max(0, Duration.between(oldest, LocalDateTime.now()).getSeconds()));
+        } catch (Exception e) {
+            // 指标刷新失败不能影响重投主流程
+            log.warn("刷新发券 outbox 指标失败: {}", e.getMessage());
+        }
+    }
 
     @Transactional
     public void publish(Long userId, String couponType, String uniqueKey, double minAmount,
@@ -82,6 +125,7 @@ public class CouponGrantOutboxService {
      */
     @Scheduled(fixedDelay = 30000)
     public void relayPending() {
+        refreshGauges();
         var pending = outboxMapper.selectPendingBatch(LocalDateTime.now(), 100);
         if (pending.isEmpty()) {
             return;

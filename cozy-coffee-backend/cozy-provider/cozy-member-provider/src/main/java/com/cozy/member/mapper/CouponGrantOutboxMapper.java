@@ -16,4 +16,12 @@ public interface CouponGrantOutboxMapper extends BaseMapper<CouponGrantOutbox> {
     @Select("SELECT * FROM coupon_grant_outbox WHERE status = 'PENDING' AND next_retry_at <= #{now} "
             + "ORDER BY id ASC LIMIT #{limit}")
     List<CouponGrantOutbox> selectPendingBatch(@Param("now") LocalDateTime now, @Param("limit") int limit);
+
+    /** 指标用：按状态计数 */
+    @Select("SELECT COUNT(*) FROM coupon_grant_outbox WHERE status = #{status}")
+    long countByStatus(@Param("status") String status);
+
+    /** 指标用：最老的 PENDING 创建时间（无则 null） */
+    @Select("SELECT MIN(created_at) FROM coupon_grant_outbox WHERE status = 'PENDING'")
+    LocalDateTime oldestPendingCreatedAt();
 }

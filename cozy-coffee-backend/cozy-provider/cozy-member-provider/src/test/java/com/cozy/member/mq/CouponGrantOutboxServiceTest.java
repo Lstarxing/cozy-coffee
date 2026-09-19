@@ -5,6 +5,7 @@ import com.cozy.common.mq.MqTopics;
 import com.cozy.member.entity.CouponGrantOutbox;
 import com.cozy.member.mapper.CouponGrantOutboxMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,13 +31,15 @@ class CouponGrantOutboxServiceTest {
 
     private CouponGrantOutboxMapper outboxMapper;
     private RocketMQTemplate rocketMQTemplate;
+    private SimpleMeterRegistry registry;
     private CouponGrantOutboxService service;
 
     @BeforeEach
     void setUp() {
         outboxMapper = mock(CouponGrantOutboxMapper.class);
         rocketMQTemplate = mock(RocketMQTemplate.class);
-        service = new CouponGrantOutboxService(outboxMapper, rocketMQTemplate, new ObjectMapper());
+        registry = new SimpleMeterRegistry();
+        service = new CouponGrantOutboxService(outboxMapper, rocketMQTemplate, new ObjectMapper(), registry);
     }
 
     @Test
@@ -113,6 +116,22 @@ class CouponGrantOutboxServiceTest {
 
         assertEquals("DEAD", exhausted.getStatus());
         verifyNoInteractions(rocketMQTemplate);
+    }
+
+    @Test
+    void exposesPendingAndDeadGaugesSoFailuresAreVisible() {
+        service.registerGauges(); // 生产环境由 @PostConstruct 触发
+        when(outboxMapper.countByStatus("PENDING")).thenReturn(3L);
+        when(outboxMapper.countByStatus("DEAD")).thenReturn(1L);
+        when(outboxMapper.oldestPendingCreatedAt()).thenReturn(LocalDateTime.now().minusSeconds(120));
+        when(outboxMapper.selectPendingBatch(any(), eq(100))).thenReturn(List.of());
+
+        service.relayPending();
+
+        assertEquals(3.0, registry.get("cozy.member.coupon_grant_outbox.pending").gauge().value());
+        assertEquals(1.0, registry.get("cozy.member.coupon_grant_outbox.dead").gauge().value());
+        assertTrue(registry.get("cozy.member.coupon_grant_outbox.oldest_pending_age_seconds").gauge().value() >= 115,
+                "最老 PENDING 滞留时长应可被监控到");
     }
 
     private CouponGrantOutbox pendingRow(Long id, int retryCount) {
