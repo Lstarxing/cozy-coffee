@@ -270,12 +270,18 @@ public class MemberServiceImpl implements MemberService {
             MemberDTO dto = new MemberDTO();
             dto.setId(info.getId());
             dto.setUserId(info.getUserId());
-            dto.setExpTotal(info.getExpTotal());
+            int expTotal = info.getExpTotal() != null ? info.getExpTotal() : 0;
+            dto.setExpTotal(expTotal);
             dto.setCurrentPoints(info.getCurrentPoints());
             dto.setTotalPoints(info.getTotalPoints());
-            dto.setMemberLevel(info.getMemberLevel());
-            dto.setPointsRate(PointsRateConfig.getBaseRate(info.getMemberLevel()));
-            dto.setRedeemDiscount(RedemptionDiscountConfig.getDiscount(info.getMemberLevel()));
+
+            // 与单体 getMemberByUserId 同一口径：等级按 EXP 实时计算，不读存量 member_level。
+            // 存量值会漂移（部分加 EXP 的路径不同步等级），读存量会让列表与详情显示不同等级、
+            // 等级筛选筛错、折扣率也取错。这里刻意**不回写**：批量读若回写就成了 N 次写操作。
+            String level = computeLevelByExp(expTotal);
+            dto.setMemberLevel(level);
+            dto.setPointsRate(PointsRateConfig.getBaseRate(level));
+            dto.setRedeemDiscount(RedemptionDiscountConfig.getDiscount(level));
 
             // 填充用户信息
             UserDTO user = userMap.get(info.getUserId());
