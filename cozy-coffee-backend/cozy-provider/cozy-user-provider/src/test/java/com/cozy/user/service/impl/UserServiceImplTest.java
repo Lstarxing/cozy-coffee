@@ -4,9 +4,9 @@ import com.cozy.common.constant.ProfileRewardConfig;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.common.mq.InviteRewardEarnedEvent;
 import com.cozy.common.mq.MqTags;
-import com.cozy.common.mq.UserEventKeys;
-import com.cozy.mall.api.PointsMallService;
+import com.cozy.common.mq.WelcomeGiftEligibleEvent;
 import com.cozy.member.api.MemberService;
+import com.cozy.user.dto.request.RegisterRequest;
 import com.cozy.user.dto.request.UpdateProfileRequest;
 import com.cozy.user.dto.response.UserDTO;
 import com.cozy.user.entity.User;
@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -31,10 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -55,7 +56,6 @@ class UserServiceImplTest {
 
     private UserMapper userMapper;
     private MemberService memberService;
-    private PointsMallService pointsMallService;
     private UserEventOutboxService userEventOutboxService;
     private UserServiceImpl userService;
     private ProfileRewardConfig profileRewardConfig;
@@ -64,13 +64,11 @@ class UserServiceImplTest {
     void setUp() {
         userMapper = mock(UserMapper.class);
         memberService = mock(MemberService.class);
-        pointsMallService = mock(PointsMallService.class);
         userEventOutboxService = mock(UserEventOutboxService.class);
         profileRewardConfig = new ProfileRewardConfig();
         userService = new UserServiceImpl(userMapper, mock(StringRedisTemplate.class),
                 profileRewardConfig, userEventOutboxService);
         ReflectionTestUtils.setField(userService, "memberService", memberService);
-        ReflectionTestUtils.setField(userService, "pointsMallService", pointsMallService);
     }
 
     private User entity(long id) {
@@ -218,9 +216,8 @@ class UserServiceImplTest {
         assertEquals("invite_firstorder_38_7", event.getUniqueKey()); // C2：沿用既有业务键，不重造
         assertNotNull(event.getOccurredAt());
 
-        // 券的面额/门槛/有效期不进事件载荷；也不再同步调 mall
-        verify(pointsMallService, never()).issueCouponToUser(
-                anyLong(), any(), any(), anyDouble(), anyDouble(), anyInt());
+        // 券的面额/门槛/有效期不进事件载荷（由 mall 从模板取）。
+        // "不再同步调 mall" 不在这里断言 —— 已由 userServiceHoldsNoMallTypes 结构性守住。
     }
 
     /** 重复 / 并发触发：条件更新返回 0 → 不重复入队、返回 false。 */
@@ -268,5 +265,57 @@ class UserServiceImplTest {
 
         assertTrue(method.isAnnotationPresent(Transactional.class),
                 "认领资格与 outbox 入队必须同事务，否则入队失败会留下'已认领却没券'的用户");
+    }
+
+    // ==================== 第 6 步（新人券）：注册改为事件投递 ====================
+
+    /**
+     * 注册必须在【本事务内】写出 welcome_gift_eligible，键沿用既有业务键（ADR C2）。
+     *
+     * <p>不变量：注册事务回滚时事件行也不存在（同生共死）；投递失败有 outbox 行兜底，
+     * 不会再出现旧写法那种"RPC 失败就没有任何记录、券永久丢失"。
+     */
+    @Test
+    void registerEnqueuesWelcomeGiftWithLegacyKey() {
+        when(userMapper.selectCount(any())).thenReturn(0L); // 账号不重名 + 会员码不碰撞
+        doAnswer(invocation -> {
+            ((User) invocation.getArgument(0)).setId(99L); // 模拟自增主键回填
+            return 1;
+        }).when(userMapper).insert(any(User.class));
+        ArgumentCaptor<WelcomeGiftEligibleEvent> captor =
+                ArgumentCaptor.forClass(WelcomeGiftEligibleEvent.class);
+
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("13900000001");
+        request.setPassword("secret123");
+        userService.register(request);
+
+        verify(userEventOutboxService, times(1))
+                .publish(eq(MqTags.WELCOME_GIFT_ELIGIBLE), eq(99L), captor.capture());
+        WelcomeGiftEligibleEvent event = captor.getValue();
+        assertEquals(99L, event.getUserId());
+        // 字面量而不是 UserEventKeys.welcomeGift(...)：C2 要守的就是"键的口径不许变"，
+        // 用生成它的同一个工具去断言等于没断言。
+        assertEquals("NEW_USER_COUPON_99", event.getUniqueKey());
+        assertNotNull(event.getOccurredAt());
+
+        // 本子项只切新人券：会员仍走同步 RPC（USER_CREATED 是第 6 步最后一项）
+        verify(memberService, timeout(2000).times(1)).createMember(99L);
+    }
+
+    /**
+     * 结构性守卫（评审第 4 条）：user 侧不得再直接调用 mall。
+     *
+     * <p>新人券与邀请券都已改由事件驱动，本类不该再持有任何 {@code com.cozy.mall} 类型 ——
+     * 一旦有人把同步 RPC 加回来（哪怕只是 import 一个 DTO），这条会立刻红。
+     * 移除 Maven 依赖与加禁令是另一步，这里先守住代码层。
+     */
+    @Test
+    void userServiceHoldsNoMallTypes() {
+        for (Field field : UserServiceImpl.class.getDeclaredFields()) {
+            assertFalse(field.getType().getName().startsWith("com.cozy.mall"),
+                    "UserServiceImpl 不该再持有 mall 类型：" + field.getName()
+                            + "（写侧必须走事件，见 docs/adr/0001 §8）");
+        }
     }
 }

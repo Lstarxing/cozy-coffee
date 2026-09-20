@@ -2,16 +2,21 @@
 #
 # 本地全栈 E2E：USER_EVENTS 全链路冒烟（隔离环境）
 #
-# 覆盖《CHANGELOG》未完成清单第 13 条的 ①–⑨：
+# 覆盖《CHANGELOG》未完成清单第 13 条的 ①–⑩：
 #   ① 独立 Compose project / volume（不污染日常开发库）
 #   ② 起 MySQL / Redis / Nacos / RocketMQ + 5 个 provider + gateway
 #   ③ 等健康检查（--wait / 轮询），而不是固定 sleep
 #   ④ 显式创建 cozy-user-events
 #   ⑤ 断言 topic 4 队列 + 5 个 consumer group 在线且订阅 tag 正确
-#   ⑥ 真实 API 注册邀请人 / 被邀请人，并用邀请码绑定邀请关系
+#   ⑥ 真实 API 注册邀请人 / 被邀请人 / 管理员（3 个用户，因此有 3 条新人礼事件）
 #   ⑦ 真实 API 下单 → 接单 → 完成 → 确认取餐（触发 ORDER_COMPLETED）
-#   ⑧ 等收敛后断言：资格已认领、outbox 恰好一行且 SENT、邀请券恰好一张、首单积分恰好一次
-#   ⑨ 从订单 outbox 读原始载荷重放同一事件，断言积分/outbox/券都不增；失败留诊断、成功清环境
+#   ⑧ 断言一律【按 tag + unique_key 精确定位】，不用"全表恰好一行"——
+#      注册本身会产生多条 welcome_gift_eligible，全表计数一加生产者就误报。
+#      邀请：资格已认领、事件恰好一行且 SENT、邀请券恰好一张、首单积分恰好一次
+#      新人礼：3 个用户各一行且 SENT、各一张券，且券内容与旧同步路径逐字段一致
+#   ⑨ 从订单 outbox 读原始载荷重放 ORDER_COMPLETED，断言【该链路】的积分/outbox/券都不增
+#   ⑩ 重放 welcome_gift_eligible，断言新人礼的 outbox 与券都不增（消费侧幂等）
+#   失败留诊断、成功清环境
 #
 # 为什么值得有：HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库
 # 这条编排，单测与 CI 结构上都覆盖不到（CI 排除了需要 MySQL/Redis/Nacos 的集成测试）——
@@ -218,6 +223,8 @@ echo "  ✓ inviter=$INVITER_ID(code=$INVITE_CODE) invitee=$INVITEE_ID"
 # 这不是绕过业务流程 —— 订单的推进仍然全部走真实 API，此 SQL 仅用于环境准备。
 api POST /api/auth/register "" "{\"username\":\"$ADMIN_PHONE\",\"password\":\"$PW\",\"nickname\":\"e2e-admin\"}" > /dev/null
 mysql_q "UPDATE cozy_user.users SET role='admin' WHERE username='$ADMIN_PHONE'" > /dev/null
+ADMIN_ID="$(mysql_q "SELECT id FROM cozy_user.users WHERE username='$ADMIN_PHONE'")"
+[ -n "$ADMIN_ID" ] || { echo "  ✗ 取不到管理员 id"; exit 1; }
 ADMIN_TOKEN="$(api POST /api/auth/login "" "{\"username\":\"$ADMIN_PHONE\",\"password\":\"$PW\"}" | jget token)"
 INVITEE_TOKEN="$(api POST /api/auth/login "" "{\"username\":\"$INVITEE_PHONE\",\"password\":\"$PW\"}" | jget token)"
 [ -n "$INVITEE_TOKEN" ] && [ -n "$ADMIN_TOKEN" ] || { echo "  ✗ 登录失败"; exit 1; }
@@ -233,42 +240,94 @@ api POST "/api/admin/orders/$ORDER_ID/complete" "$ADMIN_TOKEN"  > /dev/null
 api POST "/api/order/$ORDER_ID/confirm"        "$INVITEE_TOKEN" > /dev/null
 echo "  ✓ order=$ORDER_ID 已推进到 completed 并确认取餐"
 
-banner "⑧ 等异步链路收敛后断言"
-wait_for "SELECT invite_reward_granted FROM cozy_user.users WHERE id=$INVITEE_ID" 1 || exit 1
-wait_for "SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE status='SENT'" 1 || exit 1
-echo "  ✓ 资格已认领 + outbox 已投递"
+banner "⑧ 等异步链路收敛后断言（按 tag + unique_key 精确定位，不用全表计数）"
 
 assert_eq() { # <说明> <sql> <期望>
   local v; v="$(mysql_q "$2" | tr -d '[:space:]')"
   if [ "$v" = "$3" ]; then echo "  ✓ $1 = $v"; else echo "  ✗ $1 期望 $3 实得 $v"; exit 1; fi
 }
-assert_eq "outbox 行数"      "SELECT COUNT(*) FROM cozy_user.user_event_outbox" 1
-assert_eq "outbox tag"       "SELECT tag FROM cozy_user.user_event_outbox LIMIT 1" invite_reward_earned
-assert_eq "outbox uniqueKey" "SELECT unique_key FROM cozy_user.user_event_outbox LIMIT 1" "invite_firstorder_${INVITEE_ID}_${INVITER_ID}"
-assert_eq "邀请券张数"        "SELECT COUNT(*) FROM cozy_mall.user_coupons WHERE user_id=$INVITER_ID AND coupon_code='invite_firstorder_${INVITEE_ID}_${INVITER_ID}'" 1
-assert_eq "首单积分批次数"     "SELECT COUNT(*) FROM cozy_member.points_lots WHERE user_id=$INVITEE_ID AND source_type='first_order_bonus' AND source_id=$ORDER_ID" 1
 
-banner "⑨ 重放同一条 ORDER_COMPLETED（读订单 outbox 的原始载荷）→ 断言三者都不增"
+# ---- 邀请链路 ----
+# 定位键用 unique_key 单独一列就够；tag / status 是真断言，不是同义反复（没拿 tag 当过滤条件）。
+INVITE_KEY="invite_firstorder_${INVITEE_ID}_${INVITER_ID}"
+wait_for "SELECT invite_reward_granted FROM cozy_user.users WHERE id=$INVITEE_ID" 1 || exit 1
+wait_for "SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$INVITE_KEY' AND status='SENT'" 1 || exit 1
+echo "  ✓ 资格已认领 + 邀请事件已投递"
+
+assert_eq "邀请事件行数"   "SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$INVITE_KEY'" 1
+assert_eq "邀请事件 tag"    "SELECT tag FROM cozy_user.user_event_outbox WHERE unique_key='$INVITE_KEY'" invite_reward_earned
+assert_eq "邀请事件 status" "SELECT status FROM cozy_user.user_event_outbox WHERE unique_key='$INVITE_KEY'" SENT
+assert_eq "邀请券张数"      "SELECT COUNT(*) FROM cozy_mall.user_coupons WHERE user_id=$INVITER_ID AND coupon_code='$INVITE_KEY'" 1
+assert_eq "首单积分批次数"   "SELECT COUNT(*) FROM cozy_member.points_lots WHERE user_id=$INVITEE_ID AND source_type='first_order_bonus' AND source_id=$ORDER_ID" 1
+
+# ---- 新人礼链路 ----
+# 新人券改事件投递后，issueNewUserCoupon 的【产物】必须与旧同步路径逐字段一致 ——
+# 不变量是"发的是同一张券"，只是触发方式从 RPC 换成了事件。所以这里把 rule_json 的关键字段
+# 与展示文案一并钉住（照着 buildNewUserCouponConfig 的取值）。
+assert_welcome_gift() { # <userId> <标签>
+  local u="$1" label="$2" code="NEW_USER_COUPON_$1"
+  wait_for "SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$code' AND status='SENT'" 1 || exit 1
+  assert_eq "$label 事件行数"  "SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$code'" 1
+  assert_eq "$label 事件 tag"   "SELECT tag FROM cozy_user.user_event_outbox WHERE unique_key='$code'" welcome_gift_eligible
+  assert_eq "$label 券张数"     "SELECT COUNT(*) FROM cozy_mall.user_coupons WHERE user_id=$u AND coupon_code='$code'" 1
+  assert_eq "$label 券类型"     "SELECT coupon_type FROM cozy_mall.user_coupons WHERE coupon_code='$code'" DISCOUNT
+  assert_eq "$label 券状态"     "SELECT status FROM cozy_mall.user_coupons WHERE coupon_code='$code'" ISSUED
+  assert_eq "$label 折扣值"     "SELECT JSON_UNQUOTE(JSON_EXTRACT(rule_json,'\$.value')) FROM cozy_mall.user_coupons WHERE coupon_code='$code'" 50
+  assert_eq "$label 适用范围"   "SELECT JSON_UNQUOTE(JSON_EXTRACT(rule_json,'\$.scope')) FROM cozy_mall.user_coupons WHERE coupon_code='$code'" DRINK_ONLY
+  assert_eq "$label 单杯限制"   "SELECT JSON_UNQUOTE(JSON_EXTRACT(rule_json,'\$.limit')) FROM cozy_mall.user_coupons WHERE coupon_code='$code'" SINGLE_ITEM
+  assert_eq "$label 封顶金额"   "SELECT JSON_UNQUOTE(JSON_EXTRACT(rule_json,'\$.maxDiscountAmount')) FROM cozy_mall.user_coupons WHERE coupon_code='$code'" 20
+  assert_eq "$label 业务标签"   "SELECT JSON_UNQUOTE(JSON_EXTRACT(rule_json,'\$.tag')) FROM cozy_mall.user_coupons WHERE coupon_code='$code'" NEW_USER_GIFT
+  assert_eq "$label 互斥级别"   "SELECT JSON_UNQUOTE(JSON_EXTRACT(rule_json,'\$.mutex')) FROM cozy_mall.user_coupons WHERE coupon_code='$code'" L1_EXCLUSIVE
+  assert_eq "$label 有效期天数" "SELECT TIMESTAMPDIFF(DAY, issued_at, expires_at) FROM cozy_mall.user_coupons WHERE coupon_code='$code'" 7
+  assert_eq "$label 显示标题"   "SELECT display_title FROM cozy_mall.user_coupons WHERE coupon_code='$code'" 新用户首单5折
+}
+assert_welcome_gift "$INVITER_ID" "邀请人"
+assert_welcome_gift "$INVITEE_ID" "被邀请人"
+assert_welcome_gift "$ADMIN_ID"   "管理员"
+
+# 重放验证的两个必要条件（缺一不可）：
+#   (a) 消息【确实被消费】—— 轮询该 group 在 topic 上的"已消费总量"（各队列 Consumer Offset 之和）
+#       增长，而不是固定 sleep；
+#   (b) 再消费一次【不产生新数据】。
+# 只比计数的话，消息压根没被消费也会"通过"，结论就是空的。
+sum_consumed() { # <group> <topic>
+  docker exec "$BROKER" sh -c "$MQADMIN consumerProgress -g $1 -n $NS" \
+    | awk -v t="$2" '$1 == t {s += $5} END {print s + 0}'
+}
+replay_and_assert() { # <说明> <topic> <tag> <key> <载荷> <group> <断言SQL>
+  local label="$1" topic="$2" tag="$3" key="$4" payload="$5" group="$6" sql="$7"
+  local off_before before after off_after
+  off_before="$(sum_consumed "$group" "$topic")"
+  before="$(mysql_q "$sql" | tr -d '[:space:]')"
+  docker exec -e PAYLOAD="$payload" "$BROKER" sh -c \
+    "$MQADMIN sendMessage -n $NS -t $topic -c $tag -k $key -p \"\$PAYLOAD\"" > /dev/null
+  for _ in $(seq 1 20); do
+    off_after="$(sum_consumed "$group" "$topic")"
+    [ "$off_after" -gt "$off_before" ] && break
+    sleep 2
+  done
+  if [ "$off_after" -le "$off_before" ]; then
+    echo "  ✗ [$label] 重放消息未被消费（消费位点仍为 $off_before）——本次「不增」验证无意义"; exit 1
+  fi
+  after="$(mysql_q "$sql" | tr -d '[:space:]')"
+  [ "$before" = "$after" ] || { echo "  ✗ [$label] 重放后有增加：$before → $after"; exit 1; }
+  echo "  ✓ [$label] 重放已被消费（消费位点 $off_before → $off_after），且计数未变（$before）"
+}
+
+banner "⑨ 重放同一 ORDER_COMPLETED（读订单 outbox 原始载荷）→ 该链路的积分/outbox/券都不增"
 PAYLOAD="$(mysql_q "SELECT payload FROM cozy_order.message_outbox WHERE aggregate_id=$ORDER_ID ORDER BY id DESC LIMIT 1")"
 [ -n "$PAYLOAD" ] || { echo "  ✗ 取不到原始载荷"; exit 1; }
-sum_consumed() { # 该 group 在 cozy-order-events 上的"已消费总量"= 各队列 Consumer Offset 之和
-  docker exec "$BROKER" sh -c "$MQADMIN consumerProgress -g cozy-member-first-order -n $NS" \
-    | awk '/^cozy-order-events/{s+=$5} END{print s+0}'
-}
-OFF_BEFORE="$(sum_consumed)"
-BEFORE="$(mysql_q "SELECT CONCAT((SELECT COUNT(*) FROM cozy_member.points_lots WHERE user_id=$INVITEE_ID),'/',(SELECT COUNT(*) FROM cozy_user.user_event_outbox),'/',(SELECT COUNT(*) FROM cozy_mall.user_coupons WHERE user_id=$INVITER_ID))")"
-docker exec -e PAYLOAD="$PAYLOAD" "$BROKER" sh -c \
-  "$MQADMIN sendMessage -n $NS -t cozy-order-events -c order_completed -k $ORDER_ID -p \"\$PAYLOAD\"" > /dev/null
-# 等重放【确实被消费】：轮询"已消费总量"增长，而不是固定 sleep
-for _ in $(seq 1 20); do
-  [ "$(sum_consumed)" -gt "$OFF_BEFORE" ] && break
-  sleep 2
-done
-if [ "$(sum_consumed)" -le "$OFF_BEFORE" ]; then
-  echo "  ✗ 重放消息未被消费（消费总量仍为 $OFF_BEFORE）——本次「不增」验证无意义"; exit 1
-fi
-AFTER="$(mysql_q "SELECT CONCAT((SELECT COUNT(*) FROM cozy_member.points_lots WHERE user_id=$INVITEE_ID),'/',(SELECT COUNT(*) FROM cozy_user.user_event_outbox),'/',(SELECT COUNT(*) FROM cozy_mall.user_coupons WHERE user_id=$INVITER_ID))")"
-[ "$BEFORE" = "$AFTER" ] || { echo "  ✗ 重放后有增加：$BEFORE → $AFTER"; exit 1; }
-echo "  ✓ 重放已被消费（消费总量 $OFF_BEFORE → $(sum_consumed)），且积分/outbox/券 均未增加（$BEFORE）"
+# 断言范围必须限定在【这条链路】：全局计数会被新人礼事件干扰（一加生产者就会变）
+replay_and_assert "ORDER_COMPLETED" cozy-order-events order_completed "$ORDER_ID" "$PAYLOAD" cozy-member-first-order \
+  "SELECT CONCAT((SELECT COUNT(*) FROM cozy_member.points_lots WHERE user_id=$INVITEE_ID AND source_type='first_order_bonus'),'/',(SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$INVITE_KEY'),'/',(SELECT COUNT(*) FROM cozy_mall.user_coupons WHERE user_id=$INVITER_ID AND coupon_code='$INVITE_KEY'))"
 
-banner "✅ USER_EVENTS 全链路 E2E 通过（HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库；重放幂等）"
+banner "⑩ 重放 welcome_gift_eligible（读 user outbox 原始载荷）→ 新人礼 outbox 与券都不增"
+# 这条守的是消费侧幂等（ADR C3）：issueNewUserCoupon 靠 uk_coupon_code 吸收重复投递。
+# 生产者改成"事务内写 outbox + 至少一次投递"之后，重复投递不再由 Dubbo 调用方挡住。
+GIFT_KEY="NEW_USER_COUPON_${INVITEE_ID}"
+GIFT_PAYLOAD="$(mysql_q "SELECT payload FROM cozy_user.user_event_outbox WHERE unique_key='$GIFT_KEY'")"
+[ -n "$GIFT_PAYLOAD" ] || { echo "  ✗ 取不到新人礼原始载荷"; exit 1; }
+replay_and_assert "WELCOME_GIFT_ELIGIBLE" cozy-user-events welcome_gift_eligible "$GIFT_KEY" "$GIFT_PAYLOAD" cozy-mall-welcome-gift \
+  "SELECT CONCAT((SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$GIFT_KEY'),'/',(SELECT COUNT(*) FROM cozy_mall.user_coupons WHERE user_id=$INVITEE_ID AND coupon_code='$GIFT_KEY'))"
+
+banner "✅ USER_EVENTS 全链路 E2E 通过（HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库；两条链路重放均幂等）"

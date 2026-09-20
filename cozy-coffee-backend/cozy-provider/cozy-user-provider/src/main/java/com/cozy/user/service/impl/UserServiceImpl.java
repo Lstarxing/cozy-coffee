@@ -7,10 +7,10 @@ import com.cozy.common.exception.BusinessException;
 import com.cozy.common.mq.InviteRewardEarnedEvent;
 import com.cozy.common.mq.MqTags;
 import com.cozy.common.mq.UserEventKeys;
+import com.cozy.common.mq.WelcomeGiftEligibleEvent;
 import com.cozy.common.tx.AfterCommit;
 import com.cozy.common.util.JwtUtil;
 import com.cozy.member.api.MemberService;
-import com.cozy.mall.api.PointsMallService;
 import com.cozy.user.api.UserService;
 import com.cozy.user.dto.request.LoginRequest;
 import com.cozy.user.dto.request.RegisterRequest;
@@ -58,10 +58,6 @@ public class UserServiceImpl implements UserService {
 
     @DubboReference(check = false, timeout = 60000)
     private MemberService memberService;
-
-    // v5.0: 用于发放邀请奖励券
-    @DubboReference(check = false, timeout = 60000)
-    private PointsMallService pointsMallService;
 
     @Override
     @Transactional
@@ -157,21 +153,26 @@ public class UserServiceImpl implements UserService {
         }
         log.info("用户注册成功: userId={}, username={}", user.getId(), user.getUsername());
 
-        // 异步创建会员信息及发放新用户福利，不阻塞注册流程。
-        // 必须等本事务提交后再派发：直接 runAsync 会立即启动，若注册事务随后回滚（如唯一键冲突），
-        // 会员与新人券已经发出且无法撤销。会员侧另有自愈（getMemberByUserId 查不到会补建），
-        // 所以这里主要防的是"券发给了一个不存在的用户"。
+        // 新人礼改为事件驱动（ADR 0001 §8 第 6 步）：在【注册事务内】落 outbox 行，与 users 行同生共死，
+        // 提交后由 relay 投递，mall 侧的 WelcomeGiftEligibleConsumer 复用 issueNewUserCoupon 发券。
+        // 换成 outbox 解决的是原写法（提交后异步 RPC）的两处缺口：投递失败没有任何记录、券永久丢失；
+        // 以及"券已经发出去、注册事务却回滚了"只能靠 AfterCommit 事后兜。
+        // 幂等键沿用既有业务键 NEW_USER_COUPON_{userId}（ADR C2），与券表的 coupon_code 同一把锁。
         final Long userId = user.getId();
+        userEventOutboxService.publish(MqTags.WELCOME_GIFT_ELIGIBLE, userId,
+                WelcomeGiftEligibleEvent.builder()
+                        .userId(userId)
+                        .uniqueKey(UserEventKeys.welcomeGift(userId))
+                        .occurredAt(LocalDateTime.now())
+                        .build());
+
+        // 会员信息仍走同步 RPC（USER_CREATED 的切换排在 §8 第 6 步最后一项）。
+        // 同样必须等本事务提交后再派发：runAsync 会立即启动，若注册事务随后回滚（如唯一键冲突），
+        // 会员已经建出且无法撤销。会员侧另有自愈（getMemberByUserId 查不到会补建）。
         AfterCommit.run(() -> CompletableFuture.runAsync(() -> {
             try {
-                // 1. 创建会员基础信息
                 memberService.createMember(userId);
                 log.info("会员信息创建成功: userId={}", userId);
-
-                // 2. 发放新用户礼包：首单五折券（有效期7天，饮品专用）
-                if (pointsMallService != null) {
-                    pointsMallService.issueNewUserCoupon(userId);
-                }
             } catch (Exception e) {
                 log.error("执行注册后续逻辑失败: userId={}, error={}", userId, e.getMessage());
             }

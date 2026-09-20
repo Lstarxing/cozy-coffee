@@ -28,12 +28,6 @@
             <artifactId>cozy-member-api</artifactId>
         </dependency>
 
-        <!-- 积分商城服务API -->
-        <dependency>
-            <groupId>com.cozy</groupId>
-            <artifactId>cozy-mall-api</artifactId>
-        </dependency>
-
         <!-- 公共模块 -->
         <dependency>
             <groupId>com.cozy</groupId>
@@ -132,6 +126,35 @@
                         <goals>
                             <goal>repackage</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 依赖方向守卫：user 域的新人券与邀请券均已改由本地 outbox + USER_EVENTS 投递，
+                 不得再恢复对 mall 的同步 RPC 依赖。member API 暂保留，直到 USER_CREATED 完成迁移。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>ban-user-to-mall-dependency</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>com.cozy:cozy-mall-api</exclude>
+                                    </excludes>
+                                    <message>
+                                        user 域不得依赖 mall（含传递依赖）：新人券与邀请券统一走
+                                        user_event_outbox + USER_EVENTS，见 docs/adr/0001。
+                                    </message>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
