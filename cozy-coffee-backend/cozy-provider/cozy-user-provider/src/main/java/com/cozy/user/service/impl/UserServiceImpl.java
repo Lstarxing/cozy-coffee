@@ -7,11 +7,10 @@ import com.cozy.common.mq.BirthdaySetEvent;
 import com.cozy.common.mq.InviteRewardEarnedEvent;
 import com.cozy.common.mq.MqTags;
 import com.cozy.common.mq.ProfileCompletedEvent;
+import com.cozy.common.mq.UserCreatedEvent;
 import com.cozy.common.mq.UserEventKeys;
 import com.cozy.common.mq.WelcomeGiftEligibleEvent;
-import com.cozy.common.tx.AfterCommit;
 import com.cozy.common.util.JwtUtil;
-import com.cozy.member.api.MemberService;
 import com.cozy.user.api.UserService;
 import com.cozy.user.dto.request.LoginRequest;
 import com.cozy.user.dto.request.RegisterRequest;
@@ -22,7 +21,6 @@ import com.cozy.user.mapper.UserMapper;
 import com.cozy.user.mq.UserEventOutboxService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.Cursor;
@@ -38,7 +36,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -53,9 +50,6 @@ public class UserServiceImpl implements UserService {
 
     // 用户生命周期事实事件的本地 outbox（见 docs/adr/0001 §3）
     private final UserEventOutboxService userEventOutboxService;
-
-    @DubboReference(check = false, timeout = 60000)
-    private MemberService memberService;
 
     @Override
     @Transactional
@@ -164,17 +158,25 @@ public class UserServiceImpl implements UserService {
                         .occurredAt(LocalDateTime.now())
                         .build());
 
-        // 会员信息仍走同步 RPC（USER_CREATED 的切换排在 §8 第 6 步最后一项）。
-        // 同样必须等本事务提交后再派发：runAsync 会立即启动，若注册事务随后回滚（如唯一键冲突），
-        // 会员已经建出且无法撤销。会员侧另有自愈（getMemberByUserId 查不到会补建）。
-        AfterCommit.run(() -> CompletableFuture.runAsync(() -> {
-            try {
-                memberService.createMember(userId);
-                log.info("会员信息创建成功: userId={}", userId);
-            } catch (Exception e) {
-                log.error("执行注册后续逻辑失败: userId={}, error={}", userId, e.getMessage());
-            }
-        }));
+        // 会员建档改由事件驱动（ADR 0001 §8 第 6 步最后一项）：与 users 行同事务落 outbox，
+        // 提交后由 relay 投递，member 侧的 UserCreatedConsumer 负责 createMember。
+        // 这是 user 侧**最后一个**同步依赖 member 的写点 —— 换掉后本类不再持有 MemberService。
+        publishUserCreated(userId);
+    }
+
+    /**
+     * 用户建档事件（键 `user_created_{userId}`，ADR 0001 C2）。
+     *
+     * <p>三个建档入口共用：手机号/邮箱注册、微信开发登录、微信登录。
+     * 事件只表达"这个用户被创建了"，会员的具体字段由消费端决定。
+     */
+    private void publishUserCreated(Long userId) {
+        userEventOutboxService.publish(MqTags.USER_CREATED, userId,
+                UserCreatedEvent.builder()
+                        .userId(userId)
+                        .uniqueKey(UserEventKeys.userCreated(userId))
+                        .occurredAt(LocalDateTime.now())
+                        .build());
     }
 
     @Override
@@ -222,11 +224,9 @@ public class UserServiceImpl implements UserService {
             user.setNickname("微信开发用户");
             user.setAvatar("/images/default-avatar.png");
             userMapper.insert(user);
-            try {
-                memberService.createMember(user.getId());
-            } catch (Exception e) {
-                log.warn("创建微信开发用户会员信息失败: userId={}", user.getId(), e);
-            }
+            // 建档改事件投递。较原先的"登录事务内同步建会员"晚了约一次投递时间；
+            // 若前端此刻立刻查会员信息，会员侧有自愈（查不到会补建），不会暴露 404。
+            publishUserCreated(user.getId());
         }
         if ("disabled".equals(user.getStatus())) {
             throw new BusinessException("账号已被禁用");
@@ -253,11 +253,7 @@ public class UserServiceImpl implements UserService {
             user.setAvatar("/images/default-avatar.png");
             user.setOpenid(openid);
             userMapper.insert(user);
-            try {
-                memberService.createMember(user.getId());
-            } catch (Exception e) {
-                log.warn("创建微信用户会员信息失败: userId={}", user.getId(), e);
-            }
+            publishUserCreated(user.getId());
         }
         if ("disabled".equals(user.getStatus())) {
             throw new BusinessException("账号已被禁用");

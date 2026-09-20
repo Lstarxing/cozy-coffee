@@ -2,7 +2,7 @@
 #
 # 本地全栈 E2E：USER_EVENTS 全链路冒烟（隔离环境）
 #
-# 覆盖《CHANGELOG》未完成清单第 13 条的 ①–⑫：
+# 覆盖《CHANGELOG》未完成清单第 13 条的 ①–⑭：
 #   ① 独立 Compose project / volume（不污染日常开发库）
 #   ② 起 MySQL / Redis / Nacos / RocketMQ + 5 个 provider + gateway
 #   ③ 等健康检查（--wait / 轮询），而不是固定 sleep
@@ -22,6 +22,7 @@
 #      （券内容按模板 BIRTHDAY_BASIC_DISCOUNT 钉住）→ 重放该事件不增（年度由生产者盖章，C8）
 #   ⑬ 完善资料：补齐邮箱 → `profile_completed` 一行且 SENT → member 批次（20 分）+ 流水各一次
 #      （键↔列映射按 C7）→ 重放不增
+#   ⑭ 用户建档：注册即落 `user_created` 一行且 SENT → member 恰好一条会员行 → 重放不增（C3 唯一键吸收）
 #   失败留诊断、成功清环境
 #
 # 为什么值得有：HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库
@@ -444,4 +445,18 @@ PROFILE_PAYLOAD="$(mysql_q "SELECT payload FROM cozy_user.user_event_outbox WHER
 replay_and_assert "PROFILE_COMPLETED" cozy-user-events profile_completed "$PROFILE_KEY" "$PROFILE_PAYLOAD" cozy-member-profile-completed \
   "SELECT CONCAT((SELECT COUNT(*) FROM cozy_member.points_lots WHERE user_id=$PROBE_ID AND source_type='profile'),'/',(SELECT COUNT(*) FROM cozy_member.points_transactions WHERE user_id=$PROBE_ID AND source_type='profile'))"
 
-banner "✅ USER_EVENTS 全链路 E2E 通过（HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库；四条链路重放均幂等；禁用即时撤销会话）"
+banner "⑭ 用户建档事件：注册即落 user_created；重放不增"
+UC_KEY="user_created_${PROBE_ID}"
+wait_for "SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$UC_KEY' AND status='SENT'" 1 || exit 1
+assert_eq "建档事件行数" "SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$UC_KEY'" 1
+assert_eq "建档事件 tag"  "SELECT tag FROM cozy_user.user_event_outbox WHERE unique_key='$UC_KEY'" user_created
+# member 侧：恰好一条会员行（createMember 落库；它原先是注册事务后的同步 Dubbo 调用）
+assert_eq "会员行数"     "SELECT COUNT(*) FROM cozy_member.member_info WHERE user_id=$PROBE_ID" 1
+
+# 重放同一 user_created：createMember 的 check-then-insert 靠唯一键吸收（ADR C3）
+UC_PAYLOAD="$(mysql_q "SELECT payload FROM cozy_user.user_event_outbox WHERE unique_key='$UC_KEY'")"
+[ -n "$UC_PAYLOAD" ] || { echo "  ✗ 取不到建档事件原始载荷"; exit 1; }
+replay_and_assert "USER_CREATED" cozy-user-events user_created "$UC_KEY" "$UC_PAYLOAD" cozy-member-user-created \
+  "SELECT CONCAT((SELECT COUNT(*) FROM cozy_member.member_info WHERE user_id=$PROBE_ID),'/',(SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$UC_KEY'))"
+
+banner "✅ USER_EVENTS 全链路 E2E 通过（HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库；五条链路重放均幂等；禁用即时撤销会话）"

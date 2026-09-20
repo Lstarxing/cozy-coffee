@@ -6,8 +6,8 @@ import com.cozy.common.mq.BirthdaySetEvent;
 import com.cozy.common.mq.InviteRewardEarnedEvent;
 import com.cozy.common.mq.MqTags;
 import com.cozy.common.mq.ProfileCompletedEvent;
+import com.cozy.common.mq.UserCreatedEvent;
 import com.cozy.common.mq.WelcomeGiftEligibleEvent;
-import com.cozy.member.api.MemberService;
 import com.cozy.user.dto.request.LoginRequest;
 import com.cozy.user.dto.request.RegisterRequest;
 import com.cozy.user.dto.request.UpdateProfileRequest;
@@ -65,7 +65,6 @@ import static org.mockito.Mockito.when;
 class UserServiceImplTest {
 
     private UserMapper userMapper;
-    private MemberService memberService;
     private UserEventOutboxService userEventOutboxService;
     private StringRedisTemplate stringRedisTemplate;
     private UserServiceImpl userService;
@@ -73,11 +72,9 @@ class UserServiceImplTest {
     @BeforeEach
     void setUp() {
         userMapper = mock(UserMapper.class);
-        memberService = mock(MemberService.class);
         userEventOutboxService = mock(UserEventOutboxService.class);
         stringRedisTemplate = mock(StringRedisTemplate.class);
         userService = new UserServiceImpl(userMapper, stringRedisTemplate, userEventOutboxService);
-        ReflectionTestUtils.setField(userService, "memberService", memberService);
     }
 
     private User entity(long id) {
@@ -99,7 +96,6 @@ class UserServiceImplTest {
         assertNull(users.get(0).getMemberLevel());
         assertNull(users.get(0).getCurrentPoints());
         assertNull(users.get(0).getTotalPoints());
-        verifyNoInteractions(memberService);
     }
 
     @Test
@@ -112,7 +108,6 @@ class UserServiceImplTest {
         assertNull(dto.getMemberLevel());
         assertNull(dto.getCurrentPoints());
         assertNull(dto.getTotalPoints());
-        verifyNoInteractions(memberService);
     }
 
     /** 用户不存在仍是业务失败，不因为去掉会员查询而改变。 */
@@ -149,8 +144,6 @@ class UserServiceImplTest {
         assertEquals(7L, event.getUserId());
         assertEquals("profile_completed_7", event.getUniqueKey()); // 字面量：C2 守的就是键的口径
         assertNotNull(event.getOccurredAt());
-
-        verify(memberService, never()).addPointsWithLot(anyLong(), anyInt(), any(), anyLong(), any());
     }
 
     /**
@@ -180,10 +173,6 @@ class UserServiceImplTest {
         // 字面量而不是 UserEventKeys.birthday(...)：C2 守的就是"键的口径不许变"
         assertEquals("birthday_7_" + benefitYear, event.getUniqueKey());
         assertNotNull(event.getOccurredAt());
-
-        // 生日权益不再同步调 member（两个重载都不许出现）
-        verify(memberService, never()).grantBirthdayReward(anyLong());
-        verify(memberService, never()).grantBirthdayReward(anyLong(), anyInt());
     }
 
     /**
@@ -293,8 +282,10 @@ class UserServiceImplTest {
             ((User) invocation.getArgument(0)).setId(99L); // 模拟自增主键回填
             return 1;
         }).when(userMapper).insert(any(User.class));
-        ArgumentCaptor<WelcomeGiftEligibleEvent> captor =
+        ArgumentCaptor<WelcomeGiftEligibleEvent> welcomeCaptor =
                 ArgumentCaptor.forClass(WelcomeGiftEligibleEvent.class);
+        ArgumentCaptor<UserCreatedEvent> createdCaptor =
+                ArgumentCaptor.forClass(UserCreatedEvent.class);
 
         RegisterRequest request = new RegisterRequest();
         request.setUsername("13900000001");
@@ -302,16 +293,42 @@ class UserServiceImplTest {
         userService.register(request);
 
         verify(userEventOutboxService, times(1))
-                .publish(eq(MqTags.WELCOME_GIFT_ELIGIBLE), eq(99L), captor.capture());
-        WelcomeGiftEligibleEvent event = captor.getValue();
+                .publish(eq(MqTags.WELCOME_GIFT_ELIGIBLE), eq(99L), welcomeCaptor.capture());
+        WelcomeGiftEligibleEvent event = welcomeCaptor.getValue();
         assertEquals(99L, event.getUserId());
         // 字面量而不是 UserEventKeys.welcomeGift(...)：C2 要守的就是"键的口径不许变"，
         // 用生成它的同一个工具去断言等于没断言。
         assertEquals("NEW_USER_COUPON_99", event.getUniqueKey());
         assertNotNull(event.getOccurredAt());
 
-        // 本子项只切新人券：会员仍走同步 RPC（USER_CREATED 是第 6 步最后一项）
-        verify(memberService, timeout(2000).times(1)).createMember(99L);
+        // 同一次注册还要落一条 USER_CREATED（`USER_CREATED` 切换后：会员建档也不再走同步 RPC）
+        verify(userEventOutboxService, times(1))
+                .publish(eq(MqTags.USER_CREATED), eq(99L), createdCaptor.capture());
+        assertEquals("user_created_99", createdCaptor.getValue().getUniqueKey());
+    }
+
+    /**
+     * 微信开发登录建档：新用户走事件投递，不再是登录事务内的同步 RPC。
+     *
+     * <p>需要覆盖是因为它原来是 `try { createMember } catch { warn }` 的**尽力而为**写法，
+     * 换成 outbox 后语义变了：投递行写不进去就整笔登录失败（不再静默吞掉）。
+     */
+    @Test
+    void wechatDevLoginEnqueuesUserCreatedForNewUser() {
+        when(userMapper.selectOne(any())).thenReturn(null);   // 新用户
+        when(userMapper.selectCount(any())).thenReturn(0L);   // 会员码不碰撞
+        doAnswer(invocation -> {
+            ((User) invocation.getArgument(0)).setId(88L);
+            return 1;
+        }).when(userMapper).insert(any(User.class));
+        stubSessions(Map.of());                                // issueToken 会先清会话
+        ArgumentCaptor<UserCreatedEvent> captor = ArgumentCaptor.forClass(UserCreatedEvent.class);
+
+        String token = userService.loginWechatDev("device-abc-123");
+
+        verify(userEventOutboxService).publish(eq(MqTags.USER_CREATED), eq(88L), captor.capture());
+        assertEquals("user_created_88", captor.getValue().getUniqueKey());
+        assertNotNull(token);
     }
 
     /**
@@ -327,6 +344,22 @@ class UserServiceImplTest {
             assertFalse(field.getType().getName().startsWith("com.cozy.mall"),
                     "UserServiceImpl 不该再持有 mall 类型：" + field.getName()
                             + "（写侧必须走事件，见 docs/adr/0001 §8）");
+        }
+    }
+
+    /**
+     * 结构性守卫：user 侧不得再持有 member 类型（`USER_CREATED` 切换后最后一条边也断了）。
+     *
+     * <p>这是 `@DubboReference MemberService` 那条依赖的"不会再长回来"守卫 ——
+     * 它比逐条 `verify(memberService, never())` 更强：那类断言会随 mock 一起消失，
+     * 而这条只要有人把 member 类型加回字段就红。
+     */
+    @Test
+    void userServiceHoldsNoMemberTypes() {
+        for (Field field : UserServiceImpl.class.getDeclaredFields()) {
+            assertFalse(field.getType().getName().startsWith("com.cozy.member"),
+                    "UserServiceImpl 不该再持有 member 类型：" + field.getName()
+                            + "（建档必须走 user_created 事件，见 docs/adr/0001 §8）");
         }
     }
 
