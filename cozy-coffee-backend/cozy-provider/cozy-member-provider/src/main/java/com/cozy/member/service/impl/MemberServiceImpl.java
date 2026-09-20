@@ -322,7 +322,16 @@ public class MemberServiceImpl implements MemberService {
         info.setCurrentPoints(0);
         info.setExpTotal(0); // EXP 初始为 0
         info.setConsecutiveSignDays(0);
-        memberInfoMapper.insert(info);
+        try {
+            memberInfoMapper.insert(info);
+        } catch (DuplicateKeyException e) {
+            // 并发/重投：上面的 selectCount 只是"先查"，并发下必有窗口；
+            // 真正兜住"一人一条"的是 member_info 的 UNIQUE INDEX user_id（除自增主键外它没有别的唯一约束）。
+            // 建档本就是幂等的事，按成功吸收 —— 否则 register 的异步派发重投会退化成失败重试。
+            // createMember 无事务，插入失败后也不存在部分写入。
+            log.info("会员已存在（并发或重投），按幂等处理: userId={}", userId);
+            return;
+        }
         evictMemberProfileCache(userId);
 
         // v5.3: 初始积分为0，不需要创建积分批次和流水
