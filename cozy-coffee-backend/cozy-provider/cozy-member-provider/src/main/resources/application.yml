@@ -73,6 +73,12 @@ rocketmq:
 
 # 会员等级与保级策略配置（MemberLevelConfig 单一事实源，改动只改这里）
 cozy:
+  user:
+    # USER_EVENTS 消费端持有奖励规则；事件只表达“资料已完善”，不携带积分数。
+    profile:
+      points: 20
+      source-type: profile
+      description: 完善个人资料（手机号+邮箱）奖励
   member:
     level:
       # 升级 EXP 阈值

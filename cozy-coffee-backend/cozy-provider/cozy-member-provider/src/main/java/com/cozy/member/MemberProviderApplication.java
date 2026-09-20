@@ -5,6 +5,7 @@ import com.cozy.common.constant.FirstOrderRewardConfig;
 import com.cozy.common.constant.MemberLevelConfig;
 import com.cozy.common.constant.MonthlyBenefitConfig;
 import com.cozy.common.constant.MonthlyChallengeConfig;
+import com.cozy.common.constant.ProfileRewardConfig;
 import com.cozy.common.constant.SigninRewardConfig;
 import com.cozy.common.constant.UpgradeRewardConfig;
 import org.apache.dubbo.config.spring.context.annotation.EnableDubbo;
@@ -16,7 +17,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @SpringBootApplication(scanBasePackages = { "com.cozy.member", "com.cozy.common" })
 @EnableConfigurationProperties({ MemberLevelConfig.class, MonthlyChallengeConfig.class,
         BirthdayRewardConfig.class, SigninRewardConfig.class, FirstOrderRewardConfig.class,
-        UpgradeRewardConfig.class, MonthlyBenefitConfig.class })
+        UpgradeRewardConfig.class, MonthlyBenefitConfig.class, ProfileRewardConfig.class })
 @EnableDubbo
 @MapperScan("com.cozy.member.mapper")
 @org.springframework.scheduling.annotation.EnableScheduling

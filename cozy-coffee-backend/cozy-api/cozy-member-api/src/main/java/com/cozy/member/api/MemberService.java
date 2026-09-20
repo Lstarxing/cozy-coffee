@@ -130,6 +130,12 @@ public interface MemberService {
     boolean grantBirthdayReward(Long userId) throws BusinessException;
 
     /**
+     * 按事件发生时确定的权益年度发放生日权益。
+     * 消费者不得用当前年份重算，否则跨年重投会改变幂等键。
+     */
+    void grantBirthdayReward(Long userId, int benefitYear) throws BusinessException;
+
+    /**
      * v5.5: 获取本月权益领取状态
      *
      * @return Map containing: claimed(bool), canClaim(bool), benefitName(String)

@@ -27,6 +27,7 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
@@ -37,6 +38,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -198,7 +200,19 @@ class MemberRewardGrantTest {
         member.setExpTotal(0); // computeLevelByExp → basic
         invoke("grantBirthdayRewardInternal", new Class[]{Long.class, int.class}, 38L, 2026);
         assertIssued("BIRTHDAY_BASIC_DISCOUNT", 0, 50, 30);
-        verify(transactionMapper, atLeastOnce()).insert(any(PointsTransaction.class)); // 0 分流水
+        ArgumentCaptor<PointsTransaction> transaction = ArgumentCaptor.forClass(PointsTransaction.class);
+        verify(transactionMapper).insert(transaction.capture());
+        assertEquals(Math.abs((long) "birthday_38_2026".hashCode()), transaction.getValue().getSourceId());
+    }
+
+    @Test
+    void birthdayAlreadyClaimed_skipsAllEntitlements() throws Exception {
+        when(transactionMapper.selectCount(any())).thenReturn(1L);
+
+        invoke("grantBirthdayRewardInternal", new Class[]{Long.class, int.class}, 38L, 2026);
+
+        verifyNoInteractions(couponGrantOutboxService);
+        verifyNoInteractions(pointsLotMapper);
     }
 
     // ==================== 幂等：重复领取不再发 ====================

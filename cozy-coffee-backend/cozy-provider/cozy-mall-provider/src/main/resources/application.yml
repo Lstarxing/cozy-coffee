@@ -61,6 +61,14 @@ rocketmq:
 
 # 优惠券发券模板（CouponTemplateConfig 单一事实源；顺序=旧 if-else 分支顺序，displayTitle 缺省=动态生成）
 cozy:
+  user:
+    # USER_EVENTS 消费端持有奖励规则；事件只表达“邀请奖励已获得”，不携带券规则。
+    invite:
+      coupon-type: BOGO
+      min-amount: 0
+      discount-amount: 40
+      valid-days: 30
+      unique-key-prefix: invite_firstorder
   mall:
     coupon-template:
       templates:

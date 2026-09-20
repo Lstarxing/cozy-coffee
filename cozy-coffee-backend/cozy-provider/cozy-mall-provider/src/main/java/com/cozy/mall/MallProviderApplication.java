@@ -2,6 +2,7 @@ package com.cozy.mall;
 
 import com.cozy.common.constant.CouponStackingConfig;
 import com.cozy.common.constant.CouponTemplateConfig;
+import com.cozy.common.constant.InviteRewardConfig;
 import org.apache.dubbo.config.spring.context.annotation.EnableDubbo;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
@@ -10,7 +11,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(scanBasePackages = { "com.cozy" })
-@EnableConfigurationProperties({ CouponTemplateConfig.class, CouponStackingConfig.class })
+@EnableConfigurationProperties({ CouponTemplateConfig.class, CouponStackingConfig.class, InviteRewardConfig.class })
 @EnableDubbo
 @EnableScheduling
 @MapperScan("com.cozy.mall.mapper")

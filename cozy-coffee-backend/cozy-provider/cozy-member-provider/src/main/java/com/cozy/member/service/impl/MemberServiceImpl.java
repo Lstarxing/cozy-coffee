@@ -1010,10 +1010,7 @@ public class MemberServiceImpl implements MemberService {
 
         int currentYear = LocalDate.now().getYear();
         try {
-            // 积分 / 领取记录 / outbox 必须原子提交：任一失败整体回滚，不留"发了积分但没发券"的中间态
-            new TransactionTemplate(transactionManager)
-                    .executeWithoutResult(status -> grantBirthdayRewardInternal(userId, currentYear));
-            log.info("生日权益包发放成功: userId={}, year={}", userId, currentYear);
+            grantBirthdayReward(userId, currentYear);
             return true;
         } catch (Exception e) {
             if (e.getMessage() != null && e.getMessage().contains("Duplicate")) {
@@ -1025,6 +1022,18 @@ public class MemberServiceImpl implements MemberService {
         }
     }
 
+    @Override
+    public void grantBirthdayReward(Long userId, int benefitYear) {
+        if (userId == null || benefitYear <= 0) {
+            throw new IllegalArgumentException("生日权益缺少合法的 userId 或 benefitYear");
+        }
+        // 事件消费入口不吞异常：真实故障必须抛回 RocketMQ 触发重投。
+        // 积分 / 领取记录 / outbox 在一个本地事务中提交，任一失败整体回滚。
+        new TransactionTemplate(transactionManager)
+                .executeWithoutResult(status -> grantBirthdayRewardInternal(userId, benefitYear));
+        log.info("生日权益包发放成功: userId={}, year={}", userId, benefitYear);
+    }
+
     /**
      * 内部方法：发放生日权益 (v5.3 阶梯权益)
      * - basic: 单饮品5折券 ×1 (限标准杯)
@@ -1034,16 +1043,24 @@ public class MemberServiceImpl implements MemberService {
      * - black: 全通兑免单券 ×1 + 免费切片蛋糕券 ×1 + 888积分
      */
     private void grantBirthdayRewardInternal(Long userId, int year) {
+        String baseKey = "birthday_" + userId + "_" + year;
+        long sourceId = Math.abs((long) baseKey.hashCode());
+
+        LambdaQueryWrapper<PointsTransaction> claimed = new LambdaQueryWrapper<>();
+        claimed.eq(PointsTransaction::getUserId, userId)
+                .eq(PointsTransaction::getSourceType, "birthday_gift")
+                .eq(PointsTransaction::getSourceId, sourceId);
+        if (transactionMapper.selectCount(claimed) > 0) {
+            log.info("生日权益已领取，跳过: userId={}, year={}", userId, year);
+            return;
+        }
+
         // 获取会员等级
         LambdaQueryWrapper<MemberInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MemberInfo::getUserId, userId);
         MemberInfo member = memberInfoMapper.selectOne(wrapper);
         String level = (member != null) ? computeLevelByExp(member.getExpTotal()) : "basic";
         int currentPoints = (member != null) ? member.getCurrentPoints() : 0;
-
-        // 幂等性ID：用户ID_年份
-        String baseKey = "birthday_" + userId + "_" + year;
-        long sourceId = Math.abs((long) baseKey.hashCode());
 
         BirthdayRewardConfig.LevelBirthday reward = birthdayRewardConfig.getLevel(level);
         if (reward == null) {
@@ -1066,7 +1083,7 @@ public class MemberServiceImpl implements MemberService {
         }
 
         if (reward.getPoints() <= 0) {
-            recordTransaction(userId, 0, currentPoints, "birthday_gift", null,
+            recordTransaction(userId, 0, currentPoints, "birthday_gift", sourceId,
                     "生日快乐！" + levelName(level) + "会员生日礼已发放");
         }
         log.info("生日权益发放: userId={}, level={}, points={}, couponCount={}", userId, level,
