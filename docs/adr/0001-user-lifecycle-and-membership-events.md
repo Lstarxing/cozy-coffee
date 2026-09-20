@@ -259,6 +259,12 @@ MyBatis-Plus 的 `updateById` 做不到条件更新。需
    > "先建 outbox 骨架（表 + MQ 配置 + 指标）但不接生产 / 消费者"那一行。
 5. **第 7 处（邀请券，`INVITE_REWARD_EARNED`）作为首个切换试点** —— 消费者复用的是已在线验证过的
    发券业务方法（C6），改动最小、回滚最干净。
+
+   > **切换前置门禁**：`MqTopics.USER_EVENTS` 必须**已显式创建**（4 读 4 写），且 5 个 consumer group
+   > **均已在线且订阅 tag 正确**。**不能**依赖"首条消息自动创建 topic" ——
+   > 消费者默认 `ConsumeFromWhere = CONSUME_FROM_LAST_OFFSET`，若注册发生在首条消息落盘之后，
+   > **那条消息会被直接跳过**；生产者 outbox 只保证"送达 Broker"，**补救不了消费者起始位点**。
+   > 创建命令与判据见 `surx-note/CozyCoffee/部署上线/01-部署操作手册.md` §8.2。
 6. **依次切换第 4、6、5、1–3 处**：新人券（C6 专用消费者）→ 生日（C2 沿用原键与原派生算法）→
    完善资料（依赖第 1 步）→ `USER_CREATED`（收益最低，member 读侧有自愈兜底）。
 7. **最后改邀请链的拓扑**：让 user 以独立消费者**直接消费 `ORDER_COMPLETED`** 并认领奖励资格，
