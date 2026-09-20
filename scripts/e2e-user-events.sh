@@ -20,6 +20,8 @@
 #      重新登录才恢复（守 JwtAuthInterceptor 只认 Redis session 键这个前提）
 #   ⑫ 生日：真实 API 设置生日 → `birthday_set` 一行且 SENT → member 领取记录 + mall 券各一次
 #      （券内容按模板 BIRTHDAY_BASIC_DISCOUNT 钉住）→ 重放该事件不增（年度由生产者盖章，C8）
+#   ⑬ 完善资料：补齐邮箱 → `profile_completed` 一行且 SENT → member 批次（20 分）+ 流水各一次
+#      （键↔列映射按 C7）→ 重放不增
 #   失败留诊断、成功清环境
 #
 # 为什么值得有：HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库
@@ -420,4 +422,26 @@ BIRTH_PAYLOAD="$(mysql_q "SELECT payload FROM cozy_user.user_event_outbox WHERE 
 replay_and_assert "BIRTHDAY_SET" cozy-user-events birthday_set "$BIRTH_KEY" "$BIRTH_PAYLOAD" cozy-member-birthday-set \
   "SELECT CONCAT((SELECT COUNT(*) FROM cozy_member.points_transactions WHERE user_id=$PROBE_ID AND source_type='birthday_gift'),'/',(SELECT COUNT(*) FROM cozy_mall.user_coupons WHERE coupon_code='$BIRTH_COUPON'))"
 
-banner "✅ USER_EVENTS 全链路 E2E 通过（HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库；三条链路重放均幂等；禁用即时撤销会话）"
+banner "⑬ 完善资料事件：补齐邮箱 → member 加一次分；重放不增"
+PROFILE_KEY="profile_completed_${PROBE_ID}"
+assert_eq "设置前 无完善资料事件" "SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$PROFILE_KEY'" 0
+
+api PUT /api/auth/profile "$NEW_TOKEN" "{\"email\":\"e2e-probe@cozycoffee.test\"}" > /dev/null
+
+wait_for "SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$PROFILE_KEY' AND status='SENT'" 1 || exit 1
+assert_eq "完善资料事件 tag" "SELECT tag FROM cozy_user.user_event_outbox WHERE unique_key='$PROFILE_KEY'" profile_completed
+
+# C7 的键映射：事件键 profile_completed_{uid} ↔ 落库 source_type=profile + source_id={uid}
+# 奖励值（20 分）由**消费端**配置持有 —— 这里钉住它，因为传输切换不该改变奖励值
+wait_for "SELECT COUNT(*) FROM cozy_member.points_lots WHERE user_id=$PROBE_ID AND source_type='profile' AND source_id=$PROBE_ID" 1 || exit 1
+assert_eq "完善资料批次数"  "SELECT COUNT(*) FROM cozy_member.points_lots WHERE user_id=$PROBE_ID AND source_type='profile' AND source_id=$PROBE_ID" 1
+assert_eq "完善资料批次数额" "SELECT initial_amount FROM cozy_member.points_lots WHERE user_id=$PROBE_ID AND source_type='profile'" 20
+assert_eq "完善资料积分流水" "SELECT COUNT(*) FROM cozy_member.points_transactions WHERE user_id=$PROBE_ID AND source_type='profile' AND source_id=$PROBE_ID" 1
+
+# 重放：消费侧靠 uk_reward(user_id,source_type,source_id) + 行锁串行化，不得再加一次分
+PROFILE_PAYLOAD="$(mysql_q "SELECT payload FROM cozy_user.user_event_outbox WHERE unique_key='$PROFILE_KEY'")"
+[ -n "$PROFILE_PAYLOAD" ] || { echo "  ✗ 取不到完善资料事件原始载荷"; exit 1; }
+replay_and_assert "PROFILE_COMPLETED" cozy-user-events profile_completed "$PROFILE_KEY" "$PROFILE_PAYLOAD" cozy-member-profile-completed \
+  "SELECT CONCAT((SELECT COUNT(*) FROM cozy_member.points_lots WHERE user_id=$PROBE_ID AND source_type='profile'),'/',(SELECT COUNT(*) FROM cozy_member.points_transactions WHERE user_id=$PROBE_ID AND source_type='profile'))"
+
+banner "✅ USER_EVENTS 全链路 E2E 通过（HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库；四条链路重放均幂等；禁用即时撤销会话）"

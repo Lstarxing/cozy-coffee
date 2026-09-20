@@ -1,12 +1,12 @@
 package com.cozy.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.cozy.common.constant.ProfileRewardConfig;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.common.mq.BirthdaySetEvent;
 import com.cozy.common.mq.InviteRewardEarnedEvent;
 import com.cozy.common.mq.MqTags;
+import com.cozy.common.mq.ProfileCompletedEvent;
 import com.cozy.common.mq.UserEventKeys;
 import com.cozy.common.mq.WelcomeGiftEligibleEvent;
 import com.cozy.common.tx.AfterCommit;
@@ -50,9 +50,6 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-
-    // 完善资料奖励配置（单一事实源 @ConfigurationProperties，见 cozy.user.profile）
-    private final ProfileRewardConfig profileRewardConfig;
 
     // 用户生命周期事实事件的本地 outbox（见 docs/adr/0001 §3）
     private final UserEventOutboxService userEventOutboxService;
@@ -591,16 +588,18 @@ public class UserServiceImpl implements UserService {
         boolean shouldReward = (isFirstPhone || isFirstEmail) && profileNowComplete;
 
         if (shouldReward) {
-            // 等事务提交后再派发：否则资料更新事务一旦回滚，积分已经加出去了且无法撤销。
-            AfterCommit.run(() -> CompletableFuture.runAsync(() -> {
-                try {
-                    memberService.addPointsWithLot(userId, profileRewardConfig.getPoints(),
-                            profileRewardConfig.getSourceType(), userId, profileRewardConfig.getDescription());
-                    log.info("完善资料奖励积分: userId={}", userId);
-                } catch (Exception e) {
-                    log.error("完善资料奖励积分失败: userId={}, error={}", userId, e.getMessage());
-                }
-            }));
+            // 完善资料奖励改由事件驱动（ADR 0001 §8 第 6 步）：事务内落 outbox，与资料行同生共死，
+            // 提交后由 relay 投递，member 侧的 ProfileCompletedConsumer 调 addPointsWithLot 发放。
+            // 事件**不携带积分数/文案** —— 奖励规则归消费端持有（member 侧的 cozy.user.profile），
+            // 所以 user 侧不再需要 ProfileRewardConfig（已随之删除）。
+            // 键映射见 C7：事件键 profile_completed_{userId} ↔ 落库 source_type=profile + source_id={userId}。
+            userEventOutboxService.publish(MqTags.PROFILE_COMPLETED, userId,
+                    ProfileCompletedEvent.builder()
+                            .userId(userId)
+                            .uniqueKey(UserEventKeys.profileCompleted(userId))
+                            .occurredAt(LocalDateTime.now())
+                            .build());
+            log.info("完善资料奖励事件已入队: userId={}", userId);
         }
 
         // 生日权益改由事件驱动（ADR 0001 §8 第 6 步）：在【本事务内】落 outbox，与资料行同生共死，

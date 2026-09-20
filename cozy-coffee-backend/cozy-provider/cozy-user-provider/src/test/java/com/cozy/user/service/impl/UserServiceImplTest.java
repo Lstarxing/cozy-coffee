@@ -1,11 +1,11 @@
 package com.cozy.user.service.impl;
 
-import com.cozy.common.constant.ProfileRewardConfig;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.common.mq.BirthdaySetEvent;
 import com.cozy.common.mq.InviteRewardEarnedEvent;
 import com.cozy.common.mq.MqTags;
+import com.cozy.common.mq.ProfileCompletedEvent;
 import com.cozy.common.mq.WelcomeGiftEligibleEvent;
 import com.cozy.member.api.MemberService;
 import com.cozy.user.dto.request.LoginRequest;
@@ -26,8 +26,6 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -71,7 +69,6 @@ class UserServiceImplTest {
     private UserEventOutboxService userEventOutboxService;
     private StringRedisTemplate stringRedisTemplate;
     private UserServiceImpl userService;
-    private ProfileRewardConfig profileRewardConfig;
 
     @BeforeEach
     void setUp() {
@@ -79,9 +76,7 @@ class UserServiceImplTest {
         memberService = mock(MemberService.class);
         userEventOutboxService = mock(UserEventOutboxService.class);
         stringRedisTemplate = mock(StringRedisTemplate.class);
-        profileRewardConfig = new ProfileRewardConfig();
-        userService = new UserServiceImpl(userMapper, stringRedisTemplate,
-                profileRewardConfig, userEventOutboxService);
+        userService = new UserServiceImpl(userMapper, stringRedisTemplate, userEventOutboxService);
         ReflectionTestUtils.setField(userService, "memberService", memberService);
     }
 
@@ -131,39 +126,31 @@ class UserServiceImplTest {
     // ==================== updateProfile 的事务边界（ADR 0001 的 C1） ====================
 
     /**
-     * 完善资料奖励必须等事务提交后才派发。
-     * 原先是裸 CompletableFuture，事务一回滚积分就已经加出去了、无法撤销。
+     * 完善资料奖励改为事件驱动：事件在**事务内**入队（不再依赖 AfterCommit），也不再同步调 member。
+     *
+     * <p>奖励规则（20 积分 / source_type=profile / 文案）**归消费端持有** —— 事件只表达"资料已完善"，
+     * 所以这里只断言键，不断言积分值（那个值在 member 侧的 `cozy.user.profile`，两边配置已核对一致）。
      */
     @Test
-    void profileRewardIsDispatchedOnlyAfterCommit() {
+    void profileCompletionEnqueuesEventInsideTransaction() {
         when(userMapper.selectById(7L)).thenReturn(entity(7L)); // phone/email 为空 -> 算首次填写
+        ArgumentCaptor<ProfileCompletedEvent> captor = ArgumentCaptor.forClass(ProfileCompletedEvent.class);
 
         UpdateProfileRequest request = new UpdateProfileRequest();
         request.setPhone("13800000000");
         request.setEmail("probe@example.com");
 
-        TransactionSynchronizationManager.initSynchronization();
-        try {
-            userService.updateProfile(7L, request);
+        userService.updateProfile(7L, request);
 
-            // 事务还没提交：奖励绝不能已经发出去
-            verify(memberService, never()).addPointsWithLot(anyLong(), anyInt(), any(), anyLong(), any());
+        // 不需要 afterCommit：事件与资料行同事务写入（这正是 C7 的前提："业务行与 outbox 行同事务"）
+        verify(userEventOutboxService, times(1))
+                .publish(eq(MqTags.PROFILE_COMPLETED), eq(7L), captor.capture());
+        ProfileCompletedEvent event = captor.getValue();
+        assertEquals(7L, event.getUserId());
+        assertEquals("profile_completed_7", event.getUniqueKey()); // 字面量：C2 守的就是键的口径
+        assertNotNull(event.getOccurredAt());
 
-            // 模拟提交
-            TransactionSynchronizationManager.getSynchronizations()
-                    .forEach(TransactionSynchronization::afterCommit);
-        } finally {
-            TransactionSynchronizationManager.clearSynchronization();
-        }
-
-        // 提交后才发；runAsync 是异步的，用 timeout 而不是立刻断言
-        verify(memberService, timeout(2000).times(1)).addPointsWithLot(
-                7L,
-                profileRewardConfig.getPoints(),
-                profileRewardConfig.getSourceType(),
-                7L,
-                profileRewardConfig.getDescription());
-        verify(memberService, never()).addPoints(anyLong(), anyInt(), any(), any());
+        verify(memberService, never()).addPointsWithLot(anyLong(), anyInt(), any(), anyLong(), any());
     }
 
     /**

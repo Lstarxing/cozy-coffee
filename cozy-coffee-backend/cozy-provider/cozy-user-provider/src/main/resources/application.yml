@@ -66,11 +66,5 @@ rocketmq:
     send-message-timeout: 2000
     retry-times-when-send-failed: 1
 
-# 首单邀请奖励配置（InviteRewardConfig，被邀请人首单完成时为邀请人发券）
-cozy:
-  user:
-    # 完善个人资料奖励（ProfileRewardConfig，首次补齐手机号+邮箱发积分）
-    profile:
-      points: 20
-      source-type: profile
-      description: 完善个人资料（手机号+邮箱）奖励
+# 注：`cozy.user.profile`（完善资料奖励）已随 ProfileRewardConfig 迁到消费端（member-provider），
+# 事件只表达"资料已完善"、不携带积分数 —— 本模块不再需要该配置块。
