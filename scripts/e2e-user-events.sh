@@ -56,7 +56,9 @@ export STORAGE_PUBLIC_BASE_URL="http://127.0.0.1:$GW_PORT/media"
 # 只【停】不停删：docker compose stop（不要 down，更不要 -v）。
 if [ "${1:-}" != "--force" ]; then
   conflicted=0
-  dev_containers="$(docker ps --format '{{.Names}}' | grep -E '^cozycoffee-' | grep -v '^cozycoffee-e2e-' || true)"
+  # 日常 dev 栈的容器名是 `cozy-mysql` / `cozy-nacos` …（compose project = cozycoffee，但容器名是自定义前缀），
+  # 不是 `cozycoffee-*` —— 只匹配后者会漏掉整个 dev 栈，所以两种前缀都要抓，并且剔除本项目自己的容器。
+  dev_containers="$(docker ps --format '{{.Names}}' | grep -E '^(cozy-|cozycoffee-)' | grep -v '^cozycoffee-e2e-' || true)"
   if [ -n "$dev_containers" ]; then
     echo "⚠️ 检测到日常 dev compose 栈仍在运行："
     echo "$dev_containers" | sed 's/^/     /'
