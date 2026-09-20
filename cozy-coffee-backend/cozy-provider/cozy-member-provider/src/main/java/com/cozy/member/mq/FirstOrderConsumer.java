@@ -49,32 +49,32 @@ public class FirstOrderConsumer implements RocketMQListener<OrderCompletedEvent>
         if (!Boolean.TRUE.equals(event.getIsFirstOrder())) {
             return;
         }
+
+        // 首单积分：靠 points_lots 的 (user_id, source_type, source_id) 幂等。
+        // 关键：积分与邀请奖励是**两件独立的事** —— 这里只跳过"积分写入"，不能连邀请奖励一起跳过。
+        // 否则"积分成功 + 邀请侧失败"之后重投时，会被这里提前 return 截断，邀请券永久丢失。
         long count = pointsLotMapper.selectCount(new LambdaQueryWrapper<PointsLot>()
                 .eq(PointsLot::getSourceType, firstOrderRewardConfig.getSourceType())
                 .eq(PointsLot::getSourceId, event.getOrderId()));
         if (count > 0) {
-            log.debug("首单奖励已发放，跳过: orderId={}", event.getOrderId());
-            return;
-        }
-        try {
-            memberService.addPointsWithLot(event.getUserId(), firstOrderRewardConfig.getPoints(),
-                    firstOrderRewardConfig.getSourceType(),
-                    event.getOrderId(), "新用户首单奖励");
-        } catch (DuplicateKeyException e) {
-            log.info("首单奖励并发发放被拦截(幂等): orderId={}", event.getOrderId());
-            return;
-        }
-        log.info("首单奖励发放成功: userId={}, orderId={}", event.getUserId(), event.getOrderId());
-
-        try {
-            if (userService != null) {
-                boolean granted = userService.grantInviteRewardOnFirstOrder(event.getUserId());
-                if (granted) {
-                    log.info("首单邀请奖励发放成功: userId={}", event.getUserId());
-                }
+            log.debug("首单奖励已发放，跳过积分写入: orderId={}", event.getOrderId());
+        } else {
+            try {
+                memberService.addPointsWithLot(event.getUserId(), firstOrderRewardConfig.getPoints(),
+                        firstOrderRewardConfig.getSourceType(),
+                        event.getOrderId(), "新用户首单奖励");
+                log.info("首单奖励发放成功: userId={}, orderId={}", event.getUserId(), event.getOrderId());
+            } catch (DuplicateKeyException e) {
+                // 并发下的幂等冲突同样只影响积分，继续走邀请奖励
+                log.info("首单奖励并发发放被拦截(幂等): orderId={}", event.getOrderId());
             }
-        } catch (Exception ex) {
-            log.warn("首单邀请奖励发放失败: userId={}, error={}", event.getUserId(), ex.getMessage());
+        }
+
+        // 邀请奖励：不吞异常 —— 抛出去让 RocketMQ 重投。
+        // 券入队失败若被吞掉，消息会被误认为消费成功，而首单只有一次，用户再也拿不到邀请券。
+        boolean granted = userService.grantInviteRewardOnFirstOrder(event.getUserId());
+        if (granted) {
+            log.info("首单邀请奖励事件已入队: userId={}", event.getUserId());
         }
     }
 }
