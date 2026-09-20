@@ -163,14 +163,14 @@ MyBatis-Plus 的 `updateById` 做不到条件更新。需
 
 改为调用 `addPointsWithLot(userId, points, sourceType, sourceId, description)`。该方法的幂等机制已核实：
 
-- 方法内先按 `(user_id, source_type, source_id)` 查一次 `points_transactions`，命中即返回 ——
-  这是**省一次异常的优化，不是保证**（它本身仍是"先查后写"）。
-- **真正的保证是 `uk_reward` 唯一索引**：并发时两个调用都能通过上面的查询，
-  第二个在 `recordTransaction` 插入时抛 `DuplicateKeyException`。
-- `points_lots` **没有唯一索引**（只有非唯一的 `idx_source`），批次行的防重是**传递性**的：
-  整个方法 `@Transactional`，`DuplicateKeyException` 会把余额更新与批次插入一并回滚。
-- → **调用方必须捕获 `DuplicateKeyException` 并视为已成功**（`FirstOrderConsumer` 即如此），
-  否则事件重投会退化成失败重试。
+- 方法先通过 `selectByUserIdForUpdate` 对 `member_info` 的用户行执行 `SELECT ... FOR UPDATE`，
+  **取得行锁后**才按 `(user_id, source_type, source_id)` 查询 `points_transactions`。
+  因此同一用户的并发调用会被串行化；后进入的事务在前一个事务提交后查到既有流水并正常返回。
+- `uk_reward` 唯一索引仍是最终数据库兜底，防止未来代码绕过或破坏上述锁顺序。
+  若兜底触发，`DuplicateKeyException` 会让余额、批次和流水所在事务整体回滚；消息重试后会走正常的
+  “锁行 → 查到既有流水 → 返回”路径，**调用方不应跨 Dubbo 边界解析并吞掉异常**。
+- `points_lots` **没有唯一索引**（只有非唯一的 `idx_source`）；它依靠同一事务、会员行锁以及
+  `uk_reward` 的最终兜底获得传递性保护。
 
 注：本步只改 `updateProfile` 的调用点（`addPoints` → `addPointsWithLot`）；
 `addPoints` 本身及其另一个调用方（网关 `MemberController` 的手动加分接口）都不动。

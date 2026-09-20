@@ -557,8 +557,8 @@ public class UserServiceImpl implements UserService {
             // 等事务提交后再派发：否则资料更新事务一旦回滚，积分已经加出去了且无法撤销。
             AfterCommit.run(() -> CompletableFuture.runAsync(() -> {
                 try {
-                    memberService.addPoints(userId, profileRewardConfig.getPoints(),
-                            profileRewardConfig.getSourceType(), profileRewardConfig.getDescription());
+                    memberService.addPointsWithLot(userId, profileRewardConfig.getPoints(),
+                            profileRewardConfig.getSourceType(), userId, profileRewardConfig.getDescription());
                     log.info("完善资料奖励积分: userId={}", userId);
                 } catch (Exception e) {
                     log.error("完善资料奖励积分失败: userId={}, error={}", userId, e.getMessage());

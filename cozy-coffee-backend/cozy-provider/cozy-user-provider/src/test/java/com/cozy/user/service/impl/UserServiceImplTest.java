@@ -46,13 +46,15 @@ class UserServiceImplTest {
     private UserMapper userMapper;
     private MemberService memberService;
     private UserServiceImpl userService;
+    private ProfileRewardConfig profileRewardConfig;
 
     @BeforeEach
     void setUp() {
         userMapper = mock(UserMapper.class);
         memberService = mock(MemberService.class);
+        profileRewardConfig = new ProfileRewardConfig();
         userService = new UserServiceImpl(userMapper, mock(StringRedisTemplate.class),
-                mock(InviteRewardConfig.class), mock(ProfileRewardConfig.class));
+                mock(InviteRewardConfig.class), profileRewardConfig);
         ReflectionTestUtils.setField(userService, "memberService", memberService);
     }
 
@@ -118,7 +120,7 @@ class UserServiceImplTest {
             userService.updateProfile(7L, request);
 
             // 事务还没提交：奖励绝不能已经发出去
-            verify(memberService, never()).addPoints(anyLong(), anyInt(), any(), any());
+            verify(memberService, never()).addPointsWithLot(anyLong(), anyInt(), any(), anyLong(), any());
 
             // 模拟提交
             TransactionSynchronizationManager.getSynchronizations()
@@ -128,7 +130,13 @@ class UserServiceImplTest {
         }
 
         // 提交后才发；runAsync 是异步的，用 timeout 而不是立刻断言
-        verify(memberService, timeout(2000).times(1)).addPoints(anyLong(), anyInt(), any(), any());
+        verify(memberService, timeout(2000).times(1)).addPointsWithLot(
+                7L,
+                profileRewardConfig.getPoints(),
+                profileRewardConfig.getSourceType(),
+                7L,
+                profileRewardConfig.getDescription());
+        verify(memberService, never()).addPoints(anyLong(), anyInt(), any(), any());
     }
 
     /** 生日权益同理：提交前不能发。 */
