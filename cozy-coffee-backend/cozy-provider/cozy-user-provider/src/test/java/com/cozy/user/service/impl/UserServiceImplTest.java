@@ -1,15 +1,20 @@
 package com.cozy.user.service.impl;
 
-import com.cozy.common.constant.InviteRewardConfig;
 import com.cozy.common.constant.ProfileRewardConfig;
 import com.cozy.common.exception.BusinessException;
+import com.cozy.common.mq.InviteRewardEarnedEvent;
+import com.cozy.common.mq.MqTags;
+import com.cozy.common.mq.UserEventKeys;
+import com.cozy.mall.api.PointsMallService;
 import com.cozy.member.api.MemberService;
 import com.cozy.user.dto.request.UpdateProfileRequest;
 import com.cozy.user.dto.response.UserDTO;
 import com.cozy.user.entity.User;
 import com.cozy.user.mapper.UserMapper;
+import com.cozy.user.mq.UserEventOutboxService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,12 +25,17 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
@@ -45,6 +55,8 @@ class UserServiceImplTest {
 
     private UserMapper userMapper;
     private MemberService memberService;
+    private PointsMallService pointsMallService;
+    private UserEventOutboxService userEventOutboxService;
     private UserServiceImpl userService;
     private ProfileRewardConfig profileRewardConfig;
 
@@ -52,10 +64,13 @@ class UserServiceImplTest {
     void setUp() {
         userMapper = mock(UserMapper.class);
         memberService = mock(MemberService.class);
+        pointsMallService = mock(PointsMallService.class);
+        userEventOutboxService = mock(UserEventOutboxService.class);
         profileRewardConfig = new ProfileRewardConfig();
         userService = new UserServiceImpl(userMapper, mock(StringRedisTemplate.class),
-                mock(InviteRewardConfig.class), profileRewardConfig);
+                profileRewardConfig, userEventOutboxService);
         ReflectionTestUtils.setField(userService, "memberService", memberService);
+        ReflectionTestUtils.setField(userService, "pointsMallService", pointsMallService);
     }
 
     private User entity(long id) {
@@ -175,5 +190,83 @@ class UserServiceImplTest {
 
         assertTrue(method.isAnnotationPresent(Transactional.class),
                 "updateProfile 必须带 @Transactional：否则 updateById 与后续写入各自 autocommit（见 ADR 0001 C1）");
+    }
+
+    // ==================== 第 5 步：邀请券改为事件投递（ADR 0001 §8 第 5 步） ====================
+
+    private User inviteeWithInviter(long id, long inviterId) {
+        User user = entity(id);
+        user.setInvitedBy(inviterId);
+        user.setInviteRewardGranted(false);
+        return user;
+    }
+
+    /** 首次触发：条件更新认领成功 → 恰好入队一次；事件四要素正确；且不再同步调 mall 发券。 */
+    @Test
+    void firstTriggerClaimsQualificationAndEnqueuesOnce() {
+        when(userMapper.selectById(38L)).thenReturn(inviteeWithInviter(38L, 7L));
+        when(userMapper.claimInviteReward(38L)).thenReturn(1);
+        ArgumentCaptor<InviteRewardEarnedEvent> captor = ArgumentCaptor.forClass(InviteRewardEarnedEvent.class);
+
+        assertTrue(userService.grantInviteRewardOnFirstOrder(38L));
+
+        verify(userEventOutboxService, times(1))
+                .publish(eq(MqTags.INVITE_REWARD_EARNED), eq(38L), captor.capture());
+        InviteRewardEarnedEvent event = captor.getValue();
+        assertEquals(38L, event.getInviteeUserId());
+        assertEquals(7L, event.getInviterId());
+        assertEquals("invite_firstorder_38_7", event.getUniqueKey()); // C2：沿用既有业务键，不重造
+        assertNotNull(event.getOccurredAt());
+
+        // 券的面额/门槛/有效期不进事件载荷；也不再同步调 mall
+        verify(pointsMallService, never()).issueCouponToUser(
+                anyLong(), any(), any(), anyDouble(), anyDouble(), anyInt());
+    }
+
+    /** 重复 / 并发触发：条件更新返回 0 → 不重复入队、返回 false。 */
+    @Test
+    void alreadyClaimedQualificationIsNotEnqueuedAgain() {
+        when(userMapper.selectById(38L)).thenReturn(inviteeWithInviter(38L, 7L));
+        when(userMapper.claimInviteReward(38L)).thenReturn(0);
+
+        assertFalse(userService.grantInviteRewardOnFirstOrder(38L));
+
+        verifyNoInteractions(userEventOutboxService);
+    }
+
+    /** 没有邀请人：直接返回 false，连认领都不该尝试。 */
+    @Test
+    void userWithoutInviterNeverClaims() {
+        when(userMapper.selectById(38L)).thenReturn(entity(38L)); // invitedBy == null
+
+        assertFalse(userService.grantInviteRewardOnFirstOrder(38L));
+
+        verify(userMapper, never()).claimInviteReward(anyLong());
+        verifyNoInteractions(userEventOutboxService);
+    }
+
+    /**
+     * 入队失败必须让异常**逃出方法** —— 外层 {@code @Transactional} 才会把那次"认领"一起回滚。
+     *
+     * <p>单测不起 Spring 容器，回滚本身观察不到；这里守的是"没被 catch 掉"这个前提。
+     * 若这里又写成 catch→return false，资格会被白白认领、券永远发不出去（且调用方不会再重试首单）。
+     */
+    @Test
+    void enqueueFailurePropagatesSoThatQualificationRollsBack() {
+        when(userMapper.selectById(38L)).thenReturn(inviteeWithInviter(38L, 7L));
+        when(userMapper.claimInviteReward(38L)).thenReturn(1);
+        doThrow(new IllegalStateException("outbox insert failed"))
+                .when(userEventOutboxService).publish(any(), anyLong(), any());
+
+        assertThrows(IllegalStateException.class, () -> userService.grantInviteRewardOnFirstOrder(38L));
+    }
+
+    /** 结构性守卫："认领 + 入队同事务"的前提就是这个注解（ADR 0001 §2）。 */
+    @Test
+    void grantInviteRewardIsTransactional() throws Exception {
+        Method method = UserServiceImpl.class.getMethod("grantInviteRewardOnFirstOrder", Long.class);
+
+        assertTrue(method.isAnnotationPresent(Transactional.class),
+                "认领资格与 outbox 入队必须同事务，否则入队失败会留下'已认领却没券'的用户");
     }
 }

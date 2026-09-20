@@ -97,10 +97,13 @@ public interface UserService {
     java.util.List<Long> findUsersByBirthday(int month, int day) throws BusinessException;
 
     /**
-     * v5.0: 被邀请人首单完成时触发邀请奖励发放
-     * 
+     * v5.0: 被邀请人首单完成时触发邀请奖励发放。
+     *
+     * <p>返回 true 表示「**邀请奖励资格已被本调用认领，且发券事件已可靠入队**」
+     * （资格标记与 outbox 入队同事务），**不**表示券已在 mall 落库 —— 发券由 mall 侧消费者异步完成
+     * （见 docs/adr/0001 C5）。已认领过、或该用户没有邀请人时返回 false。
+     *
      * @param userId 被邀请人的用户ID
-     * @return 是否成功发放奖励（如果已发放过则返回false）
      */
     boolean grantInviteRewardOnFirstOrder(Long userId) throws BusinessException;
 }

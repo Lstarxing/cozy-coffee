@@ -1,10 +1,12 @@
 package com.cozy.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.cozy.common.constant.InviteRewardConfig;
 import com.cozy.common.constant.ProfileRewardConfig;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
+import com.cozy.common.mq.InviteRewardEarnedEvent;
+import com.cozy.common.mq.MqTags;
+import com.cozy.common.mq.UserEventKeys;
 import com.cozy.common.tx.AfterCommit;
 import com.cozy.common.util.JwtUtil;
 import com.cozy.member.api.MemberService;
@@ -16,6 +18,7 @@ import com.cozy.user.dto.request.UpdateProfileRequest;
 import com.cozy.user.dto.response.UserDTO;
 import com.cozy.user.entity.User;
 import com.cozy.user.mapper.UserMapper;
+import com.cozy.user.mq.UserEventOutboxService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -47,11 +50,11 @@ public class UserServiceImpl implements UserService {
     private final StringRedisTemplate stringRedisTemplate;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    // 首单邀请奖励配置（单一事实源 @ConfigurationProperties，见 cozy.user.invite）
-    private final InviteRewardConfig inviteRewardConfig;
-
     // 完善资料奖励配置（单一事实源 @ConfigurationProperties，见 cozy.user.profile）
     private final ProfileRewardConfig profileRewardConfig;
+
+    // 用户生命周期事实事件的本地 outbox（见 docs/adr/0001 §3）
+    private final UserEventOutboxService userEventOutboxService;
 
     @DubboReference(check = false, timeout = 60000)
     private MemberService memberService;
@@ -796,44 +799,34 @@ public class UserServiceImpl implements UserService {
             return false;
         }
 
-        // 检查是否有邀请人
-        if (user.getInvitedBy() == null) {
+        Long inviterId = user.getInvitedBy();
+        if (inviterId == null) {
             log.debug("用户 {} 没有邀请人，跳过首单奖励", userId);
             return false;
         }
 
-        // 检查奖励是否已发放
-        if (Boolean.TRUE.equals(user.getInviteRewardGranted())) {
-            log.debug("用户 {} 的邀请奖励已发放过，跳过", userId);
+        // 条件更新认领资格：并发/重投下只有一个调用能把 0 改成 1（docs/adr/0001 C4）。
+        // 刻意不用上面 selectById 的 inviteRewardGranted 判断 —— 那种"先查后写"有 TOCTOU 窗口。
+        if (userMapper.claimInviteReward(userId) == 0) {
+            log.debug("用户 {} 的邀请奖励资格已被认领过，跳过", userId);
             return false;
         }
 
-        Long inviterId = user.getInvitedBy();
-        log.info("用户 {} 完成首单，准备为邀请人 {} 发放买一送一券", userId, inviterId);
+        // 与上面那次条件更新同属一个事务：入队失败会一并回滚，资格不会被"白白认领"。
+        // 幂等键与 mall 消费者校验的完全一致（UserEventKeys 是唯一来源）；
+        // 事件不带券的面额/门槛/有效期 —— 那些由 mall 的消费者自己读配置。
+        String uniqueKey = UserEventKeys.inviteReward(userId, inviterId);
+        userEventOutboxService.publish(MqTags.INVITE_REWARD_EARNED, userId,
+                InviteRewardEarnedEvent.builder()
+                        .inviteeUserId(userId)
+                        .inviterId(inviterId)
+                        .uniqueKey(uniqueKey)
+                        .occurredAt(LocalDateTime.now())
+                        .build());
 
-        try {
-            // 发放买一送一券给邀请人（配置见 cozy.user.invite）
-            if (pointsMallService != null) {
-                String inviteKey = inviteRewardConfig.getUniqueKeyPrefix() + "_" + userId + "_" + inviterId;
-                pointsMallService.issueCouponToUser(inviterId, inviteRewardConfig.getCouponType(),
-                        inviteKey, inviteRewardConfig.getMinAmount(),
-                        inviteRewardConfig.getDiscountAmount(), inviteRewardConfig.getValidDays());
-                log.info("邀请人 {} 获得买一送一券奖励（被邀请人 {} 首单）", inviterId, userId);
-            } else {
-                log.error("券服务不可用，无法为邀请人 {} 发放首单奖励", inviterId);
-                return false;
-            }
-
-            // 标记奖励已发放
-            user.setInviteRewardGranted(true);
-            userMapper.updateById(user);
-
-            return true;
-        } catch (Exception e) {
-            log.error("发放首单邀请奖励失败: userId={}, inviterId={}, error={}",
-                    userId, inviterId, e.getMessage());
-            return false;
-        }
+        log.info("被邀请人 {} 首单完成，邀请券已可靠入队: inviterId={}, uniqueKey={}",
+                userId, inviterId, uniqueKey);
+        return true;
     }
 
 }
