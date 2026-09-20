@@ -2166,8 +2166,19 @@ public class PointsMallServiceImpl implements PointsMallService {
 
         // v2.1: 复用通用发券逻辑，通过配置区分业务场景
         // 调用内部方法，传入标准化配置
-        issueCouponByConfig(userId, uniqueKey, buildNewUserCouponConfig());
-        log.info("新用户首单五折券发放成功: userId={}", userId);
+        try {
+            issueCouponByConfig(userId, uniqueKey, buildNewUserCouponConfig());
+            log.info("新用户首单五折券发放成功: userId={}", userId);
+        } catch (DuplicateKeyException e) {
+            // 并发/重投：另一个调用已插入同一券码。上面的 selectCount 只是"先查"，并发下必有窗口，
+            // 真正兜住"只发一张"的是 user_coupons 的 uk_coupon_code 唯一索引 ——
+            // 且此处唯一可能被违反的就是它（uk_user_used_order 的 used_shop_order_id 为 NULL，不参与唯一冲突）。
+            // 按幂等吸收成功，不要把异常抛给上游，否则事件重投会退化成失败重试。
+            // 这里 catch 之所以安全：异常在本事务方法返回之前就被捕获，没有逃出事务拦截器，
+            // 所以事务不会被标记 rollback-only（InnoDB 的重复键只回滚当前语句）；
+            // issueCouponByConfig 是 private，说明它不构成独立的嵌套事务边界。插入点也没有前置写入。
+            log.info("新用户优惠券已存在（并发或重投），按幂等处理: userId={}, couponCode={}", userId, uniqueKey);
+        }
     }
 
     /**
