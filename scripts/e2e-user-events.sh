@@ -6,8 +6,9 @@
 #   ① 独立 Compose project / volume（不污染日常开发库）
 #   ② 起 MySQL / Redis / Nacos / RocketMQ + 5 个 provider + gateway
 #   ③ 等健康检查（--wait / 轮询），而不是固定 sleep
-#   ④ 显式创建 cozy-user-events
-#   ⑤ 断言 topic 4 队列 + 5 个 consumer group 在线且订阅 tag 正确
+#   ④ 显式创建 cozy-user-events 与 cozy-order-events
+#   ⑤ 断言两个 topic 均 4 队列 + 6 个 consumer group 在线且订阅 tag 正确
+#      （含 user 侧第 7 步新增的 cozy-user-invite-reward，它订阅 cozy-order-events 上的 order_completed）
 #   ⑥ 真实 API 注册邀请人 / 被邀请人 / 管理员（3 个用户，因此有 3 条新人礼事件）
 #   ⑦ 真实 API 下单 → 接单 → 完成 → 确认取餐（触发 ORDER_COMPLETED）
 #   ⑧ 断言一律【按 tag + unique_key 精确定位】，不用"全表恰好一行"——
@@ -136,40 +137,49 @@ echo "  ✓ 全部 healthy"
 
 # -------------------------------------------------- ④⑤ 事件拓扑（本阶段重点）
 
-banner "④ 显式创建 cozy-user-events（4 读 4 写；不依赖「首条消息自动创建」）"
+banner "④ 显式创建 cozy-user-events 与 cozy-order-events（不依赖「首条消息自动创建」）"
 docker exec "$BROKER" sh -c "$MQADMIN updateTopic -n $NS -c DefaultCluster -t cozy-user-events -r 4 -w 4" > /dev/null
+# order 事件 topic：user 侧新增的「邀请资格认领」消费者订阅它（ADR §8 第 7 步）。
+# 不显式创建的话，消费者注册会发生在首条消息之后 → CONSUME_FROM_LAST_OFFSET 直接跳过它（手册 §8.2 同款坑）。
+docker exec "$BROKER" sh -c "$MQADMIN updateTopic -n $NS -c DefaultCluster -t cozy-order-events -r 4 -w 4" > /dev/null
 echo "  ✓ created"
 
 banner "⑤ 断言 topic 路由（readQueueNums=4 / writeQueueNums=4）"
-route="$(docker exec "$BROKER" sh -c "$MQADMIN topicRoute -n $NS -t cozy-user-events")"
-grep -q '"readQueueNums":4' <<<"$route"  || { echo "✗ readQueueNums != 4"; echo "$route"; exit 1; }
-grep -q '"writeQueueNums":4' <<<"$route" || { echo "✗ writeQueueNums != 4"; echo "$route"; exit 1; }
-echo "  ✓ 4/4"
+for t in cozy-user-events cozy-order-events; do
+  route="$(docker exec "$BROKER" sh -c "$MQADMIN topicRoute -n $NS -t $t")"
+  grep -q '"readQueueNums":4' <<<"$route"  || { echo "✗ $t readQueueNums != 4"; echo "$route"; exit 1; }
+  grep -q '"writeQueueNums":4' <<<"$route" || { echo "✗ $t writeQueueNums != 4"; echo "$route"; exit 1; }
+done
+echo "  ✓ 2 个 topic 均 4/4"
 
-banner "⑤ 断言 5 个 consumer group 在线且订阅 tag 正确（等心跳，最多 90s）"
+banner "⑤ 断言 6 个 consumer group 在线且订阅 tag 正确（等心跳，最多 90s）"
 # 关键：**先等再断言**。刚建完 topic 时消费者可能还没注册上（这正是线上踩过的坑）
-declare -A CONSUMER_TAGS=(
-  [cozy-member-user-created]=user_created
-  [cozy-member-profile-completed]=profile_completed
-  [cozy-member-birthday-set]=birthday_set
-  [cozy-mall-welcome-gift]=welcome_gift_eligible
-  [cozy-mall-invite-reward]=invite_reward_earned
+# 值形如 <topic>:<tag> —— 第 7 步后 user 侧的邀请认领消费者订阅的是 cozy-order-events
+declare -A CONSUMER_SUBS=(
+  [cozy-member-user-created]="cozy-user-events:user_created"
+  [cozy-member-profile-completed]="cozy-user-events:profile_completed"
+  [cozy-member-birthday-set]="cozy-user-events:birthday_set"
+  [cozy-mall-welcome-gift]="cozy-user-events:welcome_gift_eligible"
+  [cozy-mall-invite-reward]="cozy-user-events:invite_reward_earned"
+  [cozy-user-invite-reward]="cozy-order-events:order_completed"
 )
 for attempt in $(seq 1 18); do
   all_ok=1
-  for g in "${!CONSUMER_TAGS[@]}"; do
+  for g in "${!CONSUMER_SUBS[@]}"; do
+    spec="${CONSUMER_SUBS[$g]}"; topic="${spec%%:*}"; tag="${spec##*:}"
     out="$(docker exec "$BROKER" sh -c "$MQADMIN consumerConnection -g $g -n $NS" 2>&1 || true)"
-    grep -qE "^cozy-user-events[[:space:]]+${CONSUMER_TAGS[$g]}$" <<<"$out" || all_ok=0
+    grep -qE "^${topic}[[:space:]]+${tag}$" <<<"$out" || all_ok=0
   done
   [ "$all_ok" = 1 ] && break
   sleep 5
 done
-for g in "${!CONSUMER_TAGS[@]}"; do
+for g in "${!CONSUMER_SUBS[@]}"; do
+  spec="${CONSUMER_SUBS[$g]}"; topic="${spec%%:*}"; tag="${spec##*:}"
   out="$(docker exec "$BROKER" sh -c "$MQADMIN consumerConnection -g $g -n $NS" 2>&1 || true)"
-  if grep -qE "^cozy-user-events[[:space:]]+${CONSUMER_TAGS[$g]}$" <<<"$out"; then
-    echo "  ✓ $g → ${CONSUMER_TAGS[$g]}"
+  if grep -qE "^${topic}[[:space:]]+${tag}$" <<<"$out"; then
+    echo "  ✓ $g → $topic:$tag"
   else
-    echo "  ✗ $g 未在线或订阅 tag 不符（期望 ${CONSUMER_TAGS[$g]}）"
+    echo "  ✗ $g 未在线或订阅 tag 不符（期望 $topic:$tag）"
     # CODE:17 "No topic route info … %RETRY%<group>" 就是 topic 不存在的典型体征
     grep -q "No topic route info" <<<"$out" && echo "    → 报 CODE:17：topic 不存在（不是消费端配置问题）"
     exit 1

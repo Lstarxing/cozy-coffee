@@ -4,41 +4,36 @@ import com.cozy.common.constant.FirstOrderRewardConfig;
 import com.cozy.common.mq.OrderCompletedEvent;
 import com.cozy.member.api.MemberService;
 import com.cozy.member.mapper.PointsLotMapper;
-import com.cozy.user.api.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.lang.reflect.Field;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * 首单消费的两个 P1 守卫（2026-09-20 评审提出）。
+ * 首单消费者：现在**只管首单积分**这一件事。
  *
- * <p>核心：**积分与邀请奖励是两件独立的事**。
- * <ul>
- *   <li>积分已发 / 并发冲突 → 只跳过积分写入，**必须继续**调 user —— 否则"积分成功 + 邀请侧失败"
- *       之后重投会被提前 return 截断，邀请券永久丢失</li>
- *   <li>邀请侧失败 → **抛出**（RocketMQ 重投），不能吞成 warn —— 吞掉等于消息被误 ack，
- *       而首单只有一次，用户再也拿不到邀请券</li>
- * </ul>
+ * <p>「邀请奖励资格认领」自 ADR 0001 §8 第 7 步起移到 user 侧（`OrderCompletedInviteConsumer`），
+ * 本消费者不再回调 user —— 所以这里不再有"积分失败也要继续调 user"那类守卫，
+ * 取而代之的是**结构守卫**：它不该再持有任何 `com.cozy.user` 类型。
  */
 class FirstOrderConsumerTest {
 
     private MemberService memberService;
     private PointsLotMapper pointsLotMapper;
-    private UserService userService;
     private FirstOrderConsumer consumer;
     private final FirstOrderRewardConfig config = new FirstOrderRewardConfig();
 
@@ -46,9 +41,7 @@ class FirstOrderConsumerTest {
     void setUp() {
         memberService = mock(MemberService.class);
         pointsLotMapper = mock(PointsLotMapper.class);
-        userService = mock(UserService.class);
         consumer = new FirstOrderConsumer(memberService, pointsLotMapper, config);
-        ReflectionTestUtils.setField(consumer, "userService", userService);
     }
 
     private OrderCompletedEvent firstOrder() {
@@ -59,38 +52,24 @@ class FirstOrderConsumerTest {
         return event;
     }
 
-    /** 积分已发过（例如上次投递积分成功、邀请侧失败）→ 跳过积分写入，但**必须**继续调 user。 */
+    /** 积分已发过 → 跳过写入（重投安全）。 */
     @Test
-    void pointsAlreadyGranted_stillCallsInviteReward() {
+    void pointsAlreadyGranted_skipsWrite() {
         when(pointsLotMapper.selectCount(any())).thenReturn(1L);
 
         consumer.onMessage(firstOrder());
 
-        verify(memberService, never()).addPointsWithLot(
-                anyLong(), anyInt(), anyString(), anyLong(), anyString());
-        verify(userService, times(1)).grantInviteRewardOnFirstOrder(38L);
+        verifyNoInteractions(memberService);
     }
 
-    /** 积分并发冲突（唯一键拦截）→ 同样只跳过积分，继续调 user。 */
+    /** 并发下的唯一键冲突 → 吸收，不抛出（重投会看到已存在而跳过）。 */
     @Test
-    void pointsDuplicateKey_stillCallsInviteReward() {
+    void pointsDuplicateKey_isAbsorbed() {
         when(pointsLotMapper.selectCount(any())).thenReturn(0L);
         doThrow(new DuplicateKeyException("duplicate")).when(memberService)
                 .addPointsWithLot(anyLong(), anyInt(), anyString(), anyLong(), anyString());
 
-        consumer.onMessage(firstOrder());
-
-        verify(userService, times(1)).grantInviteRewardOnFirstOrder(38L);
-    }
-
-    /** 邀请侧失败必须抛出 → 触发 RocketMQ 重投。 */
-    @Test
-    void inviteRewardFailure_propagates() {
-        when(pointsLotMapper.selectCount(any())).thenReturn(0L);
-        when(userService.grantInviteRewardOnFirstOrder(38L))
-                .thenThrow(new IllegalStateException("user-provider down"));
-
-        assertThrows(IllegalStateException.class, () -> consumer.onMessage(firstOrder()));
+        assertDoesNotThrow(() -> consumer.onMessage(firstOrder()));
     }
 
     /** 非首单：完全跳过，连积分幂等查询都不做。 */
@@ -101,6 +80,21 @@ class FirstOrderConsumerTest {
 
         consumer.onMessage(event);
 
-        verifyNoInteractions(pointsLotMapper, memberService, userService);
+        verifyNoInteractions(pointsLotMapper, memberService);
+    }
+
+    /**
+     * 结构守卫：本消费者不得再持有 user 域类型。
+     *
+     * <p>ADR §8 第 7 步删掉了 `FirstOrderConsumer` 回调 `userService` 那一跳；
+     * 一旦有人把 `@DubboReference UserService` 加回来，这条会立刻红（比"某条 verify 没调到"清楚得多）。
+     */
+    @Test
+    void consumerHoldsNoUserTypes() {
+        for (Field field : FirstOrderConsumer.class.getDeclaredFields()) {
+            assertFalse(field.getType().getName().startsWith("com.cozy.user"),
+                    "FirstOrderConsumer 不该再持有 user 类型：" + field.getName()
+                            + "（邀请资格认领归 user 侧自己消费 ORDER_COMPLETED，见 docs/adr/0001 §8 第 7 步）");
+        }
     }
 }
