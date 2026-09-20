@@ -14,4 +14,10 @@ public final class MqTags {
     public static final String ORDER_CANCELLED = "order_cancelled";
 
     public static final String COUPON_GRANT_REQUESTED = "coupon_grant_requested";
+
+    public static final String USER_CREATED = "user_created";
+    public static final String WELCOME_GIFT_ELIGIBLE = "welcome_gift_eligible";
+    public static final String PROFILE_COMPLETED = "profile_completed";
+    public static final String BIRTHDAY_SET = "birthday_set";
+    public static final String INVITE_REWARD_EARNED = "invite_reward_earned";
 }
