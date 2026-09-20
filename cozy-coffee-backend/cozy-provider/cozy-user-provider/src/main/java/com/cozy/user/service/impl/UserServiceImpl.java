@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cozy.common.constant.ProfileRewardConfig;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
+import com.cozy.common.mq.BirthdaySetEvent;
 import com.cozy.common.mq.InviteRewardEarnedEvent;
 import com.cozy.common.mq.MqTags;
 import com.cozy.common.mq.UserEventKeys;
@@ -602,21 +603,20 @@ public class UserServiceImpl implements UserService {
             }));
         }
 
-        // v4.2: 设置生日后立即发放生日权益包（同样等提交后派发）
+        // 生日权益改由事件驱动（ADR 0001 §8 第 6 步）：在【本事务内】落 outbox，与资料行同生共死，
+        // 提交后由 relay 投递，member 侧的 BirthdaySetConsumer 调 grantBirthdayReward(userId, benefitYear) 发放。
+        // benefitYear 必须由【生产者】盖章（C8）：消费者若用 now() 重算，跨年重投会算出下一年度的键，
+        // 同一笔权益会跨年各发一次。键沿用既有业务键 birthday_{userId}_{year}（C2）。
         if (request.getBirthday() != null) {
-            final Long uid = userId;
-            AfterCommit.run(() -> CompletableFuture.runAsync(() -> {
-                try {
-                    boolean granted = memberService.grantBirthdayReward(uid);
-                    if (granted) {
-                        log.info("生日权益包发放成功: userId={}", uid);
-                    } else {
-                        log.info("生日权益包已领取过: userId={}", uid);
-                    }
-                } catch (Exception e) {
-                    log.error("生日权益包发放失败: userId={}, error={}", uid, e.getMessage());
-                }
-            }));
+            int benefitYear = LocalDate.now().getYear();
+            userEventOutboxService.publish(MqTags.BIRTHDAY_SET, userId,
+                    BirthdaySetEvent.builder()
+                            .userId(userId)
+                            .benefitYear(benefitYear)
+                            .uniqueKey(UserEventKeys.birthday(userId, benefitYear))
+                            .occurredAt(LocalDateTime.now())
+                            .build());
+            log.info("生日权益事件已入队: userId={}, benefitYear={}", userId, benefitYear);
         }
     }
 

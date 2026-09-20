@@ -3,6 +3,7 @@ package com.cozy.user.service.impl;
 import com.cozy.common.constant.ProfileRewardConfig;
 import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
+import com.cozy.common.mq.BirthdaySetEvent;
 import com.cozy.common.mq.InviteRewardEarnedEvent;
 import com.cozy.common.mq.MqTags;
 import com.cozy.common.mq.WelcomeGiftEligibleEvent;
@@ -30,6 +31,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.time.LocalDate;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -164,27 +166,37 @@ class UserServiceImplTest {
         verify(memberService, never()).addPoints(anyLong(), anyInt(), any(), any());
     }
 
-    /** 生日权益同理：提交前不能发。 */
+    /**
+     * 设置生日 = 在**事务内**落一条 `birthday_set`，年度由生产者盖章（ADR 0001 C2 + C8）。
+     *
+     * <p>与完善资料奖励不同，这里**不再**走 `AfterCommit` + 异步 RPC：
+     * 事件行必须与资料行同事务（提交前就已写入），这正是事务性 outbox 的意义。
+     * 年度也绝不能留给消费者用 `now()` 重算 —— 跨年重投会算出下一年度的键，同笔权益重发。
+     */
     @Test
-    void birthdayRewardIsDispatchedOnlyAfterCommit() {
+    void settingBirthdayEnqueuesEventWithStampedYear() {
         when(userMapper.selectById(7L)).thenReturn(entity(7L));
+        ArgumentCaptor<BirthdaySetEvent> captor = ArgumentCaptor.forClass(BirthdaySetEvent.class);
 
         UpdateProfileRequest request = new UpdateProfileRequest();
         request.setBirthday("1990-05-20");
 
-        TransactionSynchronizationManager.initSynchronization();
-        try {
-            userService.updateProfile(7L, request);
+        userService.updateProfile(7L, request);
 
-            verify(memberService, never()).grantBirthdayReward(anyLong());
+        // 不需要 afterCommit：事件在事务内就已入队
+        verify(userEventOutboxService, times(1))
+                .publish(eq(MqTags.BIRTHDAY_SET), eq(7L), captor.capture());
+        BirthdaySetEvent event = captor.getValue();
+        assertEquals(7L, event.getUserId());
+        int benefitYear = LocalDate.now().getYear();
+        assertEquals(benefitYear, event.getBenefitYear());
+        // 字面量而不是 UserEventKeys.birthday(...)：C2 守的就是"键的口径不许变"
+        assertEquals("birthday_7_" + benefitYear, event.getUniqueKey());
+        assertNotNull(event.getOccurredAt());
 
-            TransactionSynchronizationManager.getSynchronizations()
-                    .forEach(TransactionSynchronization::afterCommit);
-        } finally {
-            TransactionSynchronizationManager.clearSynchronization();
-        }
-
-        verify(memberService, timeout(2000).times(1)).grantBirthdayReward(7L);
+        // 生日权益不再同步调 member（两个重载都不许出现）
+        verify(memberService, never()).grantBirthdayReward(anyLong());
+        verify(memberService, never()).grantBirthdayReward(anyLong(), anyInt());
     }
 
     /**

@@ -2,7 +2,7 @@
 #
 # 本地全栈 E2E：USER_EVENTS 全链路冒烟（隔离环境）
 #
-# 覆盖《CHANGELOG》未完成清单第 13 条的 ①–⑪：
+# 覆盖《CHANGELOG》未完成清单第 13 条的 ①–⑫：
 #   ① 独立 Compose project / volume（不污染日常开发库）
 #   ② 起 MySQL / Redis / Nacos / RocketMQ + 5 个 provider + gateway
 #   ③ 等健康检查（--wait / 轮询），而不是固定 sleep
@@ -18,6 +18,8 @@
 #   ⑩ 重放 welcome_gift_eligible，断言新人礼的 outbox 与券都不增（消费侧幂等）
 #   ⑪ 禁用用户必须立即撤销会话：禁用前 token 可用 → 禁用后 401 → 恢复 active 仍 401 →
 #      重新登录才恢复（守 JwtAuthInterceptor 只认 Redis session 键这个前提）
+#   ⑫ 生日：真实 API 设置生日 → `birthday_set` 一行且 SENT → member 领取记录 + mall 券各一次
+#      （券内容按模板 BIRTHDAY_BASIC_DISCOUNT 钉住）→ 重放该事件不增（年度由生产者盖章，C8）
 #   失败留诊断、成功清环境
 #
 # 为什么值得有：HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库
@@ -382,4 +384,40 @@ NEW_TOKEN="$(api POST /api/auth/login "" "{\"username\":\"$PROBE_PHONE\",\"passw
 assert_val "重新登录后 新 token 可用"   "$(token_status "$NEW_TOKEN")" 200
 echo "  ✓ 禁用即踢下线：401 → 恢复后仍 401 → 重新登录才恢复"
 
-banner "✅ USER_EVENTS 全链路 E2E 通过（HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库；两条链路重放均幂等；禁用即时撤销会话）"
+banner "⑫ 生日事件：设置生日 → member 权益 + mall 券各落一次；重放不增"
+# 年度由【生产者】盖章（ADR C8），所以这里用同一个时区的年份去对（全栈 TZ=Asia/Shanghai）
+BIRTH_YEAR="$(date +%Y)"
+BIRTH_KEY="birthday_${PROBE_ID}_${BIRTH_YEAR}"
+BIRTH_COUPON="${BIRTH_KEY}_gift1"
+assert_eq "设置前 无该生日事件" "SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$BIRTH_KEY'" 0
+
+api PUT /api/auth/profile "$NEW_TOKEN" "{\"birthday\":\"1990-05-20\"}" > /dev/null
+
+wait_for "SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$BIRTH_KEY' AND status='SENT'" 1 || exit 1
+assert_eq "生日事件行数"  "SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$BIRTH_KEY'" 1
+assert_eq "生日事件 tag"   "SELECT tag FROM cozy_user.user_event_outbox WHERE unique_key='$BIRTH_KEY'" birthday_set
+
+# member 侧：basic 等级生日积分是 0，但**必有一条领取记录** —— 幂等判据正是靠它（source_id = abs(hash(key))）
+wait_for "SELECT COUNT(*) FROM cozy_member.points_transactions WHERE user_id=$PROBE_ID AND source_type='birthday_gift'" 1 || exit 1
+assert_eq "生日领取记录"   "SELECT COUNT(*) FROM cozy_member.points_transactions WHERE user_id=$PROBE_ID AND source_type='birthday_gift'" 1
+
+# mall 侧：券码 = 事件键 + _gift1；模板 BIRTHDAY_BASIC_DISCOUNT 的字段一并钉住。
+# ⚠️ 字段名与新人券不同：模板驱动券落的是 discountRate / skuLimit（新人券是手工构造的 value），
+#    照抄新人券那套键名会取到 NULL —— 本脚本真踩过。
+#    数值用 `JSON_EXTRACT(...) + 0` 比，避免 20 与 20.0 这类表示差异造成假失败。
+wait_for "SELECT COUNT(*) FROM cozy_mall.user_coupons WHERE coupon_code='$BIRTH_COUPON'" 1 || exit 1
+assert_eq "生日券类型"     "SELECT coupon_type FROM cozy_mall.user_coupons WHERE coupon_code='$BIRTH_COUPON'" DISCOUNT
+assert_eq "生日券状态"     "SELECT status FROM cozy_mall.user_coupons WHERE coupon_code='$BIRTH_COUPON'" ISSUED
+assert_eq "生日券折扣率"   "SELECT JSON_EXTRACT(rule_json,'\$.discountRate') + 0 FROM cozy_mall.user_coupons WHERE coupon_code='$BIRTH_COUPON'" 0.5
+assert_eq "生日券封顶"     "SELECT JSON_EXTRACT(rule_json,'\$.maxDiscountAmount') + 0 FROM cozy_mall.user_coupons WHERE coupon_code='$BIRTH_COUPON'" 20
+assert_eq "生日券适用范围" "SELECT JSON_UNQUOTE(JSON_EXTRACT(rule_json,'\$.scope')) FROM cozy_mall.user_coupons WHERE coupon_code='$BIRTH_COUPON'" DRINK_ONLY
+assert_eq "生日券杯型限制" "SELECT JSON_UNQUOTE(JSON_EXTRACT(rule_json,'\$.skuLimit')) FROM cozy_mall.user_coupons WHERE coupon_code='$BIRTH_COUPON'" STANDARD_ONLY
+assert_eq "生日券单杯限制" "SELECT JSON_UNQUOTE(JSON_EXTRACT(rule_json,'\$.limit')) FROM cozy_mall.user_coupons WHERE coupon_code='$BIRTH_COUPON'" SINGLE_ITEM
+
+# 重放同一条 birthday_set：消费者用「键 → source_id」判重，不得再发券/再记一笔
+BIRTH_PAYLOAD="$(mysql_q "SELECT payload FROM cozy_user.user_event_outbox WHERE unique_key='$BIRTH_KEY'")"
+[ -n "$BIRTH_PAYLOAD" ] || { echo "  ✗ 取不到生日事件原始载荷"; exit 1; }
+replay_and_assert "BIRTHDAY_SET" cozy-user-events birthday_set "$BIRTH_KEY" "$BIRTH_PAYLOAD" cozy-member-birthday-set \
+  "SELECT CONCAT((SELECT COUNT(*) FROM cozy_member.points_transactions WHERE user_id=$PROBE_ID AND source_type='birthday_gift'),'/',(SELECT COUNT(*) FROM cozy_mall.user_coupons WHERE coupon_code='$BIRTH_COUPON'))"
+
+banner "✅ USER_EVENTS 全链路 E2E 通过（HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库；三条链路重放均幂等；禁用即时撤销会话）"
