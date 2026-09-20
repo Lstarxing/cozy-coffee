@@ -1,0 +1,92 @@
+# E2E 覆盖层：复用 docker-compose.prod.yml 的拓扑与环境变量，只改三件事——
+#   1) 应用镜像换成本地构建的（不做 ACR 拉取，保证测的是工作区代码）
+#   2) 端口避让：本机日常 dev 栈通常已占 3306/6379/8848/9876/10911/9000/8080/8081
+#   3) Docker Desktop 兼容：规避 Nacos JDK8 cgroup v2 NPE，并初始化 RocketMQ 命名卷权限
+#
+# 用法（脚本 scripts/e2e-user-events.sh 会做这些）：
+#   docker compose -p cozycoffee-e2e -f docker-compose.prod.yml -f docker-compose.e2e.yml up -d --wait
+# 隔离说明：项目名 cozycoffee-e2e 让卷/网络/容器名都带该前缀，与日常 dev 栈互不影响；
+#           结束用 `down -v` 连卷一起删。
+#
+# ⚠️ 需要 dummy 的 ACR_* 环境变量：base 文件里 image 用了 ${ACR_REGISTRY:?...}，
+#    Compose 解析时会校验该变量存在（即使本覆盖层把 image 覆盖掉了）。
+#    脚本里已注入 ACR_REGISTRY=dummy / ACR_NAMESPACE=dummy / IMAGE_TAG=local。
+
+services:
+  # ---- 基础设施：一律不映射宿主端口，避免与日常 dev 栈撞 ----
+  mysql:
+    ports: !override []
+  redis:
+    ports: !override []
+  nacos:
+    ports: !override []
+    # Nacos 2.2.3 自带 JDK8 在 Docker Desktop/cgroup v2 读取容器资源时会 NPE。
+    # 只在本地 E2E 覆盖，生产编排不受影响。
+    environment:
+      JAVA_TOOL_OPTIONS: "-XX:-UseContainerSupport"
+    # HTTP 8848 可访问不等于 Dubbo 依赖的 gRPC 9848 已就绪；两者都通才允许应用启动。
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8848/nacos/v1/console/health/liveness >/dev/null && nc -z 127.0.0.1 9848"]
+      interval: 3s
+      timeout: 2s
+      retries: 60
+      start_period: 10s
+  rocketmq-namesrv:
+    ports: !override []
+  rocketmq-broker:
+    ports: !override []
+    depends_on:
+      rocketmq-store-init:
+        condition: service_completed_successfully
+  minio:
+    ports: !override []
+
+  # Docker Desktop 新建的 named volume 归 root，而 RocketMQ 镜像以 rocketmq 用户运行。
+  # 一次性 init 容器先把 store 目录交给镜像内的运行用户，避免 broker 因 lock 文件无权写入而重启。
+  rocketmq-store-init:
+    image: apache/rocketmq:5.3.0
+    user: "0:0"
+    entrypoint: ["sh", "-c"]
+    command: ["chown -R rocketmq:rocketmq /home/rocketmq/store"]
+    volumes:
+      - rocketmq_store:/home/rocketmq/store
+    restart: "no"
+
+  # ---- 应用：本地构建的镜像 ----
+  user-provider:
+    image: cozycoffee-e2e/user-provider:local
+    depends_on:
+      nacos:
+        condition: service_healthy
+  member-provider:
+    image: cozycoffee-e2e/member-provider:local
+    depends_on:
+      nacos:
+        condition: service_healthy
+  order-provider:
+    image: cozycoffee-e2e/order-provider:local
+    depends_on:
+      nacos:
+        condition: service_healthy
+  mall-provider:
+    image: cozycoffee-e2e/mall-provider:local
+    depends_on:
+      nacos:
+        condition: service_healthy
+
+  # ---- 网关：唯一需要宿主端口的服务（脚本用 curl 驱动 HTTP 链路）----
+  gateway:
+    image: cozycoffee-e2e/gateway:local
+    ports: !override ["127.0.0.1:18080:8080"]
+    depends_on:
+      nacos:
+        condition: service_healthy
+    environment:
+      # E2E 只绑定本机 loopback HTTP；生产 profile 的其他 fail-closed 校验仍然保留。
+      COZY_GUARD_ALLOW_INSECURE_HTTP: "true"
+
+  # ---- 前端：E2E 不需要（脚本直接打网关 API），用 profile 关掉 ----
+  web:
+    profiles: ["e2e-disabled"]
+  admin:
+    profiles: ["e2e-disabled"]
