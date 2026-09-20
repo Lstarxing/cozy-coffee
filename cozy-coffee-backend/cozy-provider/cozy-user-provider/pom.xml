@@ -22,12 +22,6 @@
             <artifactId>cozy-user-api</artifactId>
         </dependency>
 
-        <!-- 会员服务API (跨服务调用) -->
-        <dependency>
-            <groupId>com.cozy</groupId>
-            <artifactId>cozy-member-api</artifactId>
-        </dependency>
-
         <!-- 公共模块 -->
         <dependency>
             <groupId>com.cozy</groupId>
@@ -138,7 +132,7 @@
                 <version>3.5.0</version>
                 <executions>
                     <execution>
-                        <id>ban-user-to-mall-dependency</id>
+                        <id>ban-cross-domain-dependencies</id>
                         <goals>
                             <goal>enforce</goal>
                         </goals>
@@ -147,10 +141,12 @@
                                 <bannedDependencies>
                                     <excludes>
                                         <exclude>com.cozy:cozy-mall-api</exclude>
+                                        <exclude>com.cozy:cozy-member-api</exclude>
                                     </excludes>
                                     <message>
-                                        user 域不得依赖 mall（含传递依赖）：新人券与邀请券统一走
-                                        user_event_outbox + USER_EVENTS，见 docs/adr/0001。
+                                        user 域不得依赖 member / mall（含传递依赖）：新人券、邀请券、生日、
+                                        完善资料、用户建档五类副作用全部走 user_event_outbox + USER_EVENTS，
+                                        消费端在各自的 provider 里，见 docs/adr/0001 §8。
                                     </message>
                                 </bannedDependencies>
                             </rules>
