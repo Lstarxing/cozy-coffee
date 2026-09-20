@@ -2,7 +2,7 @@
 #
 # 本地全栈 E2E：USER_EVENTS 全链路冒烟（隔离环境）
 #
-# 覆盖《CHANGELOG》未完成清单第 13 条的 ①–⑩：
+# 覆盖《CHANGELOG》未完成清单第 13 条的 ①–⑪：
 #   ① 独立 Compose project / volume（不污染日常开发库）
 #   ② 起 MySQL / Redis / Nacos / RocketMQ + 5 个 provider + gateway
 #   ③ 等健康检查（--wait / 轮询），而不是固定 sleep
@@ -16,6 +16,8 @@
 #      新人礼：3 个用户各一行且 SENT、各一张券，且券内容与旧同步路径逐字段一致
 #   ⑨ 从订单 outbox 读原始载荷重放 ORDER_COMPLETED，断言【该链路】的积分/outbox/券都不增
 #   ⑩ 重放 welcome_gift_eligible，断言新人礼的 outbox 与券都不增（消费侧幂等）
+#   ⑪ 禁用用户必须立即撤销会话：禁用前 token 可用 → 禁用后 401 → 恢复 active 仍 401 →
+#      重新登录才恢复（守 JwtAuthInterceptor 只认 Redis session 键这个前提）
 #   失败留诊断、成功清环境
 #
 # 为什么值得有：HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库
@@ -242,9 +244,16 @@ echo "  ✓ order=$ORDER_ID 已推进到 completed 并确认取餐"
 
 banner "⑧ 等异步链路收敛后断言（按 tag + unique_key 精确定位，不用全表计数）"
 
-assert_eq() { # <说明> <sql> <期望>
+assert_eq() { # <说明> <sql> <期望>：断言【SQL 查询结果】
   local v; v="$(mysql_q "$2" | tr -d '[:space:]')"
   if [ "$v" = "$3" ]; then echo "  ✓ $1 = $v"; else echo "  ✗ $1 期望 $3 实得 $v"; exit 1; fi
+}
+
+# 比两个【字面值】（HTTP 状态码 / redis-cli 输出 …）。
+# ⚠️ 别用 assert_eq 比这些：它会把第 2 个参数当 SQL 扔给 mysql，
+# 例如 `assert_eq "..." 200 200` 会报 `ERROR 1064 ... near '200'`（本脚本真踩过）。
+assert_val() { # <说明> <实得> <期望>
+  if [ "$2" = "$3" ]; then echo "  ✓ $1 = $2"; else echo "  ✗ $1 期望 $3 实得 $2"; exit 1; fi
 }
 
 # ---- 邀请链路 ----
@@ -330,4 +339,45 @@ GIFT_PAYLOAD="$(mysql_q "SELECT payload FROM cozy_user.user_event_outbox WHERE u
 replay_and_assert "WELCOME_GIFT_ELIGIBLE" cozy-user-events welcome_gift_eligible "$GIFT_KEY" "$GIFT_PAYLOAD" cozy-mall-welcome-gift \
   "SELECT CONCAT((SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$GIFT_KEY'),'/',(SELECT COUNT(*) FROM cozy_mall.user_coupons WHERE user_id=$INVITEE_ID AND coupon_code='$GIFT_KEY'))"
 
-banner "✅ USER_EVENTS 全链路 E2E 通过（HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库；两条链路重放均幂等）"
+banner "⑪ 禁用用户必须立即撤销会话（P1：鉴权只认 Redis 里的 session 键）"
+# 探针用独立账号，避免禁用动作影响上面的订单链路
+PROBE_PHONE="136${STAMP: -8}"
+api POST /api/auth/register "" "{\"username\":\"$PROBE_PHONE\",\"password\":\"$PW\",\"nickname\":\"e2e-probe\"}" > /dev/null
+PROBE_ID="$(mysql_q "SELECT id FROM cozy_user.users WHERE username='$PROBE_PHONE'")"
+[ -n "$PROBE_ID" ] || { echo "  ✗ 取不到探针账号 id"; exit 1; }
+assert_welcome_gift "$PROBE_ID" "探针"
+PROBE_TOKEN="$(api POST /api/auth/login "" "{\"username\":\"$PROBE_PHONE\",\"password\":\"$PW\"}" | jget token)"
+[ -n "$PROBE_TOKEN" ] || { echo "  ✗ 探针账号登录失败"; exit 1; }
+
+REDIS="$PROJECT-redis-1"
+redis_get() { docker exec "$REDIS" redis-cli get "$1" | tr -d '\r'; }
+redis_exists() { docker exec "$REDIS" redis-cli exists "$1" | tr -d '\r'; }
+# 该用户当前名下的 session 键个数（值为 userId）；无匹配时 grep -c 退出码为 1，故补 || true
+probe_sessions() {
+  local n=0 k
+  for k in $(docker exec "$REDIS" redis-cli --scan --pattern 'cozy:auth:session:*' | tr -d '\r'); do
+    [ "$(redis_get "$k")" = "$PROBE_ID" ] && n=$((n + 1))
+  done
+  echo "$n"
+}
+# 受保护接口：/api/member/addresses 不在 WebConfig 的放行名单里（/api/auth/me 才是放行的）
+token_status() { curl -sS -o /dev/null -w '%{http_code}' -X GET "$GW/api/member/addresses" -H "Authorization: Bearer $1"; }
+
+assert_val "禁用前 原 token 可用"      "$(token_status "$PROBE_TOKEN")" 200
+assert_val "禁用前 session 键存在"     "$(probe_sessions)" 1
+
+api PUT "/api/admin/users/$PROBE_ID/status?status=disabled" "$ADMIN_TOKEN" > /dev/null
+assert_val "禁用后 原 token 已 401"    "$(token_status "$PROBE_TOKEN")" 401
+assert_val "禁用后 session 键已清空"    "$(probe_sessions)" 0
+assert_val "禁用后 token 指针已删"      "$(redis_exists "cozy:auth:user:token:$PROBE_ID")" 0
+assert_eq  "禁用后 tokenVersion 已递增" "SELECT token_version FROM cozy_user.users WHERE id=$PROBE_ID" 1
+
+# 恢复 active 不恢复旧会话：必须重新登录
+api PUT "/api/admin/users/$PROBE_ID/status?status=active" "$ADMIN_TOKEN" > /dev/null
+assert_val "恢复 active 后 旧 token 仍 401" "$(token_status "$PROBE_TOKEN")" 401
+NEW_TOKEN="$(api POST /api/auth/login "" "{\"username\":\"$PROBE_PHONE\",\"password\":\"$PW\"}" | jget token)"
+[ -n "$NEW_TOKEN" ] || { echo "  ✗ 恢复后重新登录失败"; exit 1; }
+assert_val "重新登录后 新 token 可用"   "$(token_status "$NEW_TOKEN")" 200
+echo "  ✓ 禁用即踢下线：401 → 恢复后仍 401 → 重新登录才恢复"
+
+banner "✅ USER_EVENTS 全链路 E2E 通过（HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库；两条链路重放均幂等；禁用即时撤销会话）"

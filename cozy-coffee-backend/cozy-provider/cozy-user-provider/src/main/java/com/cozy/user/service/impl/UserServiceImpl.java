@@ -268,6 +268,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void resetPasswordDev(String username, String newPassword) {
         if (username == null || username.isBlank() || newPassword == null || newPassword.length() < 6) {
             throw new BusinessException("账号或新密码格式不正确");
@@ -281,7 +282,9 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setTokenVersion((user.getTokenVersion() == null ? 0 : user.getTokenVersion()) + 1);
         userMapper.updateById(user);
-        clearUserSessions(user.getId());
+        // 重置密码的语义就是"把旧会话全部踢掉"：必须成功，否则会出现"报错但密码已变"。
+        // 所以配 @Transactional —— 撤销失败时密码更新一起回滚。
+        revokeAllSessions(user.getId());
     }
 
     @Override
@@ -306,7 +309,8 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setTokenVersion((user.getTokenVersion() == null ? 0 : user.getTokenVersion()) + 1);
         userMapper.updateById(user);
-        clearUserSessions(user.getId());
+        // 改密后旧会话必须失效（含其他设备）：强制撤销，失败让异常逃出 → 密码更新随事务回滚
+        revokeAllSessions(user.getId());
     }
 
     private String issueToken(User user) {
@@ -355,6 +359,34 @@ public class UserServiceImpl implements UserService {
             }
         } catch (Exception e) {
             log.warn("扫描历史登录会话失败: userId={}", userId, e);
+        }
+    }
+
+    /**
+     * 强制撤销某用户的全部登录会话（禁用等"必须成功"的场景）。
+     *
+     * <p>与 {@link #clearUserSessions} 的两处不同都是刻意的：
+     * ① 连 {@code cozy:auth:user:token:{id}} 一起删 —— 那个指针只在下次登录时被 {@code issueToken} 覆盖，
+     * 否则会一直留着；
+     * ② <b>不吞异常</b> —— 失败必须抛出去让调用方的事务回滚，不能"接口报禁用成功、会话其实还在"。
+     * 所以它不复用上面那个"逐键 try/catch + 整体 try/catch"的尽力而为版本。
+     *
+     * <p>鉴权侧只看 Redis 里 session 键是否存在（不比 tokenVersion、也不查用户状态），
+     * 删掉这些键就等于立刻踢下线。
+     */
+    private void revokeAllSessions(Long userId) {
+        stringRedisTemplate.delete(RedisKeyConstants.userCurrentTokenById(userId));
+        String targetUserId = String.valueOf(userId);
+        ScanOptions options = ScanOptions.scanOptions().match("cozy:auth:session:*").count(500).build();
+        // 故意不写 catch：这里只可能抛 RuntimeException（如 RedisConnectionFailureException），
+        // 让它一路逃出 updateUserStatus 的 @Transactional，状态变更随之回滚
+        try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {
+            while (cursor.hasNext()) {
+                String key = cursor.next();
+                if (targetUserId.equals(stringRedisTemplate.opsForValue().get(key))) {
+                    stringRedisTemplate.delete(key);
+                }
+            }
         }
     }
 
@@ -743,12 +775,24 @@ public class UserServiceImpl implements UserService {
 
         // 如果是禁用操作，递增tokenVersion使所有Token失效
         if ("disabled".equals(status)) {
-            user.setTokenVersion(user.getTokenVersion() + 1);
-            log.info("用户 {} 被禁用，tokenVersion递增到 {}", userId, user.getTokenVersion());
+            // null 按 0 处理：本列是 NOT NULL DEFAULT 0，但实体可能被手工构造，
+            // 原先的 getTokenVersion() + 1 会 NPE
+            int nextVersion = (user.getTokenVersion() == null ? 0 : user.getTokenVersion()) + 1;
+            user.setTokenVersion(nextVersion);
+            log.info("用户 {} 被禁用，tokenVersion递增到 {}", userId, nextVersion);
         }
 
         userMapper.updateById(user);
         log.info("用户状态更新: userId={}, {} -> {}", userId, oldStatus, status);
+
+        if ("disabled".equals(status)) {
+            // 鉴权只认 Redis 里的 session 键（JwtAuthInterceptor 不比 tokenVersion、也不查用户状态），
+            // 所以光改状态是不够的 —— 必须同时掐掉会话，否则用户手上的 token 在会话 TTL 内仍然可用。
+            // 放在 updateById 之后：撤销失败时异常逃出方法 → 状态变更随事务回滚（Redis 没有回滚，
+            // 可能出现"状态没变但会话已被踢掉"，这个方向可接受：宁可多踢一次，也不能反过来）。
+            revokeAllSessions(userId);
+            log.info("用户 {} 的登录会话已全部撤销（禁用）", userId);
+        }
     }
 
     @Override

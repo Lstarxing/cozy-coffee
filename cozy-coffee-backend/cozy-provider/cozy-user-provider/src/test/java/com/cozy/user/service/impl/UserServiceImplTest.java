@@ -1,11 +1,13 @@
 package com.cozy.user.service.impl;
 
 import com.cozy.common.constant.ProfileRewardConfig;
+import com.cozy.common.constant.RedisKeyConstants;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.common.mq.InviteRewardEarnedEvent;
 import com.cozy.common.mq.MqTags;
 import com.cozy.common.mq.WelcomeGiftEligibleEvent;
 import com.cozy.member.api.MemberService;
+import com.cozy.user.dto.request.LoginRequest;
 import com.cozy.user.dto.request.RegisterRequest;
 import com.cozy.user.dto.request.UpdateProfileRequest;
 import com.cozy.user.dto.response.UserDTO;
@@ -15,7 +17,12 @@ import com.cozy.user.mq.UserEventOutboxService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.redis.RedisConnectionFailureException;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -23,7 +30,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -34,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -57,6 +67,7 @@ class UserServiceImplTest {
     private UserMapper userMapper;
     private MemberService memberService;
     private UserEventOutboxService userEventOutboxService;
+    private StringRedisTemplate stringRedisTemplate;
     private UserServiceImpl userService;
     private ProfileRewardConfig profileRewardConfig;
 
@@ -65,8 +76,9 @@ class UserServiceImplTest {
         userMapper = mock(UserMapper.class);
         memberService = mock(MemberService.class);
         userEventOutboxService = mock(UserEventOutboxService.class);
+        stringRedisTemplate = mock(StringRedisTemplate.class);
         profileRewardConfig = new ProfileRewardConfig();
-        userService = new UserServiceImpl(userMapper, mock(StringRedisTemplate.class),
+        userService = new UserServiceImpl(userMapper, stringRedisTemplate,
                 profileRewardConfig, userEventOutboxService);
         ReflectionTestUtils.setField(userService, "memberService", memberService);
     }
@@ -317,5 +329,192 @@ class UserServiceImplTest {
                     "UserServiceImpl 不该再持有 mall 类型：" + field.getName()
                             + "（写侧必须走事件，见 docs/adr/0001 §8）");
         }
+    }
+
+    // ==================== P1：禁用用户必须立即撤销会话 ====================
+
+    private User userWithStatus(long id, String status, Integer tokenVersion) {
+        User user = entity(id);
+        user.setStatus(status);
+        user.setTokenVersion(tokenVersion);
+        return user;
+    }
+
+    /** 让 {@code scan("cozy:auth:session:*")} 依次吐出给定的「会话键 → 归属用户 id」。 */
+    @SuppressWarnings("unchecked")
+    private void stubSessions(Map<String, String> sessionKeyToUserId) {
+        Cursor<String> cursor = mock(Cursor.class);
+        Iterator<String> keys = sessionKeyToUserId.keySet().iterator();
+        when(cursor.hasNext()).thenAnswer(invocation -> keys.hasNext());
+        when(cursor.next()).thenAnswer(invocation -> keys.next());
+        ValueOperations<String, String> valueOps = mock(ValueOperations.class);
+        sessionKeyToUserId.forEach((key, userId) -> when(valueOps.get(key)).thenReturn(userId));
+        when(stringRedisTemplate.scan(any(ScanOptions.class))).thenReturn(cursor);
+        when(stringRedisTemplate.opsForValue()).thenReturn(valueOps);
+    }
+
+    /**
+     * 禁用 = 状态置 disabled + tokenVersion++ + 删该用户的会话与当前 token 指针。
+     *
+     * <p>本类只验证"删了哪些键"；**"原 token 随后拿 401"由本地 E2E 验证**
+     * （401 需要真容器跑 JwtAuthInterceptor，本模块的单测不起容器）。
+     */
+    @Test
+    void disableRevokesSessionsAndTokenPointer() {
+        when(userMapper.selectById(42L)).thenReturn(userWithStatus(42L, "active", 0));
+        stubSessions(Map.of("cozy:auth:session:mine", "42", "cozy:auth:session:other", "7"));
+
+        userService.updateUserStatus(42L, "disabled");
+
+        verify(stringRedisTemplate).delete(RedisKeyConstants.userCurrentTokenById(42L));
+        verify(stringRedisTemplate).delete("cozy:auth:session:mine");
+        // 别人的会话一根都不能碰
+        verify(stringRedisTemplate, never()).delete("cozy:auth:session:other");
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userMapper).updateById(captor.capture());
+        assertEquals("disabled", captor.getValue().getStatus());
+        assertEquals(1, captor.getValue().getTokenVersion());
+    }
+
+    /** 重复禁用：依旧把残留会话清干净（幂等），tokenVersion 继续递增。 */
+    @Test
+    void repeatedDisableStillRevokes() {
+        when(userMapper.selectById(42L)).thenReturn(userWithStatus(42L, "disabled", 5));
+        stubSessions(Map.of("cozy:auth:session:leaked", "42"));
+
+        userService.updateUserStatus(42L, "disabled");
+
+        verify(stringRedisTemplate).delete("cozy:auth:session:leaked");
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userMapper).updateById(captor.capture());
+        assertEquals(6, captor.getValue().getTokenVersion());
+    }
+
+    /** 启用不碰任何会话（尤其不能顺手踢掉别人的），也不递增 tokenVersion、不恢复旧 token。 */
+    @Test
+    void enableDoesNotTouchSessions() {
+        when(userMapper.selectById(42L)).thenReturn(userWithStatus(42L, "disabled", 3));
+
+        userService.updateUserStatus(42L, "active");
+
+        verifyNoInteractions(stringRedisTemplate);
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userMapper).updateById(captor.capture());
+        assertEquals("active", captor.getValue().getStatus());
+        assertEquals(3, captor.getValue().getTokenVersion());
+    }
+
+    /** tokenVersion 为 null（旧数据）按 0 处理，不能 NPE。 */
+    @Test
+    void disableToleratesNullTokenVersion() {
+        when(userMapper.selectById(42L)).thenReturn(userWithStatus(42L, "active", null));
+        stubSessions(Map.of());
+
+        userService.updateUserStatus(42L, "disabled");
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userMapper).updateById(captor.capture());
+        assertEquals(1, captor.getValue().getTokenVersion());
+    }
+
+    /**
+     * Redis 撤销失败必须让异常**逃出方法** —— 否则会出现"接口报禁用成功、会话其实还在"。
+     *
+     * <p>单测不起 Spring 容器，事务回滚本身观察不到；这里守的是"没被 catch 掉"这个前提
+     * （与 `enqueueFailurePropagatesSoThatQualificationRollsBack` 同一个思路）。
+     */
+    @Test
+    void revokeFailurePropagatesSoStatusRollsBack() {
+        when(userMapper.selectById(42L)).thenReturn(userWithStatus(42L, "active", 0));
+        doThrow(new RedisConnectionFailureException("redis down"))
+                .when(stringRedisTemplate).delete(anyString());
+
+        assertThrows(RedisConnectionFailureException.class,
+                () -> userService.updateUserStatus(42L, "disabled"));
+    }
+
+    /** 已禁用用户不能重新登录（既有行为，补进来让 P1 的回归面完整）。 */
+    @Test
+    void disabledUserCannotLogin() {
+        User user = userWithStatus(42L, "disabled", 1);
+        user.setPassword("irrelevant-hash");
+        when(userMapper.selectOne(any())).thenReturn(user);
+
+        LoginRequest request = new LoginRequest();
+        request.setUsername("u42");
+        request.setPassword("secret123");
+
+        assertThrows(BusinessException.class, () -> userService.login(request));
+    }
+
+    // ---- 凭据变更同样必须"强制"撤销（与禁用共用 revokeAllSessions）----
+
+    /**
+     * 改密成功后必须**强制**撤销（而不是尽力而为）。
+     *
+     * <p>判据：强制版会删 {@code cozy:auth:user:token:{id}} 指针，尽力版不会 ——
+     * 这是两者唯一可观测的差别，所以用它当断言。
+     */
+    @Test
+    void changePasswordRevokesSessionsForcibly() {
+        User user = userWithStatus(42L, "active", 0);
+        user.setPassword(new BCryptPasswordEncoder().encode("OldPass123"));
+        when(userMapper.selectById(42L)).thenReturn(user);
+        stubSessions(Map.of());
+
+        userService.changePassword(42L, "OldPass123", "NewPass456");
+
+        verify(stringRedisTemplate).delete(RedisKeyConstants.userCurrentTokenById(42L));
+    }
+
+    /** 开发用重置密码同理（它此前连 @Transactional 都没有，见下面的结构守卫）。 */
+    @Test
+    void resetPasswordDevRevokesSessionsForcibly() {
+        User user = userWithStatus(42L, "active", 0);
+        when(userMapper.selectOne(any())).thenReturn(user);
+        stubSessions(Map.of());
+
+        userService.resetPasswordDev("u42", "NewPass456");
+
+        verify(stringRedisTemplate).delete(RedisKeyConstants.userCurrentTokenById(42L));
+    }
+
+    /** 改密时 Redis 撤销失败必须抛出去 → 密码更新随事务回滚，不能"密码改了但旧会话还在"。 */
+    @Test
+    void changePasswordRevokeFailurePropagates() {
+        User user = userWithStatus(42L, "active", 0);
+        user.setPassword(new BCryptPasswordEncoder().encode("OldPass123"));
+        when(userMapper.selectById(42L)).thenReturn(user);
+        doThrow(new RedisConnectionFailureException("redis down"))
+                .when(stringRedisTemplate).delete(anyString());
+
+        assertThrows(RedisConnectionFailureException.class,
+                () -> userService.changePassword(42L, "OldPass123", "NewPass456"));
+    }
+
+    /** 重置密码同理；没有 @Transactional 时会出现"报错但密码已变"，所以下面还有结构守卫。 */
+    @Test
+    void resetPasswordDevRevokeFailurePropagates() {
+        when(userMapper.selectOne(any())).thenReturn(userWithStatus(42L, "active", 0));
+        doThrow(new RedisConnectionFailureException("redis down"))
+                .when(stringRedisTemplate).delete(anyString());
+
+        assertThrows(RedisConnectionFailureException.class,
+                () -> userService.resetPasswordDev("u42", "NewPass456"));
+    }
+
+    /**
+     * 结构性守卫：`resetPasswordDev` 必须是 `@Transactional`。
+     *
+     * <p>它原来没有 —— 那样"密码已提交、随后 Redis 撤销失败"会留下"接口报错但密码已变"。
+     * 加了事务，撤销失败才能把密码更新一起回滚（真实回滚要起容器，这里只守注解本身）。
+     */
+    @Test
+    void resetPasswordDevIsTransactional() throws Exception {
+        Method method = UserServiceImpl.class.getMethod("resetPasswordDev", String.class, String.class);
+
+        assertTrue(method.isAnnotationPresent(Transactional.class),
+                "resetPasswordDev 必须带 @Transactional：否则 Redis 撤销失败会留下'报错但密码已变'");
     }
 }
