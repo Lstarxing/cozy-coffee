@@ -8,6 +8,9 @@
   C2/C3 扩围、新增 C6（消费者必须复用原发券方法）、C7（先修既有幂等缺陷，含 `addPointsWithLot` 的幂等机制）、
   C8（时间参数由事件携带，消费者不得用 `now()` 重算）、新增 §8 迁移顺序（第 3、4 步为同一批次）；
   全文去掉易漂移的行号，改引类名与方法名
+- **修订**：2026-09-20（第二次）—— 定稿**事件载荷封套**（保留 `occurredAt`；不引入通用 `eventId` / `schemaVersion`，
+  `OUTBOX_ID` 仅用于投递排障）与**第 3 步的 outbox 契约**（单表 + 非空 `tag`、固定 topic、
+  `UNIQUE(tag, unique_key)`、`tag` 白名单、5 个 tag / 键 / consumerGroup）；补齐 C1 / C7 / C3 的实施状态
 - **相关**：本仓 CHANGELOG `2026-09-19` / `2026-09-20`；**ADR 0002**《商品目录所有权》（结论：移除 `mall → order`）；
   写点盘点证据见 `surx-note/CozyCoffee/方案/用户生命周期事件迁移-写点对照与证据.md`
 
@@ -63,13 +66,36 @@
 
 ### 3. 事件契约与版本策略
 
-事件带 `eventId`、`occurredAt`、`schemaVersion` 与业务幂等键（稳定、可人工理解的字符串）。
-字段只追加、不改义；破坏性变更通过新增 tag 或版本号承载。
+**事件载荷的封套（2026-09-20 定稿）**：payload 携带**业务字段 + 业务幂等键 + `occurredAt`**；
+**不**额外引入通用 `eventId` 与 `schemaVersion`：
 
-**Topic 归属**：新增 `MqTopics.USER_EVENTS` 承载本 ADR 的全部事件。
+- 稳定身份由**业务幂等键**承担；outbox 的 `OUTBOX_ID` 只是**投递记录 id**，不能当业务幂等键
+- `occurredAt` **保留在 payload**：outbox 的 `created_at` 是**入队**时间，不一定等于业务事实发生的时间；
+  且 `RocketMQListener<Event>` 只收到 payload，消费者拿不到 header 里的信息
+  （现有 header 只有 `KEYS` / `OUTBOX_ID`，连入队时间都没有）
+- 破坏性契约变化通过**新增 tag** 承载（`MqTags` 为字符串常量，新增 tag 不破坏老消费者）
+- 注：`CouponGrantRequestedEvent` 没有 `occurredAt`，因为它更接近**跨域命令**；
+  领域**事实**事件（`OrderCompletedEvent` / `OrderCancelledEvent`）都带 `occurredAt` —— 本 ADR 的 5 个事件属后者
+
+**Topic 归属**：新增 `MqTopics.USER_EVENTS`（`"cozy-user-events"`）承载本 ADR 的全部事件。
 user-provider **不得**把消息发进 `MqTopics.MEMBER_EVENTS`（该 topic 语义属会员域，
 现有唯一消费者 `CouponGrantConsumer` 也只绑定它的 tag）。为了复用某个 listener 而借用别的域的 topic，
 会把刚解开的领域所有权重新糊回去。
+
+**user 侧 outbox 契约（第 3 步）**：
+
+- topic **固定** `MqTopics.USER_EVENTS`；表内**不存 topic** —— 该表只属 user 域，固定 topic 比"每行自带目标"更不易误投
+- **一张表** `user_event_outbox`（列对齐 `coupon_grant_outbox`，**新增非空 `tag` 列**）；
+  relay 目标 = `MqTopics.USER_EVENTS + ":" + row.tag`
+- 唯一约束是 **`UNIQUE (tag, unique_key)`**，**不是**单列 `unique_key` —— 幂等范围天然是
+  「**事件类型 + 业务键**」；不同 tag 即使将来合法复用同一业务键也不应互相吞消息，
+  靠"前缀永不冲突"的人工约定太脆弱，应由表结构表达真实约束
+- 写入时对 `tag` 做**白名单校验**（只允许下表 5 个常量），且 `tag` 非空
+- 五个 listener 用**五个不同 consumer group**（同一 group 的订阅表达式必须一致，混用会互相抢消息）
+- 表结构、relay（同事务入队 → `AfterCommit` 投递 → `@Scheduled` 重投 + 退避 + DEAD）与三类指标
+  （pending / dead / oldest_pending_age_seconds）**沿用 `CouponGrantOutboxService` 范本**
+- 迁移落点：`cozy-user-provider/src/main/resources/db/migration/V3__add_user_event_outbox.sql`
+  （该模块自有 `V1__init` / `V2__add_user_openid`，按其顺序编号）
 
 **事件只表达已发生的事实，不携带产品规则。** 券的面额、门槛、有效期、模板类型属于 mall
 （见 §4 C6），事件里带一份就等于把 mall 的产品配置复制到 user。
@@ -81,6 +107,20 @@ user-provider **不得**把消息发进 `MqTopics.MEMBER_EVENTS`（该 topic 语
 | `PROFILE_COMPLETED` | 手机号 + 邮箱首次同时完整 | member（专用消费者） | 事件键 `profile_completed_{userId}`；落库为 `source_type=profile` + `source_id={userId}`（**新增**，不用 `hashCode()` —— 见 C7） |
 | `BIRTHDAY_SET` | 生日设置 / 按规则修改成功 | member（专用消费者） | `birthday_{userId}_{benefitYear}`（**沿用既有格式与原 `sourceId` 派生算法**；`benefitYear` **由事件携带**，见 C2 / C8） |
 | `INVITE_REWARD_EARNED` | user 认领奖励资格成功（触发方见 §8 第 7 步） | mall（**专用消费者**，复用六参 `issueCouponToUser` 业务方法，见 C6） | `invite_firstorder_{inviteeUserId}_{inviterId}`（复用现有前缀） |
+
+**每事件的 payload 与 outbox 键**（`unique_key` 是**入队侧**唯一性，此前 ADR 漏写 —— 它才是"同一次业务只入队一次"的保证）：
+
+| Tag | payload 字段 | outbox `unique_key` | consumerGroup |
+|---|---|---|---|
+| `USER_CREATED` | `userId` | `user_created_{userId}` | `cozy-member-user-created` |
+| `WELCOME_GIFT_ELIGIBLE` | `userId` | `NEW_USER_COUPON_{userId}` | `cozy-mall-welcome-gift` |
+| `PROFILE_COMPLETED` | `userId` | `profile_completed_{userId}` | `cozy-member-profile-completed` |
+| `BIRTHDAY_SET` | `userId` + `benefitYear` | `birthday_{userId}_{benefitYear}` | `cozy-member-birthday-set` |
+| `INVITE_REWARD_EARNED` | `inviteeUserId` + `inviterId` | `invite_firstorder_{inviteeUserId}_{inviterId}` | `cozy-mall-invite-reward` |
+
+> 「同一把锁」指**同一业务语义**，不要求存储层表示完全相同 —— 例如 `PROFILE_COMPLETED` 的消费侧仍映射为
+> `source_type=profile` + `source_id=userId`（C7）。`BIRTHDAY_SET` 的键含 `benefitYear`：同一年内改生日
+> **不会重复入队**（那年权益已发过），次年才重新入队，与 C2 / C8 自洽。
 
 ### 4. 实施约束
 
@@ -252,13 +292,20 @@ MyBatis-Plus 的 `updateById` 做不到条件更新。需
 ## 实施状态
 
 - **已实施（读侧）**：读路径上移 Gateway（`AdminUserProfileCoordinator`）；`listAllUsers()` / `getUserDetail()`
-  不再反查 member，N+1 与假数据降级一并消除。
-- **已实施（C1）**：`updateProfile` 补 `@Transactional`，两处副作用改 `AfterCommit` 派发，含反射守卫测试。
+  不再反查 member，N+1 与假数据降级一并消除。已 push 并上线（`1e18a95`）。
+- **已实施（C1）**：`updateProfile` 补 `@Transactional`，两处副作用改 `AfterCommit` 派发，含反射守卫测试
+  （`cfb5ac3`）。
+- **已实施（C7）**：`PROFILE_COMPLETED` 的积分写入改走 `addPointsWithLot` + `source_id = userId`（`78ce09f`）
+  —— 已上线并冒烟通过（首次完善资料只加一次分）。同提交纠正了 C7 的一处机制描述。
+- **已实施（C3）**：`issueNewUserCoupon`（`b781ad8`）与 `createMember`（`ff6f19f`）改为**靠唯一索引吸收重复请求**；
+  连同上面 C7 那条，**C3 的三个点全部完成**，均已上线并通过注册冒烟。
 - **已完成（盘点）**：7 个写点 → 5 个事件的对照表，含各自的既有幂等键、DB 兜底索引与消费者归属。
   逐条核实证据（含当前行号与调用链）见
   `surx-note/CozyCoffee/方案/用户生命周期事件迁移-写点对照与证据.md`。
-- **推迟**：outbox 表、事件 DTO、消费者与生产者切换（§8 第 2–7 步）。
-  理由：在没有生产者和消费者的情况下先建骨架收益为零，只会提前引入表、MQ 配置与指标维护成本；
-  这些内容应与消费者实现同批进入，避免"基础设施建了但没人用"。
+- **未实施（§8 第 3、4 步）**：user 侧 outbox 表 / relay / 三类指标与 5 个消费者。
+  二者是**同一开发 / 发布批次** —— 只有表 / relay / 指标而没有消费者的"半批"**不得单独上线**。
+  契约已定稿（见 §3：封套、单表 + `tag`、`UNIQUE(tag, unique_key)`、5 个 tag / 键 / consumerGroup），**代码未动**。
+- **未实施（§8 第 5–7 步）**：生产者传输切换（试点为第 7 处邀请券）、其余写点切换、
+  以及消除 `member → user` 反向依赖。
 - **本 ADR 之外**：`member → order`（月度统计投影，尚无 ADR 覆盖）、
   `mall → order`（见 **ADR 0002**，结论是**移除**该依赖：经核实两处读取都是冗余的）、`cozy-common` 拆分。
