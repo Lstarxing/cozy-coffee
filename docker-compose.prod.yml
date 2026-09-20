@@ -111,7 +111,7 @@ services:
     image: ${ACR_REGISTRY:?需设置 ACR_REGISTRY}/${ACR_NAMESPACE:?需设置 ACR_NAMESPACE}/user-provider:${IMAGE_TAG:?需设置 IMAGE_TAG}
     <<: *java-limits
     restart: unless-stopped
-    depends_on: [mysql, redis, nacos]
+    depends_on: [mysql, redis, nacos, rocketmq-namesrv]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health/readiness || exit 1"]
       interval: 15s
@@ -125,6 +125,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
       DUBBO_REGISTRY_ADDRESS: nacos://nacos:8848
+      ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
 
   member-provider:
     image: ${ACR_REGISTRY:?需设置 ACR_REGISTRY}/${ACR_NAMESPACE:?需设置 ACR_NAMESPACE}/member-provider:${IMAGE_TAG:?需设置 IMAGE_TAG}

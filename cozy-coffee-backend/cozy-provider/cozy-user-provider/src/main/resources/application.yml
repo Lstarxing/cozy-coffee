@@ -2,6 +2,10 @@ server:
   port: 8081
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
   endpoint:
     health:
       probes:
@@ -54,6 +58,13 @@ dubbo:
   consumer:
     timeout: 30000
     check: false
+
+rocketmq:
+  name-server: ${ROCKETMQ_NAME_SERVER:localhost:9876}
+  producer:
+    group: cozy-user-producer
+    send-message-timeout: 2000
+    retry-times-when-send-failed: 1
 
 # 首单邀请奖励配置（InviteRewardConfig，被邀请人首单完成时为邀请人发券）
 cozy:
