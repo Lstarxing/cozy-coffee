@@ -6,6 +6,8 @@ import com.cozy.order.service.product.ProductRuleValidator;
 
 import com.cozy.member.api.MemberService;
 import com.cozy.member.dto.response.MemberDTO;
+import com.cozy.mall.api.PointsMallService;
+import com.cozy.mall.dto.request.ItemCheckDTO;
 import com.cozy.order.dto.request.CartCheckRequest;
 import com.cozy.order.dto.request.OrderItemRequest;
 import com.cozy.order.dto.response.CartCheckResultDTO;
@@ -18,6 +20,8 @@ import com.cozy.order.service.order.OrderRewardService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
@@ -26,6 +30,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 class OrderPreviewerTest {
@@ -145,5 +150,30 @@ class OrderPreviewerTest {
         product.setTempType("HOT_COLD");
         product.setUpdatedAt(LocalDateTime.of(2026, 7, 14, 12, 0));
         return product;
+    }
+
+    /**
+     * ItemCheckDTO.price 的契约守卫（见 docs/adr/0002）：它必须是 order 权威算出的
+     * 【当前规格】【每单位】基础价，不含加料费。
+     *
+     * <p>mall 侧的券估值只认这个字段（指定商品兑换券不再反查 order 的商品目录），
+     * 所以这里钉住"每单位 + 按规格"两条：数量 2、LARGE 杯时必须传 23（= priceLarge），
+     * 而不是整行 46、也不是标准杯价。
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void itemCheckPriceIsUnitBasePriceOfChosenSpec() {
+        when(productMapper.selectById(13L)).thenReturn(product(13L, "active", "20.00"));
+        PointsMallService mall = mock(PointsMallService.class);
+        ReflectionTestUtils.setField(service, "pointsMallService", mall);
+
+        CartCheckRequest req = request(item(13L, 2, "LARGE"));
+        req.setCouponCode("C1");
+        service.preview(7L, "basic", req);
+
+        ArgumentCaptor<List<ItemCheckDTO>> captor = ArgumentCaptor.forClass(List.class);
+        verify(mall).previewCouponCombination(any(), anyList(), any(), any(), anyList(), captor.capture());
+
+        assertEquals(0, new BigDecimal("23.00").compareTo(captor.getValue().get(0).getPrice()));
     }
 }

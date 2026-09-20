@@ -91,9 +91,10 @@ class CouponCalculatorTest {
     }
 
     @Test
-    void exchangeLinkedProductFallback() {
+    void exchangeLinkedProductUsesItemUnitPrice() {
         ExchangeCouponCalculator calc = new ExchangeCouponCalculator();
-        // 指定商品券：orderService 为空时回退到商品实际价
+        // 指定商品券直接用 ItemCheckDTO.price（order 权威算出的当前规格基础价），
+        // 不再反查 order 的商品目录 —— 见 docs/adr/0002
         BigDecimal d = calc.calculate(coupon("EXCHANGE", "{\"linkedProductId\":123}"),
                 BigDecimal.ZERO, List.of(item(123L, new BigDecimal("28"), "drink", 1, "MEDIUM", false)));
         assertEquals(0, new BigDecimal("28").compareTo(d));

@@ -34,12 +34,6 @@
             <artifactId>cozy-user-api</artifactId>
         </dependency>
 
-        <!-- 订单服务API（查询咖啡商品信息） -->
-        <dependency>
-            <groupId>com.cozy</groupId>
-            <artifactId>cozy-order-api</artifactId>
-        </dependency>
-
         <!-- 公共模块 -->
         <dependency>
             <groupId>com.cozy</groupId>
@@ -127,6 +121,37 @@
                         <goals>
                             <goal>repackage</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 依赖方向守卫：mall 已不再依赖 order 的商品目录（券估值只用 ItemCheckDTO.price，
+                 券标题用 mall 本地的 points_products.name，见 docs/adr/0002）。
+                 用 bannedDependencies 在构建期失败，防止这条冗余依赖以后悄悄长回来。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>ban-reverse-dependencies</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>com.cozy:cozy-order-api</exclude>
+                                    </excludes>
+                                    <message>
+                                        mall 域不得依赖 order（含传递依赖）：券估值只用 ItemCheckDTO.price
+                                        （order 权威算出的当前规格基础价），券标题用 points_products.name 快照。
+                                        见 docs/adr/0002。
+                                    </message>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

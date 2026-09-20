@@ -4,11 +4,7 @@ import com.cozy.common.exception.BusinessException;
 import com.cozy.mall.dto.request.ItemCheckDTO;
 import com.cozy.mall.entity.UserCoupon;
 import com.cozy.mall.util.CouponRuleUtil;
-import com.cozy.order.api.OrderService;
-import com.cozy.order.dto.response.CoffeeProductDTO;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -17,14 +13,13 @@ import java.util.List;
 /**
  * 兑换券/免单券策略：支持 SKU 限制、品类黑名单、指定商品/通兑。
  * rule_json: maxDiscount(封顶，缺省无上限) / value / skuLimit / categoryBlocklist / linkedProductId / scope(CAKE_ONLY)
+ *
+ * <p>本类<b>不依赖 order 的商品目录</b>：指定商品兑换券只用 ItemCheckDTO.price
+ * （order 权威算出的当前规格基础价），见 docs/adr/0002。
  */
 @Slf4j
 @Component("EXCHANGE")
-@RequiredArgsConstructor
 public class ExchangeCouponCalculator implements CouponCalculator {
-
-    @DubboReference(check = false)
-    private OrderService orderService;
 
     @Override
     public BigDecimal calculate(UserCoupon coupon, BigDecimal orderAmount, List<ItemCheckDTO> items) {
@@ -66,7 +61,7 @@ public class ExchangeCouponCalculator implements CouponCalculator {
         }
     }
 
-    /** 指定商品兑换券：仅限标准杯，只抵扣标准杯基础价 */
+    /** 指定商品兑换券：仅限标准杯，只抵扣该商品的当前规格基础价 */
     private BigDecimal applyLinkedProduct(UserCoupon coupon, List<ItemCheckDTO> items,
             long linkedProductId, BigDecimal maxDiscount) {
         if (items != null) {
@@ -76,16 +71,11 @@ public class ExchangeCouponCalculator implements CouponCalculator {
                     if (!cupSize.equals("STANDARD") && !cupSize.equals("MEDIUM")) {
                         throw new BusinessException("此兑换券仅限标准杯使用，请调整杯型后再试");
                     }
-                    try {
-                        CoffeeProductDTO product = orderService.getProduct(linkedProductId);
-                        if (product != null && product.getPrice() != null) {
-                            log.info("指定商品兑换券：productId={}, 标准杯价格={}, 实际商品价格={}",
-                                    linkedProductId, product.getPrice(), item.getPrice());
-                            return product.getPrice().min(maxDiscount);
-                        }
-                    } catch (Exception e) {
-                        log.warn("查询商品标准价格失败，回退到使用商品实际价格: productId={}", linkedProductId, e);
-                    }
+                    // item.getPrice() 就是 order 权威算出的当前规格基础价（不含加料费），见 docs/adr/0002。
+                    // 这里原先反查 order.getProduct().getPrice()：对 MEDIUM_LARGE 商品该字段恒为 NULL
+                    // （代码本来就会落到同一个 item.getPrice()），对 DEFAULT 商品两者相等 ——
+                    // 即那次 RPC 不带任何增量信息，已删除，mall 不再依赖商品目录。
+                    log.info("指定商品兑换券：productId={}, 当前规格基础价={}", linkedProductId, item.getPrice());
                     return item.getPrice().min(maxDiscount);
                 }
             }

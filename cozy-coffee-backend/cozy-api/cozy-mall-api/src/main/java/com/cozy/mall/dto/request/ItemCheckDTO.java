@@ -17,6 +17,14 @@ public class ItemCheckDTO implements Serializable {
     @NotNull(message = "商品ID不能为空")
     private Long productId;
 
+    /**
+     * order 权威计算的【当前规格】【每单位】基础价，<b>不含加料费</b>
+     * （加料费由 CouponCombinationService 的 addonsTotal / addonPrices 单独传）。
+     *
+     * <p>由 OrderPreviewer / OrderCreator 在调用 ProductPricingService.price() 之后填入；
+     * 是 mall 侧券估值的<b>唯一</b>价格来源 —— mall <b>不得</b>再反查 order 的商品目录取价。
+     * 改这里的语义必须同时回归 mall 的券计算，见 docs/adr/0002。
+     */
     private BigDecimal price;
 
     private String category;

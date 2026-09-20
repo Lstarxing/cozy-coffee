@@ -33,8 +33,6 @@ import com.cozy.mall.dto.response.CouponCombinationResult;
 import com.cozy.mall.dto.response.CouponSummaryDTO;
 import com.cozy.mall.dto.response.PointsOrderDTO;
 import com.cozy.mall.dto.response.PointsProductDTO;
-import com.cozy.order.api.OrderService;
-import com.cozy.order.dto.response.CoffeeProductDTO;
 import com.cozy.user.api.UserService;
 import com.cozy.user.dto.response.UserDTO;
 import lombok.RequiredArgsConstructor;
@@ -118,10 +116,6 @@ public class PointsMallServiceImpl implements PointsMallService {
     // 跨服务调用：地址服务（获取收货地址）
     @DubboReference(check = false)
     private AddressService addressService;
-    
-    // 跨服务调用：订单服务（查询咖啡商品信息）
-    @DubboReference(check = false)
-    private OrderService orderService;
 
     // 跨服务调用：用户服务（获取用户信息）
     @DubboReference(check = false)
@@ -1293,9 +1287,18 @@ public class PointsMallServiceImpl implements PointsMallService {
         UserCoupon issued = userCouponMapper.selectOne(wrapper);
         if (issued != null) {
             issued.setSourcePointsOrderId(orderId);
+            // 标题快照（见 docs/adr/0002）：积分兑换路径本来就持有来源商品，用它的名字做完整标题，
+            // 展示时就无需反查 order 的商品目录。名称可能已含"券/兑换券"字样，故**不再拼后缀**。
+            // 判定用归一化前的 systemCouponType 而不是 issued.getCouponType()：
+            //   FREE_DRINK（全场通兑）经券模板归一化后落库类型同样是 EXCHANGE（见 CouponTemplateConfig），
+            //   若按落库类型判断会把通兑券的标题也覆盖掉 —— 只有 EXCHANGE_<id> 这类的标题原本依赖商品名。
+            if (systemCouponType.startsWith("EXCHANGE_")
+                    && product.getName() != null && !product.getName().isBlank()) {
+                issued.setDisplayTitle(product.getName());
+            }
             userCouponMapper.updateById(issued);
-            log.info("✅ 积分兑换券发放成功: userId={}, couponCode={}, type={}, orderId={}", 
-                    userId, uniqueKey, systemCouponType, orderId);
+            log.info("✅ 积分兑换券发放成功: userId={}, couponCode={}, type={}, orderId={}, title={}",
+                    userId, uniqueKey, systemCouponType, orderId, issued.getDisplayTitle());
         }
     }
 
@@ -1989,20 +1992,16 @@ public class PointsMallServiceImpl implements PointsMallService {
         }
 
         if (Boolean.TRUE.equals(t.getLinkedProductFromCode())) {
-            // EXCHANGE_123：解析商品 ID 并查询名称
+            // EXCHANGE_123：只解析商品 ID 存进 rule_json
             String productIdStr = couponType.substring(couponType.indexOf("_") + 1);
             Long linkedProductId = Long.parseLong(productIdStr);
             rule.put("linkedProductId", linkedProductId);
-            String productName = "商品";
-            try {
-                var coffeeProduct = orderService.getProduct(linkedProductId);
-                if (coffeeProduct != null) {
-                    productName = coffeeProduct.getName();
-                }
-            } catch (Exception e) {
-                log.warn("查询关联商品失败: linkedProductId={}", linkedProductId, e);
+            // 标题不再反查 order 的商品目录（见 docs/adr/0002）：
+            // 积分兑换路径会在发券后把来源商品名快照进 display_title；
+            // 公共入口（如 CouponGrantConsumer）拿不到来源名时，保留这里的兜底标题。
+            if (coupon.getDisplayTitle() == null) {
+                coupon.setDisplayTitle("商品兑换券");
             }
-            coupon.setDisplayTitle(productName + "兑换券");
             if (coupon.getDisplaySubTitle() == null) {
                 coupon.setDisplaySubTitle("限标准杯，升杯加料需补差价");
             }

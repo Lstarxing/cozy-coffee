@@ -3,6 +3,7 @@ package com.cozy.mall.service.impl;
 import com.cozy.common.constant.CouponTemplateConfig;
 import com.cozy.mall.coupon.CouponCalculator;
 import com.cozy.mall.coupon.CouponCombinationService;
+import com.cozy.mall.entity.PointsProduct;
 import com.cozy.mall.entity.UserCoupon;
 import com.cozy.mall.mapper.MonthlyRedemptionMapper;
 import com.cozy.mall.mapper.PointsOrderFulfillmentMapper;
@@ -18,13 +19,17 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
@@ -67,6 +72,62 @@ class CouponTemplateTest {
 
     private JsonNode rule(String ruleJson) throws Exception {
         return objectMapper.readTree(ruleJson);
+    }
+
+    // ==================== 积分兑换券的标题快照（docs/adr/0002） ====================
+
+    private PointsProduct redemptionProduct(String name, Long linkedProductId) {
+        PointsProduct p = new PointsProduct();
+        p.setId(1L);
+        p.setName(name);
+        p.setCouponType("EXCHANGE");
+        p.setLinkedProductId(linkedProductId);
+        p.setValidDays(30);
+        p.setFaceValue(40);
+        return p;
+    }
+
+    /**
+     * 走积分兑换的发券路径（private issueCouponToUser(userId, orderId, PointsProduct, now)）。
+     * 该路径发完券后会再查一次同 couponCode 的券来补 sourcePointsOrderId —— 这里把插入的实例回给它。
+     */
+    private UserCoupon issueByRedemption(PointsProduct product) {
+        when(userCouponMapper.selectCount(any())).thenReturn(0L);
+        AtomicReference<UserCoupon> inserted = new AtomicReference<>();
+        when(userCouponMapper.insert(any(UserCoupon.class))).thenAnswer(invocation -> {
+            inserted.set(invocation.getArgument(0));
+            return 1;
+        });
+        when(userCouponMapper.selectOne(any())).thenAnswer(invocation -> inserted.get());
+
+        ReflectionTestUtils.invokeMethod(service, "issueCouponToUser", 1L, 99L, product, LocalDateTime.now());
+
+        assertNotNull(inserted.get(), "应发出一张券");
+        return inserted.get();
+    }
+
+    /** EXCHANGE_&lt;id&gt;：标题取来源商品名并快照，且**不再拼"兑换券"后缀**。 */
+    @Test
+    void exchangeWithLinkedProductSnapshotsProductName() {
+        UserCoupon coupon = issueByRedemption(redemptionProduct("拿铁兑换券", 123L));
+
+        assertEquals("EXCHANGE", coupon.getCouponType());
+        assertEquals("拿铁兑换券", coupon.getDisplayTitle()); // 不是「拿铁兑换券兑换券」
+        assertEquals(99L, coupon.getSourcePointsOrderId());
+    }
+
+    /**
+     * FREE_DRINK（无关联商品 → 全场通兑）经券模板归一化后**落库类型同样是 EXCHANGE**，
+     * 但它不该被积分商品名覆盖 —— 标题仍由模板链路负责（该分支见 applyCouponTemplate 的
+     * "EXCHANGE" + contains("FREE_DRINK") 一支）。商品名刻意取得与标题不同，
+     * 一旦按落库类型判断就会覆盖，这条即失败。
+     */
+    @Test
+    void freeDrinkKeepsTemplateTitle() {
+        UserCoupon coupon = issueByRedemption(redemptionProduct("全场通兑免单券", null));
+
+        assertEquals("EXCHANGE", coupon.getCouponType()); // 归一化后与 EXCHANGE_<id> 同类型
+        assertEquals("全场饮品通兑券", coupon.getDisplayTitle());
     }
 
     private void assertInt(JsonNode node, String field, int expected) {
@@ -222,7 +283,8 @@ class CouponTemplateTest {
         assertEquals("EXCHANGE", coupon.getCouponType());
         JsonNode r = rule(coupon.getRuleJson());
         assertInt(r, "linkedProductId", 123);
-        // 无 orderService 时商品名兜底
+        // 公共入口（如 CouponGrantConsumer）拿不到来源商品名时，保留「商品兑换券」兜底；
+        // 积分兑换路径会把来源商品名快照进 display_title —— 见 docs/adr/0002
         assertEquals("商品兑换券", coupon.getDisplayTitle());
         assertEquals("限标准杯，升杯加料需补差价", coupon.getDisplaySubTitle());
     }

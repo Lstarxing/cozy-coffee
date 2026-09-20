@@ -20,7 +20,6 @@ import com.cozy.mall.mapper.CouponRollbackInboxMapper;
 import com.cozy.mall.service.PointsRefundOutboxService;
 import com.cozy.member.api.AddressService;
 import com.cozy.member.api.MemberService;
-import com.cozy.order.api.OrderService;
 import com.cozy.user.api.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
@@ -65,7 +64,6 @@ class PointsMallServiceImplTest {
     @Mock private CouponCombinationService couponCombinationService;
     @Mock private MemberService memberService;
     @Mock private AddressService addressService;
-    @Mock private OrderService orderService;
     @Mock private UserService userService;
 
     @InjectMocks private PointsMallServiceImpl pointsMallService;
@@ -84,7 +82,6 @@ class PointsMallServiceImplTest {
         // @DubboReference 字段不在 @RequiredArgsConstructor 构造里，@InjectMocks 不会注入
         ReflectionTestUtils.setField(pointsMallService, "memberService", memberService);
         ReflectionTestUtils.setField(pointsMallService, "addressService", addressService);
-        ReflectionTestUtils.setField(pointsMallService, "orderService", orderService);
         ReflectionTestUtils.setField(pointsMallService, "userService", userService);
     }
 
