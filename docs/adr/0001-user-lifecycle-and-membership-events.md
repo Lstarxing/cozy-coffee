@@ -297,21 +297,64 @@ MyBatis-Plus 的 `updateById` 做不到条件更新。需
 
 ## 实施状态
 
+> **§8 的 7 步已全部实施完毕**（2026-09-20）。下列按批次列出，含各自的验收证据与部署状态。
+
+**前置与单点修复**
 - **已实施（读侧）**：读路径上移 Gateway（`AdminUserProfileCoordinator`）；`listAllUsers()` / `getUserDetail()`
   不再反查 member，N+1 与假数据降级一并消除。已 push 并上线（`1e18a95`）。
 - **已实施（C1）**：`updateProfile` 补 `@Transactional`，两处副作用改 `AfterCommit` 派发，含反射守卫测试
-  （`cfb5ac3`）。
-- **已实施（C7）**：`PROFILE_COMPLETED` 的积分写入改走 `addPointsWithLot` + `source_id = userId`（`78ce09f`）
-  —— 已上线并冒烟通过（首次完善资料只加一次分）。同提交纠正了 C7 的一处机制描述。
+  （`cfb5ac3`，已上线）。
+- **已实施（C7）**：`PROFILE_COMPLETED` 的积分写入改走 `addPointsWithLot` + `source_id = userId`（`78ce09f`，
+  已上线并冒烟：首次完善资料只加一次分）。同提交纠正了 C7 的一处机制描述。
 - **已实施（C3）**：`issueNewUserCoupon`（`b781ad8`）与 `createMember`（`ff6f19f`）改为**靠唯一索引吸收重复请求**；
   连同上面 C7 那条，**C3 的三个点全部完成**，均已上线并通过注册冒烟。
 - **已完成（盘点）**：7 个写点 → 5 个事件的对照表，含各自的既有幂等键、DB 兜底索引与消费者归属。
-  逐条核实证据（含当前行号与调用链）见
-  `surx-note/CozyCoffee/方案/用户生命周期事件迁移-写点对照与证据.md`。
-- **未实施（§8 第 3、4 步）**：user 侧 outbox 表 / relay / 三类指标与 5 个消费者。
-  二者是**同一开发 / 发布批次** —— 只有表 / relay / 指标而没有消费者的"半批"**不得单独上线**。
-  契约已定稿（见 §3：封套、单表 + `tag`、`UNIQUE(tag, unique_key)`、5 个 tag / 键 / consumerGroup），**代码未动**。
-- **未实施（§8 第 5–7 步）**：生产者传输切换（试点为第 7 处邀请券）、其余写点切换、
-  以及消除 `member → user` 反向依赖。
-- **本 ADR 之外**：`member → order`（月度统计投影，尚无 ADR 覆盖）、
-  `mall → order`（见 **ADR 0002**，结论是**移除**该依赖：经核实两处读取都是冗余的）、`cozy-common` 拆分。
+  逐条核实证据见 `surx-note/CozyCoffee/方案/用户生命周期事件迁移-写点对照与证据.md`。
+
+**§8 第 3、4 步（同一批次）—— 基础设施与消费者**
+- 已实施（`fee16a9` common 契约 / `e26ffea` user 侧 / `2188da1` 5 个消费者）：`user_event_outbox`（V3）、
+  relay、三类指标、5 个消费者。**已上线**：5 个 consumerGroup 在线且订阅 tag 正确；
+  ⚠️ 其间暴露过一个真缺口 —— **新 topic 必须显式创建**，否则消费者注册不上（该门禁已写入 §8 与部署手册 §8.2）。
+
+**§8 第 5 步 —— 邀请券传输切换**
+- 已实施并**已上线验收**（`94b4dab` + `6662d9c`）：邀请券改事件投递、资格认领改条件更新（C4）；
+  并发 P1 修复（`FirstOrderConsumer` 拆开积分与邀请两件事）；线上真跑过一次首单链路并实测重投幂等。
+
+**§8 第 6 步 —— 其余写点切换 + 依赖锁死**（4 个提交，**未部署**）
+| 提交 | 内容 |
+|---|---|
+| `3cf37bf` | 生日 → `birthday_set`（`benefitYear` 由生产者盖章，C8） |
+| `780ac59` | 完善资料 → `profile_completed`（奖励规则归消费端；顺带删除 user 侧已死的 `ProfileRewardConfig`） |
+| `33dc020` | 用户建档 → `user_created`（注册 / 微信开发 / 微信 三处入口） |
+| `7a577cd` | 删 `cozy-member-api` 依赖；禁令扩为 `ban-cross-domain-dependencies`（member/mall） |
+
+- **写侧 7 处至此全部事件化**，`user → member/mall` 由 Maven 禁令锁死（三条禁令全 pass）。
+- 验收：本地隔离 E2E **①–⑭ 全绿**（五条链路的幂等重放均以**消费位点增长**为证）+ 模块单测全绿。
+
+**§8 第 7 步 —— 邀请链拓扑改向**（`48a6bd2`，**未部署**）
+- user 侧新增 `OrderCompletedInviteConsumer`（新 consumerGroup `cozy-user-invite-reward`），
+  自己消费 `ORDER_COMPLETED` 认领邀请资格；member 的 `FirstOrderConsumer` 摘掉回调那一跳 ——
+  **`member → user` 的反向写边消除**。
+- ⚠️ **范围澄清**：本步只消除**反向写边**。`MemberServiceImpl` 仍有 3 处 `userService` 调用，
+  但都是**读**（资料展示 + 月度生日批次的 `findUsersByBirthday`），**本 ADR 未排期**
+  —— 因此 member 的 `cozy-user-api` 依赖与"暂不加禁令"保持不变。
+- 验收：本地隔离 E2E 全绿（含 ⑤ 断言 6 个 group 在线、⑧ 的邀请断言经新路径达成、⑨ 重放验证新消费者幂等）。
+
+**ADR 之外的相邻修复（同批但独立提交）**
+- `952b2c4` + `dc24eda`：**禁用用户必须立即撤销会话**（P1）。鉴权只认 Redis session 键，
+  而 `updateUserStatus` 原本不禁会话 → 旧 token 在 TTL 内仍可用。新增 `revokeAllSessions`
+  （删 session + `user:token` 指针，且**不吞异常**），并把改密/重置密码一并改为强制撤销。
+  本地 E2E ⑪ 以真容器验证（禁用前 200 → 禁用后 401 → 恢复 active 仍 401 → 重登才恢复）。
+
+**尚未消除的跨域依赖（明确列出，避免误以为已全清）**
+| 边 | 现状 |
+|---|---|
+| `user → member` / `user → mall` | **已删除 + 禁令锁死** |
+| `mall → order` | **已删除 + 禁令锁死**（ADR 0002） |
+| `member → user` | 反向**写**边已消除；**读**侧 3 处仍在（未排期） |
+| `member → order` | 3 处 `getMonthlyStats`（月度任务/资料），**无 ADR 覆盖**，要动先写 ADR |
+
+**部署状态**：§8 第 3–5 步已上线；**第 6、7 步与 P1 修复尚未部署**（按用户决定合并为一次收尾部署，
+理由是"部署是最终成功而非重构迭代"，且本地 E2E 已作逐项门禁）。
+
+**相关但不属于本 ADR**：`member → order` 的月度统计投影、`cozy-common` 拆分（评审第 5 条）。
