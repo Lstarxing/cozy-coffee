@@ -2,7 +2,8 @@ package com.cozy.common.mq;
 
 /**
  * RocketMQ 标签常量。
- * 本期仅接入 ORDER_CREATED，其余标签保留位置以便后续扩展。
+ * ORDER_CREATED 只负责清管理端缓存（下单不提醒商家，避免弃单噪声）；
+ * ORDER_PAID 才是「商家该开始做这一单」的信号，由网关在用户侧接单（= 支付）成功后发出。
  */
 public final class MqTags {
 
@@ -10,6 +11,7 @@ public final class MqTags {
     }
 
     public static final String ORDER_CREATED = "order_created";
+    public static final String ORDER_PAID = "order_paid";
     public static final String ORDER_COMPLETED = "order_completed";
     public static final String ORDER_CANCELLED = "order_cancelled";
 

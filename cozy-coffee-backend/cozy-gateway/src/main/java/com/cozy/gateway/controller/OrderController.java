@@ -96,7 +96,8 @@ public class OrderController {
 
     @PostMapping("/{id}/accept")
     public Result<ShopOrderDTO> acceptOrder(@PathVariable Long id) {
-        return Result.success(orderService.acceptUserOrder(id, AuthUtil.requireUserId()), "已接单");
+        // 走编排层：provider 事务提交后由它派发 ORDER_PAID（管理端提醒 + 清缓存在消费端做）
+        return Result.success(orderCoordinatorService.acceptUserOrder(AuthUtil.requireUserId(), id), "已接单");
     }
 
     @PostMapping("/{id}/confirm")

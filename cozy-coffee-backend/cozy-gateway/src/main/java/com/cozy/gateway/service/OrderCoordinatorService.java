@@ -1,6 +1,7 @@
 package com.cozy.gateway.service;
 
 import com.cozy.common.mq.OrderCreatedEvent;
+import com.cozy.common.mq.OrderPaidEvent;
 import com.cozy.common.exception.BusinessErrorCode;
 import com.cozy.common.exception.BusinessException;
 import com.cozy.gateway.mq.OrderEventProducer;
@@ -64,6 +65,29 @@ public class OrderCoordinatorService {
     public CartCheckResultDTO checkCart(Long userId, CartCheckRequest request) {
         MemberContext member = getMemberContext(userId);
         return orderService.checkCart(userId, member.level(), request);
+    }
+
+    /**
+     * 用户支付成功后自动接单，接单成功后派发 ORDER_PAID 通知商家。
+     * <p>
+     * 事件在 Dubbo 返回后发 —— 此时 provider 的 {@code @Transactional acceptUserOrder} 已提交。
+     * 刻意**不**放进 provider 的方法体内：那是提交前，一旦事务回滚就会通知商家"已付款"。
+     * 失败会抛异常，天然走不到下面的派发（"成功才发、失败不发"）。
+     */
+    public ShopOrderDTO acceptUserOrder(Long userId, Long orderId) {
+        ShopOrderDTO order = orderService.acceptUserOrder(orderId, userId);
+
+        MemberContext member = getMemberContext(userId);
+        OrderPaidEvent event = OrderPaidEvent.builder()
+                .orderId(order.getId())
+                .orderNo(order.getOrderNo())
+                .username(member.nickname())
+                .payAmount(order.getPayAmount())
+                .itemCount(order.getTotalQuantity())
+                .build();
+        orderEventProducer.publishOrderPaid(event);
+
+        return order;
     }
 
     private MemberContext getMemberContext(Long userId) {

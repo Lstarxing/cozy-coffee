@@ -4,6 +4,7 @@ import com.cozy.common.mq.MqTags;
 import com.cozy.common.mq.MqTopics;
 import com.cozy.common.mq.OrderCompletedEvent;
 import com.cozy.common.mq.OrderCreatedEvent;
+import com.cozy.common.mq.OrderPaidEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
@@ -38,6 +39,17 @@ public class OrderEventProducer {
             return;
         }
         send(MqTags.ORDER_COMPLETED, event, event.getOrderId());
+    }
+
+    /**
+     * 支付成功（= 用户侧接单成功）后派发，由 OrderPaidEventConsumer 清管理端缓存并提醒商家。
+     * 尽力而为：丢了最坏是管理端晚一个缓存 TTL 才看到，不影响订单本身。
+     */
+    public void publishOrderPaid(OrderPaidEvent event) {
+        if (event == null || event.getOrderId() == null) {
+            return;
+        }
+        send(MqTags.ORDER_PAID, event, event.getOrderId());
     }
 
     private void send(String tag, Object payload, Long orderId) {

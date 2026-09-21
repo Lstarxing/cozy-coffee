@@ -88,7 +88,7 @@
     </div>
 
     <el-card shadow="never" class="table-card compact-card">
-       <TableToolbar :last-updated="lastUpdated" @refresh="loadOrders" />
+       <TableToolbar :last-updated="lastUpdated" @refresh="handleRefresh" />
 
        <el-table
         v-loading="loading"
@@ -242,7 +242,7 @@
     <OrderDetailDialog
       v-model="detailDialogVisible"
       :order-id="selectedOrderId"
-      @refresh="loadOrders"
+      @refresh="handleRefresh"
     />
   </div>
 </template>
@@ -281,6 +281,11 @@ const {
   getDisplayStatus,
   formatDate
 } = useOrderList()
+
+// 显式刷新必须回源（fresh=true → noCache=true）。
+// 管理端订单列表在网关侧有 30s(±8s) 的 Redis 缓存，若刷新也走缓存，用户点「刷新」看到的是
+// 最多 38 秒前的状态，只能等 8s 轮询把缓存熬过期 —— 表现为「刷新没反应，过十几秒自己变了」。
+const handleRefresh = () => loadOrders({ fresh: true })
 
 // -- dialogs --
 const detailDialogVisible = ref(false)
