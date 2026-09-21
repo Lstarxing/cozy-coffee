@@ -1,0 +1,665 @@
+diff --git a/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/converter/OrderDtoConverter.java b/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/converter/OrderDtoConverter.java
+index 9883966..89068ba 100644
+--- a/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/converter/OrderDtoConverter.java
++++ b/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/converter/OrderDtoConverter.java
+@@ -48,6 +48,63 @@ public class OrderDtoConverter {
+      * CoffeeProduct entity -> DTO
+      */
+     public CoffeeProductDTO toProductDTO(CoffeeProduct entity) {
++        CoffeeBean bean = entity.getBeanId() == null ? null : beanMapper.selectById(entity.getBeanId());
++        CoffeeBlend blend = entity.getBlendId() == null ? null : blendMapper.selectById(entity.getBlendId());
++        return toProductDTO(entity, productAddonResolver.loadMenuGroups(entity.getId()), bean, blend);
++    }
++
++    /**
++     * 菜单批量转换：一次性预加载加料组、豆档案和拼配档案，避免逐商品查询。
++     */
++    public List<CoffeeProductDTO> toProductDTOList(List<CoffeeProduct> entities) {
++        if (entities == null || entities.isEmpty()) {
++            return List.of();
++        }
++
++        List<Long> productIds = entities.stream()
++                .map(CoffeeProduct::getId)
++                .filter(java.util.Objects::nonNull)
++                .distinct()
++                .toList();
++        Map<Long, List<com.cozy.order.dto.response.AddonGroupDTO>> addonGroupsByProductId =
++                productAddonResolver.loadMenuGroupsBatch(productIds);
++
++        List<Long> beanIds = entities.stream()
++                .map(CoffeeProduct::getBeanId)
++                .filter(java.util.Objects::nonNull)
++                .distinct()
++                .toList();
++        Map<Long, CoffeeBean> beanById = beanIds.isEmpty()
++                ? Map.of()
++                : beanMapper.selectBatchIds(beanIds).stream()
++                        .collect(Collectors.toMap(CoffeeBean::getId, Function.identity()));
++
++        List<Long> blendIds = entities.stream()
++                .map(CoffeeProduct::getBlendId)
++                .filter(java.util.Objects::nonNull)
++                .distinct()
++                .toList();
++        Map<Long, CoffeeBlend> blendById = blendIds.isEmpty()
++                ? Map.of()
++                : blendMapper.selectBatchIds(blendIds).stream()
++                        .collect(Collectors.toMap(CoffeeBlend::getId, Function.identity()));
++
++        return entities.stream()
++                .map(entity -> toProductDTO(
++                        entity,
++                        entity.getId() == null
++                                ? List.of()
++                                : addonGroupsByProductId.getOrDefault(entity.getId(), List.of()),
++                        entity.getBeanId() == null ? null : beanById.get(entity.getBeanId()),
++                        entity.getBlendId() == null ? null : blendById.get(entity.getBlendId())))
++                .toList();
++    }
++
++    private CoffeeProductDTO toProductDTO(
++            CoffeeProduct entity,
++            List<com.cozy.order.dto.response.AddonGroupDTO> addonGroups,
++            CoffeeBean bean,
++            CoffeeBlend blend) {
+         CoffeeProductDTO dto = new CoffeeProductDTO();
+         dto.setId(entity.getId());
+         dto.setName(entity.getName());
+@@ -73,7 +130,7 @@ public class OrderDtoConverter {
+         dto.setColdBrewPrice(entity.getColdBrewPrice());
+         dto.setBeanId(entity.getBeanId());
+         dto.setBlendId(entity.getBlendId());
+-        dto.setAddonGroups(productAddonResolver.loadMenuGroups(entity.getId()));
++        dto.setAddonGroups(addonGroups);
+         // 规格允许选项（单一事实源：后端由枚举规范值计算，前端渲染用）
+         ProductRuleValidator.AllowedOptionsDTO opts = ruleValidator.getAllowedOptions(entity);
+         dto.setAllowedSizes(java.util.Arrays.asList(opts.getAllowedSizes()));
+@@ -81,14 +138,8 @@ public class OrderDtoConverter {
+         dto.setAllowedTemps(java.util.Arrays.asList(opts.getAllowedTemps()));
+         // 食品/烘焙信号（前端无需各自硬编码分类列表）
+         dto.setIsFood(ProductRuleValidator.isFoodCategory(entity.getCategory()));
+-        if (entity.getBeanId() != null) {
+-            CoffeeBean bean = beanMapper.selectById(entity.getBeanId());
+-            if (bean != null) dto.setBeanProfile(toBeanProfile(bean));
+-        }
+-        if (entity.getBlendId() != null) {
+-            CoffeeBlend blend = blendMapper.selectById(entity.getBlendId());
+-            if (blend != null) dto.setBlendProfile(toBlendProfile(blend));
+-        }
++        if (bean != null) dto.setBeanProfile(toBeanProfile(bean));
++        if (blend != null) dto.setBlendProfile(toBlendProfile(blend));
+         return dto;
+     }
+ 
+diff --git a/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/product/MenuCacheService.java b/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/product/MenuCacheService.java
+index 6ffc58d..e303c9a 100644
+--- a/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/product/MenuCacheService.java
++++ b/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/product/MenuCacheService.java
+@@ -19,7 +19,6 @@ import java.util.Comparator;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.UUID;
+-import java.util.concurrent.Semaphore;
+ import java.util.concurrent.ThreadLocalRandom;
+ import java.util.concurrent.TimeUnit;
+ import java.util.concurrent.atomic.AtomicLong;
+@@ -37,13 +36,16 @@ import java.util.stream.Collectors;
+ public class MenuCacheService {
+ 
+     private static final String EMPTY_CACHE_MARKER = "__NULL__";
+-    private static final Semaphore MENU_DB_REBUILD_GUARD = new Semaphore(4);
+     private static final LongAdder MENU_CACHE_HIT = new LongAdder();
+     private static final LongAdder MENU_CACHE_MISS = new LongAdder();
+     private static final LongAdder MENU_CACHE_EMPTY_HIT = new LongAdder();
+-    private static final LongAdder MENU_DEGRADE_FAST_FAIL = new LongAdder();
++    private static final LongAdder MENU_REBUILD_WAIT = new LongAdder();
++    private static final LongAdder MENU_REBUILD_FALLBACK = new LongAdder();
+     private static final AtomicLong MENU_METRIC_SEQ = new AtomicLong();
+     private static final long L1_TTL_MS = TimeUnit.MINUTES.toMillis(10);
++    private static final long REBUILD_WAIT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(3);
++    private static final long REBUILD_POLL_MIN_MS = 40L;
++    private static final long REBUILD_POLL_MAX_MS = 80L;
+ 
+     /** 分类展示顺序（设计文档 3.1）：01经典 → 02奶咖 → 03特调 → 04精品 → 05非咖啡 → 06烘焙 */
+     private static final Map<String, Integer> CATEGORY_RANK = Map.of(
+@@ -124,77 +126,142 @@ public class MenuCacheService {
+         }
+         MENU_CACHE_MISS.increment();
+ 
+-        // DB rebuild with distributed lock
+-        String lockToken = UUID.randomUUID().toString();
+-        boolean locked = tryAcquireRebuildLock(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken, 8);
+-        if (!locked) {
++        // Local single-flight: only one request per instance may rebuild. Followers wait on
++        // this monitor and reuse the L1 result instead of returning a fake empty menu.
++        synchronized (this) {
++            List<CoffeeProductDTO> rebuiltLocally = freshLocalMenu();
++            if (rebuiltLocally != null) {
++                MENU_CACHE_HIT.increment();
++                logMetricsMaybe();
++                return rebuiltLocally;
++            }
++
++            List<CoffeeProductDTO> rebuiltRemotely = readRedisMenu();
++            if (rebuiltRemotely != null) {
++                return rebuiltRemotely;
++            }
++
++            String lockToken = UUID.randomUUID().toString();
++            boolean locked = tryAcquireRebuildLock(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken, 8);
+             try {
+-                TimeUnit.MILLISECONDS.sleep(40L);
+-                Object retryCache = redisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
+-                if (EMPTY_CACHE_MARKER.equals(retryCache)) {
+-                    this.cachedMenu = Collections.emptyList();
+-                    this.cachedMenuAt = System.currentTimeMillis();
+-                    MENU_CACHE_EMPTY_HIT.increment();
+-                    logMetricsMaybe();
+-                    return this.cachedMenu;
++                if (!locked) {
++                    MENU_REBUILD_WAIT.increment();
++                    List<CoffeeProductDTO> waitedMenu = waitForRebuiltMenu();
++                    if (waitedMenu != null) {
++                        return waitedMenu;
++                    }
++
++                    // The lock holder may have failed. Retry ownership once; if another
++                    // instance still owns it, perform one local fallback query rather than
++                    // returning a semantically incorrect empty menu.
++                    locked = tryAcquireRebuildLock(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken, 8);
++                    if (!locked) {
++                        MENU_REBUILD_FALLBACK.increment();
++                        log.warn("等待菜单缓存重建超时，执行单实例数据库兜底查询");
++                    }
+                 }
+-                List<CoffeeProductDTO> redisCached = dtoConverter.convertToCoffeeProductList(retryCache);
+-                if (redisCached != null) {
+-                    this.cachedMenu = redisCached;
+-                    this.cachedMenuAt = System.currentTimeMillis();
+-                    MENU_CACHE_HIT.increment();
+-                    logMetricsMaybe();
+-                    return redisCached;
++
++                // Close the race where another instance populated Redis immediately before
++                // this instance acquired the distributed lock.
++                List<CoffeeProductDTO> latestRedisMenu = readRedisMenu();
++                if (latestRedisMenu != null) {
++                    return latestRedisMenu;
++                }
++
++                List<CoffeeProductDTO> result = queryActiveProducts();
++                storeMenu(result);
++                return result;
++            } finally {
++                if (locked) {
++                    releaseRebuildLock(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken);
+                 }
+-            } catch (Exception e) {
+-                log.warn("重建等待后读取Redis菜单缓存失败", e);
+             }
+         }
++    }
+ 
+-        if (!acquireDbRebuildPermit()) {
+-            MENU_DEGRADE_FAST_FAIL.increment();
+-            logMetricsMaybe();
+-            return Collections.emptyList();
+-        }
++    private List<CoffeeProductDTO> freshLocalMenu() {
++        List<CoffeeProductDTO> menu = this.cachedMenu;
++        return menu != null && System.currentTimeMillis() - this.cachedMenuAt < L1_TTL_MS ? menu : null;
++    }
+ 
++    private List<CoffeeProductDTO> readRedisMenu() {
+         try {
+-            synchronized (this) {
+-                if (this.cachedMenu != null)
+-                    return this.cachedMenu;
+-
+-                LambdaQueryWrapper<CoffeeProduct> wrapper = new LambdaQueryWrapper<>();
+-                wrapper.eq(CoffeeProduct::getStatus, "active");
+-                List<CoffeeProductDTO> result = productMapper.selectList(wrapper).stream()
+-                        .sorted(MENU_ORDER)
+-                        .map(dtoConverter::toProductDTO)
+-                        .collect(Collectors.toList());
+-
+-                this.cachedMenu = result;
++            Object cachedValue = redisTemplate.opsForValue().get(RedisKeyConstants.ORDER_MENU_ACTIVE);
++            if (EMPTY_CACHE_MARKER.equals(cachedValue)) {
++                this.cachedMenu = Collections.emptyList();
+                 this.cachedMenuAt = System.currentTimeMillis();
+-                try {
+-                    if (result.isEmpty()) {
+-                        redisTemplate.opsForValue().set(
+-                                RedisKeyConstants.ORDER_MENU_ACTIVE, EMPTY_CACHE_MARKER,
+-                                Duration.ofSeconds(60));
+-                    } else {
+-                        long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
+-                        redisTemplate.opsForValue().set(
+-                                RedisKeyConstants.ORDER_MENU_ACTIVE, result,
+-                                Duration.ofMinutes(ttlMinutes));
+-                    }
+-                } catch (Exception e) {
+-                    log.warn("写入Redis菜单缓存失败", e);
+-                }
+-                log.info("菜单缓存已更新，共 {} 个商品", result.size());
++                MENU_CACHE_EMPTY_HIT.increment();
+                 logMetricsMaybe();
+-                return result;
++                return this.cachedMenu;
++            }
++            List<CoffeeProductDTO> redisCached = dtoConverter.convertToCoffeeProductList(cachedValue);
++            if (redisCached != null) {
++                this.cachedMenu = redisCached;
++                this.cachedMenuAt = System.currentTimeMillis();
++                MENU_CACHE_HIT.increment();
++                logMetricsMaybe();
++                return redisCached;
+             }
+-        } finally {
+-            MENU_DB_REBUILD_GUARD.release();
+-            if (locked) {
+-                releaseRebuildLock(RedisKeyConstants.LOCK_ORDER_MENU_REBUILD, lockToken);
++        } catch (Exception e) {
++            log.warn("读取Redis菜单缓存失败，回退数据库查询", e);
++        }
++        return null;
++    }
++
++    private List<CoffeeProductDTO> waitForRebuiltMenu() {
++        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(REBUILD_WAIT_TIMEOUT_MS);
++        while (System.nanoTime() < deadline) {
++            try {
++                long delay = ThreadLocalRandom.current().nextLong(
++                        REBUILD_POLL_MIN_MS, REBUILD_POLL_MAX_MS + 1);
++                TimeUnit.MILLISECONDS.sleep(delay);
++            } catch (InterruptedException e) {
++                Thread.currentThread().interrupt();
++                return null;
++            }
++
++            List<CoffeeProductDTO> localMenu = freshLocalMenu();
++            if (localMenu != null) {
++                MENU_CACHE_HIT.increment();
++                logMetricsMaybe();
++                return localMenu;
++            }
++            List<CoffeeProductDTO> redisMenu = readRedisMenu();
++            if (redisMenu != null) {
++                return redisMenu;
+             }
+         }
++        return null;
++    }
++
++    private List<CoffeeProductDTO> queryActiveProducts() {
++        LambdaQueryWrapper<CoffeeProduct> wrapper = new LambdaQueryWrapper<>();
++        wrapper.eq(CoffeeProduct::getStatus, "active");
++        List<CoffeeProduct> products = productMapper.selectList(wrapper).stream()
++                .sorted(MENU_ORDER)
++                .collect(Collectors.toList());
++        return dtoConverter.toProductDTOList(products);
++    }
++
++    private void storeMenu(List<CoffeeProductDTO> result) {
++        this.cachedMenu = result;
++        this.cachedMenuAt = System.currentTimeMillis();
++        try {
++            if (result.isEmpty()) {
++                redisTemplate.opsForValue().set(
++                        RedisKeyConstants.ORDER_MENU_ACTIVE, EMPTY_CACHE_MARKER,
++                        Duration.ofSeconds(60));
++            } else {
++                long ttlMinutes = 5L + ThreadLocalRandom.current().nextLong(3L);
++                redisTemplate.opsForValue().set(
++                        RedisKeyConstants.ORDER_MENU_ACTIVE, result,
++                        Duration.ofMinutes(ttlMinutes));
++            }
++        } catch (Exception e) {
++            log.warn("写入Redis菜单缓存失败", e);
++        }
++        log.info("菜单缓存已更新，共 {} 个商品", result.size());
++        logMetricsMaybe();
+     }
+ 
+     private boolean tryAcquireRebuildLock(String lockKey, String lockToken, int ttlSeconds) {
+@@ -210,15 +277,11 @@ public class MenuCacheService {
+         }
+     }
+ 
+-    private boolean acquireDbRebuildPermit() {
+-        return MENU_DB_REBUILD_GUARD.tryAcquire();
+-    }
+-
+     private void logMetricsMaybe() {
+         if (MENU_METRIC_SEQ.incrementAndGet() % 100 == 0) {
+-            log.info("菜单缓存指标: hit={} miss={} emptyHit={} fastFail={}",
++            log.info("菜单缓存指标: hit={} miss={} emptyHit={} rebuildWait={} rebuildFallback={}",
+                     MENU_CACHE_HIT.sum(), MENU_CACHE_MISS.sum(),
+-                    MENU_CACHE_EMPTY_HIT.sum(), MENU_DEGRADE_FAST_FAIL.sum());
++                    MENU_CACHE_EMPTY_HIT.sum(), MENU_REBUILD_WAIT.sum(), MENU_REBUILD_FALLBACK.sum());
+         }
+     }
+ }
+diff --git a/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/product/ProductAddonResolver.java b/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/product/ProductAddonResolver.java
+index ae97ee0..8eb5119 100644
+--- a/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/product/ProductAddonResolver.java
++++ b/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/product/ProductAddonResolver.java
+@@ -147,35 +147,97 @@ public class ProductAddonResolver {
+      * 菜单 / 详情展示用：读取商品加料组（组约束 + 组内项 + price_delta 权威价）。
+      */
+     public List<AddonGroupDTO> loadMenuGroups(Long productId) {
+-        List<CoffeeProductAddonGroup> groups = loadGroups(productId);
+-        if (groups.isEmpty()) {
++        if (productId == null) {
+             return List.of();
+         }
+-        Map<String, ResolvedAddon> byCode = loadResolvedAddons(groups);
+-        List<AddonGroupDTO> result = new ArrayList<>();
+-        for (CoffeeProductAddonGroup g : groups) {
++        return loadMenuGroupsBatch(List.of(productId)).getOrDefault(productId, List.of());
++    }
++
++    /**
++     * 菜单批量读取：无论商品数量多少，加料组、绑定和主数据最多各查询一次。
++     */
++    public Map<Long, List<AddonGroupDTO>> loadMenuGroupsBatch(List<Long> productIds) {
++        if (productIds == null || productIds.isEmpty()) {
++            return Map.of();
++        }
++        List<Long> distinctProductIds = productIds.stream()
++                .filter(java.util.Objects::nonNull)
++                .distinct()
++                .toList();
++        if (distinctProductIds.isEmpty()) {
++            return Map.of();
++        }
++
++        List<CoffeeProductAddonGroup> groups = groupMapper.selectList(
++                new LambdaQueryWrapper<CoffeeProductAddonGroup>()
++                        .in(CoffeeProductAddonGroup::getProductId, distinctProductIds)
++                        .orderByAsc(CoffeeProductAddonGroup::getProductId)
++                        .orderByAsc(CoffeeProductAddonGroup::getSortOrder));
++        if (groups == null || groups.isEmpty()) {
++            return Map.of();
++        }
++
++        List<Long> groupIds = groups.stream().map(CoffeeProductAddonGroup::getId).toList();
++        List<CoffeeProductAddon> bindings = productAddonMapper.selectList(
++                new LambdaQueryWrapper<CoffeeProductAddon>()
++                        .in(CoffeeProductAddon::getGroupId, groupIds));
++        if (bindings == null) {
++            bindings = List.of();
++        }
++
++        List<Long> addonIds = bindings.stream()
++                .map(CoffeeProductAddon::getAddonId)
++                .filter(java.util.Objects::nonNull)
++                .distinct()
++                .toList();
++        List<ProductAddon> addons = addonIds.isEmpty()
++                ? List.of()
++                : addonMapper.selectList(new LambdaQueryWrapper<ProductAddon>()
++                        .in(ProductAddon::getId, addonIds));
++
++        Map<Long, ProductAddon> addonById = new LinkedHashMap<>();
++        if (addons != null) {
++            for (ProductAddon addon : addons) {
++                addonById.put(addon.getId(), addon);
++            }
++        }
++        Map<Long, List<CoffeeProductAddon>> bindingsByGroupId = new LinkedHashMap<>();
++        for (CoffeeProductAddon binding : bindings) {
++            bindingsByGroupId.computeIfAbsent(binding.getGroupId(), ignored -> new ArrayList<>())
++                    .add(binding);
++        }
++
++        Map<Long, List<AddonGroupDTO>> result = new LinkedHashMap<>();
++        for (CoffeeProductAddonGroup group : groups) {
+             AddonGroupDTO groupDto = new AddonGroupDTO();
+-            groupDto.setCategory(g.getCategory());
+-            groupDto.setSelectionMode(g.getSelectionMode());
+-            groupDto.setMinSelect(g.getMinSelect());
+-            groupDto.setMaxSelect(g.getMaxSelect());
+-            groupDto.setSortOrder(g.getSortOrder());
+-            List<AddonItemDTO> items = byCode.values().stream()
+-                    .filter(a -> a.category().equals(g.getCategory()))
+-                    .sorted(Comparator.comparingInt(ResolvedAddon::sortOrder))
+-                    .map(a -> {
++            groupDto.setCategory(group.getCategory());
++            groupDto.setSelectionMode(group.getSelectionMode());
++            groupDto.setMinSelect(group.getMinSelect());
++            groupDto.setMaxSelect(group.getMaxSelect());
++            groupDto.setSortOrder(group.getSortOrder());
++
++            List<AddonItemDTO> items = bindingsByGroupId.getOrDefault(group.getId(), List.of()).stream()
++                    .sorted(Comparator.comparing(CoffeeProductAddon::getSortOrder,
++                            Comparator.nullsLast(Comparator.<Integer>naturalOrder())))
++                    .map(binding -> {
++                        ProductAddon addon = addonById.get(binding.getAddonId());
++                        if (addon == null) {
++                            return null;
++                        }
+                         AddonItemDTO item = new AddonItemDTO();
+-                        item.setAddonId(a.addonId());
+-                        item.setCode(a.code());
+-                        item.setName(a.name());
+-                        item.setPriceDelta(a.priceDelta());
+-                        item.setIsDefault(a.isDefault());
+-                        item.setSortOrder(a.sortOrder());
++                        item.setAddonId(addon.getId());
++                        item.setCode(addon.getCode());
++                        item.setName(addon.getName());
++                        item.setPriceDelta(binding.getPriceDelta());
++                        item.setIsDefault(Boolean.TRUE.equals(binding.getIsDefault()));
++                        item.setSortOrder(binding.getSortOrder());
+                         return item;
+                     })
++                    .filter(java.util.Objects::nonNull)
+                     .toList();
+             groupDto.setItems(items);
+-            result.add(groupDto);
++            result.computeIfAbsent(group.getProductId(), ignored -> new ArrayList<>())
++                    .add(groupDto);
+         }
+         return result;
+     }
+diff --git a/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/test/java/com/cozy/order/service/MenuCacheServiceTest.java b/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/test/java/com/cozy/order/service/MenuCacheServiceTest.java
+index 51f3c69..cdb90fd 100644
+--- a/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/test/java/com/cozy/order/service/MenuCacheServiceTest.java
++++ b/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/test/java/com/cozy/order/service/MenuCacheServiceTest.java
+@@ -2,7 +2,12 @@ package com.cozy.order.service;
+ 
+ import com.cozy.common.constant.RedisKeyConstants;
+ import com.cozy.order.dto.response.CoffeeProductDTO;
++import com.cozy.order.entity.CoffeeBean;
++import com.cozy.order.entity.CoffeeBlend;
+ import com.cozy.order.entity.CoffeeProduct;
++import com.cozy.order.entity.CoffeeProductAddon;
++import com.cozy.order.entity.CoffeeProductAddonGroup;
++import com.cozy.order.entity.ProductAddon;
+ import com.cozy.order.mapper.CoffeeBeanMapper;
+ import com.cozy.order.mapper.CoffeeBlendMapper;
+ import com.cozy.order.mapper.CoffeeProductAddonGroupMapper;
+@@ -23,20 +28,35 @@ import org.springframework.data.redis.core.ValueOperations;
+ import java.math.BigDecimal;
+ import java.time.Duration;
+ import java.util.List;
++import java.util.concurrent.CompletableFuture;
++import java.util.concurrent.CountDownLatch;
++import java.util.concurrent.ExecutorService;
++import java.util.concurrent.Executors;
++import java.util.concurrent.TimeUnit;
++import java.util.stream.IntStream;
+ import java.util.stream.Collectors;
+ 
+ import static org.junit.jupiter.api.Assertions.assertEquals;
+ import static org.junit.jupiter.api.Assertions.assertFalse;
++import static org.junit.jupiter.api.Assertions.assertNotNull;
+ import static org.mockito.ArgumentMatchers.any;
+ import static org.mockito.ArgumentMatchers.anyString;
+ import static org.mockito.ArgumentMatchers.eq;
+ import static org.mockito.Mockito.mock;
++import static org.mockito.Mockito.never;
++import static org.mockito.Mockito.times;
++import static org.mockito.Mockito.verify;
+ import static org.mockito.Mockito.when;
+ 
+ class MenuCacheServiceTest {
+ 
+     private MenuCacheService cacheService;
+     private CoffeeProductMapper productMapper;
++    private CoffeeProductAddonGroupMapper groupMapper;
++    private CoffeeProductAddonMapper productAddonMapper;
++    private ProductAddonMapper addonMapper;
++    private CoffeeBeanMapper beanMapper;
++    private CoffeeBlendMapper blendMapper;
+ 
+     @BeforeEach
+     @SuppressWarnings("unchecked")
+@@ -44,13 +64,15 @@ class MenuCacheServiceTest {
+         RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
+         StringRedisTemplate stringRedisTemplate = mock(StringRedisTemplate.class);
+         productMapper = mock(CoffeeProductMapper.class);
++        groupMapper = mock(CoffeeProductAddonGroupMapper.class);
++        productAddonMapper = mock(CoffeeProductAddonMapper.class);
++        addonMapper = mock(ProductAddonMapper.class);
++        beanMapper = mock(CoffeeBeanMapper.class);
++        blendMapper = mock(CoffeeBlendMapper.class);
+         ProductAddonResolver addonResolver = new ProductAddonResolver(
+-                mock(CoffeeProductAddonGroupMapper.class),
+-                mock(CoffeeProductAddonMapper.class),
+-                mock(ProductAddonMapper.class),
+-                new ObjectMapper());
++                groupMapper, productAddonMapper, addonMapper, new ObjectMapper());
+         OrderDtoConverter dtoConverter = new OrderDtoConverter(new ObjectMapper(), productMapper, addonResolver,
+-                new ProductRuleValidator(), mock(CoffeeBeanMapper.class), mock(CoffeeBlendMapper.class));
++                new ProductRuleValidator(), beanMapper, blendMapper);
+ 
+         ValueOperations<String, Object> valueOps = mock(ValueOperations.class);
+         ValueOperations<String, String> stringValueOps = mock(ValueOperations.class);
+@@ -63,6 +85,7 @@ class MenuCacheServiceTest {
+                 .thenReturn(true);
+ 
+         when(productMapper.selectList(any())).thenReturn(List.of(product()));
++        when(groupMapper.selectList(any())).thenReturn(List.of());
+ 
+         cacheService = new MenuCacheService(redisTemplate, stringRedisTemplate, productMapper, dtoConverter);
+     }
+@@ -77,6 +100,88 @@ class MenuCacheServiceTest {
+         }
+     }
+ 
++    @Test
++    void concurrentColdMissesShareOneRebuildWithoutReturningEmptyMenus() throws Exception {
++        CountDownLatch start = new CountDownLatch(1);
++        when(productMapper.selectList(any())).thenAnswer(invocation -> {
++            TimeUnit.MILLISECONDS.sleep(100);
++            return List.of(product());
++        });
++
++        ExecutorService executor = Executors.newFixedThreadPool(32);
++        try {
++            List<CompletableFuture<List<CoffeeProductDTO>>> requests = IntStream.range(0, 200)
++                    .mapToObj(ignored -> CompletableFuture.supplyAsync(() -> {
++                        try {
++                            start.await();
++                            return cacheService.getMenu();
++                        } catch (InterruptedException e) {
++                            Thread.currentThread().interrupt();
++                            throw new IllegalStateException(e);
++                        }
++                    }, executor))
++                    .toList();
++
++            start.countDown();
++            for (CompletableFuture<List<CoffeeProductDTO>> request : requests) {
++                assertFalse(request.get(5, TimeUnit.SECONDS).isEmpty());
++            }
++        } finally {
++            executor.shutdownNow();
++        }
++
++        verify(productMapper, times(1)).selectList(any());
++    }
++
++    @Test
++    void batchesMenuRelationsWithoutPerProductQueries() {
++        CoffeeProduct beanProduct = product("SPECIALTY", "bean-product", 1, null);
++        beanProduct.setId(1L);
++        beanProduct.setBeanId(11L);
++        CoffeeProduct blendProduct = product("SPECIALTY", "blend-product", 2, null);
++        blendProduct.setId(2L);
++        blendProduct.setBlendId(22L);
++        when(productMapper.selectList(any())).thenReturn(List.of(beanProduct, blendProduct));
++
++        CoffeeProductAddonGroup group1 = addonGroup(101L, 1L);
++        CoffeeProductAddonGroup group2 = addonGroup(102L, 2L);
++        when(groupMapper.selectList(any())).thenReturn(List.of(group1, group2));
++
++        CoffeeProductAddon binding1 = addonBinding(101L, 201L);
++        CoffeeProductAddon binding2 = addonBinding(102L, 201L);
++        when(productAddonMapper.selectList(any())).thenReturn(List.of(binding1, binding2));
++
++        ProductAddon addon = new ProductAddon();
++        addon.setId(201L);
++        addon.setCode("OAT_MILK");
++        addon.setName("燕麦奶");
++        when(addonMapper.selectList(any())).thenReturn(List.of(addon));
++
++        CoffeeBean bean = new CoffeeBean();
++        bean.setId(11L);
++        bean.setCode("BEAN_11");
++        CoffeeBlend blend = new CoffeeBlend();
++        blend.setId(22L);
++        blend.setCode("BLEND_22");
++        when(beanMapper.selectBatchIds(any())).thenReturn(List.of(bean));
++        when(blendMapper.selectBatchIds(any())).thenReturn(List.of(blend));
++
++        List<CoffeeProductDTO> menu = cacheService.getMenu();
++
++        assertEquals(2, menu.size());
++        assertEquals(1, menu.get(0).getAddonGroups().size());
++        assertEquals(1, menu.get(1).getAddonGroups().size());
++        assertNotNull(menu.get(0).getBeanProfile());
++        assertNotNull(menu.get(1).getBlendProfile());
++        verify(groupMapper, times(1)).selectList(any());
++        verify(productAddonMapper, times(1)).selectList(any());
++        verify(addonMapper, times(1)).selectList(any());
++        verify(beanMapper, times(1)).selectBatchIds(any());
++        verify(blendMapper, times(1)).selectBatchIds(any());
++        verify(beanMapper, never()).selectById(any());
++        verify(blendMapper, never()).selectById(any());
++    }
++
+     @Test
+     void ordersMenuByCategoryThenSortOrderWithSpecialtyComboLast() {
+         // 回归：分类展示顺序（01经典→06烘焙）> 精品固定组合置尾 > 分类内 sortOrder。
+@@ -117,4 +222,26 @@ class MenuCacheServiceTest {
+         p.setPrice(new BigDecimal("20.00"));
+         return p;
+     }
++
++    private CoffeeProductAddonGroup addonGroup(Long id, Long productId) {
++        CoffeeProductAddonGroup group = new CoffeeProductAddonGroup();
++        group.setId(id);
++        group.setProductId(productId);
++        group.setCategory("MILK");
++        group.setSelectionMode("SINGLE");
++        group.setMinSelect(1);
++        group.setMaxSelect(1);
++        group.setSortOrder(1);
++        return group;
++    }
++
++    private CoffeeProductAddon addonBinding(Long groupId, Long addonId) {
++        CoffeeProductAddon binding = new CoffeeProductAddon();
++        binding.setGroupId(groupId);
++        binding.setAddonId(addonId);
++        binding.setIsDefault(true);
++        binding.setPriceDelta(BigDecimal.ZERO);
++        binding.setSortOrder(1);
++        return binding;
++    }
+ }

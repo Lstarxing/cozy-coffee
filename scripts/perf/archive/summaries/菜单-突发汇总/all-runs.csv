@@ -1,0 +1,7 @@
+"scenario","run","requests","httpFailurePct","businessErrorPct","checkPass","checkFail","avgMs","p95Ms","p99Ms","exitCode"
+"cold-burst","L1_L2_cold-burst_50rps_2m_run1","200","0","98","404","196","1302.97","1472.194","1776.306","99"
+"cold-burst","L1_L2_cold-burst_50rps_2m_run2","200","0","98","404","196","1757.566","1997.16","2314.335","99"
+"cold-burst","L1_L2_cold-burst_50rps_2m_run3","200","0","98","404","196","1475.981","1684.49","2072.903","99"
+"warm-burst","L1_L2_warm-burst_50rps_2m_run1","200","0","0","600","0","502.734","969.927","1060.905","0"
+"warm-burst","L1_L2_warm-burst_50rps_2m_run2","200","0","0","600","0","750.446","1277.461","1301.484","0"
+"warm-burst","L1_L2_warm-burst_50rps_2m_run3","200","0","0","600","0","608.01","1051.645","1075.173","0"

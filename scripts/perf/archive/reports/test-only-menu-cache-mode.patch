@@ -1,0 +1,80 @@
+diff --git a/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/product/MenuCacheService.java b/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/product/MenuCacheService.java
+index 6ffc58d..0eb7eea 100644
+--- a/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/product/MenuCacheService.java
++++ b/cozy-coffee-backend/cozy-provider/cozy-order-provider/src/main/java/com/cozy/order/service/product/MenuCacheService.java
+@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.data.redis.core.RedisTemplate;
+ import org.springframework.data.redis.core.StringRedisTemplate;
+ import com.cozy.common.util.RedisLockUtil;
++import org.springframework.beans.factory.annotation.Value;
+ import org.springframework.stereotype.Component;
+ 
+ import java.time.Duration;
+@@ -76,6 +77,13 @@ public class MenuCacheService {
+     private final CoffeeProductMapper productMapper;
+     private final OrderDtoConverter dtoConverter;
+ 
++    /**
++     * Performance-test switch. Defaults to the production behavior.
++     * Supported values: DB_ONLY, REDIS_ONLY, L1_L2.
++     */
++    @Value("${cozy.cache.menu.mode:L1_L2}")
++    private String cacheMode;
++
+     private volatile List<CoffeeProductDTO> cachedMenu = null;
+     private volatile long cachedMenuAt = 0;
+ 
+@@ -91,12 +99,18 @@ public class MenuCacheService {
+     }
+ 
+     public List<CoffeeProductDTO> getMenu() {
++        if ("DB_ONLY".equalsIgnoreCase(cacheMode)) {
++            return queryActiveProducts();
++        }
++
+         // L1: in-process cache
+-        List<CoffeeProductDTO> l1 = this.cachedMenu;
+-        if (l1 != null && System.currentTimeMillis() - this.cachedMenuAt < L1_TTL_MS) {
+-            MENU_CACHE_HIT.increment();
+-            logMetricsMaybe();
+-            return l1;
++        if (!"REDIS_ONLY".equalsIgnoreCase(cacheMode)) {
++            List<CoffeeProductDTO> l1 = this.cachedMenu;
++            if (l1 != null && System.currentTimeMillis() - this.cachedMenuAt < L1_TTL_MS) {
++                MENU_CACHE_HIT.increment();
++                logMetricsMaybe();
++                return l1;
++            }
+         }
+         this.cachedMenu = null;
+         this.cachedMenuAt = 0;
+@@ -162,12 +176,7 @@ public class MenuCacheService {
+                 if (this.cachedMenu != null)
+                     return this.cachedMenu;
+ 
+-                LambdaQueryWrapper<CoffeeProduct> wrapper = new LambdaQueryWrapper<>();
+-                wrapper.eq(CoffeeProduct::getStatus, "active");
+-                List<CoffeeProductDTO> result = productMapper.selectList(wrapper).stream()
+-                        .sorted(MENU_ORDER)
+-                        .map(dtoConverter::toProductDTO)
+-                        .collect(Collectors.toList());
++                List<CoffeeProductDTO> result = queryActiveProducts();
+ 
+                 this.cachedMenu = result;
+                 this.cachedMenuAt = System.currentTimeMillis();
+@@ -202,6 +211,15 @@ public class MenuCacheService {
+                 stringRedisTemplate.opsForValue().setIfAbsent(lockKey, lockToken, Duration.ofSeconds(ttlSeconds)));
+     }
+ 
++    private List<CoffeeProductDTO> queryActiveProducts() {
++        LambdaQueryWrapper<CoffeeProduct> wrapper = new LambdaQueryWrapper<>();
++        wrapper.eq(CoffeeProduct::getStatus, "active");
++        return productMapper.selectList(wrapper).stream()
++                .sorted(MENU_ORDER)
++                .map(dtoConverter::toProductDTO)
++                .collect(Collectors.toList());
++    }
++
+     private void releaseRebuildLock(String lockKey, String lockToken) {
+         try {
+             RedisLockUtil.releaseLock(stringRedisTemplate, lockKey, lockToken);

@@ -1,0 +1,13 @@
+{
+  "vus": 50,
+  "requests": 50,
+  "httpFailurePct": 0.0,
+  "businessErrorPct": 0.0,
+  "nonReplayResponses": 1,
+  "replayResponses": 49,
+  "databaseRows": 1,
+  "distinctOrderIds": 1,
+  "avgMs": 424.994,
+  "p95Ms": 532.626,
+  "p99Ms": 541.653
+}

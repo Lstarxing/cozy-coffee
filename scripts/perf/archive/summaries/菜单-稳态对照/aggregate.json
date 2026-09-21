@@ -1,0 +1,50 @@
+[
+  {
+    "mode": "DB_ONLY",
+    "rateTarget": 20,
+    "runs": 5,
+    "actualRpsMedian": 20.002,
+    "avgMsMedian": 40.879,
+    "p50MsMedian": 36.513,
+    "p95MsMedian": 64.61,
+    "p99MsMedian": 90.488,
+    "errorRatePctMax": 0.0,
+    "droppedIterationsTotal": 0,
+    "dbStatementsMedian": 92473.0,
+    "dbRowsExaminedMedian": 199348.0,
+    "dbTimeMsMedian": 14066.909,
+    "redisCommandsMedian": 8.0
+  },
+  {
+    "mode": "L1_L2",
+    "rateTarget": 20,
+    "runs": 5,
+    "actualRpsMedian": 20.017,
+    "avgMsMedian": 3.956,
+    "p50MsMedian": 3.736,
+    "p95MsMedian": 5.909,
+    "p99MsMedian": 8.005,
+    "errorRatePctMax": 0.0,
+    "droppedIterationsTotal": 0,
+    "dbStatementsMedian": 2.0,
+    "dbRowsExaminedMedian": 0.0,
+    "dbTimeMsMedian": 0.664,
+    "redisCommandsMedian": 8.0
+  },
+  {
+    "mode": "REDIS_ONLY",
+    "rateTarget": 20,
+    "runs": 5,
+    "actualRpsMedian": 20.017,
+    "avgMsMedian": 5.065,
+    "p50MsMedian": 4.697,
+    "p95MsMedian": 7.825,
+    "p99MsMedian": 9.501,
+    "errorRatePctMax": 0.0,
+    "droppedIterationsTotal": 0,
+    "dbStatementsMedian": 2.0,
+    "dbRowsExaminedMedian": 0.0,
+    "dbTimeMsMedian": 0.634,
+    "redisCommandsMedian": 1209.0
+  }
+]

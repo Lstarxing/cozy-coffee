@@ -1,0 +1,152 @@
+name: cozycoffee-perf-app
+
+services:
+  nacos-perf:
+    image: nacos/nacos-server:v2.2.3
+    container_name: cozy-perf-nacos
+    restart: "no"
+    cpus: 1.0
+    mem_limit: 512m
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: "false"
+      JAVA_TOOL_OPTIONS: -XX:-UseContainerSupport
+      JVM_XMS: 256m
+      JVM_XMX: 256m
+      JVM_XMN: 128m
+    networks:
+      - cozycoffee
+
+  rocketmq-perf-namesrv:
+    image: apache/rocketmq:5.3.0
+    container_name: cozy-perf-rocketmq-namesrv
+    restart: "no"
+    cpus: 0.5
+    mem_limit: 384m
+    command: sh mqnamesrv
+    environment:
+      JAVA_OPT_EXT: -Xms128m -Xmx128m -Xmn64m
+    networks:
+      - cozycoffee
+
+  rocketmq-perf-broker:
+    image: apache/rocketmq:5.3.0
+    container_name: cozy-perf-rocketmq-broker
+    restart: "no"
+    cpus: 1.0
+    mem_limit: 512m
+    depends_on:
+      - rocketmq-perf-namesrv
+    command: sh mqbroker -n rocketmq-perf-namesrv:9876 -c /home/rocketmq/conf/broker.conf
+    environment:
+      NAMESRV_ADDR: rocketmq-perf-namesrv:9876
+      JAVA_OPT_EXT: -Xms256m -Xmx256m -Xmn128m
+    volumes:
+      - ./rocketmq/broker.conf:/home/rocketmq/conf/broker.conf:ro
+    networks:
+      - cozycoffee
+
+  user-provider:
+    image: cozycoffee-perf/user-provider:94361cf
+    container_name: cozy-perf-user
+    restart: "no"
+    cpus: 1.0
+    mem_limit: 512m
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+        -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF-8
+        -Ddubbo.registry.address=nacos://nacos-perf:8848
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_perf_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: cozy_perf
+      SPRING_DATASOURCE_PASSWORD: ${PERF_DB_PASSWORD:?请设置 PERF_DB_PASSWORD（隔离压测库口令，非生产）}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_DATABASE: 15
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos-perf:8848
+      ROCKETMQ_NAME_SERVER: rocketmq-perf-namesrv:9876
+      JWT_SECRET: ${PERF_JWT_SECRET:?请设置 PERF_JWT_SECRET（隔离压测用，至少 64 字节）}
+    networks:
+      - cozycoffee
+
+  member-provider:
+    image: cozycoffee-perf/member-provider:94361cf
+    container_name: cozy-perf-member
+    restart: "no"
+    cpus: 1.0
+    mem_limit: 512m
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+        -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF-8
+        -Ddubbo.registry.address=nacos://nacos-perf:8848
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_perf_member?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: cozy_perf
+      SPRING_DATASOURCE_PASSWORD: ${PERF_DB_PASSWORD:?请设置 PERF_DB_PASSWORD（隔离压测库口令，非生产）}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_DATABASE: 15
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos-perf:8848
+      ROCKETMQ_NAME_SERVER: rocketmq-perf-namesrv:9876
+    networks:
+      - cozycoffee
+
+  order-provider:
+    image: cozycoffee-perf/order-provider:coldfix-n1-20260917
+    container_name: cozy-perf-order
+    restart: "no"
+    cpus: 1.0
+    mem_limit: 512m
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+        -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF-8
+        -Ddubbo.registry.address=nacos://nacos-perf:8848
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cozy_perf_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: cozy_perf
+      SPRING_DATASOURCE_PASSWORD: ${PERF_DB_PASSWORD:?请设置 PERF_DB_PASSWORD（隔离压测库口令，非生产）}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_DATABASE: 15
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos-perf:8848
+      ROCKETMQ_NAME_SERVER: rocketmq-perf-namesrv:9876
+      COZY_CACHE_MENU_MODE: ${MENU_CACHE_MODE:-L1_L2}
+      COZY_ORDER_TIMEOUT_CANCEL_ENABLED: "false"
+      COZY_ORDER_REWARD_AUTO_CONFIRM_ENABLED: "false"
+    networks:
+      - cozycoffee
+
+  gateway:
+    image: cozycoffee-perf/gateway:94361cf
+    container_name: cozy-perf-gateway
+    restart: "no"
+    cpus: 1.0
+    mem_limit: 512m
+    depends_on:
+      - nacos-perf
+      - rocketmq-perf-broker
+      - order-provider
+    ports:
+      - "127.0.0.1:18080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+        -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF-8
+        -Ddubbo.registry.address=nacos://nacos-perf:8848
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_DATABASE: 15
+      DUBBO_REGISTRY_ADDRESS: nacos://nacos-perf:8848
+      ROCKETMQ_NAME_SERVER: rocketmq-perf-namesrv:9876
+      AUTH_DEV_LOGIN_ENABLED: "true"
+      JWT_SECRET: ${PERF_JWT_SECRET:?请设置 PERF_JWT_SECRET（隔离压测用，至少 64 字节）}
+      CORS_ALLOWED_ORIGINS: http://localhost:18080
+      STORAGE_TYPE: local
+      LOCAL_UPLOAD_DIR: /tmp/cozy-perf-uploads
+    networks:
+      - cozycoffee
+
+networks:
+  cozycoffee:
+    external: true
+    name: cozycoffee_default

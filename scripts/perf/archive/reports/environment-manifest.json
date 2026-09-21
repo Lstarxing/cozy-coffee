@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2026-09-17T15:20:11.7614694+08:00",
+  "sourceGitSha": "94361cf5316bdb9d0490f7a91645ea6dcea75389",
+  "sourceBranch": "detached worktree from user repository",
+  "host": {
+    "os": "Microsoft Windows 11 专业版",
+    "cpu": "12th Gen Intel(R) Core(TM) i5-12500",
+    "physicalCores": 6,
+    "logicalProcessors": 12,
+    "memoryGiB": 31.69
+  },
+  "runtime": {
+    "dockerDesktop": "Docker Desktop 4.64.0 (221278)",
+    "dockerEngine": "29.2.1",
+    "k6": "grafana/k6:1.5.0",
+    "nacos": "nacos/nacos-server:v2.2.3",
+    "rocketmq": "apache/rocketmq:5.3.0"
+  },
+  "isolation": {
+    "nacos": "dedicated cozy-perf-nacos",
+    "rocketmq": "dedicated nameserver and broker",
+    "mysqlSchemas": [
+      "cozy_perf_order",
+      "cozy_perf_user",
+      "cozy_perf_member"
+    ],
+    "redisDatabase": 15,
+    "applicationContainers": [
+      "cozy-perf-gateway",
+      "cozy-perf-order",
+      "cozy-perf-user",
+      "cozy-perf-member"
+    ],
+    "applicationLimit": "each 1 CPU / 512 MiB"
+  },
+  "testData": "dedicated mobile 13890000002 in cozy_perf_user only",
+  "benchmarkChangesAppliedOnlyToDetachedWorktree": true,
+  "productionFixesAppliedToMainWorkingTree": [
+    "menu cache singleflight and Redis lock waiting",
+    "menu DTO batch preloading to remove N+1 queries"
+  ]
+}

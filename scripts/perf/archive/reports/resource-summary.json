@@ -1,0 +1,82 @@
+[
+  {
+    "testSet": "menu-formal",
+    "container": "cozy-perf-gateway",
+    "samples": 226,
+    "cpuPeakPct": 19.67,
+    "cpuAvgPct": 8.41,
+    "memoryPeakPct": 52.39
+  },
+  {
+    "testSet": "menu-formal",
+    "container": "cozy-perf-order",
+    "samples": 226,
+    "cpuPeakPct": 84.56,
+    "cpuAvgPct": 19.86,
+    "memoryPeakPct": 59.44
+  },
+  {
+    "testSet": "menu-capacity",
+    "container": "cozy-perf-gateway",
+    "samples": 45,
+    "cpuPeakPct": 79.44,
+    "cpuAvgPct": 39.75,
+    "memoryPeakPct": 53.82
+  },
+  {
+    "testSet": "menu-capacity",
+    "container": "cozy-perf-order",
+    "samples": 45,
+    "cpuPeakPct": 32.14,
+    "cpuAvgPct": 16.04,
+    "memoryPeakPct": 58.02
+  },
+  {
+    "testSet": "menu-cold",
+    "container": "cozy-perf-gateway",
+    "samples": 3,
+    "cpuPeakPct": 73.58,
+    "cpuAvgPct": 62.07,
+    "memoryPeakPct": 63.47
+  },
+  {
+    "testSet": "menu-cold",
+    "container": "cozy-perf-order",
+    "samples": 3,
+    "cpuPeakPct": 100.87,
+    "cpuAvgPct": 85.83,
+    "memoryPeakPct": 58.18
+  },
+  {
+    "testSet": "menu-warm",
+    "container": "cozy-perf-gateway",
+    "samples": 3,
+    "cpuPeakPct": 103.59,
+    "cpuAvgPct": 74.82,
+    "memoryPeakPct": 54.81
+  },
+  {
+    "testSet": "menu-warm",
+    "container": "cozy-perf-order",
+    "samples": 3,
+    "cpuPeakPct": 27.18,
+    "cpuAvgPct": 19.84,
+    "memoryPeakPct": 57.47
+  },
+  {
+    "testSet": "order-formal",
+    "container": "cozy-perf-gateway",
+    "samples": 75,
+    "cpuPeakPct": 18.64,
+    "cpuAvgPct": 7.07,
+    "memoryPeakPct": 60.08
+  },
+  {
+    "testSet": "order-formal",
+    "container": "cozy-perf-order",
+    "samples": 75,
+    "cpuPeakPct": 19.4,
+    "cpuAvgPct": 7.77,
+    "memoryPeakPct": 62.01
+  }
+]

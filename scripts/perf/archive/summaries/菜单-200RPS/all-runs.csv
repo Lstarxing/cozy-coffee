@@ -1,0 +1,4 @@
+"directory","mode","scenario","rateTarget","duration","requests","actualRps","avgMs","p50Ms","p95Ms","p99Ms","maxMs","errorRatePct","droppedIterations","dbStatements","dbRowsExamined","dbTimeMs","redisCommands","redisHits","redisMisses"
+"L1_L2_steady_200rps_60s_run1","L1_L2","steady","200","60s","12001","200.024","2.784","2.404","3.991","7.499","96.056","0","0","2","0","0.625","9","0","0"
+"L1_L2_steady_200rps_60s_run2","L1_L2","steady","200","60s","12001","200.023","2.986","2.447","4.121","13.049","126.066","0","0","2","0","0.731","8","0","0"
+"L1_L2_steady_200rps_60s_run3","L1_L2","steady","200","60s","12001","200.023","2.719","2.452","3.977","6.608","62.18","0","0","2","0","0.747","8","0","0"

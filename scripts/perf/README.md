@@ -63,19 +63,22 @@ k6 run -e BASE_URL=http://localhost:8080 -e RATE=20 -e DURATION=60s scripts/perf
 
 ## 复现归档
 
-脚本本体之外的**隔离环境、编排脚本、原始结果与报告**都在：
+**隔离环境、编排脚本、报告与汇总结果**已精选入库到 [`archive/`](archive/)（脱敏快照）：
 
 ```text
-surx-note/CozyCoffee/压测/
-├─ 脚本/docker-compose.perf.yml      隔离环境（专用 Nacos/RocketMQ/MySQL schema/Redis DB）
-├─ 脚本/run-menu-benchmark.ps1       菜单 A/B 编排（-Mode DB_ONLY|L1_L2 -Scenario steady|cold-burst|warm-burst）
-├─ 脚本/run-order-workflow.ps1       下单链路编排（-Token -Rate -Duration）
-├─ 报告/*.patch                      复现所需的生产代码修复补丁
-└─ 原始结果/…                        每轮 k6 / MySQL / Redis / 资源 / 应用日志
+scripts/perf/archive/
+├─ reports/                 完整报告、环境清单、资源/幂等汇总、复现所需源码补丁
+├─ orchestration/           隔离 Compose、k6 场景、编排/汇总脚本、broker 配置
+└─ summaries/<批次>/        每个批次的 aggregate / all-runs / summary
 ```
 
-复现前提（见该目录 `README.md`）：从提交 `94361cf5316bdb9d0490f7a91645ea6dcea75389` 构建镜像，并按需应用
-`报告/` 下的补丁；压测开关默认为生产行为 `L1_L2`。
+⚠️ 归档里的凭据已换成占位符（`<PERF_DB_PASSWORD>` 等），**跑之前先填**；细节见 [`archive/README.md`](archive/README.md)。
+
+**未入库**：每轮原始日志（应用日志、容器指标、MySQL / Redis 快照、Surefire XML）—— 含本机绝对路径且体积大。
+所以本目录支持的是**可复核**（口径、负载、轮数与汇总件齐全，可照着重跑），不是"克隆即可一键复现"。
+
+复现前提：从提交 `94361cf5316bdb9d0490f7a91645ea6dcea75389` 构建镜像，并按需应用 `archive/reports/` 下的补丁；
+压测开关默认为生产行为 `L1_L2`。
 
 ## Locust（历史，已被 k6 取代）
 

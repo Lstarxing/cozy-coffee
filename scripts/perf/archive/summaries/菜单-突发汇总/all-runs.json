@@ -1,0 +1,80 @@
+[
+  {
+    "scenario": "cold-burst",
+    "run": "L1_L2_cold-burst_50rps_2m_run1",
+    "requests": 200,
+    "httpFailurePct": 0.0,
+    "businessErrorPct": 98.0,
+    "checkPass": 404,
+    "checkFail": 196,
+    "avgMs": 1302.97,
+    "p95Ms": 1472.194,
+    "p99Ms": 1776.306,
+    "exitCode": 99
+  },
+  {
+    "scenario": "cold-burst",
+    "run": "L1_L2_cold-burst_50rps_2m_run2",
+    "requests": 200,
+    "httpFailurePct": 0.0,
+    "businessErrorPct": 98.0,
+    "checkPass": 404,
+    "checkFail": 196,
+    "avgMs": 1757.566,
+    "p95Ms": 1997.16,
+    "p99Ms": 2314.335,
+    "exitCode": 99
+  },
+  {
+    "scenario": "cold-burst",
+    "run": "L1_L2_cold-burst_50rps_2m_run3",
+    "requests": 200,
+    "httpFailurePct": 0.0,
+    "businessErrorPct": 98.0,
+    "checkPass": 404,
+    "checkFail": 196,
+    "avgMs": 1475.981,
+    "p95Ms": 1684.49,
+    "p99Ms": 2072.903,
+    "exitCode": 99
+  },
+  {
+    "scenario": "warm-burst",
+    "run": "L1_L2_warm-burst_50rps_2m_run1",
+    "requests": 200,
+    "httpFailurePct": 0.0,
+    "businessErrorPct": 0.0,
+    "checkPass": 600,
+    "checkFail": 0,
+    "avgMs": 502.734,
+    "p95Ms": 969.927,
+    "p99Ms": 1060.905,
+    "exitCode": 0
+  },
+  {
+    "scenario": "warm-burst",
+    "run": "L1_L2_warm-burst_50rps_2m_run2",
+    "requests": 200,
+    "httpFailurePct": 0.0,
+    "businessErrorPct": 0.0,
+    "checkPass": 600,
+    "checkFail": 0,
+    "avgMs": 750.446,
+    "p95Ms": 1277.461,
+    "p99Ms": 1301.484,
+    "exitCode": 0
+  },
+  {
+    "scenario": "warm-burst",
+    "run": "L1_L2_warm-burst_50rps_2m_run3",
+    "requests": 200,
+    "httpFailurePct": 0.0,
+    "businessErrorPct": 0.0,
+    "checkPass": 600,
+    "checkFail": 0,
+    "avgMs": 608.01,
+    "p95Ms": 1051.645,
+    "p99Ms": 1075.173,
+    "exitCode": 0
+  }
+]

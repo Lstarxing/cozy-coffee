@@ -1,0 +1,16 @@
+{
+  "mode": "L1_L2",
+  "rateTarget": 200,
+  "runs": 3,
+  "actualRpsMedian": 200.023,
+  "avgMsMedian": 2.784,
+  "p50MsMedian": 2.447,
+  "p95MsMedian": 3.991,
+  "p99MsMedian": 7.499,
+  "errorRatePctMax": 0.0,
+  "droppedIterationsTotal": 0,
+  "dbStatementsMedian": 2.0,
+  "dbRowsExaminedMedian": 0.0,
+  "dbTimeMsMedian": 0.731,
+  "redisCommandsMedian": 8.0
+}

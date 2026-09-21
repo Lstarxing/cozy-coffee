@@ -1,0 +1,35 @@
+[
+  {
+    "run": "L1_L2_warm-burst_50rps_2m_run1",
+    "requests": 200,
+    "httpFailurePct": 0.0,
+    "businessErrorPct": 0.0,
+    "checksPassed": 600,
+    "checksFailed": 0,
+    "avgMs": 719.379,
+    "p95Ms": 1089.84,
+    "p99Ms": 1108.071
+  },
+  {
+    "run": "L1_L2_warm-burst_50rps_2m_run2",
+    "requests": 200,
+    "httpFailurePct": 0.0,
+    "businessErrorPct": 0.0,
+    "checksPassed": 600,
+    "checksFailed": 0,
+    "avgMs": 482.538,
+    "p95Ms": 916.274,
+    "p99Ms": 933.945
+  },
+  {
+    "run": "L1_L2_warm-burst_50rps_2m_run3",
+    "requests": 200,
+    "httpFailurePct": 0.0,
+    "businessErrorPct": 0.0,
+    "checksPassed": 600,
+    "checksFailed": 0,
+    "avgMs": 598.445,
+    "p95Ms": 1030.341,
+    "p99Ms": 1099.063
+  }
+]
