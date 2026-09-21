@@ -7,10 +7,12 @@
 #   ② 起 MySQL / Redis / Nacos / RocketMQ + 4 个 Provider + Gateway
 #   ③ 等健康检查（--wait / 轮询），而不是固定 sleep
 #   ④ 显式创建 cozy-user-events 与 cozy-order-events
-#   ⑤ 断言两个 topic 均 4 队列 + 6 个 consumer group 在线且订阅 tag 正确
-#      （含 user 侧第 7 步新增的 cozy-user-invite-reward，它订阅 cozy-order-events 上的 order_completed）
+#   ⑤ 断言两个 topic 均 4 队列 + 8 个 consumer group 在线且订阅 tag 正确
+#      （含 user 侧第 7 步新增的 cozy-user-invite-reward，它订阅 cozy-order-events 上的 order_completed；
+#       以及网关侧两个：cozy-gateway-order-cache 订阅 order_created、cozy-gateway-sse-paid 订阅 order_paid）
 #   ⑥ 真实 API 注册邀请人 / 被邀请人 / 管理员（3 个用户，因此有 3 条新人礼事件）
-#   ⑦ 真实 API 下单 → 接单 → 完成 → 确认取餐（触发 ORDER_COMPLETED）
+#   ⑦ 真实 API 下单 → 支付(=移动端自动接单) → 出餐 → 确认取餐（触发 ORDER_COMPLETED）；
+#      并真连一条管理端 SSE，断言「付款后才提醒商家」的口径：下单只清缓存【不】推 new_order，付款【才】推
 #   ⑧ 断言一律【按 tag + unique_key 精确定位】，不用"全表恰好一行"——
 #      注册本身会产生多条 welcome_gift_eligible，全表计数一加生产者就误报。
 #      邀请：资格已认领、事件恰好一行且 SENT、邀请券恰好一张、首单积分恰好一次
@@ -95,6 +97,9 @@ KEEP_ON_FAIL=1
 
 cleanup() {
   local code=$?
+  # 第 ⑦ 步的 SSE 监听是后台 curl（自带 timeout 兜底）；正常路径会显式收掉，
+  # 失败路径靠这里收，避免诊断期间还挂着一条长连接干扰日志
+  [ -n "${SSE_PID:-}" ] && kill "$SSE_PID" 2>/dev/null || true
   echo
   echo "--- 收集诊断（→ $LOG_DIR）---"
   "${COMPOSE[@]}" ps > "$LOG_DIR/ps.txt" 2>&1 || true
@@ -156,9 +161,11 @@ for t in cozy-user-events cozy-order-events; do
 done
 echo "  ✓ 2 个 topic 均 4/4"
 
-banner "⑤ 断言 6 个 consumer group 在线且订阅 tag 正确（等心跳，最多 90s）"
+banner "⑤ 断言 8 个 consumer group 在线且订阅 tag 正确（等心跳，最多 90s）"
 # 关键：**先等再断言**。刚建完 topic 时消费者可能还没注册上（这正是线上踩过的坑）
-# 值形如 <topic>:<tag> —— 第 7 步后 user 侧的邀请认领消费者订阅的是 cozy-order-events
+# 值形如 <topic>:<tag> —— 第 7 步后 user 侧的邀请认领消费者订阅的是 cozy-order-events。
+# 网关侧两个也在 cozy-order-events 上（同一 topic 的 tag 分流）：
+#   order_created 只清缓存、order_paid 才推 new_order —— 订阅缺一个就是「下单/付款不提醒商家」。
 declare -A CONSUMER_SUBS=(
   [cozy-member-user-created]="cozy-user-events:user_created"
   [cozy-member-profile-completed]="cozy-user-events:profile_completed"
@@ -166,6 +173,8 @@ declare -A CONSUMER_SUBS=(
   [cozy-mall-welcome-gift]="cozy-user-events:welcome_gift_eligible"
   [cozy-mall-invite-reward]="cozy-user-events:invite_reward_earned"
   [cozy-user-invite-reward]="cozy-order-events:order_completed"
+  [cozy-gateway-order-cache]="cozy-order-events:order_created"
+  [cozy-gateway-sse-paid]="cozy-order-events:order_paid"
 )
 for attempt in $(seq 1 18); do
   all_ok=1
@@ -216,6 +225,24 @@ wait_for() { # <sql> <期望值> [次数] [间隔秒]
   echo "  ✗ 等待超时：期望 [$want]，实得 [$v]"; echo "    SQL: $sql"; return 1
 }
 
+assert_eq() { # <说明> <sql> <期望>：断言【SQL 查询结果】
+  local v; v="$(mysql_q "$2" | tr -d '[:space:]')"
+  if [ "$v" = "$3" ]; then echo "  ✓ $1 = $v"; else echo "  ✗ $1 期望 $3 实得 $v"; exit 1; fi
+}
+
+# 比两个【字面值】（HTTP 状态码 / redis-cli 输出 …）。
+# ⚠️ 别用 assert_eq 比这些：它会把第 2 个参数当 SQL 扔给 mysql，
+# 例如 `assert_eq "..." 200 200` 会报 `ERROR 1064 ... near '200'`（本脚本真踩过）。
+assert_val() { # <说明> <实得> <期望>
+  if [ "$2" = "$3" ]; then echo "  ✓ $1 = $2"; else echo "  ✗ $1 期望 $3 实得 $2"; exit 1; fi
+}
+
+# Redis 判据。管理端缓存落在 Redis（key 用 StringRedisSerializer，就是字面量、无额外前缀），
+# 第 ⑦ 步既用它确认「缓存生效」，也用它当「MQ 消费端真跑过」的探针。
+REDIS="$PROJECT-redis-1"
+redis_get() { docker exec "$REDIS" redis-cli get "$1" | tr -d '\r'; }
+redis_exists() { docker exec "$REDIS" redis-cli exists "$1" | tr -d '\r'; }
+
 api() { # <method> <path> [token] [body] [idempotency-key]
   local m="$1" p="$2" t="${3:-}" b="${4:-}" idem="${5:-}"
   local args=(-sS -X "$m" "$GW$p" -H 'Content-Type: application/json')
@@ -253,29 +280,80 @@ INVITEE_TOKEN="$(api POST /api/auth/login "" "{\"username\":\"$INVITEE_PHONE\",\
 [ -n "$INVITEE_TOKEN" ] && [ -n "$ADMIN_TOKEN" ] || { echo "  ✗ 登录失败"; exit 1; }
 echo "  ✓ admin / invitee 已登录"
 
-banner "⑦ 真实接口下单 → 接单 → 完成 → 确认取餐（触发 ORDER_COMPLETED）"
+banner "⑦ 真实接口下单 → 支付(=移动端自动接单) → 出餐 → 确认取餐（触发 ORDER_COMPLETED）"
+# 商家提醒的口径（2026-09-21 定）：**付款成功后才提醒**。未付款订单可以进系统，但不该让商家开始
+# 制作，否则弃单会制造噪声。所以这一步要端到端证明两件事：下单【不】推 new_order，付款【才】推。
+#
+# 为什么必须真挂一条 SSE：new_order 是「广播给当前已连接的管理端」的。单测只能证明代码调了
+# broadcast()，证明不了「网关发得出去、管理端收得到」这条链真的通 —— 那正是这一步要守的。
+# 注意管理端页面的接单按钮已随该口径下线（Orders.vue「支付后移动端自动接单」），
+# 所以这里走【用户侧】POST /api/order/{id}/accept，与线上真实路径一致。
+ADMIN_SSE_OUT="$LOG_DIR/sse-admin.txt"
+ADMIN_TICKET="$(api POST /api/admin/sse/ticket "$ADMIN_TOKEN" | jget ticket)"
+[ -n "$ADMIN_TICKET" ] || { echo "  ✗ 取不到管理端 SSE ticket"; exit 1; }
+# -N 关掉 curl 缓冲；timeout 兜底自毁，脚本中途失败也不会留下挂死的连接
+timeout 180 curl -sS -N "$GW/api/admin/sse/events?ticket=$ADMIN_TICKET" > "$ADMIN_SSE_OUT" 2>&1 &
+SSE_PID=$!
+# 等建连事件再往下 —— 连上之前发生的广播是收不到的，固定 sleep 会变成随机假通过
+for i in $(seq 1 20); do
+  grep -q '^event: *connected' "$ADMIN_SSE_OUT" 2>/dev/null && break
+  sleep 0.5
+done
+grep -q '^event: *connected' "$ADMIN_SSE_OUT" 2>/dev/null \
+  || { echo "  ✗ 管理端 SSE 未建连"; cat "$ADMIN_SSE_OUT"; exit 1; }
+echo "  ✓ 管理端 SSE 已建连"
+
 PRODUCT_ID="$(mysql_q "SELECT id FROM cozy_order.coffee_products WHERE name='Cozy 美式' AND status='active' LIMIT 1")"
 [ -n "$PRODUCT_ID" ] || PRODUCT_ID="$(mysql_q "SELECT id FROM cozy_order.coffee_products WHERE status='active' ORDER BY id LIMIT 1")"
+# 先焐热管理端订单列表缓存：它既是「缓存确实在生效」的前提，也是下面判断
+# 「order_created 真被消费了」的探针（该消费端只清缓存、不广播）。
+ADMIN_LIST_KEY="cozy:admin:orders:list:_:_:_:_:_:_"
+api GET "/api/admin/orders" "$ADMIN_TOKEN" > /dev/null
+assert_val "下单前 管理端列表缓存已建立" "$(redis_exists "$ADMIN_LIST_KEY")" 1
+
 ORDER_ID="$(api POST /api/order/create "$INVITEE_TOKEN" "{\"diningMethod\":\"TAKEOUT\",\"storeId\":1,\"items\":[{\"productId\":$PRODUCT_ID,\"quantity\":1,\"cupSize\":\"MEDIUM\",\"sugarLevel\":\"NO_ADDED_SUGAR\",\"temperature\":\"HOT\",\"coffeeStrength\":\"NORMAL\",\"optionsJson\":\"{\\\"skuId\\\": null, \\\"milkType\\\": \\\"WHOLE\\\"}\",\"addonsJson\":\"[]\"}]}" "e2e-order-$STAMP" | jget id)"
 [ -n "$ORDER_ID" ] || { echo "  ✗ 下单失败"; exit 1; }
-api POST "/api/admin/orders/$ORDER_ID/accept"  "$ADMIN_TOKEN"   > /dev/null
+ORDER_NO="$(mysql_q "SELECT order_no FROM cozy_order.shop_orders WHERE id=$ORDER_ID")"
+[ -n "$ORDER_NO" ] || { echo "  ✗ 取不到订单号"; exit 1; }
+
+# ① 下单：只发 ORDER_CREATED → 消费端只清缓存。
+# 判据刻意【不是】「等 N 秒看着没推送」——那种等待证不了伪。这里先证明这条事件确实被消费过
+# （缓存被清），再检查它没广播：两步合起来才是「消费了、且没提醒商家」。
+# 轮询上限 15s 是刻意的：缓存 TTL 是 30~38s，必须在它自然过期之前判完，否则清掉的到底是
+# 消费端还是 TTL 就分不清了。
+for i in $(seq 1 15); do
+  [ "$(redis_exists "$ADMIN_LIST_KEY")" = 0 ] && break
+  sleep 1
+done
+assert_val "下单后 order_created 已清管理端缓存" "$(redis_exists "$ADMIN_LIST_KEY")" 0
+# 已确认它被处理过；再留一点余量，防「先清缓存、后广播」那种写法把断言骗过去
+sleep 3
+if grep -q 'new_order' "$ADMIN_SSE_OUT"; then
+  echo "  ✗ 下单就推了 new_order —— 未付款订单不该让商家开始制作"
+  cat "$ADMIN_SSE_OUT"; exit 1
+fi
+echo "  ✓ 下单未推 new_order（order_created 只清缓存）"
+
+# ② 付款（=移动端自动接单）：网关在 Dubbo 接单成功后才发 ORDER_PAID → 消费端推 new_order
+api POST "/api/order/$ORDER_ID/accept" "$INVITEE_TOKEN" > /dev/null
+for i in $(seq 1 20); do
+  grep -q "$ORDER_NO" "$ADMIN_SSE_OUT" 2>/dev/null && break
+  sleep 1
+done
+# 事件名与单号都要对：只 grep 单号的话，日志里任何一处出现该单号都会假通过
+grep -q 'new_order' "$ADMIN_SSE_OUT" && grep -q "$ORDER_NO" "$ADMIN_SSE_OUT" \
+  || { echo "  ✗ 付款后管理端未收到本单 new_order（orderNo=$ORDER_NO）"; cat "$ADMIN_SSE_OUT"; exit 1; }
+echo "  ✓ 付款后管理端收到本单 new_order 广播"
+
+kill "$SSE_PID" 2>/dev/null || true
+wait "$SSE_PID" 2>/dev/null || true
+SSE_PID=""
+
 api POST "/api/admin/orders/$ORDER_ID/complete" "$ADMIN_TOKEN"  > /dev/null
 api POST "/api/order/$ORDER_ID/confirm"        "$INVITEE_TOKEN" > /dev/null
 echo "  ✓ order=$ORDER_ID 已推进到 completed 并确认取餐"
 
 banner "⑧ 等异步链路收敛后断言（按 tag + unique_key 精确定位，不用全表计数）"
-
-assert_eq() { # <说明> <sql> <期望>：断言【SQL 查询结果】
-  local v; v="$(mysql_q "$2" | tr -d '[:space:]')"
-  if [ "$v" = "$3" ]; then echo "  ✓ $1 = $v"; else echo "  ✗ $1 期望 $3 实得 $v"; exit 1; fi
-}
-
-# 比两个【字面值】（HTTP 状态码 / redis-cli 输出 …）。
-# ⚠️ 别用 assert_eq 比这些：它会把第 2 个参数当 SQL 扔给 mysql，
-# 例如 `assert_eq "..." 200 200` 会报 `ERROR 1064 ... near '200'`（本脚本真踩过）。
-assert_val() { # <说明> <实得> <期望>
-  if [ "$2" = "$3" ]; then echo "  ✓ $1 = $2"; else echo "  ✗ $1 期望 $3 实得 $2"; exit 1; fi
-}
 
 # ---- 邀请链路 ----
 # 定位键用 unique_key 单独一列就够；tag / status 是真断言，不是同义反复（没拿 tag 当过滤条件）。
@@ -406,9 +484,6 @@ assert_welcome_gift "$PROBE_ID" "探针"
 PROBE_TOKEN="$(api POST /api/auth/login "" "{\"username\":\"$PROBE_PHONE\",\"password\":\"$PW\"}" | jget token)"
 [ -n "$PROBE_TOKEN" ] || { echo "  ✗ 探针账号登录失败"; exit 1; }
 
-REDIS="$PROJECT-redis-1"
-redis_get() { docker exec "$REDIS" redis-cli get "$1" | tr -d '\r'; }
-redis_exists() { docker exec "$REDIS" redis-cli exists "$1" | tr -d '\r'; }
 # 该用户当前名下的 session 键个数（值为 userId）；无匹配时 grep -c 退出码为 1，故补 || true
 probe_sessions() {
   local n=0 k

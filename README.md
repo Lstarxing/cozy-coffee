@@ -216,7 +216,8 @@ docker compose up -d          # 只起基础设施，其余在 IDE 里跑
 ### 隔离 API E2E
 `scripts/e2e-user-events.sh` 用**独立 Compose project 与 volume**（不污染日常开发库）起真实基础设施与 4 个 Provider + Gateway，全程走**真实 API**（SQL 只用于断言与环境准备），验证注册、下单、权益发放、消息重放与会话撤销。
 
-- 覆盖 **14 个验收步骤**，含 topic / consumer group 门禁（**先等心跳再断言**，不固定 sleep）
+- 覆盖 **15 个验收步骤**，含 topic / consumer group 门禁（**先等心跳再断言**，不固定 sleep）
+- 商家提醒链路真挂一条管理端 SSE：断言**下单只清缓存不推** `new_order`、**付款才推**（推送内容带本单订单号）
 - **成功即清理环境**（`down -v`），**失败保留现场**并把各容器日志收进临时目录
 - 与日常 dev 栈同时跑会抢本机资源，脚本自带冲突守卫；确认要并行时加 `--force`
 - **不在 CI 里**：它需要真实基础设施、跑一次成本高，由人工在改事件链路后触发
@@ -250,7 +251,7 @@ ssh cozy 'bash /opt/cozycoffee/deploy/check-health.sh'          # 部署后巡�
 - **数据库迁移**：40 个 Flyway 脚本（User 3 / Member 4 / Order 26 / Mall 7）—— 四个服务的迁移量之和，不是单库版本号
 - **前端**：Web / 小程序 / 管理端 Vitest 单测
 - **CI（GitHub Actions）**：JDK 17 + `mvn test` + 三端前端测试矩阵，自动判败
-- **隔离 API E2E（独立入口，不在 CI）**：`scripts/e2e-user-events.sh` 的 14 个验收步骤，见[运行方式](#隔离-api-e2e)
+- **隔离 API E2E（独立入口，不在 CI）**：`scripts/e2e-user-events.sh` 的 15 个验收步骤，见[运行方式](#隔离-api-e2e)
 
 > CI 为不引入外部依赖，**排除 6 个需要真实基础设施（MySQL / Redis / Nacos / RocketMQ）的集成测试类**，
 > 因此 CI 跑的**不是全量测试**，那部分由隔离 E2E 承接。测试方法数来自源码静态统计（行首 `@Test`），
