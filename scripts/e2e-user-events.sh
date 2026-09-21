@@ -4,7 +4,7 @@
 #
 # 覆盖《CHANGELOG》未完成清单第 13 条的 ①–⑭：
 #   ① 独立 Compose project / volume（不污染日常开发库）
-#   ② 起 MySQL / Redis / Nacos / RocketMQ + 5 个 provider + gateway
+#   ② 起 MySQL / Redis / Nacos / RocketMQ + 4 个 Provider + Gateway
 #   ③ 等健康检查（--wait / 轮询），而不是固定 sleep
 #   ④ 显式创建 cozy-user-events 与 cozy-order-events
 #   ⑤ 断言两个 topic 均 4 队列 + 6 个 consumer group 在线且订阅 tag 正确
@@ -15,7 +15,8 @@
 #      注册本身会产生多条 welcome_gift_eligible，全表计数一加生产者就误报。
 #      邀请：资格已认领、事件恰好一行且 SENT、邀请券恰好一张、首单积分恰好一次
 #      新人礼：3 个用户各一行且 SENT、各一张券，且券内容与旧同步路径逐字段一致
-#   ⑨ 从订单 outbox 读原始载荷重放 ORDER_COMPLETED，断言【该链路】的积分/outbox/券都不增
+#   ⑨ 从订单 outbox 读原始载荷重放 ORDER_COMPLETED，等 member 首单与 user 邀请认领【两个消费组】
+#      都处理完，再断言【该链路】的积分/outbox/券都不增
 #   ⑩ 重放 welcome_gift_eligible，断言新人礼的 outbox 与券都不增（消费侧幂等）
 #   ⑪ 禁用用户必须立即撤销会话：禁用前 token 可用 → 禁用后 401 → 恢复 active 仍 401 →
 #      重新登录才恢复（守 JwtAuthInterceptor 只认 Redis session 键这个前提）
@@ -79,7 +80,7 @@ if [ "${1:-}" != "--force" ]; then
 
 本次 E2E 需要一份相对空闲的本机资源。建议先【停掉】（不要删卷）：
     docker compose stop                 # 在仓库根，日常 dev 栈
-    # 再在 IDE 里停掉 5 个 provider / gateway 的运行配置
+    # 再在 IDE 里停掉 4 个 Provider / Gateway 的运行配置
 然后重跑本脚本。确认要继续（例如你本就打算并行）可加 --force。
 EOT
     exit 1
@@ -312,39 +313,75 @@ assert_welcome_gift "$INVITEE_ID" "被邀请人"
 assert_welcome_gift "$ADMIN_ID"   "管理员"
 
 # 重放验证的两个必要条件（缺一不可）：
-#   (a) 消息【确实被消费】—— 轮询该 group 在 topic 上的"已消费总量"（各队列 Consumer Offset 之和）
-#       增长，而不是固定 sleep；
+#   (a) 消息【确实被消费】—— 轮询该事件【所有】订阅 group 在 topic 上的"已消费总量"
+#       （各队列 Consumer Offset 之和）增长，而不是固定 sleep；
 #   (b) 再消费一次【不产生新数据】。
 # 只比计数的话，消息压根没被消费也会"通过"，结论就是空的。
 sum_consumed() { # <group> <topic>
   docker exec "$BROKER" sh -c "$MQADMIN consumerProgress -g $1 -n $NS" \
     | awk -v t="$2" '$1 == t {s += $5} END {print s + 0}'
 }
-replay_and_assert() { # <说明> <topic> <tag> <key> <载荷> <group> <断言SQL>
-  local label="$1" topic="$2" tag="$3" key="$4" payload="$5" group="$6" sql="$7"
-  local off_before before after off_after
-  off_before="$(sum_consumed "$group" "$topic")"
+# 位点必须能解析成整数，且读取命令本身要成功。
+# 空值会让 `[ "" -gt "" ]` 报 integer expression expected —— 而它在 if / && 里只表现为"条件不成立"，
+# 于是「位点没读到」会被静默当成「没有增长」，再被当成「消费侧幂等通过」。这种"验证本身失效"的
+# 假通过比断言失败更难发现，所以宁可当场停下。
+require_offset() { # <组名> <值>
+  case "$2" in
+    '' | *[!0-9]*)
+      echo "  ✗ [$1] 消费位点读不到有效整数（实得「$2」）——consumerProgress 失败或输出格式变了" >&2
+      exit 1 ;;
+  esac
+}
+replay_and_assert() { # <说明> <topic> <tag> <key> <载荷> <group[,group...]> <断言SQL>
+  local label="$1" topic="$2" tag="$3" key="$4" payload="$5" groups="$6" sql="$7"
+  local g before after pending=1 waited=0
+  declare -A off_before off_after
+  # 一条事件可能被【多个】消费组订阅 —— 例如 ORDER_COMPLETED 同时被 member 首单与 user 邀请认领消费。
+  # 只等其中一个，就没法断言"另一个也处理过了"；那样「新消费者重放幂等」就是没验证过的空话。
+  for g in ${groups//,/ }; do
+    # 赋值放进 if 条件里，这样 set -e 不会在读取失败时直接静默中止，而是走到下面这句给得出原因
+    if ! off_before[$g]="$(sum_consumed "$g" "$topic")"; then
+      echo "  ✗ [$label] consumerProgress 执行失败（group=$g topic=$topic）——docker 没跑 / group 不存在？" >&2
+      exit 1
+    fi
+    require_offset "$g" "${off_before[$g]}"
+  done
   before="$(mysql_q "$sql" | tr -d '[:space:]')"
   docker exec -e PAYLOAD="$payload" "$BROKER" sh -c \
     "$MQADMIN sendMessage -n $NS -t $topic -c $tag -k $key -p \"\$PAYLOAD\"" > /dev/null
-  for _ in $(seq 1 20); do
-    off_after="$(sum_consumed "$group" "$topic")"
-    [ "$off_after" -gt "$off_before" ] && break
-    sleep 2
+  while [ "$pending" = 1 ] && [ "$waited" -lt 20 ]; do
+    pending=0
+    for g in ${groups//,/ }; do
+      if ! off_after[$g]="$(sum_consumed "$g" "$topic")"; then
+        echo "  ✗ [$label] consumerProgress 执行失败（group=$g topic=$topic）" >&2
+        exit 1
+      fi
+      require_offset "$g" "${off_after[$g]}"
+      [ "${off_after[$g]}" -gt "${off_before[$g]}" ] || pending=1
+    done
+    [ "$pending" = 1 ] && { sleep 2; waited=$((waited + 1)); }
   done
-  if [ "$off_after" -le "$off_before" ]; then
-    echo "  ✗ [$label] 重放消息未被消费（消费位点仍为 $off_before）——本次「不增」验证无意义"; exit 1
+  if [ "$pending" = 1 ]; then
+    for g in ${groups//,/ }; do
+      [ "${off_after[$g]}" -gt "${off_before[$g]}" ] || {
+        echo "  ✗ [$label] 重放消息未被 [$g] 消费（位点仍为 ${off_before[$g]}）——本次「不增」验证无意义"; exit 1; }
+    done
   fi
   after="$(mysql_q "$sql" | tr -d '[:space:]')"
   [ "$before" = "$after" ] || { echo "  ✗ [$label] 重放后有增加：$before → $after"; exit 1; }
-  echo "  ✓ [$label] 重放已被消费（消费位点 $off_before → $off_after），且计数未变（$before）"
+  local detail=""
+  for g in ${groups//,/ }; do detail="$detail $g(${off_before[$g]}→${off_after[$g]})"; done
+  echo "  ✓ [$label] 重放已被消费（$detail），且计数未变（$before）"
 }
 
 banner "⑨ 重放同一 ORDER_COMPLETED（读订单 outbox 原始载荷）→ 该链路的积分/outbox/券都不增"
 PAYLOAD="$(mysql_q "SELECT payload FROM cozy_order.message_outbox WHERE aggregate_id=$ORDER_ID ORDER BY id DESC LIMIT 1")"
 [ -n "$PAYLOAD" ] || { echo "  ✗ 取不到原始载荷"; exit 1; }
 # 断言范围必须限定在【这条链路】：全局计数会被新人礼事件干扰（一加生产者就会变）
-replay_and_assert "ORDER_COMPLETED" cozy-order-events order_completed "$ORDER_ID" "$PAYLOAD" cozy-member-first-order \
+# 两个消费组都要等：cozy-member-first-order（首单积分）与 cozy-user-invite-reward（邀请资格认领，
+# ADR §8 第 7 步新增）。只等 member 的话，「新消费者重放幂等」这句就是没验证过的。
+replay_and_assert "ORDER_COMPLETED" cozy-order-events order_completed "$ORDER_ID" "$PAYLOAD" \
+  cozy-member-first-order,cozy-user-invite-reward \
   "SELECT CONCAT((SELECT COUNT(*) FROM cozy_member.points_lots WHERE user_id=$INVITEE_ID AND source_type='first_order_bonus'),'/',(SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$INVITE_KEY'),'/',(SELECT COUNT(*) FROM cozy_mall.user_coupons WHERE user_id=$INVITER_ID AND coupon_code='$INVITE_KEY'))"
 
 banner "⑩ 重放 welcome_gift_eligible（读 user outbox 原始载荷）→ 新人礼 outbox 与券都不增"
