@@ -103,3 +103,27 @@ uploads/
 
 # 本地图片静态资源（OSS 到期临时放入网关 classpath，不入库）
 cozy-coffee-backend/cozy-gateway/src/main/resources/static/images/
+
+# ===================== AI 工具 / 编辑器本地产物 =====================
+# Claude Code superpowers 插件的会话产物：头脑风暴原型 HTML + state/server-info
+# （后者含本机绝对路径与本机端口，属工具状态而非项目内容）
+.superpowers/
+# superpowers 插件的计划/规格文档（2026-07 建仓期的过程记录，不属对外项目文档）
+docs/superpowers/
+# impeccable 工具的钩子缓存与本地配置（此前只写在 .git/info/exclude —— 那是本机私有的，
+# 不随仓库走，别人 clone 下来会看到这些文件是未跟踪的）
+.impeccable/
+# Cursor 编辑器规则（CodeGraph 用法提示，属编辑器本地配置）
+.cursor/
+# CodeGraph 索引状态：数据库/日志由 .codegraph/.gitignore 兜底，这里再挡一道以防那个文件被误删
+.codegraph/
+!.codegraph/.gitignore
+
+# ===================== 根目录误生成 / 工具模板 =====================
+# 误跑 npm init 生成的清单。各子应用有自己的 package.json，
+# CI 用 working-directory 进子目录跑，不经根清单 —— 故根级这两个必须带前导斜杠限制，
+# 否则会连子应用的 package.json 一起忽略
+/package.json
+/package-lock.json
+# 设计工具输出的通用 brief 模板（项目文档统一放 docs/）
+/PRODUCT.md
