@@ -47,6 +47,35 @@ body {
     padding-top: var(--nav-height);
 }
 
+/* ---------- 全局滚动条:细化 + 降对比,悬停增强 ----------
+   仅作用于文档级滚动条。Firefox 专用标准属性必须隔离在下面这个
+   @supports 里:Chrome 121+ 起 scrollbar-width/scrollbar-color 一旦
+   取非 auto 值就会压过 ::-webkit-scrollbar 伪元素,同写会导致 Chrome
+   降级成系统 thin(约 8px、无 hover),故这里用 Gecko 专有属性做隔离。 */
+@supports (-moz-appearance: none) {
+    html {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(72, 45, 37, 0.28) transparent;
+    }
+}
+
+html::-webkit-scrollbar {
+    width: 5px;
+}
+
+html::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+html::-webkit-scrollbar-thumb {
+    background: rgba(72, 45, 37, 0.12);
+    border-radius: 999px;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+    background: rgba(72, 45, 37, 0.28);
+}
+
 .background-container {
     position: fixed;
     top: 0;
