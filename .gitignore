@@ -115,9 +115,8 @@ docs/superpowers/
 .impeccable/
 # Cursor 编辑器规则（CodeGraph 用法提示，属编辑器本地配置）
 .cursor/
-# CodeGraph 索引状态：数据库/日志由 .codegraph/.gitignore 兜底，这里再挡一道以防那个文件被误删
+# CodeGraph 索引状态：数据库、日志、socket 与索引配置全属本机，整目录不入库
 .codegraph/
-!.codegraph/.gitignore
 
 # ===================== 根目录误生成 / 工具模板 =====================
 # 误跑 npm init 生成的清单。各子应用有自己的 package.json，
