@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * Status flow (verified against current OrderServiceImpl):
  *   createOrder  -> "pending"    (待支付，15 分钟超时自动取消)
- *   acceptOrder  -> "preparing"  (支付成功后自动接单；completeOrder 前必须为 preparing)
+ *   acceptUserOrder -> "preparing"  (支付成功后自动接单；completeOrder 前必须为 preparing)
  *   completeOrder -> "completed"
  *   pending/preparing -> cancelOrder -> "cancelled"
  */
@@ -81,7 +81,7 @@ public class OrderFlowBaselineTest {
         assertEquals("pending", created.getStatus(), "New order should be pending (awaiting payment)");
 
         // Act: accept order -> status "preparing"（支付成功后自动接单）
-        ShopOrderDTO accepted = orderService.acceptOrder(created.getId());
+        ShopOrderDTO accepted = orderService.acceptUserOrder(created.getId(), userId);
         assertEquals("preparing", accepted.getStatus(), "Order should be preparing after accept");
 
         // Act: complete order -> status "completed"
@@ -131,7 +131,7 @@ public class OrderFlowBaselineTest {
         assertEquals("pending", created.getStatus(), "New order should be pending (awaiting payment)");
 
         // Accept -> "preparing"（支付成功后自动接单）
-        ShopOrderDTO accepted = orderService.acceptOrder(created.getId());
+        ShopOrderDTO accepted = orderService.acceptUserOrder(created.getId(), userId);
         assertEquals("preparing", accepted.getStatus());
 
         // Cancel from preparing state (admin side)

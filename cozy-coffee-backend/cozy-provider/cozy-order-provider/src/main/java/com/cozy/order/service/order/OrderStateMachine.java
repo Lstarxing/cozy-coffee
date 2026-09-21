@@ -34,7 +34,7 @@ public enum OrderStateMachine {
 
     /**
      * 校验状态流转是否合法。
-     * pending -> preparing (acceptOrder)
+     * pending -> preparing (acceptUserOrder)
      * preparing -> delivering (外送出餐) / completed (自提出餐) / cancelled
      * delivering -> completed (到点自动完成) / cancelled
      */

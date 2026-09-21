@@ -52,11 +52,6 @@ public class AdminOrderController {
         return Result.success(listService.listOrders(status, orderNo, keyword, userId, startDate, endDate, noCache));
     }
 
-    @PostMapping("/orders/{orderId}/accept")
-    public Result<ShopOrderDTO> acceptOrder(@PathVariable Long orderId) {
-        return Result.success(commandService.acceptOrder(orderId));
-    }
-
     @PostMapping("/orders/{orderId}/complete")
     public Result<ShopOrderDTO> completeOrder(@PathVariable Long orderId) {
         return Result.success(commandService.completeOrder(orderId));

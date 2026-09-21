@@ -45,12 +45,6 @@ public class AdminOrderCommandService {
         return order;
     }
 
-    public ShopOrderDTO acceptOrder(Long orderId) {
-        ShopOrderDTO order = orderService.acceptOrder(orderId);
-        AdminCacheUtil.evictOrderAndAnalytics(cacheEvictor);
-        return order;
-    }
-
     public ShopOrderDTO completeOrder(Long orderId) {
         // 出餐仅履约：自提 → completed、外送 → delivering；奖励待用户确认/兜底 Job 发放（order-provider 统一发布事件）
         ShopOrderDTO order = orderService.completeOrder(orderId);

@@ -78,39 +78,11 @@ public class OrderCommandService {
         return orderDtoEnricher.toOrderDTO(order, null);
     }
 
-    @Transactional
-    public ShopOrderDTO acceptOrder(Long orderId) {
-        if (orderId == null) {
-            throw new BusinessException("订单ID不能为空");
-        }
-        ShopOrder order = orderMapper.selectById(orderId);
-        if (order == null) {
-            throw new BusinessException("订单不存在");
-        }
-        OrderStateMachine current = OrderStateMachine.from(order.getStatus());
-        current.assertCanTransition(OrderStateMachine.PREPARING);
-
-        // 如果还没有取餐码，生成一个
-        if (order.getPickupCode() == null || order.getPickupCode().isEmpty()) {
-            LocalDateTime now = LocalDateTime.now();
-            String pickupCode = pickupCodeService.generatePickupCode(1L, now);
-            LocalDate businessDate = pickupCodeService.calculateBusinessDate(now);
-            order.setPickupCode(pickupCode);
-            order.setBusinessDate(businessDate);
-            order.setPickupCodeGeneratedAt(now);
-            order.setStoreId(1L);
-        }
-
-        order.setStatus(OrderStateMachine.PREPARING.value());
-        orderMapper.updateById(order);
-        orderTimeoutIndexer.syncPendingTimeoutIndex(order);
-        log.info("订单接单: orderId={}, orderNo={}", orderId, order.getOrderNo());
-        confirmOrderCoupon(order);
-        return orderDtoEnricher.toOrderDTO(order, null);
-    }
-
     /**
-     * 用户支付成功后自动接单：校验订单归属后复用接单逻辑。
+     * 订单接单：校验订单归属后生成取餐码，状态改为 preparing。
+     * <p>
+     * 这是**唯一**的接单入口。管理端「手动接单」（无归属校验的 acceptOrder）已随
+     * 「支付后移动端自动接单」的口径下线 —— 商家看的是付款后的提醒，不再自己接单。
      */
     @Transactional
     public ShopOrderDTO acceptUserOrder(Long orderId, Long userId) {

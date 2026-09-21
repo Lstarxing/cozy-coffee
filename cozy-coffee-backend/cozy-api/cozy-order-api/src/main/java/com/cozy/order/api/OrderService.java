@@ -83,12 +83,7 @@ public interface OrderService {
     Map<String, Long> getOrderStatusCounts() throws BusinessException;
 
     /**
-     * 接单（生成取餐码，状态改为preparing）
-     */
-    ShopOrderDTO acceptOrder(Long orderId) throws BusinessException;
-
-    /**
-     * 用户支付成功后自动接单（校验订单归属，状态改为preparing）
+     * 接单：校验订单归属后生成取餐码，状态改为 preparing（唯一的接单入口）
      */
     ShopOrderDTO acceptUserOrder(Long orderId, Long userId) throws BusinessException;
 

@@ -143,7 +143,6 @@ export const deleteBlend = (id) => api.delete(`/admin/content/blends/${id}`)
 export const getOrderCounts = () => api.get('/admin/orders/counts')
 export const getOrders = (params) => api.get('/admin/orders', { params })
 export const getOrderDetail = (orderId) => api.get(`/admin/orders/${orderId}`)
-export const acceptOrder = (orderId) => api.post(`/admin/orders/${orderId}/accept`)
 export const completeOrder = (orderId) => api.post(`/admin/orders/${orderId}/complete`)
 export const cancelOrder = (orderId) => api.post(`/admin/orders/${orderId}/cancel`)
 
