@@ -10,11 +10,21 @@ const api = axios.create({
 
 let isHandlingAuthFailure = false
 
+// 登录/重置类端点不挂 Bearer：这里可能残留一个已失效的 adminToken，若挂上去，
+// 网关的 JwtAuthInterceptor 会在鉴权层就把登录请求 401 掉，登录页因此永远进不去。
+// 2026-09-21 起网关白名单已补上 /api/auth/admin/login，这里是第二道防线。
+const AUTH_FREE_PATHS = [/\/auth\/(admin\/)?login$/, /\/auth\/password\/reset/]
+const isAuthFreePath = url => AUTH_FREE_PATHS.some(re => re.test(url || ''))
+
 function handleAuthFailure() {
     if (isHandlingAuthFailure) {
         return
     }
     isHandlingAuthFailure = true
+
+    // 必须清掉：否则跳到 /login 后，登录请求会继续带着这个已知失效的 token，
+    // 被鉴权层拦成 401 —— 密码正确也登不进，且每次重试都重复同样结局。
+    localStorage.removeItem('adminToken')
 
     if (window.location.pathname !== '/login') {
         window.location.href = '/login'
@@ -29,7 +39,7 @@ function handleAuthFailure() {
 api.interceptors.request.use(
     config => {
         const token = localStorage.getItem('adminToken')
-        if (token) {
+        if (token && !isAuthFreePath(config.url)) {
             config.headers = config.headers || {}
             config.headers['Authorization'] = `Bearer ${token}`
         }
@@ -53,7 +63,9 @@ api.interceptors.response.use(
 
         const status = error?.response?.status
         const url = error?.config?.url || ''
-        const isLoginApi = url.includes('/auth/login')
+        // 注意别写成 url.includes('/auth/login')：'/auth/admin/login' 里【不包含】子串
+        // '/auth/login'（中间隔着 admin/），管理端登录失败会因此误触发一次跳转。
+        const isLoginApi = isAuthFreePath(url)
 
         if (!isLoginApi && (status === 401 || status === 403)) {
             handleAuthFailure()
