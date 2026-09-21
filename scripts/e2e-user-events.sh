@@ -25,6 +25,9 @@
 #   ⑬ 完善资料：补齐邮箱 → `profile_completed` 一行且 SENT → member 批次（20 分）+ 流水各一次
 #      （键↔列映射按 C7）→ 重放不增
 #   ⑭ 用户建档：注册即落 `user_created` 一行且 SENT → member 恰好一条会员行 → 重放不增（C3 唯一键吸收）
+#   ⑮ 放行名单回归门禁（无效 token 下的期望矩阵）：公开入口 login / admin-login / register /
+#      wechat-session / reset-dev 与 SSE /events 必须【非 401】；受保护入口 /api/auth/me、
+#      SSE /ticket 与 /disconnect 必须【401】。注册点只有 cozy-gateway/config/WebConfig 一处。
 #   失败留诊断、成功清环境
 #
 # 为什么值得有：HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库
@@ -505,5 +508,48 @@ UC_PAYLOAD="$(mysql_q "SELECT payload FROM cozy_user.user_event_outbox WHERE uni
 [ -n "$UC_PAYLOAD" ] || { echo "  ✗ 取不到建档事件原始载荷"; exit 1; }
 replay_and_assert "USER_CREATED" cozy-user-events user_created "$UC_KEY" "$UC_PAYLOAD" cozy-member-user-created \
   "SELECT CONCAT((SELECT COUNT(*) FROM cozy_member.member_info WHERE user_id=$PROBE_ID),'/',(SELECT COUNT(*) FROM cozy_user.user_event_outbox WHERE unique_key='$UC_KEY'))"
+
+banner "⑮ 放行名单回归门禁（无效 token 下的期望矩阵）"
+# 背景：JwtAuthInterceptor 对「带了 token 但无效」是【直接 401】，不看该路径是否本就公开。
+# 于是公开入口一旦漏在放行名单外，客户端手里一个失效 token 就把自己锁死 ——
+# 2026-09-21 真实踩到：/api/auth/admin/login 漏了，表现是「管理端密码正确也永远登不进」。
+# 这类回归正常 CI / 手测都碰不到（要恰好持有一个失效 token），只有这条门禁能拦住。
+# 注册点只有一处：cozy-gateway/config/WebConfig#addInterceptors（2026-09-21 合并）。
+# 此前 cozy-common 也注册一遍，两份名单【取交集】生效 —— 那正是漏掉的根源。
+BAD_TOKEN="e2e.garbage.token"
+
+_public_code() { # <方法> <路径>：打印 HTTP 状态码
+  local m="$1" p="$2"
+  local args=(-sS -o /dev/null -w '%{http_code}' -X "$m" "$GW$p" -H "Authorization: Bearer $BAD_TOKEN")
+  [ "$m" = POST ] && args+=(-H 'Content-Type: application/json' -d '{}')
+  curl "${args[@]}" 2>/dev/null
+}
+# 期望【非 401】：真正公开的入口必须穿过鉴权层（业务层随后可回 400/403）
+assert_public_reachable() { # <方法> <路径>
+  local code; code="$(_public_code "$1" "$2")"
+  [ "$code" = 401 ] && { echo "  ✗ $1 $2 被失效 token 拦成 401 —— 公开入口漏在放行名单外"; exit 1; }
+  echo "  ✓ $1 $2 → $code（非 401，已越过鉴权层）"
+}
+# 期望【必须 401】：受保护入口，失效 token 就该被拦
+assert_rejected() { # <方法> <路径>
+  local code; code="$(_public_code "$1" "$2")"
+  [ "$code" = 401 ] || { echo "  ✗ $1 $2 期望 401，实得 $code —— 受保护入口被误放行"; exit 1; }
+  echo "  ✓ $1 $2 → 401（受保护，符合预期）"
+}
+
+echo "  -- 公开入口：非 401 --"
+assert_public_reachable POST /api/auth/login
+assert_public_reachable POST /api/auth/admin/login
+assert_public_reachable POST /api/auth/register
+assert_public_reachable POST /api/auth/wechat/session
+assert_public_reachable POST /api/auth/password/reset-dev
+echo "  -- SSE /events：建连凭一次性 ticket，不走 JWT（非 401 即证明已放行）--"
+assert_public_reachable GET  /api/member/sse/events
+assert_public_reachable GET  /api/admin/sse/events
+echo "  -- 受保护入口：必须 401 --"
+assert_rejected GET  /api/auth/me
+assert_rejected POST /api/member/sse/ticket
+assert_rejected POST /api/member/sse/disconnect
+assert_rejected POST /api/admin/sse/ticket
 
 banner "✅ USER_EVENTS 全链路 E2E 通过（HTTP → Order MQ → Member → Dubbo → User outbox → User MQ → Mall 券落库；五条链路重放均幂等；禁用即时撤销会话）"
