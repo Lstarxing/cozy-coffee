@@ -22,7 +22,7 @@ DELETE FROM signin_records WHERE user_id = 38;
 UPDATE member_info SET last_signin_date = NULL, consecutive_sign_days = 0 WHERE user_id = 38;
 
 -- 5. 月度挑战：重置 claimed 标志 + 已发积分流水
-UPDATE monthly_task SET
+UPDATE monthly_tasks SET
   challenge_order_claimed = 0,
   challenge_morning_claimed = 0,
   challenge_delivery_claimed = 0,
@@ -33,7 +33,7 @@ WHERE user_id = 38
   AND source_type IN ('challenge_order','challenge_morning','challenge_delivery','challenge_newproduct');
 
 -- 6. 首单奖励
-DELETE FROM points_lot WHERE user_id = 38 AND source_type = 'first_order_bonus';
+DELETE FROM points_lots WHERE user_id = 38 AND source_type = 'first_order_bonus';
 
 -- 7. 完善资料奖励
 DELETE FROM points_transactions WHERE user_id = 38 AND source_type = 'profile';
@@ -53,7 +53,7 @@ WHERE user_id = 38
 USE cozy_user;
 
 -- 邀请奖励标记
-UPDATE user SET invite_reward_granted = 0 WHERE id = 38;
+UPDATE users SET invite_reward_granted = 0 WHERE id = 38;
 
 -- ============================================================
 -- 使用说明：
