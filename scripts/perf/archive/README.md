@@ -1,14 +1,14 @@
 # 压测复现材料（归档快照）
 
-2026-09-17 那轮菜单缓存 / DTO N+1 压测的**报告、编排脚本与汇总结果**快照。原始归档在仓库外的
+这里保存菜单缓存 / DTO N+1 优化测试与 2026-09-21 容量测试的**报告、编排脚本与汇总结果**快照。原始归档在仓库外的
 `surx-note/CozyCoffee/压测/`，本目录是**精选入库 + 脱敏**后的版本 —— 目的是让口径**可复核**。
 
-口径与结论见根 README 的 [压测说明](../../README.md#压测说明)，细节见 `reports/` 下的报告。
+口径与结论见根 README 的 [压测说明](../../../README.md#压测说明)，细节见 `reports/` 下的报告。
 
 ## 目录
 
-- `reports/`：完整报告（`压测报告.md`、`DTO转换N+1修复复测报告.md`、`缓存击穿修复复测报告.md`）、
-  环境清单 `environment-manifest.json`、资源与幂等汇总，以及**复现所需的源码补丁**（`*.patch`）
+- `reports/`：完整报告（含 `容量测试-20260921-current.md`、`压测报告.md`、`DTO转换N+1修复复测报告.md`、`缓存击穿修复复测报告.md`）、
+  容量摘要 `capacity-20260921-summary.json`、环境清单、资源与幂等汇总，以及**复现所需的源码补丁**（`*.patch`）
 - `orchestration/`：隔离 Compose、k6 场景、PowerShell 编排与汇总脚本、RocketMQ broker 配置
 - `summaries/<批次>/`：每个批次的 k6 汇总件（`aggregate.csv` / `aggregate.json` / `all-runs.csv` / `summary.json`）
 
@@ -32,8 +32,8 @@ Surefire `TEST-*.xml`）**未随仓库发布** —— 它们含本机绝对路�
 
 ## 复现前提
 
-1. 从提交 `94361cf5316bdb9d0490f7a91645ea6dcea75389` 构建应用镜像。
-2. 生产代码修复见 `reports/menu-cache-coldfix-and-n1.patch`；复现三模式 A/B 时直接用
+1. 菜单缓存 / DTO N+1 历史测试从提交 `94361cf5316bdb9d0490f7a91645ea6dcea75389` 构建；当前容量测试对应提交 `050f357e8778721af62ff24c11cc09fcf4ba2f06`。
+2. 复现历史三模式 A/B 时，生产代码修复见 `reports/menu-cache-coldfix-and-n1.patch`，并直接使用
    `reports/benchmark-menu-cache-with-coldfix.patch`（已同时包含两项修复与测试开关）。
 3. 用 `orchestration/docker-compose.perf.yml` 起隔离环境（专用 Nacos / RocketMQ / MySQL schema / Redis DB 15）。
 4. 订单脚本需要现场登录拿测试 token —— **归档刻意不保存 token**。

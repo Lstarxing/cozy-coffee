@@ -1,0 +1,53 @@
+{
+  "testDate": "2026-09-21",
+  "gitSha": "050f357e8778721af62ff24c11cc09fcf4ba2f06",
+  "menuRead": {
+    "recommended": {
+      "rateRps": 300,
+      "runs": 3,
+      "requests": 54002,
+      "httpFailures": 0,
+      "businessFailures": 0,
+      "droppedIterations": 0,
+      "medianP95Ms": 183.634,
+      "medianP99Ms": 385.292
+    },
+    "completionBoundary": {
+      "rateRps": 650,
+      "runs": 3,
+      "requests": 117002,
+      "httpFailures": 0,
+      "businessFailures": 0,
+      "droppedIterations": 0,
+      "medianP95Ms": 5018.653,
+      "medianP99Ms": 5174.745
+    },
+    "firstClearFailureRps": 675
+  },
+  "orderWorkflow": {
+    "description": "cart validation plus order creation",
+    "requestsPerIteration": 2,
+    "recommended": {
+      "rateTps": 25,
+      "runs": 3,
+      "attemptedOrders": 4501,
+      "createdOrders": 4501,
+      "httpFailures": 0,
+      "businessFailures": 0,
+      "droppedIterations": 0,
+      "medianP95PerRequestMs": 710.346,
+      "medianP99PerRequestMs": 1974.51
+    },
+    "thresholdBoundary": {
+      "rateTps": 60,
+      "runs": 3,
+      "attemptedOrders": 10801,
+      "createdOrders": 10798,
+      "droppedIterations": 0,
+      "medianP95PerRequestMs": 4805.29,
+      "medianP99PerRequestMs": 6107.847,
+      "threshold": "HTTP and business failure rates below 0.1%"
+    },
+    "firstClearFailureTps": 65
+  }
+}

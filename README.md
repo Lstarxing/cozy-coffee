@@ -42,7 +42,7 @@ CozyCoffee 是个人独立开发的咖啡零售微服务项目，覆盖商品点
 - **会员与积分体系**：EXP / 积分双账户、五级成长与等级特权、FIFO 先到期先消耗；签到 / 月度挑战 / 生日 / 首单 / 邀请 / 晋升礼等奖励规则全部 `@ConfigurationProperties` 配置化——改 yml 即可调整策略
 - **优惠券与商品体系**：发券模板 + 抵扣策略（`CouponCalculator` 按 9 类券分发）+ L1 主券 / L2 辅券组合引擎；V2 商品统一规格校验与定价（杯型 / 出品方式）、加料组权威解析、咖啡内容层数据驱动，三端同源
 - **Redis 与并发治理**：字符串缓存（本地 + Redis 多级、空值缓存、TTL 抖动、SingleFlight、重建锁）；Bitmap 记签到、ZSet 管订单超时队列；配合分布式锁、CAS 乐观锁（防超卖 / 防重复发放）与订单状态机兜底
-- **性能与并发验证**：k6 在隔离环境多轮 A/B；菜单接口 200 RPS 连续 3 轮无失败或丢弃，冷缓存 200 并发连续 3 轮均返回有效菜单且每轮只重建 1 次（**单实例并发正确性验证**，非多实例故障注入）
+- **性能与并发验证**：k6 在隔离环境按固定到达率测试；当前提交下菜单读取建议容量为 **300 RPS**（3 轮共 54,002 次请求，零失败、零丢弃，P95 中位数 183.6 ms），完整下单工作流建议容量为 **25 TPS**（3 轮创建 4,501 笔订单，零失败、零丢弃，请求级 P95 中位数 710.3 ms）；另以冷缓存 200 并发验证 SingleFlight 每轮只重建 1 次
 
 ## 技术栈
 | 层 | 技术 |
@@ -74,7 +74,7 @@ flowchart LR
     OB --> MQ[RocketMQ]
     UB --> MQ
     MB --> MQ
-    G -->|order_created syncSend| MQ
+    G -->|order_created / order_paid syncSend| MQ
     MQ --> G
     MQ --> US
     MQ --> MS
@@ -94,7 +94,7 @@ flowchart LR
     G --> N
 ```
 
-> 三条写入路径各不相同：订单完成 / 取消在订单事务内写 **Order Outbox**、由 Relay 投递；用户生命周期事件写 **User Outbox**；Member 发券请求写 **Member Outbox**。`order_created` 则由 Gateway 直接 `syncSend` 并等待 Broker ACK 后返回 —— 这条**刻意不走 Outbox**，因为下单响应需要立即知道 Broker 已接收。SSE 推送与管理端缓存失效由消费者异步处理。
+> 三条 Outbox 写入路径各不相同：订单完成 / 取消在订单事务内写 **Order Outbox**、由 Relay 投递；用户生命周期事件写 **User Outbox**；Member 发券请求写 **Member Outbox**。Gateway 另对 `order_created` 与 `order_paid` 直接 `syncSend` 并等待 Broker ACK：创建事件只触发管理端缓存失效，支付并接单成功后才通过支付事件向商家推送新订单。两条 Gateway 事件都不走 Outbox。
 
 ## 事件驱动与最终一致性
 系统有**四条**消息路径，触发方式与可靠性语义各不相同，不要一概而论：
@@ -105,11 +105,12 @@ flowchart LR
 
 **③ Member 发券请求（Member Outbox）** —— 发券请求持久化到 `coupon_grant_outbox`，Member 不再同步调用 Mall API，并暴露待投递 / 失败 / 滞留指标。
 
-**④ 订单创建（Gateway 同步投递）** —— `order_created` 由 Gateway `syncSend` 投递并等待 Broker ACK 后返回；SSE 广播与管理端缓存失效由消费者异步处理。**这条刻意不走 Outbox。**
+**④ 订单创建与支付（Gateway 同步投递）** —— `order_created` 由 Gateway `syncSend` 投递并等待 Broker ACK 后返回，消费者只失效管理端缓存；支付成功并由用户侧自动接单后再发送 `order_paid`，消费者失效缓存并向商家 SSE 推送新订单。**这两条消息刻意不走 Outbox。**
 
 ```
 cozy-order-events
- ├── order_created   → Gateway syncSend → SSE 广播 + 管理端缓存失效      (BROADCASTING)
+ ├── order_created   → Gateway syncSend → 管理端缓存失效                 (BROADCASTING)
+ ├── order_paid      → Gateway syncSend → 管理端缓存失效 + 商家 SSE      (BROADCASTING)
  ├── order_completed → Order Outbox → 积分 / EXP / 首单 / 月度任务       (CLUSTERING)
  │                    → user 认领邀请资格（cozy-user-invite-reward）    (CLUSTERING)
  │                    → gateway SSE 完成通知                           (BROADCASTING)
@@ -150,10 +151,17 @@ sequenceDiagram
     GW-->>C: 下单成功响应
     MQ-->>GW: 广播消费(BROADCASTING)
     GW->>RS: 失效管理端订单与看板缓存
-    GW->>SSE: 推送新订单事件
+    C->>GW: 支付成功（用户侧自动接单）
+    GW->>OS: 更新订单为制作中
+    OS-->>GW: 接单成功
+    GW->>MQ: syncSend OrderPaidEvent（等待 Broker ACK）
+    GW-->>C: 返回支付 / 接单结果
+    MQ-->>GW: 广播消费(BROADCASTING)
+    GW->>RS: 再次失效管理端缓存
+    GW->>SSE: 向商家推送新订单事件
 ```
 
-> 说明：下单响应会等待 `ORDER_CREATED` 获得 Broker ACK，但不会等待 SSE 广播与缓存失效等消费端逻辑完成；`ORDER_COMPLETED` 和 `ORDER_CANCELLED` 由 Order Provider 在事务内写入 Outbox，分别触发积分、成长值、首单、月度任务和优惠券回滚。
+> 说明：下单响应会等待 `ORDER_CREATED` 获得 Broker ACK，但创建事件只负责失效管理端缓存；商家收到 `new_order` SSE 的时点是支付成功并自动接单之后。`ORDER_COMPLETED` 和 `ORDER_CANCELLED` 由 Order Provider 在事务内写入 Outbox，分别触发积分、成长值、首单、月度任务和优惠券回滚。
 
 ## 缓存策略图
 ```mermaid
@@ -247,7 +255,7 @@ ssh cozy 'bash /opt/cozycoffee/deploy/check-health.sh'          # 部署后巡�
 > 不删改旧镜像仍在用的列），否则旧镜像可能启动失败。2C8G 上 5 个 JVM 冷启动约 3.6~7.8 分钟属正常。
 
 ## 测试与 CI
-- **后端**：50 个测试类、**300+ JUnit 5 测试方法**，覆盖订单状态机、定价与加料、优惠券计算与组合、用券下单、取消回滚、奖励发放、积分一致性，以及菜单缓存并发与 DTO 批量转换两个回归
+- **后端**：52 个测试类、**300+ JUnit 5 测试方法**，覆盖订单状态机、定价与加料、优惠券计算与组合、用券下单、取消回滚、奖励发放、积分一致性，以及菜单缓存并发与 DTO 批量转换两个回归
 - **数据库迁移**：40 个 Flyway 脚本（User 3 / Member 4 / Order 26 / Mall 7）—— 四个服务的迁移量之和，不是单库版本号
 - **前端**：Web / 小程序 / 管理端 Vitest 单测
 - **CI（GitHub Actions）**：JDK 17 + `mvn test` + 三端前端测试矩阵，自动判败
@@ -262,6 +270,17 @@ ssh cozy 'bash /opt/cozycoffee/deploy/check-health.sh'          # 部署后巡�
 - **环境隔离**：专用 Nacos、RocketMQ、MySQL Schema 和 Redis DB；Gateway、Order Provider 各限制为 1 CPU / 512 MiB
 - **统计口径**：正式 A/B 使用 5 轮中位数，容量与突发测试使用 3 轮中位数；不取单轮最好成绩
 
+### 当前提交容量测试（2026-09-21）
+
+基于提交 [`050f357`](https://github.com/Lstarxing/cozy-coffee/commit/050f357e8778721af62ff24c11cc09fcf4ba2f06)，在 12 CPU、约 16.6 GiB 内存的 Docker Desktop 主机上运行隔离环境；每个 Java 服务限制为 1 CPU / 512 MiB。菜单读取与下单工作流均采用固定到达率、60 秒正式轮次，每档运行 3 轮，容量建议要求 HTTP 失败率和业务失败率均低于 0.1%，且无丢弃迭代。
+
+| 场景 | 建议容量 | 正式轮次与样本 | HTTP / 业务失败 | 丢弃迭代 | P95 中位数 | P99 中位数 |
+|---|---:|---:|---:|---:|---:|---:|
+| 菜单读取 | **300 RPS** | 3 轮，54,002 次请求 | 0 / 0 | 0 | 183.634 ms | 385.292 ms |
+| 购物车校验 + 创建订单 | **25 TPS** | 3 轮，4,501 笔订单 | 0 / 0 | 0 | 710.346 ms / 请求 | 1,974.510 ms / 请求 |
+
+菜单在 650 RPS 下仍完成 3 轮且无失败或丢弃，但 P95 已升至约 5.02 秒，675 RPS 首次出现明确失败；下单工作流在 60 TPS 下仍满足失败率阈值，但 P95 已升至约 4.81 秒，65 TPS 首次出现明确失败。因此公开容量采用留有响应时间余量的 **300 RPS / 25 TPS**，不把完成边界写成建议承载量。完整报告与机器可读摘要见 [`scripts/perf/archive/reports/容量测试-20260921-current.md`](scripts/perf/archive/reports/%E5%AE%B9%E9%87%8F%E6%B5%8B%E8%AF%95-20260921-current.md) 和 [`capacity-20260921-summary.json`](scripts/perf/archive/reports/capacity-20260921-summary.json)。
+
 ### 菜单缓存 A/B
 
 该组测试完成于 DTO N+1 修复前；对照双方使用相同代码、数据和容器资源（数据集为 **31 个商品**），仅切换 DB 直读与本地缓存 + Redis 模式。测试负载为 20 RPS、60 秒/轮，各运行 5 轮。
@@ -271,7 +290,7 @@ ssh cozy 'bash /opt/cozycoffee/deploy/check-health.sh'          # 部署后巡�
 | DB 直读 | 40.879 ms | 64.610 ms | 90.488 ms | 0 | 0 |
 | 本地缓存 + Redis | 3.956 ms | 5.909 ms | 8.005 ms | 0 | 0 |
 
-缓存模式下平均响应时间降低 **90.32%**，P99 降低 **91.15%**。在 200 RPS 下连续运行 3 轮，共完成 36,003 次请求，P95 / P99 中位数为 3.991 / 7.499 ms，无失败或丢弃。
+缓存模式下平均响应时间降低 **90.32%**，P99 降低 **91.15%**。该轮优化验证还在 200 RPS 下连续运行 3 轮，共完成 36,003 次请求，P95 / P99 中位数为 3.991 / 7.499 ms，无失败或丢弃。该数据用于比较优化前后，当前提交的容量口径以上一节为准。
 
 ### DTO N+1 优化
 
@@ -285,10 +304,9 @@ ssh cozy 'bash /opt/cozycoffee/deploy/check-health.sh'          # 部署后巡�
 | P99 中位数 | 90.488 ms | 22.614 ms | -75.01% |
 | 5 轮 MySQL 语句数中位数 | 92,473 | 7,208 | -92.21% |
 
-### 冷缓存与下单正确性
+### 冷缓存与并发正确性
 
 - 冷缓存 200 并发连续 3 轮均为 200/200 非空、0 HTTP 错误、0 业务错误，每轮只记录 1 次缓存更新和 6 条 SQL。这是**单 Order Provider 实例**的并发正确性验证（SingleFlight 合并重建），**不是多实例故障注入**，也不代表毫秒级突发响应。
-- 完整“购物车预览 → 创建订单 → RocketMQ 发布”链路以 5 个工作流/秒运行 5 轮，共创建并落库 1,503 笔订单，0 业务失败、0 丢弃；创建订单 P95 / P99 中位数为 54.806 / 61.857 ms。
 - 50 个并发请求使用同一个幂等键创建订单时，1 次首次创建、49 次幂等重放，数据库只生成 1 笔订单。
 
 > 上述数据用于说明当前本地隔离环境下的优化效果与并发正确性，不代表线上容量上限。
@@ -361,33 +379,37 @@ ssh cozy 'bash /opt/cozycoffee/deploy/check-health.sh'          # 部署后巡�
 品牌叙事首页 → 产区探索 → 菜单点单 → 选规格 → 结算 → 订单 → 积分商城 → 会员运营。
 
 <p align="center">
-  <img width="24%" src="docs/images/frontend-mobile/01-home.png" alt="首页-品牌叙事">
-  <img width="24%" src="docs/images/frontend-mobile/02-home-origins.png" alt="首页-产区探索入口">
-  <img width="24%" src="docs/images/frontend-mobile/03-origins.png" alt="产区探索">
-  <img width="24%" src="docs/images/frontend-mobile/04-about.png" alt="关于我们">
+  <img width="30%" src="docs/images/frontend-mobile/01-home.png" alt="首页-品牌叙事">
+  <img width="30%" src="docs/images/frontend-mobile/02-home-origins.png" alt="首页-产区探索入口">
+  <img width="30%" src="docs/images/frontend-mobile/03-origins.png" alt="产区探索">
 </p>
 <p align="center">
-  <img width="24%" src="docs/images/frontend-mobile/05-menu.png" alt="菜单点单">
-  <img width="24%" src="docs/images/frontend-mobile/06-spec.png" alt="确认订单">
-  <img width="24%" src="docs/images/frontend-mobile/07-confirm.png" alt="商品选规格">
-  <img width="24%" src="docs/images/frontend-mobile/09-order-detail.png" alt="订单详情">
+  <img width="30%" src="docs/images/frontend-mobile/04-about.png" alt="关于我们">
+  <img width="30%" src="docs/images/frontend-mobile/05-menu.png" alt="菜单点单">
+  <img width="30%" src="docs/images/frontend-mobile/06-spec.png" alt="确认订单">
 </p>
 <p align="center">
-  <img width="24%" src="docs/images/frontend-mobile/08-order-list.png" alt="订单列表">
-  <img width="24%" src="docs/images/frontend-mobile/11-points-mall.png" alt="积分商城">
-  <img width="24%" src="docs/images/frontend-mobile/14-points-detail.png" alt="积分明细">
-  <img width="24%" src="docs/images/frontend-mobile/10-redemption.png" alt="兑换订单">
+  <img width="30%" src="docs/images/frontend-mobile/07-confirm.png" alt="商品选规格">
+  <img width="30%" src="docs/images/frontend-mobile/08-order-list.png" alt="订单列表">
+  <img width="30%" src="docs/images/frontend-mobile/09-order-detail.png" alt="订单详情">
 </p>
 <p align="center">
-  <img width="24%" src="docs/images/frontend-mobile/13-points-rules.png" alt="积分规则">
-  <img width="24%" src="docs/images/frontend-mobile/12-coupons.png" alt="优惠券">
-  <img width="24%" src="docs/images/frontend-mobile/19-profile.png" alt="我的-会员卡">
-  <img width="24%" src="docs/images/frontend-mobile/16-benefits.png" alt="会员权益">
+  <img width="30%" src="docs/images/frontend-mobile/11-points-mall.png" alt="积分商城">
+  <img width="30%" src="docs/images/frontend-mobile/14-points-detail.png" alt="积分明细">
+  <img width="30%" src="docs/images/frontend-mobile/10-redemption.png" alt="兑换订单">
 </p>
 <p align="center">
-  <img width="24%" src="docs/images/frontend-mobile/18-levels.png" alt="会员等级">
-  <img width="24%" src="docs/images/frontend-mobile/15-signin.png" alt="每日签到">
-  <img width="24%" src="docs/images/frontend-mobile/17-challenge.png" alt="月度挑战">
+  <img width="30%" src="docs/images/frontend-mobile/13-points-rules.png" alt="积分规则">
+  <img width="30%" src="docs/images/frontend-mobile/12-coupons.png" alt="优惠券">
+  <img width="30%" src="docs/images/frontend-mobile/19-profile.png" alt="我的-会员卡">
+</p>
+<p align="center">
+  <img width="45%" src="docs/images/frontend-mobile/16-benefits.png" alt="会员权益">
+  <img width="45%" src="docs/images/frontend-mobile/18-levels.png" alt="会员等级">
+</p>
+<p align="center">
+  <img width="45%" src="docs/images/frontend-mobile/15-signin.png" alt="每日签到">
+  <img width="45%" src="docs/images/frontend-mobile/17-challenge.png" alt="月度挑战">
 </p>
 
 </details>
